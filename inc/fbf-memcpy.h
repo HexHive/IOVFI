@@ -10,13 +10,13 @@
 namespace fbf {
     class MemcpyIdentifier : public FunctionIdentifier {
     public:
-        MemcpyIdentifier(uintptr_t location);
+        explicit MemcpyIdentifier(uintptr_t location);
 
-        virtual ~MemcpyIdentifier(void);
+        ~MemcpyIdentifier() override;
 
-        virtual int evaluate(void);
+        int evaluate() override;
 
-        virtual void setup(void);
+        void setup() override;
 
     protected:
         char src_[FunctionIdentifier::BUFFER_SIZE];

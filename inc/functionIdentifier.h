@@ -12,24 +12,24 @@
 namespace fbf {
     class FunctionIdentifier {
     public:
-        FunctionIdentifier(uintptr_t location);
+        explicit FunctionIdentifier(uintptr_t location);
 
-        virtual ~FunctionIdentifier(void);
+        virtual ~FunctionIdentifier();
 
-        virtual int run_test(void);
+        virtual int run_test();
 
-        uintptr_t get_location(void);
+        uintptr_t get_location();
 
         const static size_t BUFFER_SIZE = 32;
 
     protected:
         uintptr_t location_;
 
-        int rand(void);
+        int rand();
 
-        virtual int evaluate(void) = 0;
+        virtual int evaluate() = 0;
 
-        virtual void setup(void);
+        virtual void setup();
 
     private:
         std::random_device rd_;

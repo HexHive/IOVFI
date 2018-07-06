@@ -4,8 +4,8 @@
 #include "fosbin-flop.h"
 
 void *test_memcpy(void *dst, const void *src, size_t nbytes) {
-    char *d = (char *) dst;
-    char *s = (char *) src;
+    auto *d = (char *) dst;
+    auto *s = (char *) src;
 
     for (size_t i = 0; i < nbytes; i++) {
         d[i] = s[i];

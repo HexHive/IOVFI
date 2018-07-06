@@ -12,16 +12,14 @@ fbf::FunctionIdentifier::FunctionIdentifier(uintptr_t location) : location_(loca
 
 }
 
-fbf::FunctionIdentifier::~FunctionIdentifier() {
-
-}
+fbf::FunctionIdentifier::~FunctionIdentifier() = default;
 
 uintptr_t fbf::FunctionIdentifier::get_location() {
     return location_;
 }
 
 void fbf::FunctionIdentifier::setup() {
-    return;
+
 }
 
 int fbf::FunctionIdentifier::rand() {
