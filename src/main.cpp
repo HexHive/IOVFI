@@ -1,31 +1,29 @@
 #include <iostream>
-#include <functionIdentifier.h>
-#include <fbf-memcpy.h>
 #include "fosbin-flop.h"
-#include <identifierFactory.h>
-#include <memory>
+#include <experimental/filesystem>
+#include <fullTest.h>
 
-void *test_memcpy(void *dst, const void *src, size_t nbytes) {
-    auto *d = (char *) dst;
-    auto *s = (char *) src;
-
-    for (size_t i = 0; i < nbytes; i++) {
-        d[i] = s[i];
-    }
-
-    return dst;
+void usage() {
+    std::cout << "fosbin-flop <path to binary descriptor>" << std::endl;
 }
+
+namespace fs = std::experimental::filesystem;
 
 int main(int argc, char **argv) {
     std::cout << EXE_NAME << " v. " << VERSION_MAJOR << "." << VERSION_MINOR << std::endl;
 
-    std::shared_ptr<fbf::FunctionIdentifier> f = fbf::IdentifierFactory
-            ::Instance()->CreateIdentifier("memcpy", (uintptr_t) &test_memcpy);
-    std::cout << "test_memcpy (" << f->get_location() << ")";
-    if (f->run_test()) {
-        std::cout << " was detected to be memcpy-like!" << std::endl;
-    } else {
-        std::cout << " was NOT detected to be memcpy-like!" << std::endl;
+    if(argc != 2) {
+        usage();
+        exit(0);
+    }
+    fs::path descriptor(argv[1]);
+    try {
+        fbf::FullTest test(descriptor);
+        test.run();
+        test.output(std::cout);
+    } catch(std::exception& e) {
+        std::cout << "ERROR: " << e.what() << std::endl;
+        exit(1);
     }
 
     return 0;
