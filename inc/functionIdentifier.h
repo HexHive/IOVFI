@@ -13,8 +13,8 @@ namespace fbf {
     class FunctionIdentifier {
     public:
         explicit FunctionIdentifier(uintptr_t location);
-
         virtual ~FunctionIdentifier();
+        explicit FunctionIdentifier();
 
         virtual int run_test();
 

@@ -12,6 +12,12 @@ fbf::FunctionIdentifier::FunctionIdentifier(uintptr_t location) : location_(loca
 
 }
 
+fbf::FunctionIdentifier::FunctionIdentifier() : location_(0),
+                                                rd_(),
+                                                mt_(rd_()),
+                                                dist_(std::numeric_limits<int>::min(),
+                                                      std::numeric_limits<int>::max()) {}
+
 fbf::FunctionIdentifier::~FunctionIdentifier() = default;
 
 uintptr_t fbf::FunctionIdentifier::get_location() {

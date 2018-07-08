@@ -5,6 +5,8 @@ fbf::MemcpyIdentifier::MemcpyIdentifier(uintptr_t location) : FunctionIdentifier
 
 }
 
+fbf::MemcpyIdentifier::MemcpyIdentifier() : FunctionIdentifier() {}
+
 fbf::MemcpyIdentifier::~MemcpyIdentifier() = default;
 
 void fbf::MemcpyIdentifier::setup() {
