@@ -7,7 +7,7 @@ OBJ_FILES := $(patsubst %.c, ${BUILD_DIR}/%.o, ${SRC_FILES})
 
 all: build-dir ${OBJ_FILES}
 
-clean: ; rm -f *.test
+clean: ; rm -rf ${BUILD_DIR}
 
 build-dir: ; mkdir -p ${BUILD_DIR}
 
