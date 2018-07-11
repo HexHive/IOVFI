@@ -5,6 +5,8 @@ set(${PROJECT_NAME}-VERSION-MAJOR 0)
 set(${PROJECT_NAME}-VERSION-MINOR 1)
 set(CMAKE_CXX_STANDARD 14)
 
+set(CMAKE_VERBOSE_MAKEFILE true)
+
 configure_file("inc/${PROJECT_NAME}-config.h.in"
         "inc/${PROJECT_NAME}-config.h")
 
