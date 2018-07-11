@@ -15,6 +15,8 @@ namespace fbf {
     class FullTest {
         std::vector<std::unique_ptr<fbf::TestRun>> testRuns_;
         fs::path descriptor_, bin_path_;
+        uintptr_t mmap_loc_;
+        size_t mmap_size_;
         void parse_descriptor();
 
     public:

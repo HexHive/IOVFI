@@ -9,6 +9,7 @@
 #include <functional>
 #include <memory>
 #include <map>
+#include <set>
 
 namespace fbf {
     class IdentifierFactory {
@@ -20,6 +21,7 @@ namespace fbf {
         void RegisterFactoryFunction(std::string name, std::function<fbf::FunctionIdentifier*(uintptr_t)> identifierFactory);
         std::shared_ptr<fbf::FunctionIdentifier> CreateIdentifier(std::string name, uintptr_t addr);
         static fbf::IdentifierFactory* Instance();
+        const std::set<std::string> getRegistered();
     };
 }
 

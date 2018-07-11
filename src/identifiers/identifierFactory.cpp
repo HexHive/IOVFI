@@ -7,6 +7,7 @@
 #include <functional>
 #include <memory>
 #include <identifierFactory.h>
+#include <algorithm>
 
 fbf::IdentifierFactory::IdentifierFactory() {
 
@@ -31,4 +32,12 @@ std::shared_ptr<fbf::FunctionIdentifier> fbf::IdentifierFactory::CreateIdentifie
 fbf::IdentifierFactory *fbf::IdentifierFactory::Instance() {
     static fbf::IdentifierFactory factory;
     return &factory;
+}
+
+const std::set<std::string> fbf::IdentifierFactory::getRegistered() {
+    std::set<std::string> result;
+    std::transform(registry_.begin(), registry_.end(),
+        std::inserter(result, result.end()),
+        [](auto pair){ return pair.first; });
+    return result;
 }
