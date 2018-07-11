@@ -2,6 +2,8 @@ cmake-build-*/
 
 .idea/
 
+tests/build/
+
 # Prerequisites
 *.d
 
