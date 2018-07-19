@@ -3,8 +3,11 @@
 //
 
 #include <stddef.h>
+#include "test.h"
 
+FOSTEST
 void* memcpy_test(void* dest, const void* src, size_t n) {
+    asm("");
     char* d = (char*)dest;
     char* s = (char*)src;
     size_t i;
@@ -14,11 +17,4 @@ void* memcpy_test(void* dest, const void* src, size_t n) {
     }
 
     return dest;
-}
-
-int main(int argc, char** argv) {
-    char src[5];
-    char dest[5];
-
-    memcpy_test(dest, src, sizeof(dest));
 }

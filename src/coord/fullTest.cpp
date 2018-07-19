@@ -125,7 +125,7 @@ void fbf::FullTest::parse_descriptor() {
 
     for(std::set<uintptr_t>::iterator it = offsets.begin();
         it != offsets.end(); ++it) {
-        uintptr_t addr = mmap_loc_ - *it;
+        uintptr_t addr = mmap_loc_ + *it;
         for(std::set<std::string>::iterator it2 = identifiers.begin();
             it2 != identifiers.end(); ++it2) {
             std::shared_ptr<fbf::FunctionIdentifier> id =

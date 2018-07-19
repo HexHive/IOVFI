@@ -12,18 +12,21 @@
 namespace fbf {
     class FunctionIdentifier {
     public:
-        explicit FunctionIdentifier(uintptr_t location);
-        virtual ~FunctionIdentifier();
+        explicit FunctionIdentifier(uintptr_t location, const std::string& functionName);
         explicit FunctionIdentifier();
+        virtual ~FunctionIdentifier();
 
         virtual int run_test();
 
         uintptr_t get_location();
 
+        const std::string& getFunctionName();
+
         const static size_t BUFFER_SIZE = 32;
 
     protected:
         uintptr_t location_;
+        std::string functionName_;
 
         int rand();
 

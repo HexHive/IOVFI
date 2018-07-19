@@ -1,9 +1,8 @@
 #include <fbf-memcpy.h>
 #include <cstring>
 
-fbf::MemcpyIdentifier::MemcpyIdentifier(uintptr_t location) : FunctionIdentifier(location) {
-
-}
+fbf::MemcpyIdentifier::MemcpyIdentifier(uintptr_t location) :
+                                FunctionIdentifier(location, "memcpy") { }
 
 fbf::MemcpyIdentifier::MemcpyIdentifier() : FunctionIdentifier() {}
 

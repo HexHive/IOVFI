@@ -33,5 +33,12 @@ void fbf::TestRun::output_results(std::ostream &out) {
         run_test();
     }
 
-    out << "Result for 0x" << std::hex << test_->get_location() << ": " << result_;
+    out << "Result for "
+        << test_->getFunctionName()
+        << " at 0x"
+        << std::hex
+        << test_->get_location()
+        << ": "
+        << ((result_ == 1) ? "positive" : "negative")
+        << std::endl;
 }
