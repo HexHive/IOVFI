@@ -15,10 +15,11 @@ TESTS := $(patsubst %.c, ${BUILD_DIR}/%, ${SRC_FILES})
 
 all: build-dir ${TESTS}
 
-clean: ; rm -rf ${BUILD_DIR}
+clean: ; rm -rf ${BUILD_DIR} ${DESC_DIR}
 
 build-dir: ; mkdir -p ${BUILD_DIR} ${DESC_DIR}
 
 ${BUILD_DIR}/%: %.c 
-	${CC} ${CFLAGS} -o $@ $^
-	$(shell ${READELF} $@ | ${GREP} ${TEST_SECTION} | ${AWK} '{ print "binary=${PWD}/$@"; printf "addr=%s\n", $$6; }' > ${DESC_DIR}/$(notdir $@).desc )
+	$(shell ${CC} ${CFLAGS} -o $@ $^ && ${READELF} $@ | ${GREP} ${TEST_SECTION} | ${AWK} '{ print "binary=${PWD}/$@"; printf "addr=%s\n", $$6; }' > ${DESC_DIR}/$(notdir $@).desc )
+
+${BUILD_DIR}/%:

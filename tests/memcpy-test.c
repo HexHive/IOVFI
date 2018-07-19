@@ -5,9 +5,8 @@
 #include <stddef.h>
 #include "test.h"
 
-FOSTEST
+FOSBINTEST
 void* memcpy_test(void* dest, const void* src, size_t n) {
-    asm("");
     char* d = (char*)dest;
     char* s = (char*)src;
     size_t i;
