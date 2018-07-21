@@ -4,7 +4,7 @@
 
 #ifndef FOSBIN_FLOP_IDENTIFIERFACTORY_H
 #define FOSBIN_FLOP_IDENTIFIERFACTORY_H
-#include <functionIdentifier.h>
+#include <identifiers/functionIdentifier.h>
 #include <string>
 #include <functional>
 #include <memory>

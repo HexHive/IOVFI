@@ -1,8 +1,8 @@
-#include <fbf-memcpy.h>
+#include <identifiers/fbf-memcpy.h>
 #include <cstring>
 
 fbf::MemcpyIdentifier::MemcpyIdentifier(uintptr_t location) :
-                                FunctionIdentifier(location, "memcpy") { }
+                                FunctionIdentifier(location, NAME) { }
 
 fbf::MemcpyIdentifier::MemcpyIdentifier() : FunctionIdentifier() {}
 
@@ -21,3 +21,5 @@ int fbf::MemcpyIdentifier::evaluate() {
     FBF_ASSERT(dst_[FunctionIdentifier::BUFFER_SIZE / 2] == 0);
     return FunctionIdentifier::PASS;
 }
+
+const std::string fbf::MemcpyIdentifier::NAME = "memcpy";

@@ -3,10 +3,10 @@
 //
 
 #include <string>
-#include <functionIdentifier.h>
+#include <identifiers/functionIdentifier.h>
 #include <functional>
 #include <memory>
-#include <identifierFactory.h>
+#include <identifiers/identifierFactory.h>
 #include <algorithm>
 
 fbf::IdentifierFactory::IdentifierFactory() {

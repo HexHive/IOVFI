@@ -5,8 +5,8 @@
 #ifndef FOSBIN_FLOP_MEMCPY_H
 #define FOSBIN_FLOP_MEMCPY_H
 
-#include <functionIdentifier.h>
-#include <identifierRegistrar.h>
+#include <identifiers/functionIdentifier.h>
+#include <identifiers/identifierRegistrar.h>
 
 namespace fbf {
     class MemcpyIdentifier : public FunctionIdentifier {
@@ -18,12 +18,14 @@ namespace fbf {
         int evaluate() override;
         void setup() override;
 
+        const static std::string NAME;
+
     protected:
         char src_[FunctionIdentifier::BUFFER_SIZE];
         char dst_[FunctionIdentifier::BUFFER_SIZE];
     };
 
-    static IdentifierRegistrar<MemcpyIdentifier> registrar("memcpy");
+    static IdentifierRegistrar<MemcpyIdentifier> registrar(fbf::MemcpyIdentifier::NAME);
 }
 
 #endif //FOSBIN_FLOP_MEMCPY_H
