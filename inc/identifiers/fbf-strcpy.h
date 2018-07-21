@@ -18,14 +18,12 @@ namespace fbf {
         int evaluate() override;
         void setup() override;
 
-        const static std::string NAME;
-
     protected:
         char src_[FunctionIdentifier::BUFFER_SIZE];
         char dst_[FunctionIdentifier::BUFFER_SIZE];
     };
 
-    static IdentifierRegistrar<StrcpyIdentifier> registrar(StrcpyIdentifier::NAME);
+    static IdentifierRegistrar<StrcpyIdentifier> registrar("strcpy");
 }
 
 

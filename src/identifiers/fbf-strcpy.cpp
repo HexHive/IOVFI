@@ -6,7 +6,7 @@
 #include <cstring>
 
 fbf::StrcpyIdentifier::StrcpyIdentifier(uintptr_t location) :
-        FunctionIdentifier(location, NAME) { }
+        FunctionIdentifier(location, "strcpy") { }
 
 fbf::StrcpyIdentifier::StrcpyIdentifier() : FunctionIdentifier() {}
 
@@ -19,7 +19,7 @@ void fbf::StrcpyIdentifier::setup() {
     do {
         int src_val = FunctionIdentifier::rand();
         std::memset(src_, src_val, sizeof(src_));
-    } while(src_val != dst_val);
+    } while(src_val == dst_val);
 
     /* Cut off the string in the middle for confirming that dst_ isn't overwritten */
     src_[sizeof(src_) / 2] = '\0';
@@ -38,5 +38,3 @@ int fbf::StrcpyIdentifier::evaluate() {
     }
     return FunctionIdentifier::PASS;
 }
-
-const std::string fbf::StrcpyIdentifier::NAME = "strcpy";
