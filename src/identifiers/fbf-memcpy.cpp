@@ -19,5 +19,5 @@ int fbf::MemcpyIdentifier::evaluate() {
     FBF_ASSERT(test == dst_);
     FBF_ASSERT(std::memcmp(src_, dst_, FunctionIdentifier::BUFFER_SIZE / 2) == 0);
     FBF_ASSERT(dst_[FunctionIdentifier::BUFFER_SIZE / 2] == 0);
-    return 0;
+    return FunctionIdentifier::PASS;
 }

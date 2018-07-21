@@ -35,14 +35,14 @@ fbf::FullTest::~FullTest() {
 }
 
 void fbf::FullTest::run() {
-    for (std::vector<std::unique_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
+    for (std::vector<std::shared_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
          it != testRuns_.end(); ++it) {
         (*it)->run_test();
     }
 }
 
 void fbf::FullTest::output(std::ostream &out) {
-    for (std::vector<std::unique_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
+    for (std::vector<std::shared_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
          it != testRuns_.end(); ++it) {
         (*it)->output_results(out);
     }
@@ -130,7 +130,7 @@ void fbf::FullTest::parse_descriptor() {
             it2 != identifiers.end(); ++it2) {
             std::shared_ptr<fbf::FunctionIdentifier> id =
                     fbf::IdentifierFactory::Instance()->CreateIdentifier(*it2, addr);
-            testRuns_.push_back(std::make_unique<fbf::TestRun>(id));
+            testRuns_.push_back(std::make_shared<fbf::TestRun>(id));
         }
     }
 }

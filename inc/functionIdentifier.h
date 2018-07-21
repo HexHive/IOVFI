@@ -17,21 +17,19 @@ namespace fbf {
         virtual ~FunctionIdentifier();
 
         virtual int run_test();
-
         uintptr_t get_location();
-
         const std::string& getFunctionName();
 
         const static size_t BUFFER_SIZE = 32;
+        const static int PASS = 0;
+        const static int FAIL = std::numeric_limits<int>::min();
 
     protected:
         uintptr_t location_;
         std::string functionName_;
 
         int rand();
-
         virtual int evaluate() = 0;
-
         virtual void setup();
 
     private:
@@ -40,7 +38,7 @@ namespace fbf {
         std::uniform_int_distribution<int> dist_;
     };
 
-#define FBF_ASSERT(x) if(!(x)) { return -1; }
+#define FBF_ASSERT(x) if(!(x)) { return fbf::FunctionIdentifier::FAIL; }
 }
 
 #endif //FOSBIN_FLOP_FUNCTIONIDENTIFIER_H
