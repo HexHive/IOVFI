@@ -3,9 +3,9 @@
 //
 
 #include <stddef.h>
-#include "test.h"
+#include "fosbin_test.h"
 
-FOSBINTEST
+FOSBIN_TEST
 void* memcpy_test(void* dest, const void* src, size_t n) {
     char* d = (char*)dest;
     char* s = (char*)src;

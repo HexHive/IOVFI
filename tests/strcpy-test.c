@@ -4,9 +4,9 @@
 
 #include <stddef.h>
 
-#include "test.h"
+#include "fosbin_test.h"
 
-FOSBINTEST
+FOSBIN_TEST
 char* strcpy_test(char* dest, const char* src) {
     size_t i;
     for(i = 0; src[i] != '\0'; i++) {

@@ -37,7 +37,7 @@ int fbf::FunctionIdentifier::rand() {
 
 int fbf::FunctionIdentifier::run_test() {
     setup();
-    return evaluate() == 0;
+    return evaluate();
 }
 
 const std::string& fbf::FunctionIdentifier::getFunctionName() {
