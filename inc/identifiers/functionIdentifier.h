@@ -21,7 +21,7 @@ namespace fbf {
         const std::string& getFunctionName();
 
         const static size_t BUFFER_SIZE = 32;
-        const static int PASS = 0;
+        const static int PASS = std::numeric_limits<int>::max();
         const static int FAIL = std::numeric_limits<int>::min();
 
     protected:
