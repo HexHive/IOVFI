@@ -19,6 +19,8 @@ namespace fbf {
         void setup() override;
         const std::string& getName();
 
+        const static int OFFSET;
+
     protected:
         char src_[FunctionIdentifier::BUFFER_SIZE];
     };
