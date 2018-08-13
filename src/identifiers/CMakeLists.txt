@@ -5,4 +5,6 @@ TARGET_SOURCES(${PROJECT_NAME}
         ${CMAKE_CURRENT_LIST_DIR}/fbf-memcpy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/fbf-strcpy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/fbf-sprintf.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/fbf-strncpy.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/fbf-memmove.cpp
         )

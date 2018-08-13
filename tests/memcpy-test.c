@@ -17,3 +17,10 @@ void* memcpy_test(void* dest, const void* src, size_t n) {
 
     return dest;
 }
+
+int main() {
+    char src[10];
+    char dest[10];
+    memcpy_test(dest, src, sizeof(dest));
+    return 0;
+}

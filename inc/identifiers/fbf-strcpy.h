@@ -11,19 +11,20 @@
 namespace fbf {
     class StrcpyIdentifier : public FunctionIdentifier {
     public:
-        explicit StrcpyIdentifier(uintptr_t location);
-        explicit StrcpyIdentifier();
-        ~StrcpyIdentifier() override;
+        StrcpyIdentifier(uintptr_t location);
+        StrcpyIdentifier();
+        virtual ~StrcpyIdentifier() override;
 
-        int evaluate() override;
-        void setup() override;
+        virtual int evaluate() override;
+        virtual void setup() override;
+        virtual const std::string& getName();
 
     protected:
         char src_[FunctionIdentifier::BUFFER_SIZE];
         char dst_[FunctionIdentifier::BUFFER_SIZE];
     };
 
-    static IdentifierRegistrar<StrcpyIdentifier> registrar("strcpy");
+    static IdentifierRegistrar<StrcpyIdentifier> registrar_strcpy("strcpy");
 }
 
 

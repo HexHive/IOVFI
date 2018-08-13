@@ -15,3 +15,10 @@ char* strcpy_test(char* dest, const char* src) {
     dest[i] = '\0';
     return dest;
 }
+
+int main() {
+    char dest[10];
+    char* src = "test";
+    strcpy_test(dest, src);
+    return 0;
+}

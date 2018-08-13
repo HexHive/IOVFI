@@ -2,11 +2,16 @@
 #include <cstring>
 
 fbf::MemcpyIdentifier::MemcpyIdentifier(uintptr_t location) :
-                                FunctionIdentifier(location, "memcpy") { }
+                                FunctionIdentifier(location, getName()) { }
 
 fbf::MemcpyIdentifier::MemcpyIdentifier() : FunctionIdentifier() {}
 
 fbf::MemcpyIdentifier::~MemcpyIdentifier() = default;
+
+const std::string& fbf::MemcpyIdentifier::getName() {
+    static const std::string name = "memcpy";
+    return name;
+}
 
 void fbf::MemcpyIdentifier::setup() {
     std::memset(src_, FunctionIdentifier::rand(), sizeof(src_));

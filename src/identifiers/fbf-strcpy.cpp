@@ -6,18 +6,24 @@
 #include <cstring>
 
 fbf::StrcpyIdentifier::StrcpyIdentifier(uintptr_t location) :
-        FunctionIdentifier(location, "strcpy") { }
+        FunctionIdentifier(location, getName()) { }
 
 fbf::StrcpyIdentifier::StrcpyIdentifier() : FunctionIdentifier() {}
 
 fbf::StrcpyIdentifier::~StrcpyIdentifier() = default;
 
+const std::string& fbf::StrcpyIdentifier::getName() {
+    static const std::string name = "strcpy";
+    return name;
+}
+
 void fbf::StrcpyIdentifier::setup() {
     int src_val = 0;
     int dst_val = FunctionIdentifier::rand();
     std::memset(dst_, dst_val, sizeof(dst_));
+    /* Make sure that src and dst are not the same */
     do {
-        int src_val = FunctionIdentifier::rand();
+        src_val = FunctionIdentifier::rand();
         std::memset(src_, src_val, sizeof(src_));
     } while(src_val == dst_val);
 
@@ -26,11 +32,11 @@ void fbf::StrcpyIdentifier::setup() {
 }
 
 int fbf::StrcpyIdentifier::evaluate() {
-    auto func = reinterpret_cast<void *(*)(char *, const char *)>(location_);
+    auto func = reinterpret_cast<char *(*)(char *, const char *)>(location_);
     char before = dst_[sizeof(dst_) / 2];
-    void *test = func(dst_, src_);
+    char *test = func(dst_, src_);
     FBF_ASSERT(test == dst_);
-    FBF_ASSERT(std::strcmp(dst_, src_));
+    FBF_ASSERT(std::strcmp(dst_, src_) == 0);
 
     /* Make sure that dst_ isn't overwritten where it shouldn't be */
     for(size_t i = sizeof(dst_) / 2 + 1; i < sizeof(dst_); i++) {

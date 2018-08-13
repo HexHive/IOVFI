@@ -18,6 +18,7 @@ namespace fbf {
 
         int evaluate() override;
         void setup() override;
+        const std::string& getName();
 
     protected:
         const char *format_ = "%d %d";
@@ -25,7 +26,7 @@ namespace fbf {
         char dst2_[FunctionIdentifier::BUFFER_SIZE];
     };
 
-    static IdentifierRegistrar<SprintfIdentifier> registrar("sprintf");
+    static IdentifierRegistrar<SprintfIdentifier> registrar_sprintf("sprintf");
 }
 
 

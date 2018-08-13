@@ -8,11 +8,16 @@
 #include "identifiers/fbf-sprintf.h"
 
 fbf::SprintfIdentifier::SprintfIdentifier(uintptr_t location) :
-                            FunctionIdentifier(location, "sprintf") { }
+                            FunctionIdentifier(location, getName()) { }
 
 fbf::SprintfIdentifier::SprintfIdentifier()  : FunctionIdentifier() {}
 
 fbf::SprintfIdentifier::~SprintfIdentifier() = default;
+
+const std::string& fbf::SprintfIdentifier::getName() {
+    static const std::string name = "sprintf";
+    return name;
+}
 
 int fbf::SprintfIdentifier::evaluate() {
     auto func = reinterpret_cast<int (*)(char*, const char*, ...)>(location_);

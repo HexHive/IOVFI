@@ -1,25 +1,30 @@
 CC := gcc
-CFLAGS := -s -c -static
+CFLAGS := -g -static
 BUILD_DIR := build
 DESC_DIR := desc
 PWD=$(shell echo $$PWD)
 
-READELF := readelf -S
+OBJDUMP := objdump -d
 GREP := grep
-AWK := awk
+AWK := awk -f
+AWK_SCRIPT := parse_funcs.awk
 
-TEST_SECTION := ".text.fosbintest"
+FUNC_REGEX := "[0-9a-f]* <[a-zA-Z0-9_]*>:"
 
 SRC_FILES := $(wildcard *.c)
 TESTS := $(patsubst %.c, ${BUILD_DIR}/%, ${SRC_FILES})
+DESC_FILES := $(patsubst ${BUILD_DIR}/%, ${DESC_DIR}/%.desc, ${TESTS})
 
 all: build-dir ${TESTS}
+
+desc: all
 
 clean: ; rm -rf ${BUILD_DIR} ${DESC_DIR}
 
 build-dir: ; mkdir -p ${BUILD_DIR} ${DESC_DIR}
 
 ${BUILD_DIR}/%: %.c 
-	$(shell ${CC} ${CFLAGS} -o $@ $^ && ${READELF} $@ | ${GREP} ${TEST_SECTION} | ${AWK} '{ print "binary=${PWD}/$@"; printf "addr=%s\n", $$6; }' > ${DESC_DIR}/$(notdir $@).desc )
+	${CC} ${CFLAGS} -o $@ $^
 
-${BUILD_DIR}/%:
+${DESC_DIR}/%.desc: ${BUILD_DIR}/%
+    ${OBJDUMP} $^ | ${GREP} ${FUNC_REGEX} | ${AWK} 'BEGIN { printf "binary=$^\n" } { printf "addr=0x%s\n", $1 }' > $@

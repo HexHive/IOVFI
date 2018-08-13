@@ -17,13 +17,14 @@ namespace fbf {
 
         int evaluate() override;
         void setup() override;
+        const std::string& getName();
 
     protected:
         char src_[FunctionIdentifier::BUFFER_SIZE];
         char dst_[FunctionIdentifier::BUFFER_SIZE];
     };
 
-    static IdentifierRegistrar<MemcpyIdentifier> registrar("memcpy");
+    static IdentifierRegistrar<MemcpyIdentifier> registrar_memcpy("memcpy");
 }
 
 #endif //FOSBIN_FLOP_MEMCPY_H
