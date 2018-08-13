@@ -24,8 +24,6 @@ namespace fbf {
         const static int PASS = std::numeric_limits<int>::max();
         const static int FAIL = std::numeric_limits<int>::min();
 
-        virtual const std::string& getName() = 0;
-
     protected:
         uintptr_t location_;
         std::string functionName_;

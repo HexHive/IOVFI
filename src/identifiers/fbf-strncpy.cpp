@@ -6,16 +6,11 @@
 #include <cstring>
 
 fbf::StrncpyIdentifier::StrncpyIdentifier(uintptr_t location) :
-        StrcpyIdentifier(location) {}
+        StrcpyIdentifier(location, "strncpy") {}
 
 fbf::StrncpyIdentifier::StrncpyIdentifier() : StrcpyIdentifier() {}
 
-size_t fbf::StrncpyIdentifier::BYTES_COPIED = fbf::FunctionIdentifier::BUFFER_SIZE / 4;
-
-const std::string& fbf::StrncpyIdentifier::getName() {
-    static const std::string name = "strncpy";
-    return name;
-}
+const size_t fbf::StrncpyIdentifier::BYTES_COPIED = fbf::FunctionIdentifier::BUFFER_SIZE / 4;
 
 int fbf::StrncpyIdentifier::evaluate() {
     auto func = reinterpret_cast<char *(*)(char *, const char *, size_t)>(location_);

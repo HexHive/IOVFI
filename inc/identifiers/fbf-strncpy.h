@@ -14,9 +14,8 @@ namespace fbf {
         StrncpyIdentifier();
 
         int evaluate() override;
-        const std::string& getName() override;
 
-        static size_t BYTES_COPIED;
+        const static size_t BYTES_COPIED;
     };
 
     static IdentifierRegistrar<StrncpyIdentifier> registrar_strncpy("strncpy");

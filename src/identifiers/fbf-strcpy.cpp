@@ -4,18 +4,18 @@
 
 #include "identifiers/fbf-strcpy.h"
 #include <cstring>
+#include <identifiers/fbf-strcpy.h>
+
 
 fbf::StrcpyIdentifier::StrcpyIdentifier(uintptr_t location) :
-        FunctionIdentifier(location, getName()) { }
+        FunctionIdentifier(location, "strcpy") { }
 
 fbf::StrcpyIdentifier::StrcpyIdentifier() : FunctionIdentifier() {}
 
 fbf::StrcpyIdentifier::~StrcpyIdentifier() = default;
 
-const std::string& fbf::StrcpyIdentifier::getName() {
-    static const std::string name = "strcpy";
-    return name;
-}
+fbf::StrcpyIdentifier::StrcpyIdentifier(uintptr_t location, const std::string &subclass_name) :
+        FunctionIdentifier(location, subclass_name) { }
 
 void fbf::StrcpyIdentifier::setup() {
     int src_val = 0;

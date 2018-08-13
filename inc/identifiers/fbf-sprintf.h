@@ -18,7 +18,6 @@ namespace fbf {
 
         int evaluate() override;
         void setup() override;
-        const std::string& getName();
 
     protected:
         const char *format_ = "%d %d";

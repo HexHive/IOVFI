@@ -17,11 +17,12 @@ namespace fbf {
 
         virtual int evaluate() override;
         virtual void setup() override;
-        virtual const std::string& getName();
 
     protected:
         char src_[FunctionIdentifier::BUFFER_SIZE];
         char dst_[FunctionIdentifier::BUFFER_SIZE];
+
+        StrcpyIdentifier(uintptr_t location, const std::string& subclass_name);
     };
 
     static IdentifierRegistrar<StrcpyIdentifier> registrar_strcpy("strcpy");

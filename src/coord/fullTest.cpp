@@ -35,8 +35,11 @@ fbf::FullTest::~FullTest() {
 }
 
 void fbf::FullTest::run() {
+    size_t test_num = 0;
     for (std::vector<std::shared_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
          it != testRuns_.end(); ++it) {
+        std::cout << "Running measurement " << ++test_num << " of "
+            << testRuns_.size() << std::endl;
         (*it)->run_test();
     }
 }

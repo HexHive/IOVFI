@@ -62,3 +62,11 @@ void fbf::TestRun::output_results(std::ostream &out) {
         << ((result_ == fbf::FunctionIdentifier::PASS) ? "positive" : "negative")
         << std::endl;
 }
+
+test_result_t fbf::TestRun::get_result() {
+    if(!test_has_run_) {
+        run_test();
+    }
+
+    return result_;
+}

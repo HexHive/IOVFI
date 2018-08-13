@@ -17,7 +17,6 @@ namespace fbf {
 
         int evaluate() override;
         void setup() override;
-        const std::string& getName();
 
         const static int OFFSET;
 

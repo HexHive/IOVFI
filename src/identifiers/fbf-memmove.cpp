@@ -6,7 +6,7 @@
 #include <cstring>
 
 fbf::MemmoveIdentifier::MemmoveIdentifier(uintptr_t location) :
-    FunctionIdentifier(location, getName()) {}
+    FunctionIdentifier(location, "memmove") {}
 
 fbf::MemmoveIdentifier::MemmoveIdentifier() : FunctionIdentifier() {}
 
@@ -44,9 +44,4 @@ void fbf::MemmoveIdentifier::setup() {
     for(size_t i = 0; i < sizeof(src_); i++) {
         src_[i] = (char)FunctionIdentifier::rand();
     }
-}
-
-const std::string &fbf::MemmoveIdentifier::getName() {
-    static const std::string name = "memmove";
-    return name;
 }
