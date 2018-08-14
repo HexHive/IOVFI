@@ -18,6 +18,9 @@ namespace fbf {
         bool test_has_run_;
 
         test_result_t determine_result(pid_t);
+        void set_signals();
+
+        static const unsigned int TIMEOUT;
     public:
         TestRun(std::shared_ptr<fbf::FunctionIdentifier> test);
         ~TestRun();

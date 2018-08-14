@@ -16,6 +16,17 @@ fbf::TestRun::TestRun(std::shared_ptr<fbf::FunctionIdentifier> test) :
 
 fbf::TestRun::~TestRun() = default;
 
+const unsigned int fbf::TestRun::TIMEOUT = 2;
+
+static void alarm_handler(int signum) {
+    exit(fbf::FunctionIdentifier::FAIL);
+}
+
+void fbf::TestRun::set_signals() {
+    signal(SIGALRM, alarm_handler);
+    alarm(TIMEOUT);
+}
+
 void fbf::TestRun::run_test() {
     if(test_has_run_) {
         return;
@@ -26,6 +37,7 @@ void fbf::TestRun::run_test() {
     if(pid < 0) {
         throw std::runtime_error("Failed to fork");
     } else if(pid == 0) {
+        set_signals();
         exit(test_->run_test());
     } else {
         result_ = determine_result(pid);
