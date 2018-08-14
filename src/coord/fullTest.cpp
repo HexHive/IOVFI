@@ -117,7 +117,9 @@ void fbf::FullTest::parse_descriptor() {
         throw std::runtime_error("Failed to get binary stats");
     }
 
-    void* offset = mmap(NULL, st.st_size, PROT_EXEC | PROT_READ, MAP_PRIVATE, fd, 0);
+    void* offset = mmap(NULL, st.st_size,
+            PROT_EXEC | PROT_READ | PROT_WRITE,
+            MAP_PRIVATE, fd, 0);
     if(!offset) {
         close(fd);
         throw std::runtime_error("Failed to memory map binary");

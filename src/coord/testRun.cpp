@@ -37,9 +37,11 @@ test_result_t fbf::TestRun::determine_result(pid_t child) {
     waitpid(child, &status, 0);
     if(WIFSIGNALED(status)) {
         /* SIGILL, SIGSEGV, etc. caused the child to stop...not what we are looking for */
-        return WTERMSIG(status);
+        return fbf::FunctionIdentifier::FAIL;
     } else if(WIFEXITED(status)) {
-        return WEXITSTATUS(status);
+        return (WEXITSTATUS(status) == 255 ?
+            fbf::FunctionIdentifier::PASS :
+            fbf::FunctionIdentifier::FAIL);
     } else {
         std::string msg = "Unexpected child exit status: ";
         msg += status;
