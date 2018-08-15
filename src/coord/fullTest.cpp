@@ -135,7 +135,7 @@ void fbf::FullTest::parse_descriptor() {
             it2 != identifiers.end(); ++it2) {
             std::shared_ptr<fbf::FunctionIdentifier> id =
                     fbf::IdentifierFactory::Instance()->CreateIdentifier(*it2, addr);
-            testRuns_.push_back(std::make_shared<fbf::TestRun>(id));
+            testRuns_.push_back(std::make_shared<fbf::TestRun>(id, *it));
         }
     }
 }

@@ -9,9 +9,10 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-fbf::TestRun::TestRun(std::shared_ptr<fbf::FunctionIdentifier> test) :
+fbf::TestRun::TestRun(std::shared_ptr<fbf::FunctionIdentifier> test, uintptr_t offset) :
     test_(test),
     test_has_run_(false),
+    offset_(offset),
     result_(std::numeric_limits<int>::max()) { }
 
 fbf::TestRun::~TestRun() = default;
@@ -69,9 +70,9 @@ void fbf::TestRun::output_results(std::ostream &out) {
 
     out << "Result for "
         << test_->getFunctionName()
-        << " at 0x"
+        << " at offset 0x"
         << std::hex
-        << test_->get_location()
+        << offset_
         << ": "
         << ((result_ == fbf::FunctionIdentifier::PASS) ? "positive" : "negative")
         << std::endl;

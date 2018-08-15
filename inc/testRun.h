@@ -16,13 +16,14 @@ namespace fbf {
         std::shared_ptr<fbf::FunctionIdentifier> test_;
         test_result_t result_;
         bool test_has_run_;
+        uintptr_t offset_;
 
         test_result_t determine_result(pid_t);
         void set_signals();
 
         static const unsigned int TIMEOUT;
     public:
-        TestRun(std::shared_ptr<fbf::FunctionIdentifier> test);
+        TestRun(std::shared_ptr<fbf::FunctionIdentifier> test, uintptr_t offset);
         ~TestRun();
         void run_test();
         void output_results(std::ostream& out);
