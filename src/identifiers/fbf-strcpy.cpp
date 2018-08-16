@@ -32,9 +32,10 @@ void fbf::StrcpyIdentifier::setup() {
 }
 
 int fbf::StrcpyIdentifier::evaluate() {
-    auto func = reinterpret_cast<char *(*)(char *, const char *)>(location_);
+    /* Make variadic to test that location_ is NOT strncpy */
+    auto func = reinterpret_cast<char *(*)(char *, const char *, ...)>(location_);
     char before = dst_[sizeof(dst_) / 2];
-    char *test = func(dst_, src_);
+    char *test = func(dst_, src_, 0);
     FBF_ASSERT(test == dst_);
     FBF_ASSERT(std::strcmp(dst_, src_) == 0);
 
@@ -42,5 +43,6 @@ int fbf::StrcpyIdentifier::evaluate() {
     for(size_t i = sizeof(dst_) / 2 + 1; i < sizeof(dst_); i++) {
         FBF_ASSERT(dst_[i] == before);
     }
+
     return FunctionIdentifier::PASS;
 }

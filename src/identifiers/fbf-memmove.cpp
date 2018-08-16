@@ -31,7 +31,7 @@ int fbf::MemmoveIdentifier::evaluate() {
 
     void* test = func(src_ + OFFSET, src_, sizeof(src_) - OFFSET);
     FBF_ASSERT(test == src_ + OFFSET);
-    FBF_ASSERT(std::memcmp(src_ + OFFSET, orig, sizeof(orig)));
+    FBF_ASSERT(std::memcmp(src_ + OFFSET, orig, sizeof(orig)) == 0);
 
     return FunctionIdentifier::PASS;
 }
@@ -43,5 +43,11 @@ void fbf::MemmoveIdentifier::setup() {
      */
     for(size_t i = 0; i < sizeof(src_); i++) {
         src_[i] = (char)FunctionIdentifier::rand();
+        if(src_[i] == 0) {
+            src_[i] = (char)FunctionIdentifier::rand();
+        }
     }
+
+    /* Exclude the possibility of string copying related false positives */
+    src_[sizeof(src_) / 2] = '\0';
 }
