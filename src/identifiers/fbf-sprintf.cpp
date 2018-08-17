@@ -19,8 +19,8 @@ int fbf::SprintfIdentifier::evaluate() {
     int rand1 = FunctionIdentifier::rand();
     int rand2 = FunctionIdentifier::rand();
 
-    int test1 = func(dst1_, format_, rand1, rand2);
     int test2 = std::sprintf(dst2_, format_, rand1, rand2);
+    int test1 = func(dst1_, format_, rand1, rand2);
 
     FBF_ASSERT(test1 == test2);
     FBF_ASSERT(std::strcmp(dst1_, dst2_) == 0);

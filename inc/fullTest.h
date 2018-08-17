@@ -8,16 +8,21 @@
 #include <experimental/filesystem>
 #include <testRun.h>
 #include <iostream>
+#include <binSection.h>
 
 namespace fs = std::experimental::filesystem;
 
 namespace fbf {
     class FullTest {
+    protected:
         std::vector<std::shared_ptr<fbf::TestRun>> testRuns_;
         fs::path descriptor_, bin_path_;
-        uintptr_t mmap_loc_;
-        size_t mmap_size_;
+        BinSection text_;
+        BinSection data_;
+        BinSection bss_;
+
         void parse_descriptor();
+        uintptr_t parse_offset(std::string& offset);
 
     public:
         FullTest(fs::path descriptor);
