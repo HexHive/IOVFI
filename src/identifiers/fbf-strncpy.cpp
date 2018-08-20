@@ -23,5 +23,16 @@ int fbf::StrncpyIdentifier::evaluate() {
     for(size_t i = BYTES_COPIED + 1; i < sizeof(dst_); i++) {
         FBF_ASSERT(dst_[i] == before);
     }
+
+    src_[1] = '\0';
+    std::memset(dst_, before, sizeof(dst_));
+    func(dst_, src_, BYTES_COPIED);
+
+    FBF_ASSERT(dst_[1] == '\0');
+    FBF_ASSERT(dst_[0] == src_[0]);
+    for(size_t i = 2; i < sizeof(dst_); i++) {
+        FBF_ASSERT(dst_[i] == before);
+    }
+
     return FunctionIdentifier::PASS;
 }
