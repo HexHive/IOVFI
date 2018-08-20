@@ -20,5 +20,5 @@ for t in `ls build/`; do
         awk -v text_va=$TEXT_VA -v text_off=$TEXT_OFFSET -v bin=$PWD/build/$t \
         -v bss_size=$BSS_SIZE -v bss_off=$BSS_OFFSET \
         'BEGIN { print "binary=" bin; print "bss_offset=" bss_off; print "bss_size=" bss_size; } \
-        { if($4 == "FUNC") { va = "0x"$2; print "addr=" (va - text_va + text_off); } }' > desc/$t.desc
+        { if($4 == "FUNC") { va = "0x"$2; printf "addr=0x%x\n", (strtonum(va) - strtonum(text_va) + strtonum(text_off));  } }' > desc/$t.desc
 done
