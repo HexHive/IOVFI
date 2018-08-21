@@ -11,10 +11,11 @@
 namespace fbf {
     class BinSection {
     public:
-        BinSection(uintptr_t location, size_t size);
+        BinSection(uintptr_t location, uintptr_t offset, size_t size);
         BinSection();
-        uintptr_t location_;
+        uintptr_t offset_;
         size_t size_;
+        uintptr_t location_;
     };
 }
 

@@ -1,3 +1,5 @@
+outputs/
+.gdb_history
 cmake-build-*/
 
 .idea/

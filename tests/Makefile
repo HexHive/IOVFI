@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -g -static
+CFLAGS := -g -static -Wl,-M
 BUILD_DIR := build
 DESC_DIR := desc
 PWD=$(shell echo $$PWD)
