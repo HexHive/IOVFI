@@ -5,7 +5,7 @@ if [[ $# != 1 ]]; then
     exit 1
 fi
 
-BIN=$1
+BIN=`realpath $1`
 
 IFS=', ' read -r -a array <<< $(readelf -S $BIN 2> /dev/null | awk '{ if($3 == ".text") { print $5 "," $6;} }')
 TEXT_VA=0x${array[0]}
