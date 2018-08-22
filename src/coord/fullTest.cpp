@@ -47,7 +47,8 @@ void fbf::FullTest::run() {
     size_t test_num = 0;
     for (std::vector<std::shared_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
          it != testRuns_.end(); ++it) {
-        std::cout << "Running measurement " << ++test_num << " of "
+        std::cout << "Running measurement " << ++test_num
+                  << " (offset " << std::hex << (*it)->get_offset() << ") of "
                   << testRuns_.size() << std::endl;
         (*it)->run_test();
     }
@@ -111,22 +112,22 @@ void fbf::FullTest::parse_descriptor() {
             continue;
         } else if (key == "data_size" ||
                    key == "bss_size") {
-            size_t size = (size_t)parse_offset(val);
+            size_t size = (size_t) parse_offset(val);
             if (key == "data_size") {
                 data_.size_ = size;
             } else {
                 bss_.size_ = size;
             }
             continue;
-        } else if(key == "bss_location") {
+        } else if (key == "bss_location") {
             uintptr_t location = parse_offset(val);
             bss_.location_ = location;
-        } else if(key == "bss_offset") {
+        } else if (key == "bss_offset") {
             bss_.offset_ = parse_offset(val);
-        } else if(key == "data_location") {
+        } else if (key == "data_location") {
             uintptr_t location = parse_offset(val);
             data_.location_ = location;
-        } else if(key == "data_offset") {
+        } else if (key == "data_offset") {
             data_.offset_ = parse_offset(val);
         } else {
             std::string msg = "Unknown key: ";
@@ -162,7 +163,7 @@ void fbf::FullTest::parse_descriptor() {
     close(fd);
     text_.location_ = (uintptr_t) offset;
 
-    if(bss_.size_ > 0) {
+    if (bss_.size_ > 0) {
         offset = mmap((void *) (text_.location_ + bss_.location_),
                       bss_.size_, PROT_READ | PROT_WRITE,
                       MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
@@ -173,14 +174,14 @@ void fbf::FullTest::parse_descriptor() {
             throw std::runtime_error(msg);
         }
         bss_.location_ = (uintptr_t) offset;
-        std::memcpy((void*)bss_.location_, (void*)(text_.location_ + bss_.offset_), bss_.size_);
+        std::memcpy((void *) bss_.location_, (void *) (text_.location_ + bss_.offset_), bss_.size_);
     }
 
-    if(data_.size_ > 0) {
-        offset = mmap((void*) (text_.location_ + data_.location_),
-                data_.size_, PROT_READ | PROT_WRITE,
-                MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
-        if(offset == MAP_FAILED) {
+    if (data_.size_ > 0) {
+        offset = mmap((void *) (text_.location_ + data_.location_),
+                      data_.size_, PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+        if (offset == MAP_FAILED) {
             char *err = strerror(errno);
             std::string msg = "Failed to memory map data: ";
             msg += err;

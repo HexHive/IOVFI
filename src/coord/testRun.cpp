@@ -19,13 +19,18 @@ fbf::TestRun::~TestRun() = default;
 
 const unsigned int fbf::TestRun::TIMEOUT = 2;
 
-static void alarm_handler(int signum) {
+static void sig_handler(int signum) {
     exit(fbf::FunctionIdentifier::FAIL);
 }
 
 void fbf::TestRun::set_signals() {
-    signal(SIGALRM, alarm_handler);
+    signal(SIGALRM, sig_handler);
+    signal(SIGINT, sig_handler);
     alarm(TIMEOUT);
+}
+
+uintptr_t fbf::TestRun::get_offset() {
+    return offset_;
 }
 
 void fbf::TestRun::run_test() {
@@ -44,6 +49,8 @@ void fbf::TestRun::run_test() {
         result_ = determine_result(pid);
     }
 }
+
+
 
 test_result_t fbf::TestRun::determine_result(pid_t child) {
     int status;
