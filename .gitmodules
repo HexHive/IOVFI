@@ -1,0 +1,4 @@
+[submodule "src/llvm"]
+	path = src/llvm
+	url = git@github.com:deadly-platypus/llvm.git
+	branch = fosbin-flop
