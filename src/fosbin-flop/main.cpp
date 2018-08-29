@@ -1,7 +1,7 @@
 #include <iostream>
-#include "fosbin-flop.h"
+#include "fosbin-flop/fosbin-flop.h"
 #include <experimental/filesystem>
-#include <fullTest.h>
+#include <fosbin-flop/fullTest.h>
 
 void usage() {
     std::cout << "fosbin-flop <path to binary descriptor>" << std::endl;

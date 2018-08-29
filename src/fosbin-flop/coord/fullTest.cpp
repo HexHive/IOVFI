@@ -2,7 +2,7 @@
 // Created by derrick on 7/8/18.
 //
 
-#include "fullTest.h"
+#include "fosbin-flop/fullTest.h"
 #include <fstream>
 #include <set>
 #include <algorithm>

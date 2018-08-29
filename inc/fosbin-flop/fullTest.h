@@ -6,9 +6,9 @@
 #define FOSBIN_FLOP_FULLTEST_H
 
 #include <experimental/filesystem>
-#include <testRun.h>
+#include <fosbin-flop/testRun.h>
 #include <iostream>
-#include <binSection.h>
+#include <fosbin-flop/binSection.h>
 
 namespace fs = std::experimental::filesystem;
 
