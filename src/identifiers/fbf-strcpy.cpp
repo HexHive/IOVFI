@@ -29,6 +29,7 @@ void fbf::StrcpyIdentifier::setup() {
 
     /* Cut off the string in the middle for confirming that dst_ isn't overwritten */
     src_[sizeof(src_) / 2] = '\0';
+    src_[sizeof(src_) - 1] = '\0';
 }
 
 int fbf::StrcpyIdentifier::evaluate() {

@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <cstring>
+#include <termios.h>
 
 namespace fs = std::experimental::filesystem;
 
@@ -45,19 +46,31 @@ fbf::FullTest::~FullTest() {
 
 void fbf::FullTest::run() {
     size_t test_num = 0;
+    struct termios in, out, err;
+    tcgetattr(0, &in);
+    tcgetattr(1, &out);
+    tcgetattr(2, &err);
+
     for (std::vector<std::shared_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
          it != testRuns_.end(); ++it) {
+        std::stringstream offset;
+        offset << std::hex << (*it)->get_offset();
+        tcsetattr(0, 0, &in);
+        tcsetattr(1, 0, &out);
+        tcsetattr(2, 0, &err);
         std::cout << "Running measurement " << ++test_num
-                  << " (offset " << std::hex << (*it)->get_offset() << ") of "
+                  << " (offset 0x" << offset.str() << ") of "
                   << testRuns_.size() << std::endl;
         (*it)->run_test();
     }
 }
 
 void fbf::FullTest::output(std::ostream &out) {
-    for (std::vector<std::shared_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
-         it != testRuns_.end(); ++it) {
-        (*it)->output_results(out);
+    size_t i = 0;
+    size_t total = testRuns_.size();
+    for (; i < total; i++) {
+        out << "Outputting " << i << " of " << total - 1 << std::endl;
+        testRuns_[i]->output_results(out);
     }
 }
 

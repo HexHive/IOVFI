@@ -8,6 +8,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sstream>
 
 fbf::TestRun::TestRun(std::shared_ptr<fbf::FunctionIdentifier> test, uintptr_t offset) :
     test_(test),
@@ -50,8 +51,6 @@ void fbf::TestRun::run_test() {
     }
 }
 
-
-
 test_result_t fbf::TestRun::determine_result(pid_t child) {
     int status;
     waitpid(child, &status, 0);
@@ -71,16 +70,24 @@ test_result_t fbf::TestRun::determine_result(pid_t child) {
 
 void fbf::TestRun::output_results(std::ostream &out) {
     /* TODO: Implement a better version of this */
+    std::stringstream ss;
+    ss << std::hex << offset_;
+
     if(!test_has_run_) {
-        run_test();
+        out << "Test for "
+        << test_->getFunctionName()
+        << " at offset 0x"
+        << ss.str()
+        << " was not run"
+        << std::endl;
+        return;
     }
 
     out << "Result for "
         << test_->getFunctionName()
         << " at offset 0x"
-        << std::hex
-        << offset_
-        << ": "
+        << ss.str()
+        << " : "
         << ((result_ == fbf::FunctionIdentifier::PASS) ? "positive" : "negative")
         << std::endl;
 }
