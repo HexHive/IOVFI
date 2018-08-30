@@ -1,9 +1,16 @@
+set( CMAKE_C_COMPILER clang )
+set( CMAKE_CXX_COMPILER clang++ )
+set( LLVM_PARALLEL_LINK_JOBS "2" )
+
 cmake_minimum_required( VERSION 3.10.2 )
 
 project( fosbin-flop )
 
 set( LIBRARY_NAME fosbin-scribe )
 set( EXE_NAME ${PROJECT_NAME} )
+
+set (CMAKE_BUILD_TYPE Debug)
+set ( LLVM_TARGETS_TO_BUILD "X86" )
 
 set( ${PROJECT_NAME}-VERSION-MAJOR 0 )
 set( ${PROJECT_NAME}-VERSION-MINOR 2 )
