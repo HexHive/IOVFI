@@ -1,7 +1,11 @@
 import json
 import sys
 
+MAX_TESTS = 10
+
 functions = {}
+
+function_names = {}
 
 type_ids = {
     0 : "void",
@@ -23,16 +27,28 @@ type_ids = {
     16: ""
 }
 
+
+def parse_function_names(filename):
+    with open(filename, "r") as f:
+        for line in f.readlines():
+            line = line.strip()
+            if line != "":
+                tokens = line.split("=")
+                function_names[tokens[0]] = tokens[1]
+
+
 def usage():
-    print("{} <path to json> [<path to json>...]")
+    print("{} <path to json> <path to function name mapping>".format(sys.argv[0]))
 
 
 def get_class_name(func):
-    return "Func" + func + "Identifier"
+    func_name = get_func_name(func)
+
+    return "Func" + func_name.capitalize() + "Identifier"
 
 
 def get_func_name(funcaddr):
-    return funcaddr
+    return function_names[funcaddr]
 
 
 def output_header(func):
@@ -41,6 +57,7 @@ def output_header(func):
     print("namespace fbf {")
 
     idname = get_class_name(func)
+    func_name = get_func_name(func)
 
     print("\tclass {} : public FunctionIdentifier {{".format(idname))
     print("\tpublic:")
@@ -51,7 +68,7 @@ def output_header(func):
     print("\t\tvoid setup() override;")
 
     print("\t};\n")
-    print("\tstatic IdentifierRegistrar<{}> registrar_{}(\"{}\");\n}}".format(idname, func, func))
+    print("\tstatic IdentifierRegistrar<{}> registrar_{}(\"{}\");\n}}".format(idname, func_name, func_name))
 
 
 def output_type(argtype):
@@ -113,7 +130,7 @@ def output_definition(func):
     for test in tests:
         print("\t" + gen_test_str(test))
 
-    print("}")
+    print("\treturn FunctionIdentifier::PASS;\n}")
 
 
 def output_identifier():
@@ -123,15 +140,23 @@ def output_identifier():
 
 
 def main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         usage()
         exit(1)
+
+    parse_function_names(sys.argv[2])
 
     file = open(sys.argv[1])
     try:
         decoded = json.load(file)
         for funcent in decoded['functions']:
             func = funcent['function']
+            if func['addr'] not in function_names:
+                continue
+
+            if func['addr'] in functions and len(functions[func['addr']]) > MAX_TESTS:
+                continue
+
             if func['addr'] not in functions:
                 functions[func["addr"]] = []
 
