@@ -19,6 +19,7 @@ fbf::TestRun::TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset) :
 fbf::TestRun::~TestRun() = default;
 
 const unsigned int fbf::TestRun::TIMEOUT = 2;
+const int fbf::TestRun::MAX_FAIL_RATE = 40;
 
 static void sig_handler(int signum) {
     exit(fbf::ITestCase::FAIL);
@@ -35,15 +36,15 @@ uintptr_t fbf::TestRun::get_offset() {
 }
 
 void fbf::TestRun::run_test() {
-    if(test_has_run_) {
+    if (test_has_run_) {
         return;
     }
     test_has_run_ = true;
 
     pid_t pid = fork();
-    if(pid < 0) {
+    if (pid < 0) {
         throw std::runtime_error("Failed to fork");
-    } else if(pid == 0) {
+    } else if (pid == 0) {
         set_signals();
         exit(test_->run_test());
     } else {
@@ -54,7 +55,7 @@ void fbf::TestRun::run_test() {
 test_result_t fbf::TestRun::determine_result(pid_t child) {
     int status;
     waitpid(child, &status, 0);
-    if(WIFSIGNALED(status)) {
+    if (WIFSIGNALED(status)) {
         /* SIGILL, SIGSEGV, etc. caused the child to stop...not what we are looking for */
         return fbf::ITestCase::FAIL;
     } else if(WIFEXITED(status)) {
@@ -73,7 +74,7 @@ void fbf::TestRun::output_results(std::ostream &out) {
     std::stringstream ss;
     ss << std::hex << offset_;
 
-    if(!test_has_run_) {
+    if (!test_has_run_) {
         out << "Test for "
         << test_->get_test_name()
         << " at offset 0x"
@@ -93,7 +94,7 @@ void fbf::TestRun::output_results(std::ostream &out) {
 }
 
 test_result_t fbf::TestRun::get_result() {
-    if(!test_has_run_) {
+    if (!test_has_run_) {
         run_test();
     }
 

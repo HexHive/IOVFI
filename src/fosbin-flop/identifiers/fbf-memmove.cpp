@@ -30,7 +30,7 @@ int fbf::MemmoveIdentifier::evaluate() {
     std::memcpy(orig, src_, sizeof(orig));
 
     void* test = func(src_ + OFFSET, src_, sizeof(src_) - OFFSET);
-    FBF_ASSERT(test == src_ + OFFSET);
+    FBF_MAJOR_ASSERT(test == src_ + OFFSET);
     FBF_ASSERT(std::memcmp(src_ + OFFSET, orig, sizeof(orig)) == 0);
 
     return ITestCase::PASS;

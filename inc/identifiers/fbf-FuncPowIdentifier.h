@@ -7,7 +7,7 @@ namespace fbf {
         explicit FuncPowIdentifier(uintptr_t location);
         explicit FuncPowIdentifier();
         ~FuncPowIdentifier();
-        int evaluate() override;
+        void evaluate() override;
         void setup() override;
     };
 

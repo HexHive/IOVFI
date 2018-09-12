@@ -20,18 +20,22 @@ namespace fbf {
         virtual int run_test();
         uintptr_t get_location();
         const std::string get_test_name();
+        int get_total_tests();
+        int get_failed_tests();
 
         const static size_t BUFFER_SIZE = 32;
 
     protected:
         uintptr_t location_;
         std::string functionName_;
+        int totalTests_, failedTests_;
 
         virtual int evaluate() = 0;
         virtual void setup();
     };
 
-#define FBF_ASSERT(x) if(!(x)) { return fbf::ITestCase::FAIL; }
+#define FBF_MAJOR_ASSERT(x) {totalTests_++; if(!(x)) { failedTests_++; return; }}
+#define FBF_ASSERT(x) {totalTests_++; if(!(x)) { failedTests_++; }}
 }
 
 #endif //FOSBIN_FLOP_FUNCTIONIDENTIFIER_H

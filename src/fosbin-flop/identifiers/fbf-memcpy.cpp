@@ -15,13 +15,13 @@ void fbf::MemcpyIdentifier::setup() {
     src_[1] = '\0';
 }
 
-int fbf::MemcpyIdentifier::evaluate() {
+void fbf::MemcpyIdentifier::evaluate() {
     auto func = reinterpret_cast<void *(*)(void *, const void *, size_t)>(location_);
     void *test = func(dst_, src_, FunctionIdentifier::BUFFER_SIZE / 2);
 
     char zero[FunctionIdentifier::BUFFER_SIZE / 2];
     std::memset(zero, 0, sizeof(zero));
-    FBF_ASSERT(test == dst_);
+    FBF_MAJOR_ASSERT(test == dst_);
     FBF_ASSERT(std::memcmp(src_, dst_, FunctionIdentifier::BUFFER_SIZE / 2) == 0);
     FBF_ASSERT(std::memcmp(dst_ + FunctionIdentifier::BUFFER_SIZE / 2, zero, sizeof(zero)) == 0);
 
