@@ -23,17 +23,15 @@ const int fbf::MemmoveIdentifier::OFFSET = 2;
  * the original data should be written to dest regardless of what is there after
  * the write starts.
  */
-int fbf::MemmoveIdentifier::evaluate() {
+void fbf::MemmoveIdentifier::evaluate() {
     auto func = reinterpret_cast<void *(*)(void *, const void *, size_t)>(location_);
 
     char orig[FunctionIdentifier::BUFFER_SIZE - OFFSET];
     std::memcpy(orig, src_, sizeof(orig));
 
     void* test = func(src_ + OFFSET, src_, sizeof(src_) - OFFSET);
-    FBF_ASSERT(test == src_ + OFFSET);
+    FBF_MAJOR_ASSERT(test == src_ + OFFSET);
     FBF_ASSERT(std::memcmp(src_ + OFFSET, orig, sizeof(orig)) == 0);
-
-    return FunctionIdentifier::PASS;
 }
 
 void fbf::MemmoveIdentifier::setup() {

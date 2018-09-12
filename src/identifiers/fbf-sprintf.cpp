@@ -14,7 +14,7 @@ fbf::SprintfIdentifier::SprintfIdentifier()  : FunctionIdentifier() {}
 
 fbf::SprintfIdentifier::~SprintfIdentifier() = default;
 
-int fbf::SprintfIdentifier::evaluate() {
+void fbf::SprintfIdentifier::evaluate() {
     auto func = reinterpret_cast<int (*)(char*, const char*, ...)>(location_);
     int rand1 = FunctionIdentifier::rand();
     int rand2 = FunctionIdentifier::rand();
@@ -22,9 +22,8 @@ int fbf::SprintfIdentifier::evaluate() {
     int test2 = std::sprintf(dst2_, format_, rand1, rand2);
     int test1 = func(dst1_, format_, rand1, rand2);
 
-    FBF_ASSERT(test1 == test2);
-    FBF_ASSERT(std::strcmp(dst1_, dst2_) == 0);
-    return FunctionIdentifier::PASS;
+    FBF_MAJOR_ASSERT(test1 == test2);
+    FBF_MAJOR_ASSERT(std::strcmp(dst1_, dst2_) == 0);
 }
 
 void fbf::SprintfIdentifier::setup() {

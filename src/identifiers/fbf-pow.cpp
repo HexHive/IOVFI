@@ -11,7 +11,7 @@ fbf::FuncPowIdentifier::~FuncPowIdentifier() = default;
 
 void fbf::FuncPowIdentifier::setup() { }
 
-int fbf::FuncPowIdentifier::evaluate() {
+void fbf::FuncPowIdentifier::evaluate() {
     auto func = reinterpret_cast<double (*)(double, double)>(location_);
     FBF_ASSERT(1 == func(0, 0));
     FBF_ASSERT(0 == func(2, -1075));
@@ -23,5 +23,4 @@ int fbf::FuncPowIdentifier::evaluate() {
     FBF_ASSERT(1.49278e+16 == func(246225, 3));
     FBF_ASSERT(9.68744e+15 == func(213175, 3));
     FBF_ASSERT(1.07782e+16 == func(220893, 3));
-    return FunctionIdentifier::PASS;
 }

@@ -22,6 +22,7 @@ namespace fbf {
         void set_signals();
 
         static const unsigned int TIMEOUT;
+        static const int MAX_FAIL_RATE;
     public:
         TestRun(std::shared_ptr<fbf::FunctionIdentifier> test, uintptr_t offset);
         ~TestRun();

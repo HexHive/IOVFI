@@ -11,14 +11,15 @@
 #include <sstream>
 
 fbf::TestRun::TestRun(std::shared_ptr<fbf::FunctionIdentifier> test, uintptr_t offset) :
-    test_(test),
-    test_has_run_(false),
-    offset_(offset),
-    result_(std::numeric_limits<int>::max()) { }
+        test_(test),
+        test_has_run_(false),
+        offset_(offset),
+        result_(std::numeric_limits<int>::max()) {}
 
 fbf::TestRun::~TestRun() = default;
 
 const unsigned int fbf::TestRun::TIMEOUT = 2;
+const int fbf::TestRun::MAX_FAIL_RATE = 40;
 
 static void sig_handler(int signum) {
     exit(fbf::FunctionIdentifier::FAIL);
@@ -35,15 +36,15 @@ uintptr_t fbf::TestRun::get_offset() {
 }
 
 void fbf::TestRun::run_test() {
-    if(test_has_run_) {
+    if (test_has_run_) {
         return;
     }
     test_has_run_ = true;
 
     pid_t pid = fork();
-    if(pid < 0) {
+    if (pid < 0) {
         throw std::runtime_error("Failed to fork");
-    } else if(pid == 0) {
+    } else if (pid == 0) {
         set_signals();
         exit(test_->run_test());
     } else {
@@ -54,13 +55,15 @@ void fbf::TestRun::run_test() {
 test_result_t fbf::TestRun::determine_result(pid_t child) {
     int status;
     waitpid(child, &status, 0);
-    if(WIFSIGNALED(status)) {
+    if (WIFSIGNALED(status)) {
         /* SIGILL, SIGSEGV, etc. caused the child to stop...not what we are looking for */
         return fbf::FunctionIdentifier::FAIL;
-    } else if(WIFEXITED(status)) {
-        return (WEXITSTATUS(status) == 255 ?
-            fbf::FunctionIdentifier::PASS :
-            fbf::FunctionIdentifier::FAIL);
+    } else if (WIFEXITED(status)) {
+        int exitStatus = WEXITSTATUS(status);
+        return (exitStatus >= 0 &&
+                exitStatus <= MAX_FAIL_RATE) ?
+               fbf::FunctionIdentifier::PASS :
+               fbf::FunctionIdentifier::FAIL;
     } else {
         std::string msg = "Unexpected child exit status: ";
         msg += status;
@@ -73,18 +76,18 @@ void fbf::TestRun::output_results(std::ostream &out) {
     std::stringstream ss;
     ss << std::hex << offset_;
 
-    if(!test_has_run_) {
+    if (!test_has_run_) {
         out << "Test for "
-        << test_->getFunctionName()
-        << " at offset 0x"
-        << ss.str()
-        << " was not run"
-        << std::endl;
+            << test_->get_function_name()
+            << " at offset 0x"
+            << ss.str()
+            << " was not run"
+            << std::endl;
         return;
     }
 
     out << "Result for "
-        << test_->getFunctionName()
+        << test_->get_function_name()
         << " at offset 0x"
         << ss.str()
         << " : "
@@ -93,7 +96,7 @@ void fbf::TestRun::output_results(std::ostream &out) {
 }
 
 test_result_t fbf::TestRun::get_result() {
-    if(!test_has_run_) {
+    if (!test_has_run_) {
         run_test();
     }
 
