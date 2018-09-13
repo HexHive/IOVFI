@@ -10,7 +10,7 @@ void usage() {
 namespace fs = std::experimental::filesystem;
 
 int main(int argc, char **argv) {
-    std::cout << EXE_NAME << " v. " << VERSION_MAJOR << "." << VERSION_MINOR << std::endl;
+    std::cout << IDENTIFIER_NAME << " v. " << VERSION_MAJOR << "." << VERSION_MINOR << std::endl;
 
     if(argc != 2) {
         usage();

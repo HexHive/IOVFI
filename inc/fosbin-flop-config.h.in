@@ -1,3 +1,2 @@
-#define VERSION_MAJOR @fosbin-flop-VERSION-MAJOR@
-#define VERSION_MINOR @fosbin-flop-VERSION-MINOR@
-#define EXE_NAME "@PROJECT_NAME@"
+#include "fosbin-config.h"
+#define IDENTIFIER_NAME "@IDENTIFIER_NAME@"

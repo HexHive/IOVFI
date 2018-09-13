@@ -1,0 +1,2 @@
+#define VERSION_MAJOR @fosbin-VERSION-MAJOR@
+#define VERSION_MINOR @fosbin-VERSION-MINOR@

@@ -1,0 +1,2 @@
+#include "fosbin-config.h"
+#define SLEUTH_NAME "@FUNC_CLASSIFIER@"
