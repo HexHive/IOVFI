@@ -5,8 +5,8 @@
 #ifndef FOSBIN_FLOP_MEMCPY_H
 #define FOSBIN_FLOP_MEMCPY_H
 
-#include <identifiers/functionIdentifier.h>
-#include <identifiers/identifierRegistrar.h>
+#include <fosbin-flop/identifiers/functionIdentifier.h>
+#include <fosbin-flop/identifiers/identifierRegistrar.h>
 
 namespace fbf {
     class MemcpyIdentifier : public FunctionIdentifier {

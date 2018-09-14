@@ -1,9 +1,14 @@
 add_executable( ${IDENTIFIER_NAME} main.cpp )
 
+
+target_include_directories( ${IDENTIFIER_NAME} PRIVATE
+        ../../inc/${IDENTIFIER_NAME}
+        )
+
 target_link_libraries( ${IDENTIFIER_NAME} stdc++fs )
 
 TARGET_SOURCES( ${IDENTIFIER_NAME}
-        PUBLIC
+        PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/identifiers/functionIdentifier.cpp
         ${CMAKE_CURRENT_LIST_DIR}/identifiers/identifierFactory.cpp
         ${CMAKE_CURRENT_LIST_DIR}/identifiers/fbf-memcpy.cpp

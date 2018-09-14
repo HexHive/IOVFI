@@ -5,7 +5,7 @@
 #ifndef FOSBIN_FLOP_STRNCPYIDENTIFIER_H
 #define FOSBIN_FLOP_STRNCPYIDENTIFIER_H
 
-#include <identifiers/fbf-strcpy.h>
+#include <fosbin-flop/identifiers/fbf-strcpy.h>
 
 namespace fbf {
     class StrncpyIdentifier : public StrcpyIdentifier {

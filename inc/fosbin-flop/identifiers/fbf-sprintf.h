@@ -6,8 +6,8 @@
 #define FOSBIN_FLOP_SPRINTFIDENTIFIER_H
 
 
-#include <identifiers/functionIdentifier.h>
-#include <identifiers/identifierRegistrar.h>
+#include <fosbin-flop/identifiers/functionIdentifier.h>
+#include <fosbin-flop/identifiers/identifierRegistrar.h>
 
 namespace fbf {
     class SprintfIdentifier : public FunctionIdentifier {

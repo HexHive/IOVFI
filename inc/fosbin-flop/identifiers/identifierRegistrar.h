@@ -5,8 +5,8 @@
 #ifndef FOSBIN_FLOP_IDENTIFIERREGISTRAR_H
 #define FOSBIN_FLOP_IDENTIFIERREGISTRAR_H
 
-#include <identifiers/functionIdentifier.h>
-#include <identifiers/identifierFactory.h>
+#include <fosbin-flop/identifiers/functionIdentifier.h>
+#include <fosbin-flop/identifiers/identifierFactory.h>
 #include <string>
 
 namespace fbf {
