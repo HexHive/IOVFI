@@ -1,6 +1,5 @@
 add_executable( ${IDENTIFIER_NAME} main.cpp )
 
-
 target_include_directories( ${IDENTIFIER_NAME} PRIVATE
         ../../inc/${IDENTIFIER_NAME}
         )
