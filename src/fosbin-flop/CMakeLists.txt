@@ -15,7 +15,8 @@ TARGET_SOURCES( ${IDENTIFIER_NAME}
         ${CMAKE_CURRENT_LIST_DIR}/identifiers/fbf-sprintf.cpp
         ${CMAKE_CURRENT_LIST_DIR}/identifiers/fbf-strncpy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/identifiers/fbf-memmove.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/coord/binSection.cpp
+        ../common/binSection.cpp
         ${CMAKE_CURRENT_LIST_DIR}/coord/fullTest.cpp
         ${CMAKE_CURRENT_LIST_DIR}/coord/testRun.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/../common/binaryDescriptor.cpp
         )

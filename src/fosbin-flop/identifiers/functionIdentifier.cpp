@@ -40,6 +40,6 @@ int fbf::FunctionIdentifier::run_test() {
     return evaluate();
 }
 
-const std::string& fbf::FunctionIdentifier::getFunctionName() {
+const std::string& fbf::FunctionIdentifier::get_test_name() {
     return functionName_;
 }

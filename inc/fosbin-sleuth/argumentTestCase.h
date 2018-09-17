@@ -10,6 +10,7 @@
 #include <iostream>
 #include <tuple>
 #include <cassert>
+#include "iTestCase.h"
 
 namespace fbf {
 #define MAX_ARG_COUNT   8
@@ -19,14 +20,19 @@ namespace fbf {
 #define DEFAULT_DOUBLE  2.0
 
     template<typename R, typename... Args>
-    class ArgumentTestCase {
+    class ArgumentTestCase : public ITestCase {
     public:
         ArgumentTestCase();
         virtual ~ArgumentTestCase();
 
-        template< typename U = std::tuple<Args...> >
-        std::enable_if_t<(std::tuple_size<U>::value > 0)>
-        test(uintptr_t location, size_t nargs = sizeof...(Args)) {
+        const std::string& get_test_name() {
+            std::tuple<Args...> t;
+            return typeid(decltype(t)).name();
+        }
+
+        template< typename U = std::tuple<Args...>,
+                typename std::enable_if<(std::tuple_size<U>::value == 2), int>::type = 0 >
+        void test(uintptr_t location) {
             std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location);
             std::tuple<Args...> t;
 
@@ -36,20 +42,33 @@ namespace fbf {
                 std::get<0>(t) = testDbl;
             }
 
-            if(nargs >= 1) {
-                if(std::is_same< decltype(testInt), typename std::tuple_element<1, std::tuple<Args...>>::type >::value)  {
-                    std::get<1>(t) = testInt;
-                } else if(std::is_same< decltype(testDbl), typename std::tuple_element<1, std::tuple<Args...>>::type >::value) {
-                    std::get<1>(t) = testDbl;
-                }
+            if(std::is_same< decltype(testInt), typename std::tuple_element<1, std::tuple<Args...>>::type >::value)  {
+                std::get<1>(t) = testInt;
+            } else if(std::is_same< decltype(testDbl), typename std::tuple_element<1, std::tuple<Args...>>::type >::value) {
+                std::get<1>(t) = testDbl;
             }
 
             execute(func, t);
         }
 
-        template< typename U = std::tuple<Args...> >
-        std::enable_if_t<(std::tuple_size<U>::value == 0)>
-        test(uintptr_t location) {
+        template< typename U = std::tuple<Args...>,
+                typename std::enable_if<(std::tuple_size<U>::value == 1), int>::type = 0 >
+        void test(uintptr_t location) {
+            std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location);
+            std::tuple<Args...> t;
+
+            if(std::is_same< decltype(testInt), typename std::tuple_element<0, std::tuple<Args...>>::type >::value)  {
+                std::get<0>(t) = testInt;
+            } else if(std::is_same< decltype(testDbl), typename std::tuple_element<0, std::tuple<Args...>>::type >::value) {
+                std::get<0>(t) = testDbl;
+            }
+
+            execute(func, t);
+        }
+
+        template< typename U = std::tuple<Args...>,
+                typename std::enable_if<(std::tuple_size<U>::value == 0), int>::type = 0 >
+        void test(uintptr_t location) {
             std::function<R()> func = reinterpret_cast<R(*)()>(location);
             std::tuple<> t;
 
@@ -68,7 +87,6 @@ namespace fbf {
 
         void precall();
         void postcall();
-
         void execute(std::function<void(Args...)>& func, std::tuple<Args...>& args) {
             precall();
             std::apply(func, args);
@@ -78,10 +96,10 @@ namespace fbf {
 
     template<typename R, typename... Args>
     fbf::ArgumentTestCase<R, Args...>::ArgumentTestCase() :
-        testInt(DEFAULT_INT), testDbl(DEFAULT_DOUBLE), testPasses(false), errno_before(0)
+    testInt(DEFAULT_INT), testDbl(DEFAULT_DOUBLE), errno_before(0), testPasses(false)
     {
-        testStr = (char*)std::malloc(STR_LEN);
-        testPtr = std::malloc(PTR_LEN);
+        testStr = (char*)malloc(STR_LEN);
+        testPtr = malloc(PTR_LEN);
     }
 
     template<typename R, typename... Args>
@@ -104,19 +122,6 @@ namespace fbf {
     void fbf::ArgumentTestCase<R, Args...>::precall() {
         errno_before = errno;
     }
-
-//    template<typename R, class... Args>
-//    R fbf::ArgumentTestCase<R, Args...>::execute(std::function<R(Args...)> &func, std::tuple<Args...> &args) {
-//        precall();
-//        if(!std::is_void<R>::value) {
-//            R result = std::apply(func, args);
-//            postcall();
-//            return result;
-//        } else {
-//            std::apply(func, args);
-//            postcall();
-//        }
-//    }
 }
 
 #endif //FOSBIN_ARGUMENTTESTCASE_H

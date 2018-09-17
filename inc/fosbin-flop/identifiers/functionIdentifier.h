@@ -8,9 +8,10 @@
 #include <cstdint>
 #include <cstddef>
 #include <random>
+#include "iTestCase.h"
 
 namespace fbf {
-    class FunctionIdentifier {
+    class FunctionIdentifier : public ITestCase {
     public:
         explicit FunctionIdentifier(uintptr_t location, const std::string& functionName);
         explicit FunctionIdentifier();
@@ -18,7 +19,7 @@ namespace fbf {
 
         virtual int run_test();
         uintptr_t get_location();
-        const std::string& getFunctionName();
+        const std::string& get_test_name();
 
         const static size_t BUFFER_SIZE = 32;
         const static int PASS = std::numeric_limits<int>::max();

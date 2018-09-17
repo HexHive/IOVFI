@@ -2,7 +2,7 @@
 // Created by derrick on 8/17/18.
 //
 
-#include <fosbin-flop/binSection.h>
+#include <binSection.h>
 
 fbf::BinSection::BinSection(uintptr_t location, uintptr_t offset, size_t size) :
     location_(location), offset_(offset), size_(size) { }

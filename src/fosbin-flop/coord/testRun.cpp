@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 #include <sstream>
 
-fbf::TestRun::TestRun(std::shared_ptr<fbf::FunctionIdentifier> test, uintptr_t offset) :
+fbf::TestRun::TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset) :
     test_(test),
     test_has_run_(false),
     offset_(offset),
@@ -75,7 +75,7 @@ void fbf::TestRun::output_results(std::ostream &out) {
 
     if(!test_has_run_) {
         out << "Test for "
-        << test_->getFunctionName()
+        << test_->get_test_name()
         << " at offset 0x"
         << ss.str()
         << " was not run"
@@ -84,7 +84,7 @@ void fbf::TestRun::output_results(std::ostream &out) {
     }
 
     out << "Result for "
-        << test_->getFunctionName()
+        << test_->get_test_name()
         << " at offset 0x"
         << ss.str()
         << " : "

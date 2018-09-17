@@ -1,17 +1,11 @@
 #include <iostream>
 #include "fosbin-sleuth.h"
 
-#include "emptyTestCase.h"
+#include "argumentTestCase.h"
+#include "binaryDescriptor.h"
 
-int foo(int a, double b) {
-    std::cout << "Foo has been called with a = "
-    << a << " and b = " << b << std::endl;
-    return 0;
-}
-
-int test1() {
-    std::cout << "test1 has been called" << std::endl;
-    return 0;
+void usage() {
+    std::cout << "fosbin-sleuth /path/to/binary/descriptor" << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -19,11 +13,25 @@ int main(int argc, char** argv) {
         << " v. " << FOSBIN_VERSION_MAJOR << "." << FOSBIN_VERSION_MINOR
         << " starting. Good luck, Sherlock." << std::endl;
 
-    fbf::EmptyTestCase<void> test;
-    test.test((uintptr_t)&test1);
+    if(argc != 2) {
+        usage();
+        exit(1);
+    }
 
-    fbf::ArgumentTestCase<void, int, double> test2;
-    test2.test((uintptr_t)&foo);
+    fbf::BinaryDescriptor binDesc(argv[1]);
+
+    size_t num = 0;
+    for(uintptr_t location : binDesc.getOffsets()) {
+        std::cout << "Testing location " << num << " of "
+        << binDesc.getOffsets().size() << "(0x" << std::hex
+        << location << std::dec << ")" << std::endl;
+
+        {
+            fbf::ArgumentTestCase<void> test;
+            std::cout << test.get_arg_types() << std::endl;
+            test.test(location);
+        }
+    }
 
     return 0;
 }
