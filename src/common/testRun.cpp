@@ -2,7 +2,7 @@
 // Created by derrick on 7/8/18.
 //
 
-#include <fosbin-flop/testRun.h>
+#include <testRun.h>
 #include <memory>
 #include <iostream>
 #include <cstring>
@@ -21,7 +21,7 @@ fbf::TestRun::~TestRun() = default;
 const unsigned int fbf::TestRun::TIMEOUT = 2;
 
 static void sig_handler(int signum) {
-    exit(fbf::FunctionIdentifier::FAIL);
+    exit(fbf::ITestCase::FAIL);
 }
 
 void fbf::TestRun::set_signals() {
@@ -56,11 +56,11 @@ test_result_t fbf::TestRun::determine_result(pid_t child) {
     waitpid(child, &status, 0);
     if(WIFSIGNALED(status)) {
         /* SIGILL, SIGSEGV, etc. caused the child to stop...not what we are looking for */
-        return fbf::FunctionIdentifier::FAIL;
+        return fbf::ITestCase::FAIL;
     } else if(WIFEXITED(status)) {
         return (WEXITSTATUS(status) == 255 ?
-            fbf::FunctionIdentifier::PASS :
-            fbf::FunctionIdentifier::FAIL);
+            fbf::ITestCase::PASS :
+            fbf::ITestCase::FAIL);
     } else {
         std::string msg = "Unexpected child exit status: ";
         msg += status;
@@ -88,7 +88,7 @@ void fbf::TestRun::output_results(std::ostream &out) {
         << " at offset 0x"
         << ss.str()
         << " : "
-        << ((result_ == fbf::FunctionIdentifier::PASS) ? "positive" : "negative")
+        << ((result_ == fbf::ITestCase::PASS) ? "positive" : "negative")
         << std::endl;
 }
 

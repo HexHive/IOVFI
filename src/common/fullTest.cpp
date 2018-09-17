@@ -1,26 +1,16 @@
 //
-// Created by derrick on 7/8/18.
+// Created by derrick on 9/17/18.
 //
 
-#include "fosbin-flop/fullTest.h"
+#include "fullTest.h"
+#include <iostream>
 #include <fstream>
-#include <set>
-#include <algorithm>
-#include <experimental/filesystem>
-#include <identifiers/identifierFactory.h>
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <cstring>
 #include <termios.h>
 
 namespace fs = std::experimental::filesystem;
 
 fbf::FullTest::FullTest(fs::path descriptor) :
-        binDesc_(descriptor) {
-        parse_descriptor();
-}
+        binDesc_(descriptor) { }
 
 fbf::FullTest::~FullTest() { }
 
@@ -54,17 +44,6 @@ void fbf::FullTest::output(std::ostream &out) {
     }
 }
 
-void fbf::FullTest::parse_descriptor() {
-    const std::set<std::string> identifiers = fbf::IdentifierFactory::Instance()->getRegistered();
-
-    for (std::set<uintptr_t>::iterator it = binDesc_.getOffsets().begin();
-         it != binDesc_.getOffsets().end(); ++it) {
-        uintptr_t addr = binDesc_.getText().location_ + *it;
-        for (std::set<std::string>::iterator it2 = identifiers.begin();
-             it2 != identifiers.end(); ++it2) {
-            std::shared_ptr<fbf::FunctionIdentifier> id =
-                    fbf::IdentifierFactory::Instance()->CreateIdentifier(*it2, addr);
-            testRuns_.push_back(std::make_shared<fbf::TestRun>(id, *it));
-        }
-    }
+uintptr_t fbf::FullTest::compute_location(uintptr_t offset) {
+    return binDesc_.getText().location_ + offset;
 }

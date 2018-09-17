@@ -45,5 +45,5 @@ int fbf::StrcpyIdentifier::evaluate() {
         FBF_ASSERT(dst_[i] == before);
     }
 
-    return FunctionIdentifier::PASS;
+    return ITestCase::PASS;
 }

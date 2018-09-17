@@ -24,7 +24,7 @@ int fbf::SprintfIdentifier::evaluate() {
 
     FBF_ASSERT(test1 == test2);
     FBF_ASSERT(std::strcmp(dst1_, dst2_) == 0);
-    return FunctionIdentifier::PASS;
+    return ITestCase::PASS;
 }
 
 void fbf::SprintfIdentifier::setup() {

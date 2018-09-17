@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fosbin-sleuth/fullSleuthTest.h>
 #include "fosbin-sleuth.h"
 
 #include "argumentTestCase.h"
@@ -26,11 +27,9 @@ int main(int argc, char** argv) {
         << binDesc.getOffsets().size() << "(0x" << std::hex
         << location << std::dec << ")" << std::endl;
 
-        {
-            fbf::ArgumentTestCase<void> test;
-            std::cout << test.get_arg_types() << std::endl;
-            test.test(location);
-        }
+        fbf::FullSleuthTest test(argv[1], DEFAULT_INT, DEFAULT_DOUBLE, STR_LEN, PTR_LEN);
+        test.run();
+        test.output(std::cout);
     }
 
     return 0;

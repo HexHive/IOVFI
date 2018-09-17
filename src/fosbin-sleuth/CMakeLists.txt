@@ -10,4 +10,7 @@ target_sources( ${FUNC_CLASSIFIER}
         PRIVATE
         ../common/binaryDescriptor.cpp
         ../common/binSection.cpp
+        ../common/fullTest.cpp
+        ../common/testRun.cpp
+        coord/fullSleuthTest.cpp
         )

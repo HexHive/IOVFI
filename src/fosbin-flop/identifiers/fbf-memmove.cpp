@@ -33,7 +33,7 @@ int fbf::MemmoveIdentifier::evaluate() {
     FBF_ASSERT(test == src_ + OFFSET);
     FBF_ASSERT(std::memcmp(src_ + OFFSET, orig, sizeof(orig)) == 0);
 
-    return FunctionIdentifier::PASS;
+    return ITestCase::PASS;
 }
 
 void fbf::MemmoveIdentifier::setup() {

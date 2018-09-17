@@ -10,117 +10,65 @@
 #include <iostream>
 #include <tuple>
 #include <cassert>
+#include <sstream>
 #include "iTestCase.h"
 
 namespace fbf {
-#define MAX_ARG_COUNT   8
-#define STR_LEN         48
-#define PTR_LEN         1024
-#define DEFAULT_INT     1
-#define DEFAULT_DOUBLE  2.0
-
     template<typename R, typename... Args>
     class ArgumentTestCase : public ITestCase {
     public:
-        ArgumentTestCase();
+        ArgumentTestCase(uintptr_t location, std::tuple<Args...> args);
         virtual ~ArgumentTestCase();
 
-        const std::string& get_test_name() {
-            std::tuple<Args...> t;
-            return typeid(decltype(t)).name();
-        }
-
-        template< typename U = std::tuple<Args...>,
-                typename std::enable_if<(std::tuple_size<U>::value == 2), int>::type = 0 >
-        void test(uintptr_t location) {
-            std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location);
-            std::tuple<Args...> t;
-
-            if(std::is_same< decltype(testInt), typename std::tuple_element<0, std::tuple<Args...>>::type >::value)  {
-                std::get<0>(t) = testInt;
-            } else if(std::is_same< decltype(testDbl), typename std::tuple_element<0, std::tuple<Args...>>::type >::value) {
-                std::get<0>(t) = testDbl;
-            }
-
-            if(std::is_same< decltype(testInt), typename std::tuple_element<1, std::tuple<Args...>>::type >::value)  {
-                std::get<1>(t) = testInt;
-            } else if(std::is_same< decltype(testDbl), typename std::tuple_element<1, std::tuple<Args...>>::type >::value) {
-                std::get<1>(t) = testDbl;
-            }
-
-            execute(func, t);
-        }
-
-        template< typename U = std::tuple<Args...>,
-                typename std::enable_if<(std::tuple_size<U>::value == 1), int>::type = 0 >
-        void test(uintptr_t location) {
-            std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location);
-            std::tuple<Args...> t;
-
-            if(std::is_same< decltype(testInt), typename std::tuple_element<0, std::tuple<Args...>>::type >::value)  {
-                std::get<0>(t) = testInt;
-            } else if(std::is_same< decltype(testDbl), typename std::tuple_element<0, std::tuple<Args...>>::type >::value) {
-                std::get<0>(t) = testDbl;
-            }
-
-            execute(func, t);
-        }
-
-        template< typename U = std::tuple<Args...>,
-                typename std::enable_if<(std::tuple_size<U>::value == 0), int>::type = 0 >
-        void test(uintptr_t location) {
-            std::function<R()> func = reinterpret_cast<R(*)()>(location);
-            std::tuple<> t;
-
-            execute(func, t);
-            std::cout << "void function called" << std::endl;
-        }
+        const std::string get_test_name();
+        int run_test();
 
     protected:
-        int testInt;
-        double testDbl;
-        char* testStr;
-        void* testPtr;
+        uintptr_t location_;
+        std::tuple<Args...> args_;
 
-        bool testPasses;
-        int errno_before;
+        bool testPasses_;
+        int errno_before_;
 
         void precall();
         void postcall();
-        void execute(std::function<void(Args...)>& func, std::tuple<Args...>& args) {
-            precall();
-            std::apply(func, args);
-            postcall();
-        }
     };
 
     template<typename R, typename... Args>
-    fbf::ArgumentTestCase<R, Args...>::ArgumentTestCase() :
-    testInt(DEFAULT_INT), testDbl(DEFAULT_DOUBLE), errno_before(0), testPasses(false)
+    fbf::ArgumentTestCase<R, Args...>::ArgumentTestCase(uintptr_t location, std::tuple<Args...> args)
+            : location_(location), args_(args)
     {
-        testStr = (char*)malloc(STR_LEN);
-        testPtr = malloc(PTR_LEN);
+
     }
 
     template<typename R, typename... Args>
-    fbf::ArgumentTestCase<R, Args...>::~ArgumentTestCase() {
-        if(testStr) {
-            std::free(testStr);
-        }
-
-        if(testPtr) {
-            std::free(testPtr);
-        }
+    int fbf::ArgumentTestCase<R, Args...>::run_test() {
+        std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location_);
+        precall();
+        std::apply(func, args_);
+        postcall();
+        return testPasses_ == true ? fbf::ITestCase::PASS : fbf::ITestCase::FAIL;
     }
+
+    template<typename R, typename... Args>
+    fbf::ArgumentTestCase<R, Args...>::~ArgumentTestCase() { }
 
     template<typename R, class... Args>
     void fbf::ArgumentTestCase<R, Args...>::postcall() {
-        testPasses = (errno == errno_before);
+        testPasses_ = (errno == errno_before_);
     }
 
     template<typename R, class... Args>
     void fbf::ArgumentTestCase<R, Args...>::precall() {
-        errno_before = errno;
+        errno_before_ = errno;
+    }
+
+    template<typename R, class... Args>
+    const std::string fbf::ArgumentTestCase<R, Args...>::get_test_name() {
+        std::stringstream s;
+        size_t arg = sizeof...(Args);
+        s << typeid(args_).name();
+        return s.rdbuf()->str();
     }
 }
 

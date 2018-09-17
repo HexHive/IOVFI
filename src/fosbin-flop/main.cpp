@@ -1,7 +1,7 @@
 #include <iostream>
 #include "fosbin-flop/fosbin-flop.h"
 #include <experimental/filesystem>
-#include <fosbin-flop/fullTest.h>
+#include <fosbin-flop/fullIdentifierTest.h>
 
 void usage() {
     std::cout << "fosbin-flop <path to binary descriptor>" << std::endl;
@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
     fs::path descriptor(argv[1]);
     try {
         std::cout << "Parsing descriptor...";
-        fbf::FullTest test(descriptor);
+        fbf::FullIdentifierTest test(descriptor);
         std::cout << "Done!" << std::endl;
 
         test.run();

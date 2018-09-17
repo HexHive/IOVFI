@@ -1,16 +1,12 @@
 //
-// Created by derrick on 7/8/18.
+// Created by derrick on 9/17/18.
 //
 
-#ifndef FOSBIN_FLOP_FULLTEST_H
-#define FOSBIN_FLOP_FULLTEST_H
-
-#include <experimental/filesystem>
-#include <fosbin-flop/testRun.h>
-#include <iostream>
+#ifndef FOSBIN_FULLTEST_H
+#define FOSBIN_FULLTEST_H
+#include <vector>
 #include "binaryDescriptor.h"
-
-namespace fs = std::experimental::filesystem;
+#include "testRun.h"
 
 namespace fbf {
     class FullTest {
@@ -18,7 +14,8 @@ namespace fbf {
         std::vector<std::shared_ptr<fbf::TestRun>> testRuns_;
         BinaryDescriptor binDesc_;
 
-        void parse_descriptor();
+        virtual void create_testcases() = 0;
+        virtual uintptr_t compute_location(uintptr_t offset);
 
     public:
         FullTest(fs::path descriptor);
@@ -28,4 +25,5 @@ namespace fbf {
     };
 }
 
-#endif //FOSBIN_FLOP_FULLTEST_H
+
+#endif //FOSBIN_FULLTEST_H

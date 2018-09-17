@@ -7,4 +7,10 @@
 
 #include "fosbin-sleuth-config.h"
 
+#define MAX_ARG_COUNT   8
+#define STR_LEN         48
+#define PTR_LEN         1024
+#define DEFAULT_INT     1
+#define DEFAULT_DOUBLE  2.0
+
 #endif //FOSBIN_FOSBIN_SLEUTH_H
