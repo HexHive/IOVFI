@@ -15,7 +15,7 @@ void fbf::MemcpyIdentifier::setup() {
     src_[1] = '\0';
 }
 
-void fbf::MemcpyIdentifier::evaluate() {
+int fbf::MemcpyIdentifier::evaluate() {
     auto func = reinterpret_cast<void *(*)(void *, const void *, size_t)>(location_);
     void *test = func(dst_, src_, FunctionIdentifier::BUFFER_SIZE / 2);
 

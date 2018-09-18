@@ -34,7 +34,7 @@ namespace fbf {
         virtual void setup();
     };
 
-#define FBF_MAJOR_ASSERT(x) {totalTests_++; if(!(x)) { failedTests_++; return; }}
+#define FBF_MAJOR_ASSERT(x) {totalTests_++; if(!(x)) { failedTests_++; return fbf::ITestCase::FAIL; }}
 #define FBF_ASSERT(x) {totalTests_++; if(!(x)) { failedTests_++; }}
 }
 

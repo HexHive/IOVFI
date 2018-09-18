@@ -13,7 +13,7 @@ namespace fbf {
         StrncpyIdentifier(uintptr_t location);
         StrncpyIdentifier();
 
-        void evaluate() override;
+        int evaluate() override;
 
         const static size_t BYTES_COPIED;
     };

@@ -15,7 +15,7 @@ namespace fbf {
         StrcpyIdentifier();
         virtual ~StrcpyIdentifier() override;
 
-        virtual void evaluate() override;
+        virtual int evaluate() override;
         virtual void setup() override;
 
     protected:
