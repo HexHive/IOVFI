@@ -39,7 +39,7 @@ void fbf::FullTest::output(std::ostream &out) {
     size_t i = 0;
     size_t total = testRuns_.size();
     for (; i < total; i++) {
-        out << "Outputting " << i << " of " << total - 1 << std::endl;
+        out << "Outputting " << i + 1 << " of " << total << std::endl;
         testRuns_[i]->output_results(out);
     }
 }

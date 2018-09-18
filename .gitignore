@@ -1,3 +1,5 @@
+TestCases.inc
+
 outputs/
 .gdb_history
 cmake-build-*/

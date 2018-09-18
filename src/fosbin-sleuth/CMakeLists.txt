@@ -1,4 +1,6 @@
-add_executable( ${FUNC_CLASSIFIER} main.cpp )
+add_executable( ${FUNC_CLASSIFIER}
+        main.cpp
+        )
 
 target_include_directories( ${FUNC_CLASSIFIER} PRIVATE
         ../../inc/${FUNC_CLASSIFIER}
