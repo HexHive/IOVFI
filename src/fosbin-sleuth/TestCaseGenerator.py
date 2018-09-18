@@ -13,7 +13,6 @@ max_args = 5
 
 sigs = []
 
-
 def main():
     for index in range(0, len(supported_types)):
         sigs.append([])

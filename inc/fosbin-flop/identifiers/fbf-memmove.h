@@ -15,7 +15,7 @@ namespace fbf {
         explicit MemmoveIdentifier();
         ~MemmoveIdentifier() override;
 
-        void evaluate() override;
+        int evaluate() override;
         void setup() override;
 
         const static int OFFSET;

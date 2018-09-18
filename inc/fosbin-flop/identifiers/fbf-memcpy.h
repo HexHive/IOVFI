@@ -15,7 +15,7 @@ namespace fbf {
         explicit MemcpyIdentifier();
         ~MemcpyIdentifier() override;
 
-        void evaluate() override;
+        int evaluate() override;
         void setup() override;
 
     protected:

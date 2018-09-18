@@ -16,7 +16,7 @@ namespace fbf {
         explicit SprintfIdentifier();
         ~SprintfIdentifier() override;
 
-        void evaluate() override;
+        int evaluate() override;
         void setup() override;
 
     protected:
