@@ -9,10 +9,13 @@
 
 #include <vector>
 #include <map>
+#include <cstring>
 
 fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, int i, double d, size_t strLen, size_t ptrLen) :
         FullTest(descriptor), testInt(i), testDbl(d) {
     testStr = (char *) std::malloc(strLen);
+    std::memset(testStr, 'A', strLen);
+    std::strcpy(testStr, "THIS IS A TEST STRING!!!!");
     testPtr = std::malloc(ptrLen);
     create_testcases();
 }

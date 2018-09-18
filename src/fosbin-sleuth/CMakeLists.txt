@@ -15,6 +15,7 @@ target_sources( ${FUNC_CLASSIFIER}
         ../common/binSection.cpp
         ../common/fullTest.cpp
         ../common/testRun.cpp
+        ../common/iTestCase.cpp
         coord/fullSleuthTest.cpp
         TestCases.inc
         )

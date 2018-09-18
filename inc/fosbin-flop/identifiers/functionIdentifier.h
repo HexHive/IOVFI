@@ -27,14 +27,8 @@ namespace fbf {
         uintptr_t location_;
         std::string functionName_;
 
-        int rand();
         virtual int evaluate() = 0;
         virtual void setup();
-
-    private:
-        std::random_device rd_;
-        std::mt19937 mt_;
-        std::uniform_int_distribution<int> dist_;
     };
 
 #define FBF_ASSERT(x) if(!(x)) { return fbf::ITestCase::FAIL; }

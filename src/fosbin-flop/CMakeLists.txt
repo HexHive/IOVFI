@@ -19,5 +19,6 @@ TARGET_SOURCES( ${IDENTIFIER_NAME}
         ${CMAKE_CURRENT_LIST_DIR}/coord/fullIdentifierTest.cpp
         ../common/fullTest.cpp
         ../common/testRun.cpp
+        ../common/iTestCase.cpp
         ${CMAKE_CURRENT_LIST_DIR}/../common/binaryDescriptor.cpp
         )

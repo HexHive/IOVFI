@@ -41,7 +41,7 @@ namespace fbf {
     fbf::ArgumentTestCase<R, Args...>::ArgumentTestCase(uintptr_t location,
             std::tuple<Args...> args,
             std::vector<std::string> argTypes)
-            : location_(location), args_(args), argTypes_(argTypes)
+            : ITestCase(), location_(location), args_(args), argTypes_(argTypes)
     {
 
     }
