@@ -29,6 +29,7 @@ namespace fbf {
         void output_results(std::ostream& out);
         test_result_t get_result();
         uintptr_t get_offset();
+        const std::string get_test_name();
     };
 }
 

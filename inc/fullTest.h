@@ -20,8 +20,8 @@ namespace fbf {
     public:
         FullTest(fs::path descriptor);
         ~FullTest();
-        void run();
-        void output(std::ostream& out);
+        virtual void run();
+        virtual void output(std::ostream& out);
     };
 }
 

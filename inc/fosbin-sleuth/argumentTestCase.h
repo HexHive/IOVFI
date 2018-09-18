@@ -17,7 +17,9 @@ namespace fbf {
     template<typename R, typename... Args>
     class ArgumentTestCase : public ITestCase {
     public:
-        ArgumentTestCase(uintptr_t location, std::tuple<Args...> args);
+        ArgumentTestCase(uintptr_t location,
+                std::tuple<Args...> args,
+                std::vector<std::string> argTypes);
         virtual ~ArgumentTestCase();
 
         const std::string get_test_name();
@@ -32,11 +34,14 @@ namespace fbf {
 
         void precall();
         void postcall();
+        std::vector<std::string> argTypes_;
     };
 
     template<typename R, typename... Args>
-    fbf::ArgumentTestCase<R, Args...>::ArgumentTestCase(uintptr_t location, std::tuple<Args...> args)
-            : location_(location), args_(args)
+    fbf::ArgumentTestCase<R, Args...>::ArgumentTestCase(uintptr_t location,
+            std::tuple<Args...> args,
+            std::vector<std::string> argTypes)
+            : location_(location), args_(args), argTypes_(argTypes)
     {
 
     }
@@ -65,10 +70,17 @@ namespace fbf {
 
     template<typename R, class... Args>
     const std::string fbf::ArgumentTestCase<R, Args...>::get_test_name() {
+        if(argTypes_.size() == 0) {
+            return "<>";
+        }
         std::stringstream s;
-        size_t arg = sizeof...(Args);
-        s << typeid(args_).name();
-        return s.rdbuf()->str();
+        s << "<";
+        for(auto type : argTypes_) {
+            s << type << " ";
+        }
+        s << ">";
+
+        return s.str().erase(s.str().size() - 2, 1);
     }
 }
 

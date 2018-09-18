@@ -99,3 +99,7 @@ test_result_t fbf::TestRun::get_result() {
 
     return result_;
 }
+
+const std::string fbf::TestRun::get_test_name() {
+    return test_->get_test_name();
+}

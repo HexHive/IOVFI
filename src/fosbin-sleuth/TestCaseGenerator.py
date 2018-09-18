@@ -37,13 +37,15 @@ def main():
         for sig in siglist:
             typeStr = ", ".join(sig)
             print("{{\n\tstd::tuple<{}> t;".format(typeStr))
+            argTypeStr = "\", \"".join(sig);
+            print("\tstd::vector<std::string> s = {{\"{}\"}};".format(argTypeStr))
             i = 0
             for t in sig:
                 print("\tstd::get<{}>(t) = {};".format(i, supported_types[t]))
                 i += 1
 
             print("\tstd::shared_ptr<fbf::ArgumentTestCase<void, {}>> v =".format(typeStr))
-            print("\t\tstd::make_shared<fbf::ArgumentTestCase<void, {}>>(location, t);".format(typeStr))
+            print("\t\tstd::make_shared<fbf::ArgumentTestCase<void, {}>>(location, t, s);".format(typeStr))
             print("\ttestRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));")
             print("}")
 

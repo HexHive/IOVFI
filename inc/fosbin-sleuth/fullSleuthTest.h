@@ -13,6 +13,7 @@ namespace fbf {
         FullSleuthTest(fs::path descriptor, int i, double d, size_t strLen, size_t ptrLen);
 
         virtual ~FullSleuthTest();
+        virtual void output(std::ostream& o) override;
 
     protected:
         void* testPtr;
@@ -20,7 +21,7 @@ namespace fbf {
         int testInt;
         double testDbl;
 
-        virtual void create_testcases();
+        virtual void create_testcases() override;
     };
 }
 
