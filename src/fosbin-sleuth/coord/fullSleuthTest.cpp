@@ -32,14 +32,8 @@ void fbf::FullSleuthTest::create_testcases() {
             std::shared_ptr<fbf::ArgumentTestCase<void>> v = std::make_shared<fbf::ArgumentTestCase<void>>(location, t);
             testRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));
         }
+
 #include "TestCases.inc"
 
-//        {
-//            std::tuple<int> t;
-//            std::get<0>(t) = testInt;
-//            std::shared_ptr<fbf::ArgumentTestCase<void, int>> v =
-//                    std::make_shared<fbf::ArgumentTestCase<void, int>>(location, t);
-//            testRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));
-//        }
     }
 }
