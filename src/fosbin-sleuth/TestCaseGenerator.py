@@ -9,7 +9,7 @@ supported_types = {
     'void*': 'testPtr'
 }
 
-max_args = 5
+max_args = 6
 
 sigs = []
 
@@ -24,12 +24,12 @@ def main():
         i += 1
 
     for index in range(0, len(supported_types)):
-        i = len(sigs[index])
-        j = i
-        for type in supported_types.keys():
-            sigs[index].append([])
-            sigs[index][j] = sigs[index][i-1] + [type]
-            j += 1
+        for arg_num in range(0, max_args * len(supported_types)):
+            i = len(sigs[index])
+            for type in supported_types.keys():
+                sigs[index].append([])
+                sigs[index][i] = sigs[index][arg_num] + [type]
+                i += 1
 
     for index in range(0, len(supported_types)):
         siglist = sigs[index]
