@@ -50,7 +50,7 @@ namespace fbf {
     int fbf::ArgumentTestCase<R, Args...>::run_test() {
         std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location_);
         precall();
-        std::apply(func, args_);
+        R ret = std::apply(func, args_);
         postcall();
         return testPasses_ == true ? fbf::ITestCase::PASS : fbf::ITestCase::FAIL;
     }
@@ -74,13 +74,13 @@ namespace fbf {
             return "<>";
         }
         std::stringstream s;
-        s << "<";
+//        s << "<";
         for(auto type : argTypes_) {
             s << type << " ";
         }
-        s << ">";
+//        s << ">";
 
-        return s.str().erase(s.str().size() - 2, 1);
+        return s.str().erase(s.str().size() - 1, 1);
     }
 }
 

@@ -15,11 +15,13 @@ namespace fbf {
         virtual ~FullSleuthTest();
         virtual void output(std::ostream& o) override;
 
+        const static int MAX_ARGUMENTS = 8;
+
     protected:
-        void* testPtr;
-        char* testStr;
-        int testInt;
-        double testDbl;
+        void* testPtrs[MAX_ARGUMENTS];
+        char* testStrs[MAX_ARGUMENTS];
+        int testInts[MAX_ARGUMENTS];
+        double testDbls[MAX_ARGUMENTS];
 
         virtual void create_testcases() override;
     };

@@ -2,14 +2,15 @@
 
 import sys
 
+# NB: THESE TYPES CANNOT HAVE SPACES!
 supported_types = {
-    'int': 'testInt',
-    # 'double': 'testDbl',
-    # 'char*': 'testStr',
-    'void*': 'testPtr'
+    'int': 'testInts[{}]',
+    # 'double': 'testDbl[{}]',
+    # 'char*': 'testStr[{}]',
+    'void*': 'testPtrs[{}]'
 }
 
-max_args = 8
+max_args = 6
 
 sigs = []
 
@@ -36,7 +37,6 @@ def main():
                     sigs[index][arg_num][i] = newsig
                     i += 1
 
-    # for index in range(0, len(supported_types)):
     for index in range(0, len(supported_types)):
         allsigs = sigs[index]
         for arg_num in range(0, max_args):
@@ -44,17 +44,27 @@ def main():
             for sig in siglist:
                 typeStr = ", ".join(sig)
                 print("{{\n\tstd::tuple<{}> t;".format(typeStr))
-                argTypeStr = "\", \"".join(sig);
+                argTypeStr = "\", \"".join(sig)
                 print("\tstd::vector<std::string> s = {{\"{}\"}};".format(argTypeStr))
+
                 i = 0
+                type_counts = {}
+                for type in supported_types.keys():
+                    type_counts[type] = 0
+
                 for t in sig:
-                    print("\tstd::get<{}>(t) = {};".format(i, supported_types[t]))
+                    tupleStr = "\tstd::get<{}>(t) = {};".format(i, supported_types[t])
+                    tupleStr = tupleStr.format(type_counts[t])
+                    type_counts[t] = type_counts[t] + 1
+
+                    print(tupleStr)
                     i += 1
 
-                print("\tstd::shared_ptr<fbf::ArgumentTestCase<void, {}>> v =".format(typeStr))
-                print("\t\tstd::make_shared<fbf::ArgumentTestCase<void, {}>>(location, t, s);".format(typeStr))
+                print("\tstd::shared_ptr<fbf::ArgumentTestCase<void*, {}>> v =".format(typeStr))
+                print("\t\tstd::make_shared<fbf::ArgumentTestCase<void*, {}>>(location, t, s);".format(typeStr))
                 print("\ttestRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));")
                 print("}")
+
 
 if __name__ == "__main__":
     main()
