@@ -19,7 +19,6 @@ fbf::TestRun::TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset) :
 fbf::TestRun::~TestRun() = default;
 
 const unsigned int fbf::TestRun::TIMEOUT = 2;
-const int fbf::TestRun::MAX_FAIL_RATE = 40;
 
 static void sig_handler(int signum) {
     exit(fbf::ITestCase::FAIL);
@@ -59,7 +58,7 @@ test_result_t fbf::TestRun::determine_result(pid_t child) {
         /* SIGILL, SIGSEGV, etc. caused the child to stop...not what we are looking for */
         return fbf::ITestCase::FAIL;
     } else if(WIFEXITED(status)) {
-        return (WEXITSTATUS(status) == 255 ?
+        return (WEXITSTATUS(status) == fbf::ITestCase::PASS ?
             fbf::ITestCase::PASS :
             fbf::ITestCase::FAIL);
     } else {

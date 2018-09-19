@@ -24,6 +24,7 @@ namespace fbf {
         int get_failed_tests();
 
         const static size_t BUFFER_SIZE = 32;
+        const static int MAX_FAIL_RATE;
 
     protected:
         uintptr_t location_;

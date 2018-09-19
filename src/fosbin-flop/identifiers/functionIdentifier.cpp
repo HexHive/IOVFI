@@ -3,6 +3,9 @@
 //
 
 #include <identifiers/functionIdentifier.h>
+#include <fosbin-flop/identifiers/functionIdentifier.h>
+
+const int fbf::FunctionIdentifier::MAX_FAIL_RATE = 40;
 
 fbf::FunctionIdentifier::FunctionIdentifier(uintptr_t location, const std::string &functionName) :
         ITestCase(),
@@ -28,9 +31,25 @@ void fbf::FunctionIdentifier::setup() {
 
 int fbf::FunctionIdentifier::run_test() {
     setup();
-    return evaluate();
+    evaluate();
+    if(get_total_tests() == 0) {
+        return fbf::ITestCase::FAIL;
+    }
+
+    double failRate = (double)get_failed_tests() / get_total_tests();
+    int failPercent = (int)(failRate * 100);
+    return (failPercent >= fbf::FunctionIdentifier::MAX_FAIL_RATE) ?
+        fbf::ITestCase::FAIL : fbf::ITestCase::PASS;
 }
 
 const std::string fbf::FunctionIdentifier::get_test_name() {
     return functionName_;
+}
+
+int fbf::FunctionIdentifier::get_total_tests() {
+    return totalTests_;
+}
+
+int fbf::FunctionIdentifier::get_failed_tests() {
+    return failedTests_;
 }

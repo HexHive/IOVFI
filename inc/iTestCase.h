@@ -6,7 +6,6 @@
 #define FOSBIN_ITESTCASE_H
 
 #include <string>
-#include <limits>
 #include <random>
 
 namespace fbf {
@@ -16,8 +15,8 @@ namespace fbf {
         virtual const std::string get_test_name() = 0;
         virtual int run_test() = 0;
 
-        const static int PASS = std::numeric_limits<int>::max();
-        const static int FAIL = std::numeric_limits<int>::min();
+        const static int PASS = 0;
+        const static int FAIL = 1;
 
     protected:
         int rand();
