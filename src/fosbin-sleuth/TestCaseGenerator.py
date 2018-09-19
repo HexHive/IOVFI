@@ -4,13 +4,13 @@ import sys
 
 # NB: THESE TYPES CANNOT HAVE SPACES!
 supported_types = {
-    'int': 'testInts[{}]',
-    # 'double': 'testDbl[{}]',
-    # 'char*': 'testStr[{}]',
+    # 'int': 'testInts[{}]',
+    # 'double': 'testDbls[{}]',
+    # 'char*': 'testStrs[{}]',
     'void*': 'testPtrs[{}]'
 }
 
-max_args = 6
+max_args = 1
 
 sigs = []
 

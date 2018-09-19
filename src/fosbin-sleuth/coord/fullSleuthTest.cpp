@@ -104,11 +104,12 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
             it.first << std::dec <<
             ": ";
         for(auto arg_types : it.second) {
-            if(arg_types->get_test_name().empty()) {
-                o << "void";
+            if(arg_types->get_test_name().empty() || arg_types->get_test_name() == "<>") {
+                o << "< void >";
             } else {
                 o << "< " << arg_types->get_test_name() << " > ";
             }
+            o << " ";
         }
         o << std::endl;
     }

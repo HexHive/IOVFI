@@ -51,6 +51,7 @@ namespace fbf {
         std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location_);
         precall();
         R ret = std::apply(func, args_);
+        std::cout << std::hex << ret << std::endl;
         postcall();
         return testPasses_ == true ? fbf::ITestCase::PASS : fbf::ITestCase::FAIL;
     }

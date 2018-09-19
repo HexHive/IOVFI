@@ -29,7 +29,9 @@ void fbf::FullTest::run() {
         tcsetattr(1, 0, &out);
         tcsetattr(2, 0, &err);
         std::cout << "Running measurement " << ++test_num
-                  << " (offset 0x" << offset.str() << ") of "
+                  << " (offset 0x" << offset.str() << " - "
+                  << (*it)->get_test_name()
+                  << ") of "
                   << testRuns_.size() << std::endl;
         (*it)->run_test();
     }
