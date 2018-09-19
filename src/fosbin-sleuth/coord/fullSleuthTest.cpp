@@ -17,6 +17,10 @@ fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, int i, double d, size_t
     std::memset(testStr, 'A', strLen);
     std::strcpy(testStr, "THIS IS A TEST STRING!!!!");
     testPtr = std::malloc(ptrLen);
+    for(size_t i = 0; i < ptrLen; i++) {
+        ((char*)testPtr)[i] = rand();
+    }
+
     create_testcases();
 }
 
