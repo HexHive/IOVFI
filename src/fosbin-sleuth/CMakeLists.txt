@@ -10,7 +10,7 @@ target_include_directories( ${FUNC_CLASSIFIER} PRIVATE
 target_link_libraries( ${FUNC_CLASSIFIER} stdc++fs )
 
 target_sources( ${FUNC_CLASSIFIER}
-        PRIVATE
+    PUBLIC
         ../common/binaryDescriptor.cpp
         ../common/binSection.cpp
         ../common/fullTest.cpp

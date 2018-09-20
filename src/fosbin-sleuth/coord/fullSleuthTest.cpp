@@ -13,6 +13,7 @@
 #include <random>
 #include <limits>
 #include <iterator>
+#include <chrono>
 
 fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, int i, double d, size_t strLen, size_t ptrLen) :
         FullTest(descriptor) {
@@ -20,7 +21,8 @@ fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, int i, double d, size_t
     std::uniform_real_distribution<double> dblRand(std::numeric_limits<double>::min(),
                                                    std::numeric_limits<double>::max());
 
-    std::default_random_engine re;
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::default_random_engine re(seed);
 
     for (size_t i = 0; i < MAX_ARGUMENTS; i++) {
         testInts[i] = i + 1;
