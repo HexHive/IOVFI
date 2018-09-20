@@ -4,13 +4,17 @@ import sys
 
 # NB: THESE TYPES CANNOT HAVE SPACES!
 supported_types = {
-    # 'int': 'testInts[{}]',
+    'int': 'testInts[{}]',
     # 'double': 'testDbls[{}]',
     # 'char*': 'testStrs[{}]',
-    'void*': 'testPtrs[{}]'
+    'void*': 'testPtrs[{}]',
 }
 
-max_args = 1
+# Number of args we support
+max_args = 5
+
+# Number of args pass into the function
+total_args = 8
 
 sigs = []
 
@@ -43,6 +47,9 @@ def main():
             siglist = allsigs[arg_num]
             for sig in siglist:
                 typeStr = ", ".join(sig)
+                for filler in range(arg_num, total_args):
+                    typeStr += ", uintptr_t"
+
                 print("{{\n\tstd::tuple<{}> t;".format(typeStr))
                 argTypeStr = "\", \"".join(sig)
                 print("\tstd::vector<std::string> s = {{\"{}\"}};".format(argTypeStr))
@@ -51,9 +58,14 @@ def main():
                 type_counts = {}
                 for type in supported_types.keys():
                     type_counts[type] = 0
+                type_counts['uintptr_t'] = 0
 
-                for t in sig:
-                    tupleStr = "\tstd::get<{}>(t) = {};".format(i, supported_types[t])
+                for t in typeStr.split(', '):
+                    if t == "uintptr_t":
+                        val = "(uintptr_t)-1"
+                    else:
+                        val = supported_types[t]
+                    tupleStr = "\tstd::get<{}>(t) = {};".format(i, val)
                     tupleStr = tupleStr.format(type_counts[t])
                     type_counts[t] = type_counts[t] + 1
 

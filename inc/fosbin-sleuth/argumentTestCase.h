@@ -50,8 +50,12 @@ namespace fbf {
     int fbf::ArgumentTestCase<R, Args...>::run_test() {
         std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location_);
         precall();
-        R ret = std::apply(func, args_);
-        std::cout << std::hex << ret << std::endl;
+        try {
+            R ret = std::apply(func, args_);
+        } catch(std::exception& e) {
+            return fbf::ITestCase::FAIL;
+        }
+        //std::cout << std::hex << ret << std::dec << std::endl;
         postcall();
         return testPasses_ == true ? fbf::ITestCase::PASS : fbf::ITestCase::FAIL;
     }

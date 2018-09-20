@@ -45,7 +45,8 @@ void fbf::TestRun::run_test() {
         throw std::runtime_error("Failed to fork");
     } else if (pid == 0) {
         set_signals();
-        exit(test_->run_test());
+        int result = test_->run_test();
+        exit(result);
     } else {
         result_ = determine_result(pid);
     }
