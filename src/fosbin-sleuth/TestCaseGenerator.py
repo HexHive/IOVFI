@@ -7,7 +7,7 @@ supported_types = {
     'int': 'testInts[{}]',
     # 'double': 'testDbls[{}]',
     # 'char*': 'testStrs[{}]',
-    'void*': 'testPtrs[{}]',
+    'void*': '&testPtrs[{}]',
 }
 
 # Number of args we support

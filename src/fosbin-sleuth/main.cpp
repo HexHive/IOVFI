@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 
     fbf::BinaryDescriptor binDesc(argv[1]);
 
-    fbf::FullSleuthTest test(argv[1], DEFAULT_INT, DEFAULT_DOUBLE, STR_LEN, PTR_LEN);
+    fbf::FullSleuthTest test(argv[1], STR_LEN, PTR_LEN);
     test.run();
     test.output(std::cout);
 

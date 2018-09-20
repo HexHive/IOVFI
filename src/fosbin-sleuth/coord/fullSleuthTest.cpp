@@ -17,26 +17,20 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, int i, double d, size_t strLen, size_t ptrLen) :
+fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen) :
         FullTest(descriptor) {
     std::uniform_int_distribution<int> intRand(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
     std::uniform_real_distribution<double> dblRand(std::numeric_limits<double>::min(),
                                                    std::numeric_limits<double>::max());
-    int page_size = getpagesize();
-
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::default_random_engine re(seed);
 
     for (size_t i = 0; i < MAX_ARGUMENTS; i++) {
-        testInts[i] = i + 1;
-        testDbls[i] = dblRand(re);
+        testInts.push_back(i + 1);
+        testDbls.push_back(dblRand(re));
 
-        /* Separate allocated pointers by guard pages */
-        void* ptr = mmap(NULL, page_size, PROT_NONE, MAP_PRIVATE, 0, 0);
-        testPtrs[i] = mmap((char*)ptr + page_size, ptrLen, PROT_READ | PROT_WRITE, MAP_PRIVATE, 0, 0);
-        mmap((char*)testPtrs[i] + ptrLen, page_size, PROT_NONE, MAP_PRIVATE, 0, 0);
-        
-        testStrs[i] = (char *) std::malloc(strLen);
+        testStrs.push_back((char *) std::malloc(strLen));
+        testPtrs.push_back(ProtectedBuffer(ptrLen));
 
         for (size_t j = 0; j < strLen; j++) {
             /* Printable characters */
@@ -45,7 +39,8 @@ fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, int i, double d, size_t
         }
 
         for (size_t j = 0; j < ptrLen; j++) {
-            ((char*)testPtrs[i])[j] = (char)intRand(re);
+            ProtectedBuffer buf = testPtrs[i];
+            buf[j] = (char)intRand(re);
         }
     }
 
@@ -53,13 +48,8 @@ fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, int i, double d, size_t
 }
 
 fbf::FullSleuthTest::~FullSleuthTest() {
-    for (size_t i = 0; i < MAX_ARGUMENTS; i++) {
-        if (testPtrs[i]) {
-            std::free(testPtrs[i]);
-        }
-        if (testStrs[i]) {
-            std::free(testStrs[i]);
-        }
+    for (char* str : testStrs) {
+        std::free(str);
     }
 }
 

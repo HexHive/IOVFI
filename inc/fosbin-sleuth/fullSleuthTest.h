@@ -6,11 +6,13 @@
 #define FOSBIN_FULLSLEUTHTEST_H
 
 #include "fullTest.h"
+#include "protectedBuffer.h"
+#include <vector>
 
 namespace fbf {
     class FullSleuthTest : public FullTest {
     public:
-        FullSleuthTest(fs::path descriptor, int i, double d, size_t strLen, size_t ptrLen);
+        FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen);
 
         virtual ~FullSleuthTest();
         virtual void output(std::ostream& o) override;
@@ -18,10 +20,10 @@ namespace fbf {
         const static int MAX_ARGUMENTS = 8;
 
     protected:
-        void* testPtrs[MAX_ARGUMENTS];
-        char* testStrs[MAX_ARGUMENTS];
-        int testInts[MAX_ARGUMENTS];
-        double testDbls[MAX_ARGUMENTS];
+        std::vector<ProtectedBuffer> testPtrs;
+        std::vector<char*> testStrs;
+        std::vector<int> testInts;
+        std::vector<double> testDbls;
 
         virtual void create_testcases() override;
     };
