@@ -19,7 +19,7 @@
 
 fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen) :
         FullTest(descriptor) {
-    std::uniform_int_distribution<uint8_t> intRand(0x00, 0xfe);
+    std::uniform_int_distribution<uint8_t> charRand(MAX_ARGUMENTS + 2, 0xfe);
     std::uniform_real_distribution<double> dblRand(std::numeric_limits<double>::min(),
                                                    std::numeric_limits<double>::max());
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -34,13 +34,13 @@ fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t p
 
         for (size_t j = 0; j < strLen; j++) {
             /* Printable characters */
-            char randChar = '!' + intRand(re) % ('~' - '!');
+            char randChar = '!' + charRand(re) % ('~' - '!');
             testStrs[i][j] = randChar;
         }
 
         ProtectedBuffer buf = testPtrs[i];
         for (size_t j = 0; j < ptrLen; j++) {
-            buf[j] = (char)intRand(re);
+            buf[j] = charRand(re);
         }
     }
 

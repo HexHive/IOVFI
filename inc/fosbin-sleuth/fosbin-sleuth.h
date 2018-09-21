@@ -9,7 +9,7 @@
 
 #define MAX_ARG_COUNT   8
 #define STR_LEN         48
-#define PTR_LEN         1024
+#define PTR_LEN         4096
 #define DEFAULT_INT     1
 #define DEFAULT_DOUBLE  2.0
 
