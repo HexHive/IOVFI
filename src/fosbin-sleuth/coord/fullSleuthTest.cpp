@@ -19,7 +19,7 @@
 
 fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen) :
         FullTest(descriptor) {
-    std::uniform_int_distribution<int> intRand(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+    std::uniform_int_distribution<uint8_t> intRand(0x00, 0xfe);
     std::uniform_real_distribution<double> dblRand(std::numeric_limits<double>::min(),
                                                    std::numeric_limits<double>::max());
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -38,8 +38,8 @@ fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t p
             testStrs[i][j] = randChar;
         }
 
+        ProtectedBuffer buf = testPtrs[i];
         for (size_t j = 0; j < ptrLen; j++) {
-            ProtectedBuffer buf = testPtrs[i];
             buf[j] = (char)intRand(re);
         }
     }
@@ -82,26 +82,26 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
                 }
             }
 
-//            if(min_arg_counts.find(it.first) == min_arg_counts.end()) {
-//                min_arg_counts[it.first] = args.size();
-//                std::vector<std::shared_ptr<fbf::TestRun>> v;
-//                v.push_back(valid_args);
-//                successes[it.first] = v;
-//            } else if(min_arg_counts[it.first] == args.size()) {
-//                successes[it.first].push_back(valid_args);
-//            } else if(min_arg_counts[it.first] > args.size()) {
-//                successes[it.first].clear();
-//                successes[it.first].push_back(valid_args);
-//                min_arg_counts[it.first] = args.size();
-//            }
             if(min_arg_counts.find(it.first) == min_arg_counts.end()) {
                 min_arg_counts[it.first] = args.size();
                 std::vector<std::shared_ptr<fbf::TestRun>> v;
                 v.push_back(valid_args);
                 successes[it.first] = v;
-            } else {
+            } else if(min_arg_counts[it.first] == args.size()) {
                 successes[it.first].push_back(valid_args);
+            } else if(min_arg_counts[it.first] > args.size()) {
+                successes[it.first].clear();
+                successes[it.first].push_back(valid_args);
+                min_arg_counts[it.first] = args.size();
             }
+//            if(min_arg_counts.find(it.first) == min_arg_counts.end()) {
+//                min_arg_counts[it.first] = args.size();
+//                std::vector<std::shared_ptr<fbf::TestRun>> v;
+//                v.push_back(valid_args);
+//                successes[it.first] = v;
+//            } else {
+//                successes[it.first].push_back(valid_args);
+//            }
         }
     }
 
@@ -124,24 +124,6 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
 void fbf::FullSleuthTest::create_testcases() {
     for (uintptr_t offset : binDesc_.getOffsets()) {
         uintptr_t location = compute_location(offset);
-        {
-            std::tuple<uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t> t;
-            std::vector<std::string> l;
-
-            std::get<0>(t) = (uintptr_t)-1;
-            std::get<1>(t) = (uintptr_t)-1;
-            std::get<2>(t) = (uintptr_t)-1;
-            std::get<3>(t) = (uintptr_t)-1;
-            std::get<4>(t) = (uintptr_t)-1;
-            std::get<5>(t) = (uintptr_t)-1;
-            std::get<6>(t) = (uintptr_t)-1;
-            std::get<7>(t) = (uintptr_t)-1;
-
-            std::shared_ptr<fbf::ArgumentTestCase<void *, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t>> v =
-                    std::make_shared<fbf::ArgumentTestCase<void *, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t>>(location, t, l);
-            testRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));
-        }
-
 #include "TestCases.inc"
 
     }

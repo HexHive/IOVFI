@@ -41,6 +41,21 @@ def main():
                     sigs[index][arg_num][i] = newsig
                     i += 1
 
+    typeStr = ""
+    for x in range(0, total_args):
+        typeStr += "uintptr_t, "
+
+    typeStr = typeStr[:-2]
+    print("{{\n\tstd::tuple<{}> t;".format(typeStr))
+
+    print("\tstd::vector<std::string> l;")
+    for i in range(0, total_args):
+        print("\tstd::get<{}>(t) = (uintptr_t)-1;".format(i));
+
+    print("\tstd::shared_ptr<fbf::ArgumentTestCase<void*, {}>> v = ".format(typeStr))
+    print("\tstd::make_shared<fbf::ArgumentTestCase<void*, {}>>(location, t, l);".format(typeStr))
+    print("\ttestRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));\n}")
+
     for index in range(0, len(supported_types)):
         allsigs = sigs[index]
         for arg_num in range(0, max_args):
