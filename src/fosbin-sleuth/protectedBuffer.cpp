@@ -10,33 +10,32 @@
 #include <stdexcept>
 
 fbf::ProtectedBuffer::ProtectedBuffer(size_t bufsize, size_t guardsize) :
-    buffer(nullptr, 0), guards(2)
-{
-    uint8_t* ptr = (uint8_t*)mmap(NULL, guardsize, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if(ptr == MAP_FAILED) {
+        buffer(nullptr, 0), guards(2) {
+    uint8_t *ptr = (uint8_t *) mmap(NULL, guardsize, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (ptr == MAP_FAILED) {
         throw std::runtime_error("Could not allocate guard page");
     }
-    std::shared_ptr<uint8_t> sp1(ptr, [guardsize](uint8_t* ptr) { munmap(ptr, guardsize); });
+    std::shared_ptr<uint8_t> sp1(ptr, [guardsize](uint8_t *ptr) { munmap(ptr, guardsize); });
     guards[0].first = sp1;
     guards[0].second = guardsize;
 
-    uint8_t * buf = (uint8_t*)mmap(ptr + guards[0].second,
-            bufsize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if(buf == MAP_FAILED) {
+    uint8_t *buf = (uint8_t *) mmap(ptr + guards[0].second,
+                                    bufsize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (buf == MAP_FAILED) {
         munmap(guards[0].first.get(), guards[0].second);
         throw std::runtime_error("Could not allocate guard page");
     }
-    std::shared_ptr<uint8_t> sp2(buf, [bufsize](uint8_t* ptr) { munmap(ptr, bufsize); });
+    std::shared_ptr<uint8_t> sp2(buf, [bufsize](uint8_t *ptr) { munmap(ptr, bufsize); });
     buffer.first = sp2;
     buffer.second = bufsize;
 
-    ptr = (uint8_t*)mmap(buf + buffer.second, guardsize, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if(ptr == MAP_FAILED) {
+    ptr = (uint8_t *) mmap(buf + buffer.second, guardsize, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (ptr == MAP_FAILED) {
         munmap(guards[0].first.get(), guards[0].second);
         munmap(buffer.first.get(), buffer.second);
         throw std::runtime_error("Could not allocate guard page");
     }
-    std::shared_ptr<uint8_t> sp3(ptr, [guardsize](uint8_t* ptr) { munmap(ptr, guardsize); });
+    std::shared_ptr<uint8_t> sp3(ptr, [guardsize](uint8_t *ptr) { munmap(ptr, guardsize); });
     guards[1].first = sp3;
     guards[1].second = guardsize;
 }
@@ -61,16 +60,15 @@ uint8_t fbf::ProtectedBuffer::operator[](size_t i) const {
     return buffer.first.get()[i];
 }
 
-uint8_t* fbf::ProtectedBuffer::operator&() {
+uint8_t *fbf::ProtectedBuffer::operator&() {
     return buffer.first.get();
 }
 
 fbf::ProtectedBuffer::ProtectedBuffer(const fbf::ProtectedBuffer &orig)
-    : guards(orig.guards), buffer(orig.buffer)
-{ }
+        : guards(orig.guards), buffer(orig.buffer) {}
 
 fbf::ProtectedBuffer &fbf::ProtectedBuffer::operator=(const fbf::ProtectedBuffer &other) {
-    if(this != &other) {
+    if (this != &other) {
         guards = other.guards;
         buffer = other.buffer;
     }

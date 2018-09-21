@@ -13,10 +13,15 @@ supported_types = {
 # Number of args we support
 max_args = 5
 
-# Number of args pass into the function
+# Number of args passed into the function
 total_args = 8
 
 sigs = []
+
+INVALID_TYPE = "uintptr_t"
+INVALID_VALUE = "-1"
+INVALID_ARGUMENT = "({}){}".format(INVALID_TYPE, INVALID_VALUE)
+DEFAULT_RET_TYPE = "void*"
 
 
 def main():
@@ -43,17 +48,17 @@ def main():
 
     typeStr = ""
     for x in range(0, total_args):
-        typeStr += "uintptr_t, "
+        typeStr += "{}, ".format(INVALID_TYPE)
 
     typeStr = typeStr[:-2]
     print("{{\n\tstd::tuple<{}> t;".format(typeStr))
 
     print("\tstd::vector<std::string> l;")
     for i in range(0, total_args):
-        print("\tstd::get<{}>(t) = (uintptr_t)-1;".format(i));
+        print("\tstd::get<{}>(t) = {};".format(i, INVALID_ARGUMENT));
 
-    print("\tstd::shared_ptr<fbf::ArgumentTestCase<void*, {}>> v = ".format(typeStr))
-    print("\tstd::make_shared<fbf::ArgumentTestCase<void*, {}>>(location, t, l);".format(typeStr))
+    print("\tstd::shared_ptr<fbf::ArgumentTestCase<{}, {}>> v = ".format(DEFAULT_RET_TYPE, typeStr))
+    print("\tstd::make_shared<fbf::ArgumentTestCase<{}, {}>>(location, t, l);".format(DEFAULT_RET_TYPE, typeStr))
     print("\ttestRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));\n}")
 
     for index in range(0, len(supported_types)):
@@ -63,7 +68,7 @@ def main():
             for sig in siglist:
                 typeStr = ", ".join(sig)
                 for filler in range(arg_num, total_args):
-                    typeStr += ", uintptr_t"
+                    typeStr += ", {}".format(INVALID_TYPE)
 
                 print("{{\n\tstd::tuple<{}> t;".format(typeStr))
                 argTypeStr = "\", \"".join(sig)
@@ -73,11 +78,11 @@ def main():
                 type_counts = {}
                 for type in supported_types.keys():
                     type_counts[type] = 0
-                type_counts['uintptr_t'] = 0
+                type_counts[INVALID_TYPE] = 0
 
                 for t in typeStr.split(', '):
-                    if t == "uintptr_t":
-                        val = "(uintptr_t)-1"
+                    if t == INVALID_TYPE:
+                        val = INVALID_ARGUMENT
                     else:
                         val = supported_types[t]
                     tupleStr = "\tstd::get<{}>(t) = {};".format(i, val)
@@ -87,8 +92,8 @@ def main():
                     print(tupleStr)
                     i += 1
 
-                print("\tstd::shared_ptr<fbf::ArgumentTestCase<void*, {}>> v =".format(typeStr))
-                print("\t\tstd::make_shared<fbf::ArgumentTestCase<void*, {}>>(location, t, s);".format(typeStr))
+                print("\tstd::shared_ptr<fbf::ArgumentTestCase<{}, {}>> v =".format(DEFAULT_RET_TYPE, typeStr))
+                print("\t\tstd::make_shared<fbf::ArgumentTestCase<{}, {}>>(location, t, s);".format(DEFAULT_RET_TYPE, typeStr))
                 print("\ttestRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));")
                 print("}")
 

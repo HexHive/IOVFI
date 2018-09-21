@@ -15,13 +15,14 @@ namespace fbf {
         FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen);
 
         virtual ~FullSleuthTest();
-        virtual void output(std::ostream& o) override;
+
+        virtual void output(std::ostream &o) override;
 
         const static int MAX_ARGUMENTS = 8;
 
     protected:
         std::vector<ProtectedBuffer> testPtrs;
-        std::vector<char*> testStrs;
+        std::vector<char *> testStrs;
         std::vector<int> testInts;
         std::vector<double> testDbls;
 

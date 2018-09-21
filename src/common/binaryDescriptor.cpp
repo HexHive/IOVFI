@@ -18,8 +18,7 @@
 namespace fs = std::experimental::filesystem;
 
 fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
-    desc_path_(path)
-{
+        desc_path_(path) {
     if (fs::is_empty(desc_path_)) {
         throw std::runtime_error("Descriptor is empty");
     }

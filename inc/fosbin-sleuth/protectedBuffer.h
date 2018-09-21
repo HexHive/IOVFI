@@ -12,20 +12,25 @@
 
 namespace fbf {
 #define PAGE_SIZE   4096
+
     class ProtectedBuffer {
     public:
         ProtectedBuffer(size_t bufsize, size_t guardsize = PAGE_SIZE);
-        ProtectedBuffer(const ProtectedBuffer& orig);
+
+        ProtectedBuffer(const ProtectedBuffer &orig);
+
         ~ProtectedBuffer();
 
         uint8_t operator[](size_t i) const;
-        uint8_t& operator[](size_t i);
-        ProtectedBuffer& operator=(const ProtectedBuffer& other);
 
-        uint8_t* operator&();
+        uint8_t &operator[](size_t i);
+
+        ProtectedBuffer &operator=(const ProtectedBuffer &other);
+
+        uint8_t *operator&();
 
     protected:
-        std::vector< std::pair<std::shared_ptr<uint8_t>, size_t> > guards;
+        std::vector<std::pair<std::shared_ptr<uint8_t>, size_t> > guards;
         std::pair<std::shared_ptr<uint8_t>, size_t> buffer;
     };
 }
