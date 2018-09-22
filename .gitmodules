@@ -2,3 +2,6 @@
 	path = src/llvm
 	url = git@github.com:deadly-platypus/llvm.git
 	branch = fosbin-flop
+[submodule "inc/CTPL"]
+	path = inc/CTPL
+	url = git@github.com:vit-vit/CTPL.git
