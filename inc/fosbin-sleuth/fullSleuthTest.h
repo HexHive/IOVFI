@@ -12,7 +12,8 @@
 namespace fbf {
     class FullSleuthTest : public FullTest {
     public:
-        FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen);
+        FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen, uint32_t thread_count = 1);
+        FullSleuthTest(const FullSleuthTest& other);
 
         virtual ~FullSleuthTest();
 
