@@ -19,13 +19,20 @@ fbf::FullTest::~FullTest() {
 }
 
 fbf::FullTest::FullTest(const fbf::FullTest &other) :
-    binDesc_(other.binDesc_), pool_(other.pool_)
+    binDesc_(other.binDesc_), pool_(other.pool_.size())
 {
+    other.pool_.stop();
 
 }
 
 fbf::FullTest &fbf::FullTest::operator=(const fbf::FullTest &other) {
-    return <#initializer#>;
+    if(this != &other) {
+        binDesc_ = other.binDesc_;
+        pool_.resize(other.pool_.size());
+        for(auto t : other.pool_.)
+    }
+
+    return *this;
 }
 
 void fbf::FullTest::run() {
