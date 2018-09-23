@@ -23,10 +23,11 @@ set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
 
 set( CMAKE_VERBOSE_MAKEFILE True )
 
-find_package(Boost
-        1.65
-        REQUIRED
-        )
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+find_package( Boost REQUIRED )
+
+find_package( Threads REQUIRED )
 
 configure_file( "inc/${PROJ_NAME}-config.h.in"
     "inc/${PROJ_NAME}-config.h")

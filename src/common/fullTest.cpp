@@ -18,18 +18,15 @@ fbf::FullTest::~FullTest() {
     pool_.stop();
 }
 
-fbf::FullTest::FullTest(const fbf::FullTest &other) :
+fbf::FullTest::FullTest(const fbf::FullTest &other):
     binDesc_(other.binDesc_), pool_(other.pool_.size())
 {
-    other.pool_.stop();
-
 }
 
 fbf::FullTest &fbf::FullTest::operator=(const fbf::FullTest &other) {
     if(this != &other) {
         binDesc_ = other.binDesc_;
         pool_.resize(other.pool_.size());
-        for(auto t : other.pool_.)
     }
 
     return *this;
@@ -55,7 +52,9 @@ void fbf::FullTest::run() {
                   << (*it)->get_test_name()
                   << ")" << std::endl;
 
-        pool_.push((*it)->run_test());
+        std::shared_ptr<fbf::TestRun> sp = *it;
+        auto b = std::bind(&fbf::TestRun::run_test, sp.get());
+        pool_.push(b);
     }
 
     pool_.stop(true);
