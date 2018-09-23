@@ -12,21 +12,22 @@
 namespace fs = std::experimental::filesystem;
 
 fbf::FullTest::FullTest(fs::path descriptor, uint32_t thread_count) :
-        binDesc_(descriptor), pool_(thread_count) {}
+        binDesc_(descriptor), thread_count_(thread_count), pool_(thread_count) {}
 
 fbf::FullTest::~FullTest() {
     pool_.stop();
 }
 
 fbf::FullTest::FullTest(const fbf::FullTest &other):
-    binDesc_(other.binDesc_), pool_(other.pool_.size())
+    binDesc_(other.binDesc_), thread_count_(other.thread_count_), pool_(other.thread_count_)
 {
 }
 
 fbf::FullTest &fbf::FullTest::operator=(const fbf::FullTest &other) {
     if(this != &other) {
         binDesc_ = other.binDesc_;
-        pool_.resize(other.pool_.size());
+        thread_count_ = other.thread_count_;
+        pool_.resize(thread_count_);
     }
 
     return *this;

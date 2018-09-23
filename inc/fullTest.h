@@ -15,6 +15,7 @@ namespace fbf {
         std::vector<std::shared_ptr<fbf::TestRun>> testRuns_;
         BinaryDescriptor binDesc_;
         ctpl::thread_pool pool_;
+        uint32_t thread_count_;
 
         virtual void create_testcases() = 0;
         virtual uintptr_t compute_location(uintptr_t offset);
