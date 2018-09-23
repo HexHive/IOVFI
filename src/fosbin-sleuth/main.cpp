@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 
     fbf::BinaryDescriptor binDesc(argv[1]);
 
-    fbf::FullSleuthTest test(argv[1], STR_LEN, PTR_LEN);
+    fbf::FullSleuthTest test(argv[1], STR_LEN, PTR_LEN, std::thread::hardware_concurrency());
     test.run();
     test.output(std::cout);
 

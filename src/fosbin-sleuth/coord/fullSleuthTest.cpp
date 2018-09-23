@@ -17,8 +17,8 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen) :
-        FullTest(descriptor) {
+fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen, uint32_t thread_count) :
+        FullTest(descriptor, thread_count) {
     /* Avoid testInt values */
     std::uniform_int_distribution<uint8_t> charRand(MAX_ARGUMENTS + 2, 0xfe);
     std::uniform_real_distribution<double> dblRand(std::numeric_limits<double>::min(),

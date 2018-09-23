@@ -6,13 +6,27 @@
 #include <iostream>
 #include <fstream>
 #include <termios.h>
+#include <fullTest.h>
+
 
 namespace fs = std::experimental::filesystem;
 
-fbf::FullTest::FullTest(fs::path descriptor) :
-        binDesc_(descriptor) {}
+fbf::FullTest::FullTest(fs::path descriptor, uint32_t thread_count) :
+        binDesc_(descriptor), pool_(thread_count) {}
 
-fbf::FullTest::~FullTest() {}
+fbf::FullTest::~FullTest() {
+    pool_.stop();
+}
+
+fbf::FullTest::FullTest(const fbf::FullTest &other) :
+    binDesc_(other.binDesc_), pool_(other.pool_)
+{
+
+}
+
+fbf::FullTest &fbf::FullTest::operator=(const fbf::FullTest &other) {
+    return <#initializer#>;
+}
 
 void fbf::FullTest::run() {
     size_t test_num = 0;
@@ -28,13 +42,16 @@ void fbf::FullTest::run() {
         tcsetattr(0, 0, &in);
         tcsetattr(1, 0, &out);
         tcsetattr(2, 0, &err);
-        std::cout << "Running measurement " << ++test_num
+        std::cout << "Queueing measurement " << ++test_num
                   << " of " << testRuns_.size()
                   << " (offset 0x" << offset.str() << " - "
                   << (*it)->get_test_name()
                   << ")" << std::endl;
-        (*it)->run_test();
+
+        pool_.push((*it)->run_test());
     }
+
+    pool_.stop(true);
 }
 
 void fbf::FullTest::output(std::ostream &out) {

@@ -17,8 +17,8 @@
 
 namespace fs = std::experimental::filesystem;
 
-fbf::FullIdentifierTest::FullIdentifierTest(fs::path descriptor) :
-        FullTest(descriptor) {
+fbf::FullIdentifierTest::FullIdentifierTest(fs::path descriptor, uint32_t thread_count) :
+        FullTest(descriptor, thread_count) {
     create_testcases();
 }
 
