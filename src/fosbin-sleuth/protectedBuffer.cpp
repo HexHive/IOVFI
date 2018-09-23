@@ -40,17 +40,7 @@ fbf::ProtectedBuffer::ProtectedBuffer(size_t bufsize, size_t guardsize) :
     guards[1].second = guardsize;
 }
 
-fbf::ProtectedBuffer::~ProtectedBuffer() {
-/*    for(std::pair<std::shared_ptr<uint8_t>, size_t> guard : guards) {
-        if(guard.first.use_count() <= 1) {
-            munmap(guard.first.get(), guard.second);
-        }
-    }
-
-    if(buffer.first.use_count() <= 1) {
-        munmap(buffer.first.get(), buffer.second);
-    }*/
-}
+fbf::ProtectedBuffer::~ProtectedBuffer() = default;
 
 uint8_t &fbf::ProtectedBuffer::operator[](size_t i) {
     return buffer.first.get()[i];

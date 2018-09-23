@@ -23,6 +23,11 @@ set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
 
 set( CMAKE_VERBOSE_MAKEFILE True )
 
+find_package(Boost
+        1.65
+        REQUIRED
+        )
+
 configure_file( "inc/${PROJ_NAME}-config.h.in"
     "inc/${PROJ_NAME}-config.h")
 
