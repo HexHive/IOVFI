@@ -7,7 +7,9 @@ target_include_directories( ${FUNC_CLASSIFIER} PRIVATE
         .
         )
 
-target_link_libraries( ${FUNC_CLASSIFIER} stdc++fs )
+target_link_libraries( ${FUNC_CLASSIFIER}
+        stdc++fs pthread
+        )
 
 target_sources( ${FUNC_CLASSIFIER}
     PUBLIC
