@@ -58,7 +58,9 @@ void fbf::FullTest::run() {
         pool_.push(b);
     }
 
+    std::cout << "Waiting for all tests to complete...";
     pool_.stop(true);
+    std::cout << "done!" << std::endl;
 }
 
 void fbf::FullTest::output(std::ostream &out) {

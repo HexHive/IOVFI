@@ -42,6 +42,7 @@ void fbf::TestRun::run_test() {
     }
     test_has_run_ = true;
 
+    std::cout << "Running test " << get_test_name() << std::endl;
     pid_t pid = fork();
     if (pid < 0) {
         throw std::runtime_error("Failed to fork");
