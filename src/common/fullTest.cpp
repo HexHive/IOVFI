@@ -39,6 +39,7 @@ void fbf::FullTest::run() {
     tcgetattr(0, &in);
     tcgetattr(1, &out);
     tcgetattr(2, &err);
+    std::cout << "Running tests on " << binDesc_.getOffsets().size() << " offsets" << std::endl;
 
     for (std::vector<std::shared_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
          it != testRuns_.end(); ++it) {

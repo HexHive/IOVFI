@@ -6,7 +6,6 @@ import sys
 def usage():
     print("usage: {} /path/to/results /path/to/mapping".format(sys.argv[0]))
 
-
 def main():
     if len(sys.argv) != 3:
         usage()
@@ -30,8 +29,8 @@ def main():
             if index >= 0:
                 address = mapping[:index].strip()
                 name = mapping[index + 1:].strip()
-                if address in address_map:
-                    print("{}: {}".format(name, address_map[address]))
+                if address not in address_map:
+                    print("{}".format(name))
 
 
 if __name__ == "__main__":
