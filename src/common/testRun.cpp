@@ -26,7 +26,6 @@ static void sig_handler(int signum) {
 
 void fbf::TestRun::set_signals() {
     /* Change process group ID to avoid ending the parent process if kill* is called */
-    setpgid(0, 0);
     signal(SIGALRM, sig_handler);
     signal(SIGINT, sig_handler);
     alarm(TIMEOUT);
@@ -42,7 +41,11 @@ void fbf::TestRun::run_test() {
     }
     test_has_run_ = true;
 
-    std::cout << "Running test " << get_test_name() << std::endl;
+    std::cout << "Running test " 
+        << get_test_name() 
+        << " on offset "
+        << std::hex << offset_ << std::dec
+        << std::endl;
     pid_t pid = fork();
     if (pid < 0) {
         throw std::runtime_error("Failed to fork");
