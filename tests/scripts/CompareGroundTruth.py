@@ -20,7 +20,10 @@ type_map = {
     'wctype_t': 'int',
     'uint32_t': 'int',
     'char16_t': 'int',
-    'socklen_t': 'int'
+    'socklen_t': 'int',
+    'dev_t': 'int',
+    'mode_t': 'int',
+    'clockid_t': 'int'
 }
 
 def usage():
@@ -89,7 +92,8 @@ def main():
                 if len(transformedArgs) == 0:
                     transformedArgs.append("void")
 
-                print("{}: {} <-> < {} >".format(name, guess[index+1:].strip(), " ".join(transformedArgs)))
+                finalArgs = "< " + " ".join(transformedArgs) + " >"
+                print("{}\t{}\t{}: {} <-> {}".format(finalArgs == guess[index+1:].strip(), guess[index+1:].find(finalArgs) > 0, name, guess[index+1:].strip(), finalArgs))
 
 
 if __name__ == "__main__":
