@@ -25,7 +25,7 @@ set( CMAKE_VERBOSE_MAKEFILE True )
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-find_package( Boost REQUIRED )
+find_package( Boost COMPONENTS program_options REQUIRED )
 
 find_package( Threads REQUIRED )
 

@@ -5,10 +5,13 @@ add_executable( ${FUNC_CLASSIFIER}
 target_include_directories( ${FUNC_CLASSIFIER} PRIVATE
         ../../inc/${FUNC_CLASSIFIER}
         .
+        ${Boost_INCLUDE_DIRS}
         )
 
 target_link_libraries( ${FUNC_CLASSIFIER}
-        stdc++fs pthread
+        stdc++fs
+        pthread
+        ${Boost_LIBRARIES}
         )
 
 target_sources( ${FUNC_CLASSIFIER}
