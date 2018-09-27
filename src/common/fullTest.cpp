@@ -74,5 +74,9 @@ void fbf::FullTest::output(std::ostream &out) {
 }
 
 uintptr_t fbf::FullTest::compute_location(uintptr_t offset) {
+    if(binDesc_.isSharedLibrary()) {
+        return offset;
+    }
+
     return binDesc_.getText().location_ + offset;
 }

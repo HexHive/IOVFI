@@ -5,7 +5,9 @@ target_include_directories( ${IDENTIFIER_NAME} PRIVATE
         )
 
 target_link_libraries( ${IDENTIFIER_NAME}
-        stdc++fs pthread
+        stdc++fs
+        pthread
+        dl
         )
 
 TARGET_SOURCES( ${IDENTIFIER_NAME}

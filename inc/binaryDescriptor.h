@@ -29,6 +29,7 @@ namespace fbf {
         BinSection& getBss();
         fs::path& getPath();
         std::set<uintptr_t> getOffsets();
+        bool isSharedLibrary();
     };
 }
 

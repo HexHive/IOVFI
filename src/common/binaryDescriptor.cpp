@@ -13,6 +13,9 @@
 #include <unistd.h>
 #include <cstring>
 #include <binaryDescriptor.h>
+#include <dlfcn.h>
+#include <link.h>
+#include <iostream>
 
 
 namespace fs = std::experimental::filesystem;
@@ -91,58 +94,82 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
         }
     }
 
-    if (bin_path_.empty() || offsets_.empty()) {
-        throw std::runtime_error("Binary path and at least one offset required.");
+    if(bin_path_.empty()) {
+        throw std::runtime_error("Binary path is required.");
     }
 
-    struct stat st;
-
-    int fd = open(bin_path_.c_str(), O_RDONLY);
-    if (fd < 0) {
-        throw std::runtime_error("Could not open binary");
-    }
-    if (fstat(fd, &st) < 0) {
-        close(fd);
-        throw std::runtime_error("Failed to get binary stats");
-    }
-    text_.size_ = st.st_size;
-
-    void *offset = mmap(NULL, text_.size_,
-                        PROT_EXEC | PROT_READ,
-                        MAP_PRIVATE, fd, 0);
-
-    if (offset == MAP_FAILED) {
-        close(fd);
-        throw std::runtime_error("Failed to memory map binary");
-    }
-    close(fd);
-    text_.location_ = (uintptr_t) offset;
-
-    if (bss_.size_ > 0) {
-        offset = mmap((void *) (text_.location_ + bss_.location_),
-                      bss_.size_, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
-        if (offset == MAP_FAILED) {
-            char *err = strerror(errno);
-            std::string msg = "Failed to memory map BSS: ";
-            msg += err;
-            throw std::runtime_error(msg);
+    if(this->isSharedLibrary()) {
+        void* offset = dlopen(bin_path_.c_str(), RTLD_LAZY);
+        if(!offset) {
+            throw std::runtime_error(dlerror());
         }
-        bss_.location_ = (uintptr_t) offset;
-        std::memcpy((void *) bss_.location_, (void *) (text_.location_ + bss_.offset_), bss_.size_);
-    }
 
-    if (data_.size_ > 0) {
-        offset = mmap((void *) (text_.location_ + data_.location_),
-                      data_.size_, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
-        if (offset == MAP_FAILED) {
-            char *err = strerror(errno);
-            std::string msg = "Failed to memory map data: ";
-            msg += err;
-            throw std::runtime_error(msg);
+        dlerror();
+        text_.location_ = (uintptr_t)offset;
+        struct link_map *map;
+        if(dlinfo(offset, RTLD_DI_LINKMAP, &map) < 0) {
+            throw std::runtime_error(dlerror());
         }
-        data_.location_ = (uintptr_t) offset;
+        struct link_map* curr = map;
+        while(curr) {
+            std::cout << "Ox" << std::hex << curr->l_addr << std::dec << std::endl;
+            curr = curr->l_next;
+        }
+
+    } else {
+        if (offsets_.empty()) {
+            throw std::runtime_error("At least one offset required.");
+        }
+
+        struct stat st;
+
+        int fd = open(bin_path_.c_str(), O_RDONLY);
+        if (fd < 0) {
+            throw std::runtime_error("Could not open binary");
+        }
+        if (fstat(fd, &st) < 0) {
+            close(fd);
+            throw std::runtime_error("Failed to get binary stats");
+        }
+        text_.size_ = st.st_size;
+
+        void *offset = mmap(NULL, text_.size_,
+                            PROT_EXEC | PROT_READ,
+                            MAP_PRIVATE, fd, 0);
+
+        if (offset == MAP_FAILED) {
+            close(fd);
+            throw std::runtime_error("Failed to memory map binary");
+        }
+        close(fd);
+        text_.location_ = (uintptr_t) offset;
+
+        if (bss_.size_ > 0) {
+            offset = mmap((void *) (text_.location_ + bss_.location_),
+                          bss_.size_, PROT_READ | PROT_WRITE,
+                          MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+            if (offset == MAP_FAILED) {
+                char *err = strerror(errno);
+                std::string msg = "Failed to memory map BSS: ";
+                msg += err;
+                throw std::runtime_error(msg);
+            }
+            bss_.location_ = (uintptr_t) offset;
+            std::memcpy((void *) bss_.location_, (void *) (text_.location_ + bss_.offset_), bss_.size_);
+        }
+
+        if (data_.size_ > 0) {
+            offset = mmap((void *) (text_.location_ + data_.location_),
+                          data_.size_, PROT_READ | PROT_WRITE,
+                          MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+            if (offset == MAP_FAILED) {
+                char *err = strerror(errno);
+                std::string msg = "Failed to memory map data: ";
+                msg += err;
+                throw std::runtime_error(msg);
+            }
+            data_.location_ = (uintptr_t) offset;
+        }
     }
 }
 
@@ -156,7 +183,11 @@ uintptr_t fbf::BinaryDescriptor::parse_offset(std::string &offset) {
 
 fbf::BinaryDescriptor::~BinaryDescriptor() {
     if (text_.location_ > 0) {
-        munmap((void *) text_.location_, text_.size_);
+        if(isSharedLibrary()) {
+            dlclose((void*)text_.location_);
+        } else {
+            munmap((void *) text_.location_, text_.size_);
+        }
     }
 
     if (data_.location_ > 0) {
@@ -186,4 +217,8 @@ fs::path &fbf::BinaryDescriptor::getPath() {
 
 std::set<uintptr_t> fbf::BinaryDescriptor::getOffsets() {
     return offsets_;
+}
+
+bool fbf::BinaryDescriptor::isSharedLibrary() {
+    return bin_path_.extension() == ".so";
 }

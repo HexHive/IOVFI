@@ -12,6 +12,7 @@ target_link_libraries( ${FUNC_CLASSIFIER}
         stdc++fs
         pthread
         ${Boost_LIBRARIES}
+        dl
         )
 
 target_sources( ${FUNC_CLASSIFIER}
