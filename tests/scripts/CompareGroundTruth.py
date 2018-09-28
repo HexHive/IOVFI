@@ -23,7 +23,33 @@ type_map = {
     'socklen_t': 'int',
     'dev_t': 'int',
     'mode_t': 'int',
-    'clockid_t': 'int'
+    'clockid_t': 'int',
+    'uid_t': 'int',
+    'gid_t': 'int',
+    'pid_t': 'int',
+    'intmax_t': 'int',
+    'wctrans_t': 'void*',
+    'key_t': 'int',
+    'eventfd_t': 'int',
+    'nfds_t': 'int',
+    'intptr_t': 'void*',
+    'nl_catd': 'void*',
+    'iconv_t': 'void*',
+    'nl_item': 'int',
+    'uintptr_t': 'void*',
+    'id_t': 'int',
+    'mqd_t': 'int',
+    'uint16_t': 'int',
+    'in_addr_t': 'int',
+    'ns_sect': 'int',
+    'idtype_t': 'int',
+    'ssize_t': 'int',
+    'speed_t': 'int',
+    'thrd_t': 'int',
+    'thrd_start_t': 'void*',
+    'tss_dtor_t': 'void*',
+    'time_t': 'int',
+    'timer_t': 'void*'
 }
 
 def usage():
@@ -31,10 +57,13 @@ def usage():
 
 
 def transform_arg(arg):
+    arg = arg.replace("(", "").replace(")", "").replace("const", "")
+
+    if arg == "":
+        return "void"
+
     if contains_pointer(arg):
         return "void*"
-
-    arg = arg.replace("(", "").replace(")", "").replace("const", "")
 
     if arg.find("struct") > 0:
         tokens = arg.split()
@@ -58,6 +87,9 @@ def parse_xml(xml_file_name):
                 groundTruth[name] = []
                 for param in memberdef.find("argsstring").text.split(", "):
                     groundTruth[name].append(transform_arg(param))
+                if len(groundTruth[name]) == 0:
+                    groundTruth[name].append("void")
+
     except:
         sys.stderr.write("error\n")
         return
@@ -68,6 +100,7 @@ def contains_pointer(arg):
         return False
 
     return arg.find("*") >= 0
+
 
 def main():
     if len(sys.argv) != 3:
@@ -80,17 +113,16 @@ def main():
         for filename in files:
             parse_xml(os.path.join(dir, filename))
 
-    with open(sys.argv[1], "r") as guesses:
+    with open(sys.argv[1], "r", errors='ignore') as guesses:
         for guess in guesses.readlines():
             index = guess.find(":")
+            if index < 0:
+                continue
             name = guess[0:index]
             if name in groundTruth:
                 transformedArgs = []
                 for arg in groundTruth[name]:
                     transformedArgs.append(arg)
-
-                if len(transformedArgs) == 0:
-                    transformedArgs.append("void")
 
                 finalArgs = "< " + " ".join(transformedArgs) + " >"
                 print("{}\t{}\t{}: {} <-> {}".format(finalArgs == guess[index+1:].strip(), guess[index+1:].find(finalArgs) > 0, name, guess[index+1:].strip(), finalArgs))

@@ -7,11 +7,12 @@
 
 #include <string>
 #include <random>
+#include "binaryDescriptor.h"
 
 namespace fbf {
     class ITestCase {
     public:
-        ITestCase();
+        ITestCase(const BinaryDescriptor& binDesc);
         virtual const std::string get_test_name() = 0;
         virtual int run_test() = 0;
 
@@ -20,6 +21,7 @@ namespace fbf {
 
     protected:
         int rand();
+        const BinaryDescriptor& binDesc_;
 
     private:
         std::random_device rd_;

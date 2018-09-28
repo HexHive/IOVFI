@@ -109,7 +109,13 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
         if (!offset) {
             throw std::runtime_error(dlerror());
         }
-
+        printf("__errno_loc1 = %p\terrno_loc2 = %p\n", dlsym(offset, "__errno_location"), &errno);
+        void* temp = dlsym(offset, "errno");
+        if(!temp) {
+            printf("Could not find errno\n");
+        } else {
+            printf("errno at %p = %d\n", temp, *(int*)temp);
+        }
         dlerror();
         text_.location_ = (uintptr_t) offset;
         for (std::string s : syms) {

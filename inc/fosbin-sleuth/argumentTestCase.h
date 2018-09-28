@@ -11,6 +11,7 @@
 #include <tuple>
 #include <cassert>
 #include <sstream>
+#include <cerrno>
 #include "iTestCase.h"
 
 namespace fbf {
@@ -19,7 +20,8 @@ namespace fbf {
     public:
         ArgumentTestCase(uintptr_t location,
                 std::tuple<Args...> args,
-                std::vector<std::string> argTypes);
+                std::vector<std::string> argTypes,
+                const BinaryDescriptor& binDesc);
         virtual ~ArgumentTestCase();
 
         const std::string get_test_name();
