@@ -14,7 +14,6 @@
 #include <cstring>
 #include <binaryDescriptor.h>
 #include <dlfcn.h>
-#include <link.h>
 #include <iostream>
 
 
@@ -33,6 +32,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
     size_t line_num = 0;
     std::fstream f(path);
     std::string line;
+    std::set<std::string> syms;
 
     while (std::getline(f, line)) {
         line_num++;
@@ -87,6 +87,8 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
             data_.location_ = location;
         } else if (key == "data_offset") {
             data_.offset_ = parse_offset(val);
+        } else if (key == "sym") {
+            syms.insert(val);
         } else {
             std::string msg = "Unknown key: ";
             msg += key;
@@ -94,26 +96,31 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
         }
     }
 
-    if(bin_path_.empty()) {
+    if (bin_path_.empty()) {
         throw std::runtime_error("Binary path is required.");
     }
 
-    if(this->isSharedLibrary()) {
-        void* offset = dlopen(bin_path_.c_str(), RTLD_LAZY);
-        if(!offset) {
+    if (isSharedLibrary()) {
+        if (syms.empty()) {
+            throw std::runtime_error("At least one symbol must be provided.");
+        }
+
+        void *offset = dlopen(bin_path_.c_str(), RTLD_LAZY);
+        if (!offset) {
             throw std::runtime_error(dlerror());
         }
 
         dlerror();
-        text_.location_ = (uintptr_t)offset;
-        struct link_map *map;
-        if(dlinfo(offset, RTLD_DI_LINKMAP, &map) < 0) {
-            throw std::runtime_error(dlerror());
-        }
-        struct link_map* curr = map;
-        while(curr) {
-            std::cout << "Ox" << std::hex << curr->l_addr << std::dec << std::endl;
-            curr = curr->l_next;
+        text_.location_ = (uintptr_t) offset;
+        for (std::string s : syms) {
+            offset = dlsym((void *) text_.location_, s.c_str());
+            if (!offset) {
+                std::cerr << "Could not find symbol " << s << std::endl;
+                continue;
+            }
+
+            offsets_.insert((uintptr_t) offset);
+            syms_[(uintptr_t) offset] = s;
         }
 
     } else {
@@ -183,8 +190,8 @@ uintptr_t fbf::BinaryDescriptor::parse_offset(std::string &offset) {
 
 fbf::BinaryDescriptor::~BinaryDescriptor() {
     if (text_.location_ > 0) {
-        if(isSharedLibrary()) {
-            dlclose((void*)text_.location_);
+        if (isSharedLibrary()) {
+            dlclose((void *) text_.location_);
         } else {
             munmap((void *) text_.location_, text_.size_);
         }
@@ -220,5 +227,14 @@ std::set<uintptr_t> fbf::BinaryDescriptor::getOffsets() {
 }
 
 bool fbf::BinaryDescriptor::isSharedLibrary() {
-    return bin_path_.extension() == ".so";
+    return bin_path_.extension() == ".so" ||
+           bin_path_.string().find(".so.") != std::string::npos;
+}
+
+const std::string fbf::BinaryDescriptor::getSym(uintptr_t location) {
+    if (syms_.find(location) == syms_.end()) {
+        return "";
+    }
+
+    return syms_[location];
 }

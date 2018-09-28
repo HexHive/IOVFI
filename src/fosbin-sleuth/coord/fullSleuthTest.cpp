@@ -98,9 +98,14 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
     }
 
     for (auto it : successes) {
-        o << "0x" << std::hex <<
-          it.first << std::dec <<
-          ": ";
+        if(binDesc_.isSharedLibrary()) {
+            const std::string& sym = binDesc_.getSym(it.first);
+            o << sym << ": ";
+        } else {
+            o << "0x" << std::hex <<
+              it.first << std::dec <<
+              ": ";
+        }
         for (auto arg_types : it.second) {
             if (arg_types->get_test_name().empty() || arg_types->get_test_name() == "<>") {
                 o << "< void >";
