@@ -15,12 +15,13 @@
 #include <binaryDescriptor.h>
 #include <dlfcn.h>
 #include <iostream>
+#include <functional>
 
 
 namespace fs = std::experimental::filesystem;
 
 fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
-        desc_path_(path) {
+        desc_path_(path), errno_location_(0) {
     if (fs::is_empty(desc_path_)) {
         throw std::runtime_error("Descriptor is empty");
     }
@@ -109,13 +110,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
         if (!offset) {
             throw std::runtime_error(dlerror());
         }
-        printf("__errno_loc1 = %p\terrno_loc2 = %p\n", dlsym(offset, "__errno_location"), &errno);
-        void* temp = dlsym(offset, "errno");
-        if(!temp) {
-            printf("Could not find errno\n");
-        } else {
-            printf("errno at %p = %d\n", temp, *(int*)temp);
-        }
+
         dlerror();
         text_.location_ = (uintptr_t) offset;
         for (std::string s : syms) {
@@ -124,9 +119,15 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
                 std::cerr << "Could not find symbol " << s << std::endl;
                 continue;
             }
+            std::cout << std::hex << offset << std::dec << "=" << s << std::endl;
 
             offsets_.insert((uintptr_t) offset);
             syms_[(uintptr_t) offset] = s;
+        }
+
+        offset = dlsym((void*)text_.location_, "__errno_location");
+        if(offset) {
+            errno_location_ = (uintptr_t)offset;
         }
 
     } else {
@@ -186,6 +187,14 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
     }
 }
 
+int fbf::BinaryDescriptor::getErrno() {
+    if(isSharedLibrary() && errno_location_) {
+        std::function<int*()> errno_loc = reinterpret_cast<int*(*)()>(errno_location_);
+        return *errno_loc();
+    }
+
+    return errno;
+}
 
 uintptr_t fbf::BinaryDescriptor::parse_offset(std::string &offset) {
     std::istringstream iss(offset);

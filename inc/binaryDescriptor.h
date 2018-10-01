@@ -20,6 +20,7 @@ namespace fbf {
         BinSection data_;
         BinSection bss_;
         std::map<uintptr_t, std::string> syms_;
+        uintptr_t errno_location_;
 
         uintptr_t parse_offset(std::string &offset);
 
@@ -32,6 +33,7 @@ namespace fbf {
         fs::path& getPath();
         std::set<uintptr_t> getOffsets();
         const std::string getSym(uintptr_t location);
+        int getErrno();
         bool isSharedLibrary();
     };
 }

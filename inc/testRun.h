@@ -16,6 +16,7 @@ namespace fbf {
         std::shared_ptr<fbf::ITestCase> test_;
         test_result_t result_;
         bool test_has_run_;
+        int pid_status_;
         uintptr_t offset_;
 
         test_result_t determine_result(pid_t);
@@ -30,6 +31,7 @@ namespace fbf {
         test_result_t get_result();
         uintptr_t get_offset();
         const std::string get_test_name();
+        bool test_crashed();
     };
 }
 

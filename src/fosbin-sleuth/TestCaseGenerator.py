@@ -58,7 +58,7 @@ def main():
         print("\tstd::get<{}>(t) = {};".format(i, INVALID_ARGUMENT));
 
     print("\tstd::shared_ptr<fbf::ArgumentTestCase<{}, {}>> v = ".format(DEFAULT_RET_TYPE, typeStr))
-    print("\tstd::make_shared<fbf::ArgumentTestCase<{}, {}>>(location, t, l);".format(DEFAULT_RET_TYPE, typeStr))
+    print("\tstd::make_shared<fbf::ArgumentTestCase<{}, {}>>(location, t, l, binDesc_);".format(DEFAULT_RET_TYPE, typeStr))
     print("\ttestRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));\n}")
 
     for index in range(0, len(supported_types)):
@@ -93,7 +93,7 @@ def main():
                     i += 1
 
                 print("\tstd::shared_ptr<fbf::ArgumentTestCase<{}, {}>> v =".format(DEFAULT_RET_TYPE, typeStr))
-                print("\t\tstd::make_shared<fbf::ArgumentTestCase<{}, {}>>(location, t, s);".format(DEFAULT_RET_TYPE, typeStr))
+                print("\t\tstd::make_shared<fbf::ArgumentTestCase<{}, {}>>(location, t, s, binDesc_);".format(DEFAULT_RET_TYPE, typeStr))
                 print("\ttestRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));")
                 print("}")
 

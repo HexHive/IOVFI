@@ -43,7 +43,7 @@ void fbf::TestRun::run_test() {
 
     std::cout << "Running test " 
         << get_test_name() 
-        << " on offset "
+        << " on offset 0x"
         << std::hex << offset_ << std::dec
         << std::endl;
     pid_t pid = fork();
@@ -59,18 +59,17 @@ void fbf::TestRun::run_test() {
 }
 
 test_result_t fbf::TestRun::determine_result(pid_t child) {
-    int status;
-    waitpid(child, &status, 0);
-    if (WIFSIGNALED(status)) {
+    waitpid(child, &pid_status_, 0);
+    if (WIFSIGNALED(pid_status_)) {
         /* SIGILL, SIGSEGV, etc. caused the child to stop...not what we are looking for */
         return fbf::ITestCase::FAIL;
-    } else if(WIFEXITED(status)) {
-        return (WEXITSTATUS(status) == fbf::ITestCase::PASS ?
+    } else if(WIFEXITED(pid_status_)) {
+        return (WEXITSTATUS(pid_status_) == fbf::ITestCase::PASS ?
             fbf::ITestCase::PASS :
             fbf::ITestCase::FAIL);
     } else {
         std::string msg = "Unexpected child exit status: ";
-        msg += status;
+        msg += pid_status_;
         throw std::runtime_error(msg.c_str());
     }
 }
@@ -109,4 +108,8 @@ test_result_t fbf::TestRun::get_result() {
 
 const std::string fbf::TestRun::get_test_name() {
     return test_->get_test_name();
+}
+
+bool fbf::TestRun::test_crashed() {
+    return WIFSIGNALED(pid_status_) != 0;
 }

@@ -20,8 +20,7 @@ namespace fbf {
     public:
         ArgumentTestCase(uintptr_t location,
                 std::tuple<Args...> args,
-                std::vector<std::string> argTypes,
-                const BinaryDescriptor& binDesc);
+                std::vector<std::string> argTypes, BinaryDescriptor& binDesc);
         virtual ~ArgumentTestCase();
 
         const std::string get_test_name();
@@ -30,6 +29,8 @@ namespace fbf {
     protected:
         uintptr_t location_;
         std::tuple<Args...> args_;
+
+        BinaryDescriptor& binDesc_;
 
         bool testPasses_;
         int errno_before_;
@@ -42,8 +43,8 @@ namespace fbf {
     template<typename R, typename... Args>
     fbf::ArgumentTestCase<R, Args...>::ArgumentTestCase(uintptr_t location,
             std::tuple<Args...> args,
-            std::vector<std::string> argTypes)
-            : ITestCase(), location_(location), args_(args), argTypes_(argTypes)
+            std::vector<std::string> argTypes, BinaryDescriptor& binDesc)
+            : ITestCase(), location_(location), args_(args), argTypes_(argTypes), binDesc_(binDesc)
     {
 
     }
@@ -67,12 +68,12 @@ namespace fbf {
 
     template<typename R, class... Args>
     void fbf::ArgumentTestCase<R, Args...>::postcall() {
-        testPasses_ = (errno == errno_before_);
+        testPasses_ = (binDesc_.getErrno() == errno_before_);
     }
 
     template<typename R, class... Args>
     void fbf::ArgumentTestCase<R, Args...>::precall() {
-        errno_before_ = errno;
+        errno_before_ = binDesc_.getErrno();
     }
 
     template<typename R, class... Args>

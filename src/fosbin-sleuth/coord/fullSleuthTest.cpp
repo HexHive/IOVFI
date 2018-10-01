@@ -57,6 +57,7 @@ fbf::FullSleuthTest::~FullSleuthTest() {
 void fbf::FullSleuthTest::output(std::ostream &o) {
     std::map<uintptr_t, std::vector<std::shared_ptr<fbf::TestRun>>> candidates;
     std::map<uintptr_t, std::vector<std::shared_ptr<fbf::TestRun>>> successes;
+    std::vector<std::shared_ptr<fbf::TestRun>> crashed_tests;
     std::map<uintptr_t, int> min_arg_counts;
 
     for (std::shared_ptr<fbf::TestRun> test : testRuns_) {
@@ -68,6 +69,8 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
             } else {
                 candidates[test->get_offset()].push_back(test);
             }
+        } else if(test->test_crashed()) {
+            crashed_tests.push_back(test);
         }
     }
 
@@ -77,7 +80,7 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
             std::string tok;
             std::vector<std::string> args;
             while (std::getline(ss, tok, ' ')) {
-                if (!tok.empty()) {
+                if (!tok.empty() && tok != "<>") {
                     args.push_back(tok);
                 }
             }
@@ -115,6 +118,17 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
             o << " ";
         }
         o << std::endl;
+    }
+
+    for (auto it : crashed_tests) {
+        if(successes.find(it->get_offset()) != successes.end()) {
+            continue;
+        }
+        if(binDesc_.isSharedLibrary()) {
+            o << binDesc_.getSym(it->get_offset()) << " " << it->get_test_name() << ": CRASHED" << std::endl;
+        } else {
+            o << "0x" << std::hex << it->get_offset() << std::dec << ": CRASHED" << std::endl;
+        }
     }
 }
 
