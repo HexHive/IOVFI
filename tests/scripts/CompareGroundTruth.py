@@ -49,7 +49,11 @@ type_map = {
     'thrd_start_t': 'void*',
     'tss_dtor_t': 'void*',
     'time_t': 'int',
-    'timer_t': 'void*'
+    'timer_t': 'void*',
+    'short': 'int',
+    'char32_t': 'int',
+    'long': 'int',
+    'tss_t': 'int'
 }
 
 def usage():
@@ -125,7 +129,7 @@ def main():
                     transformedArgs.append(arg)
 
                 finalArgs = "< " + " ".join(transformedArgs) + " >"
-                print("{}\t{}\t{}: {} <-> {}".format(finalArgs == guess[index+1:].strip(), guess[index+1:].find(finalArgs) > 0, name, guess[index+1:].strip(), finalArgs))
+                print("{}\t{}\t{}\t{}: {} <-> {}".format(guess.count("<"), finalArgs == guess[index+1:].strip(), guess[index+1:].find(finalArgs) > 0, name, guess[index+1:].strip(), finalArgs))
 
 
 if __name__ == "__main__":

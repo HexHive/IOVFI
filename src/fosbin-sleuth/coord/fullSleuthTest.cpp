@@ -16,6 +16,7 @@
 #include <chrono>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <set>
 
 fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen, uint32_t thread_count) :
         FullTest(descriptor, thread_count) {
@@ -43,6 +44,7 @@ fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t p
         for (size_t j = 0; j < ptrLen; j++) {
             buf[j] = charRand(re);
         }
+        buf[ptrLen - sizeof(void*)] = '\0';
     }
 
     create_testcases();
@@ -80,7 +82,7 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
             std::string tok;
             std::vector<std::string> args;
             while (std::getline(ss, tok, ' ')) {
-                if (!tok.empty() && tok != "<>") {
+                if (!tok.empty()) {
                     args.push_back(tok);
                 }
             }
@@ -120,14 +122,25 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
         o << std::endl;
     }
 
+    std::set<std::string> outputs_strs;
     for (auto it : crashed_tests) {
         if(successes.find(it->get_offset()) != successes.end()) {
             continue;
         }
         if(binDesc_.isSharedLibrary()) {
-            o << binDesc_.getSym(it->get_offset()) << " " << it->get_test_name() << ": CRASHED" << std::endl;
+            const std::string sym = binDesc_.getSym(it->get_offset());
+            if(outputs_strs.find(sym) == outputs_strs.end()) {
+                o << sym << ": CRASHED" << std::endl;
+                outputs_strs.insert(sym);
+            }
         } else {
-            o << "0x" << std::hex << it->get_offset() << std::dec << ": CRASHED" << std::endl;
+            std::stringstream ss;
+            ss << std::hex << it->get_offset();
+
+            if(outputs_strs.find(ss.str()) == outputs_strs.end()) {
+                o << ss.str() << ": CRASHED" << std::endl;
+                outputs_strs.insert(ss.str());
+            }
         }
     }
 }
