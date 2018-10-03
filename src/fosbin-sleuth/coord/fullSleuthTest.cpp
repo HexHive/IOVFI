@@ -98,7 +98,7 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
             std::string tok;
             std::vector<std::string> args;
             while (std::getline(ss, tok, ' ')) {
-                if (!tok.empty()) {
+                if (!tok.empty() && tok != "<>") {
                     args.push_back(tok);
                 }
             }

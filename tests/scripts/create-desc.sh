@@ -11,7 +11,7 @@ if [[ $(file $BIN | grep "shared object") != "" ]]; then
     readelf -Ws $BIN | \
     gawk -v bin=$BIN \
     'BEGIN { print "binary=" bin; } \
-    { if($4 == "FUNC" && !syms[$8] && index($8, "@@") == 0) { print "sym=" $8; syms[$8] = 1; } }'
+    { if($4 == "FUNC" && !syms[$8] && index($8, "@") == 0) { print "sym=" $8; syms[$8] = 1; } }'
 else
     IFS=', ' read -r -a array <<< $(readelf -S $BIN 2> /dev/null | awk '{ if($3 == ".text") { print $5 "," $6;} }')
     TEXT_VA=0x${array[0]}

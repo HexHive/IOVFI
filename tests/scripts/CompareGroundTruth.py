@@ -3,6 +3,7 @@
 import sys
 import xml.etree.ElementTree as ET
 import os
+import re
 
 groundTruth = {}
 
@@ -54,15 +55,17 @@ type_map = {
     'char32_t': 'int',
     'long': 'int',
     'tss_t': 'int',
-    'long int': 'int'
+    'long int': 'int',
+    "pthread_t": "void*"
 }
+
 
 def usage():
     print("usage: {} /path/to/results /path/to/xml/directory".format(sys.argv[0]))
 
 
 def transform_arg(arg):
-    arg = arg.replace("(", "").replace(")", "").replace("const", "")
+    arg = arg.replace("(", "").replace(")", "").replace("const", "").strip()
 
     if arg == "":
         return "void"
@@ -70,9 +73,10 @@ def transform_arg(arg):
     if contains_pointer(arg):
         return "void*"
 
-    if arg.find("struct") > 0:
-        tokens = arg.split()
-        return tokens[0] + "_" + tokens[1]
+    if arg.find("struct") >= 0:
+        return arg.replace(" ", "_")
+    elif arg.find("union") >= 0:
+        return arg.replace(" ", "_")
     elif len(arg.split()) > 1:
         arg = arg.split()[0]
 
@@ -91,6 +95,7 @@ def parse_xml(xml_file_name):
                 name = memberdef.find("name").text
                 groundTruth[name] = []
                 for param in memberdef.find("argsstring").text.split(", "):
+                    arg = transform_arg(param)
                     groundTruth[name].append(transform_arg(param))
                 if len(groundTruth[name]) == 0:
                     groundTruth[name].append("void")
@@ -104,7 +109,7 @@ def contains_pointer(arg):
     if arg is None:
         return False
 
-    return arg.find("*") >= 0
+    return arg.find("*") >= 0 or arg.find("[") >= 0
 
 
 def main():
@@ -118,38 +123,60 @@ def main():
         for filename in files:
             parse_xml(os.path.join(dir, filename))
 
-    with open(sys.argv[1], "r", errors='ignore') as guesses:
-        syms = set()
+    sym_regex = re.compile("(0[Xx][0-9A-Fa-f]+)=([A-Za-z0-9_]+)")
+    guess_regex = re.compile("([0-9A-Za-z_]+):([a-zA-Z* <>]+)")
+    with open(sys.argv[1], "r", errors='replace') as guesses:
+        syms = {}
+        addr_map = {}
 
         for guess in guesses.readlines():
-            index = guess.find('=')
-            if index > 0 and len(guess) < 40 + len("MISSING "):
-                sym = guess[index + 1:]
-                syms.add(sym.strip())
+            # Skip over junk output from the test run, and only get <addr>=<sym>
+            sym_match = sym_regex.match(guess)
+            if sym_match:
+                sym = sym_match.group(2)
+                addr = sym_match.group(1)
+                if addr not in syms:
+                    syms[addr] = set()
+                syms[addr].add(sym)
+                addr_map[sym] = addr
                 continue
 
-            index = guess.find(":")
-            if index < 0:
+            guess_match = guess_regex.match(guess)
+            if not guess_match:
                 continue
 
-            name = guess[0:index]
-            if name in syms:
-                syms.remove(name)
+            name = guess_match.group(1).strip()
+            func_guesses = guess_match.group(2).strip()
 
-            if name in groundTruth:
-                transformedArgs = []
-                for arg in groundTruth[name]:
-                    transformedArgs.append(arg)
+            addr = addr_map[name]
 
-                finalArgs = "< " + " ".join(transformedArgs) + " >"
-                if guess.find("CRASH") >= 0:
-                    print("0\t0\t0\t{}: CRASHED <-> {}".format(name, finalArgs))
-                    continue
-                else:
-                    print("{}\t{}\t{}\t{}: {} <-> {}".format(guess.count("<"), finalArgs == guess[index+1:].strip(), guess[index+1:].find(finalArgs) > 0, name, guess[index+1:].strip(), finalArgs))
+            for name2 in syms[addr]:
+                if name2 in groundTruth:
+                    transformedArgs = []
+                    for arg in groundTruth[name2]:
+                        transformedArgs.append(arg)
 
-        for sym in syms:
-            print("MISSING " + sym)
+                    finalArgs = " ".join(transformedArgs)
+                    if transformedArgs[0] == "void":
+                        finalArgCount = 0
+                    else:
+                        finalArgCount = len(transformedArgs)
+
+                    for sym in syms[addr]:
+                        if guess.find("CRASH") >= 0:
+                            print("0\t0\t0\t{}: CRASHED <-> < {} > {}".format(sym, finalArgs, finalArgCount))
+                            continue
+                        else:
+                            print("{}\t{}\t{}\t{}: {} <-> < {} > {}".format(func_guesses.count("<"),
+                                                                            "< " + finalArgs + " >" == func_guesses,
+                                                                            func_guesses.find(finalArgs) >= 0,
+                                                                            sym, func_guesses, finalArgs,
+                                                                            finalArgCount))
+            syms.pop(addr)
+
+        for addr in syms:
+            print("MISSING " + str(syms[addr]))
+
 
 if __name__ == "__main__":
     main()
