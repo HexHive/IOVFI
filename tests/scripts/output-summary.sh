@@ -29,6 +29,7 @@ NUM_VA_LIST=$(grep "False.*False.*va_list" $TRUTH | wc -l)
 NUM_ARG_COUNT=$(grep "False.*False" $TRUTH | awk -v MAX_ARG=$MAX_ARG '{ if($NF > MAX_ARG) { print $0; } }' | wc -l)
 NUM_PTHREADS=$(grep "False.*False.*pthread" $TRUTH | wc -l)
 NUM_UNIONS=$(grep "False.*False.*union" $TRUTH | wc -l)
+NUM_SIGJMP=$(grep "False.*False.*jmp_buf" $TRUTH | wc -l)
 
 printf "Number of floating point functions: %d\n" $(($NUM_DOUBLE+$NUM_FLOAT))
 printf "Number of struct functions: %d\n" $NUM_STRUCT
@@ -36,8 +37,9 @@ printf "Number of varargs functions: %d\n" $(($NUM_VARARGS+NUM_VA_LIST))
 printf "Number of functions with more than $MAX_ARG arguments: %d\n" $NUM_ARG_COUNT
 printf "Number of functions with pthreads: %d\n" $NUM_PTHREADS
 printf "Number of functions with unions: %d\n" $NUM_UNIONS
+printf "Number of functions with jmp_buf: %d\n" $NUM_SIGJMP
 
-printf "\nTotal: %d\n" $(($NUM_PTHREADS+$NUM_ARG_COUNT+$NUM_VA_LIST+$NUM_VARARGS+$NUM_STRUCT+$NUM_DOUBLE+$NUM_FLOAT+$NUM_UNIONS))
+printf "\nTotal: %d\n" $(($NUM_PTHREADS+$NUM_ARG_COUNT+$NUM_VA_LIST+$NUM_VARARGS+$NUM_STRUCT+$NUM_DOUBLE+$NUM_FLOAT+$NUM_UNIONS+$NUM_SIGJMP))
 
 # Print out set counts
 echo
