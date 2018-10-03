@@ -58,9 +58,8 @@ namespace fbf {
         } catch(std::exception& e) {
             return fbf::ITestCase::FAIL;
         }
-        //std::cout << std::hex << ret << std::dec << std::endl;
         postcall();
-        return testPasses_ == true ? fbf::ITestCase::PASS : fbf::ITestCase::FAIL;
+        return testPasses_ == true ? fbf::ITestCase::PASS : fbf::ITestCase::NON_CRASHING;
     }
 
     template<typename R, typename... Args>
@@ -82,11 +81,9 @@ namespace fbf {
             return "<>";
         }
         std::stringstream s;
-//        s << "<";
         for(auto type : argTypes_) {
             s << type << " ";
         }
-//        s << ">";
 
         return s.str().erase(s.str().size() - 1, 1);
     }

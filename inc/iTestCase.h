@@ -18,6 +18,7 @@ namespace fbf {
 
         const static int PASS = 0;
         const static int FAIL = 1;
+        const static int NON_CRASHING = 2;
 
     protected:
         int rand();

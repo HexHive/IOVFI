@@ -27,7 +27,7 @@ static void sig_handler(int signum) {
 void fbf::TestRun::set_signals() {
     /* Change process group ID to avoid ending the parent process if kill* is called */
     signal(SIGALRM, sig_handler);
-    signal(SIGINT, sig_handler);
+    //signal(SIGINT, sig_handler);
     alarm(TIMEOUT);
 }
 
@@ -66,7 +66,7 @@ test_result_t fbf::TestRun::determine_result(pid_t child) {
     } else if(WIFEXITED(pid_status_)) {
         return (WEXITSTATUS(pid_status_) == fbf::ITestCase::PASS ?
             fbf::ITestCase::PASS :
-            fbf::ITestCase::FAIL);
+            fbf::ITestCase::NON_CRASHING);
     } else {
         std::string msg = "Unexpected child exit status: ";
         msg += pid_status_;

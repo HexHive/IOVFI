@@ -53,7 +53,8 @@ type_map = {
     'short': 'int',
     'char32_t': 'int',
     'long': 'int',
-    'tss_t': 'int'
+    'tss_t': 'int',
+    'long int': 'int'
 }
 
 def usage():
@@ -118,19 +119,37 @@ def main():
             parse_xml(os.path.join(dir, filename))
 
     with open(sys.argv[1], "r", errors='ignore') as guesses:
+        syms = set()
+
         for guess in guesses.readlines():
+            index = guess.find('=')
+            if index > 0 and len(guess) < 40 + len("MISSING "):
+                sym = guess[index + 1:]
+                syms.add(sym.strip())
+                continue
+
             index = guess.find(":")
             if index < 0:
                 continue
+
             name = guess[0:index]
+            if name in syms:
+                syms.remove(name)
+
             if name in groundTruth:
                 transformedArgs = []
                 for arg in groundTruth[name]:
                     transformedArgs.append(arg)
 
                 finalArgs = "< " + " ".join(transformedArgs) + " >"
-                print("{}\t{}\t{}\t{}: {} <-> {}".format(guess.count("<"), finalArgs == guess[index+1:].strip(), guess[index+1:].find(finalArgs) > 0, name, guess[index+1:].strip(), finalArgs))
+                if guess.find("CRASH") >= 0:
+                    print("0\t0\t0\t{}: CRASHED <-> {}".format(name, finalArgs))
+                    continue
+                else:
+                    print("{}\t{}\t{}\t{}: {} <-> {}".format(guess.count("<"), finalArgs == guess[index+1:].strip(), guess[index+1:].find(finalArgs) > 0, name, guess[index+1:].strip(), finalArgs))
 
+        for sym in syms:
+            print("MISSING " + sym)
 
 if __name__ == "__main__":
     main()

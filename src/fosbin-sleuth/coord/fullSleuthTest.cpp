@@ -42,9 +42,12 @@ fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t p
 
         ProtectedBuffer buf = testPtrs[i];
         for (size_t j = 0; j < ptrLen; j++) {
-            buf[j] = charRand(re);
+            if (j < ptrLen - sizeof(wchar_t)) {
+                buf[j] = charRand(re);
+            } else {
+                buf[j] = '\0';
+            }
         }
-        buf[ptrLen - sizeof(void*)] = '\0';
     }
 
     create_testcases();
@@ -59,6 +62,7 @@ fbf::FullSleuthTest::~FullSleuthTest() {
 void fbf::FullSleuthTest::output(std::ostream &o) {
     std::map<uintptr_t, std::vector<std::shared_ptr<fbf::TestRun>>> candidates;
     std::map<uintptr_t, std::vector<std::shared_ptr<fbf::TestRun>>> successes;
+    std::map<uintptr_t, std::vector<std::shared_ptr<fbf::TestRun>>> noncrashes;
     std::vector<std::shared_ptr<fbf::TestRun>> crashed_tests;
     std::map<uintptr_t, int> min_arg_counts;
 
@@ -71,8 +75,20 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
             } else {
                 candidates[test->get_offset()].push_back(test);
             }
-        } else if(test->test_crashed()) {
+            if (noncrashes.find(test->get_offset()) != noncrashes.end()) {
+                noncrashes.erase(test->get_offset());
+            }
+        } else if (test->test_crashed()) {
             crashed_tests.push_back(test);
+        } else if (test->get_result() == fbf::ITestCase::NON_CRASHING &&
+                   candidates.find(test->get_offset()) == candidates.end()) {
+            if (noncrashes.find(test->get_offset()) == noncrashes.end()) {
+                std::vector<std::shared_ptr<fbf::TestRun>> v;
+                v.push_back(test);
+                noncrashes[test->get_offset()] = v;
+            } else {
+                noncrashes[test->get_offset()].push_back(test);
+            }
         }
     }
 
@@ -103,8 +119,31 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
     }
 
     for (auto it : successes) {
-        if(binDesc_.isSharedLibrary()) {
-            const std::string& sym = binDesc_.getSym(it.first);
+        if (binDesc_.isSharedLibrary()) {
+            const std::string &sym = binDesc_.getSym(it.first);
+            o << sym << ": ";
+        } else {
+            o << "0x" << std::hex <<
+              it.first << std::dec <<
+              ": ";
+        }
+        for (auto arg_types : it.second) {
+            if (arg_types->get_test_name().empty() || arg_types->get_test_name() == "<>") {
+                o << "< void >";
+            } else {
+                o << "< " << arg_types->get_test_name() << " > ";
+            }
+            o << " ";
+        }
+        o << std::endl;
+    }
+
+    for (auto it : noncrashes) {
+        if (successes.find(it.first) != successes.end()) {
+            continue;
+        }
+        if (binDesc_.isSharedLibrary()) {
+            const std::string &sym = binDesc_.getSym(it.first);
             o << sym << ": ";
         } else {
             o << "0x" << std::hex <<
@@ -124,12 +163,13 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
 
     std::set<std::string> outputs_strs;
     for (auto it : crashed_tests) {
-        if(successes.find(it->get_offset()) != successes.end()) {
+        if (successes.find(it->get_offset()) != successes.end() ||
+            noncrashes.find(it->get_offset()) != noncrashes.end()) {
             continue;
         }
-        if(binDesc_.isSharedLibrary()) {
+        if (binDesc_.isSharedLibrary()) {
             const std::string sym = binDesc_.getSym(it->get_offset());
-            if(outputs_strs.find(sym) == outputs_strs.end()) {
+            if (outputs_strs.find(sym) == outputs_strs.end()) {
                 o << sym << ": CRASHED" << std::endl;
                 outputs_strs.insert(sym);
             }
@@ -137,7 +177,7 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
             std::stringstream ss;
             ss << std::hex << it->get_offset();
 
-            if(outputs_strs.find(ss.str()) == outputs_strs.end()) {
+            if (outputs_strs.find(ss.str()) == outputs_strs.end()) {
                 o << ss.str() << ": CRASHED" << std::endl;
                 outputs_strs.insert(ss.str());
             }
