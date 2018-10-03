@@ -7,15 +7,25 @@
 #include <fstream>
 #include <termios.h>
 #include <fullTest.h>
-
+#include <limits>
 
 namespace fs = std::experimental::filesystem;
 
 fbf::FullTest::FullTest(fs::path descriptor, uint32_t thread_count) :
-        binDesc_(descriptor), thread_count_(thread_count), pool_(thread_count) {}
+        binDesc_(descriptor),
+        thread_count_(thread_count),
+        pool_(thread_count),
+        rand_int(std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max()) {
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    re.seed(seed);
+}
 
 fbf::FullTest::~FullTest() {
     pool_.stop();
+}
+
+uint64_t fbf::FullTest::getRandLong() {
+    return rand_int(re);
 }
 
 fbf::FullTest::FullTest(const fbf::FullTest &other):

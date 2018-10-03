@@ -8,6 +8,8 @@
 #include "binaryDescriptor.h"
 #include "testRun.h"
 #include "CTPL/ctpl.h"
+#include <cstddef>
+#include <limits>
 
 namespace fbf {
     class FullTest {
@@ -20,6 +22,8 @@ namespace fbf {
         virtual void create_testcases() = 0;
         virtual uintptr_t compute_location(uintptr_t offset);
 
+        uint64_t getRandLong();
+
     public:
         FullTest(fs::path descriptor, uint32_t thread_count);
         FullTest(const FullTest& other);
@@ -28,6 +32,10 @@ namespace fbf {
         FullTest& operator=(const FullTest& other);
         virtual void run();
         virtual void output(std::ostream& out);
+
+    private:
+            std::uniform_int_distribution<uint64_t> rand_int;
+            std::default_random_engine re;
     };
 }
 
