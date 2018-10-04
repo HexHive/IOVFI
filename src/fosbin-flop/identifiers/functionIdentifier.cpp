@@ -29,6 +29,11 @@ void fbf::FunctionIdentifier::setup() {
 
 }
 
+void* fbf::FunctionIdentifier::get_value() {
+    /* TODO: Implement this */
+    return nullptr;
+}
+
 int fbf::FunctionIdentifier::run_test() {
     setup();
     evaluate();

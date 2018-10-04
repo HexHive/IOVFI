@@ -22,6 +22,7 @@ namespace fbf {
         const std::string get_test_name();
         int get_total_tests();
         int get_failed_tests();
+        virtual void* get_value();
 
         const static size_t BUFFER_SIZE = 32;
         const static int MAX_FAIL_RATE;

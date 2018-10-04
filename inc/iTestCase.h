@@ -15,6 +15,7 @@ namespace fbf {
         ITestCase();
         virtual const std::string get_test_name() = 0;
         virtual int run_test() = 0;
+        virtual void* get_value() = 0;
 
         const static int PASS = 0;
         const static int FAIL = 1;
@@ -24,8 +25,7 @@ namespace fbf {
         int rand();
 
     private:
-        std::random_device rd_;
-        std::mt19937 mt_;
+        std::default_random_engine re_;
         std::uniform_int_distribution<int> dist_;
     };
 }

@@ -19,7 +19,7 @@ total_args = 8
 sigs = []
 
 INVALID_TYPE = "uintptr_t"
-INVALID_VALUE = "getRandLong()"
+INVALID_VALUE = "-1"
 INVALID_ARGUMENT = "({}){}".format(INVALID_TYPE, INVALID_VALUE)
 DEFAULT_RET_TYPE = "void*"
 

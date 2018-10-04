@@ -16,12 +16,18 @@
 #include <dlfcn.h>
 #include <iostream>
 #include <functional>
-
+#include <random>
 
 namespace fs = std::experimental::filesystem;
 
 fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
         desc_path_(path), errno_location_(0) {
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::default_random_engine re(seed);
+    std::uniform_int_distribution<uint64_t> longrand(std::numeric_limits<uint64_t>::min(),
+                                                     std::numeric_limits<uint64_t>::max());
+    identifier_ = longrand(re);
+
     if (fs::is_empty(desc_path_)) {
         throw std::runtime_error("Descriptor is empty");
     }
@@ -252,4 +258,12 @@ const std::string fbf::BinaryDescriptor::getSym(uintptr_t location) {
     }
 
     return syms_[location];
+}
+
+uint64_t fbf::BinaryDescriptor::getIdentifier() {
+    return identifier_;
+}
+
+void fbf::BinaryDescriptor::setIdentifier(uint64_t id) {
+    identifier_ = id;
 }

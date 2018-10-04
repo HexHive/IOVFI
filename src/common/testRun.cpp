@@ -74,6 +74,10 @@ test_result_t fbf::TestRun::determine_result(pid_t child) {
     }
 }
 
+void* fbf::TestRun::get_execution_result() {
+    return test_->get_value();
+}
+
 void fbf::TestRun::output_results(std::ostream &out) {
     /* TODO: Implement a better version of this */
     std::stringstream ss;

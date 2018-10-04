@@ -12,6 +12,7 @@
 #include <cassert>
 #include <sstream>
 #include <cerrno>
+#include <cstring>
 #include "iTestCase.h"
 
 namespace fbf {
@@ -19,34 +20,46 @@ namespace fbf {
     class ArgumentTestCase : public ITestCase {
     public:
         ArgumentTestCase(uintptr_t location,
-                std::tuple<Args...> args,
-                std::vector<std::string> argTypes, BinaryDescriptor& binDesc);
+                         std::tuple<Args...> args,
+                         std::vector<std::string> argTypes, BinaryDescriptor &binDesc);
+
         virtual ~ArgumentTestCase();
 
         const std::string get_test_name();
+
         int run_test();
+
+        virtual void* get_value();
 
     protected:
         uintptr_t location_;
         std::tuple<Args...> args_;
 
-        BinaryDescriptor& binDesc_;
+        BinaryDescriptor &binDesc_;
+
+        R returnValue;
 
         bool testPasses_;
         int errno_before_;
 
         void precall();
+
         void postcall();
+
         std::vector<std::string> argTypes_;
     };
 
     template<typename R, typename... Args>
     fbf::ArgumentTestCase<R, Args...>::ArgumentTestCase(uintptr_t location,
-            std::tuple<Args...> args,
-            std::vector<std::string> argTypes, BinaryDescriptor& binDesc)
-            : ITestCase(), location_(location), args_(args), argTypes_(argTypes), binDesc_(binDesc)
-    {
+                                                        std::tuple<Args...> args,
+                                                        std::vector<std::string> argTypes, BinaryDescriptor &binDesc)
+            : ITestCase(), location_(location), args_(args), argTypes_(argTypes), binDesc_(binDesc) {
+        std::memset(&returnValue, (char)binDesc_.getIdentifier(), sizeof(returnValue));
+    }
 
+    template<typename R, typename... Args>
+    void* fbf::ArgumentTestCase<R, Args...>::get_value() {
+        return (void*)returnValue;
     }
 
     template<typename R, typename... Args>
@@ -54,8 +67,8 @@ namespace fbf {
         std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location_);
         precall();
         try {
-            R ret = std::apply(func, args_);
-        } catch(std::exception& e) {
+            returnValue = std::apply(func, args_);
+        } catch (std::exception &e) {
             return fbf::ITestCase::FAIL;
         }
         postcall();
@@ -63,7 +76,7 @@ namespace fbf {
     }
 
     template<typename R, typename... Args>
-    fbf::ArgumentTestCase<R, Args...>::~ArgumentTestCase() { }
+    fbf::ArgumentTestCase<R, Args...>::~ArgumentTestCase() {}
 
     template<typename R, class... Args>
     void fbf::ArgumentTestCase<R, Args...>::postcall() {
@@ -77,11 +90,11 @@ namespace fbf {
 
     template<typename R, class... Args>
     const std::string fbf::ArgumentTestCase<R, Args...>::get_test_name() {
-        if(argTypes_.size() == 0) {
+        if (argTypes_.size() == 0) {
             return "<>";
         }
         std::stringstream s;
-        for(auto type : argTypes_) {
+        for (auto type : argTypes_) {
             s << type << " ";
         }
 

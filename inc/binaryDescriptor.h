@@ -21,6 +21,7 @@ namespace fbf {
         BinSection bss_;
         std::map<uintptr_t, std::string> syms_;
         uintptr_t errno_location_;
+        uint64_t identifier_;
 
         uintptr_t parse_offset(std::string &offset);
 
@@ -35,6 +36,8 @@ namespace fbf {
         const std::string getSym(uintptr_t location);
         int getErrno();
         bool isSharedLibrary();
+        uint64_t getIdentifier();
+        void setIdentifier(uint64_t id);
     };
 }
 

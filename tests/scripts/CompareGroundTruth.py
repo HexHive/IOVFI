@@ -169,7 +169,7 @@ def main():
                         else:
                             print("{}\t{}\t{}\t{}: {} <-> < {} > {}".format(func_guesses.count("<"),
                                                                             "< " + finalArgs + " >" == func_guesses,
-                                                                            func_guesses.find(finalArgs) >= 0,
+                                                                            func_guesses.find("< " + finalArgs + " >") >= 0,
                                                                             sym, func_guesses, finalArgs,
                                                                             finalArgCount))
             syms.pop(addr)

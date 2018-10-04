@@ -32,6 +32,7 @@ namespace fbf {
         uintptr_t get_offset();
         const std::string get_test_name();
         bool test_crashed();
+        void* get_execution_result();
     };
 }
 

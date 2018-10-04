@@ -22,13 +22,15 @@ fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t p
         FullTest(descriptor, thread_count) {
     /* Avoid testInt values */
     std::uniform_int_distribution<uint8_t> charRand(MAX_ARGUMENTS + 2, 0xfe);
+    std::uniform_int_distribution<int> intRand(std::numeric_limits<int>::min(),
+            std::numeric_limits<int>::max());
     std::uniform_real_distribution<double> dblRand(std::numeric_limits<double>::min(),
                                                    std::numeric_limits<double>::max());
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::default_random_engine re(seed);
 
     for (size_t i = 0; i < MAX_ARGUMENTS; i++) {
-        testInts.push_back(i + 1);
+        testInts.push_back(i + 2);
         testDbls.push_back(dblRand(re));
 
         testStrs.push_back((char *) std::malloc(strLen));
@@ -67,7 +69,7 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
     std::map<uintptr_t, int> min_arg_counts;
 
     for (std::shared_ptr<fbf::TestRun> test : testRuns_) {
-        if (test->get_result() == fbf::ITestCase::PASS) {
+        if (test->get_result() == ITestCase::PASS) {
             if (candidates.find(test->get_offset()) == candidates.end()) {
                 std::vector<std::shared_ptr<fbf::TestRun>> v;
                 v.push_back(test);
@@ -93,8 +95,24 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
     }
 
     for (auto it : candidates) {
+        void* prev;
         for (auto valid_args : it.second) {
-            std::stringstream ss(valid_args->get_test_name());
+            if(valid_args == it.second.front()) {
+                prev = valid_args->get_execution_result();
+                continue;
+            }
+            void* tmp = valid_args->get_execution_result();
+            if(tmp != prev) {
+                prev = tmp;
+                if(successes.find(it.first) == successes.end()) {
+                    std::vector<std::shared_ptr<fbf::TestRun>> v;
+                    v.push_back(valid_args);
+                    successes[it.first] = v;
+                } else {
+                    successes[it.first].push_back(valid_args);
+                }
+            }
+/*            std::stringstream ss(valid_args->get_test_name());
             std::string tok;
             std::vector<std::string> args;
             while (std::getline(ss, tok, ' ')) {
@@ -114,7 +132,12 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
                 successes[it.first].clear();
                 successes[it.first].push_back(valid_args);
                 min_arg_counts[it.first] = args.size();
-            }
+            }*/
+        }
+        if(successes.find(it.first) == successes.end()) {
+            std::vector<std::shared_ptr<fbf::TestRun>> v;
+            v.push_back(it.second.front());
+            successes[it.first] = v;
         }
     }
 
@@ -186,6 +209,10 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
 }
 
 void fbf::FullSleuthTest::create_testcases() {
+    uintptr_t tmp;
+    double dnan = std::nan("1");;
+    std::memcpy(&tmp, &dnan, sizeof(dnan));
+
     for (uintptr_t offset : binDesc_.getOffsets()) {
         uintptr_t location = compute_location(offset);
 
