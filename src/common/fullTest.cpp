@@ -65,8 +65,12 @@ void fbf::FullTest::run() {
                   << ")" << std::endl;
 
         std::shared_ptr<fbf::TestRun> sp = *it;
-        auto b = std::bind(&fbf::TestRun::run_test, sp.get());
-        pool_.push(b);
+        if(thread_count_ > 1) {
+            auto b = std::bind(&fbf::TestRun::run_test, sp.get());
+            pool_.push(b);
+        } else {
+            sp->run_test();
+        }
     }
 
     std::cout << "Waiting for all tests to complete...";

@@ -37,7 +37,7 @@ namespace fbf {
 
         BinaryDescriptor &binDesc_;
 
-        R returnValue;
+        R returnValue_;
 
         bool testPasses_;
         int errno_before_;
@@ -54,12 +54,12 @@ namespace fbf {
                                                         std::tuple<Args...> args,
                                                         std::vector<std::string> argTypes, BinaryDescriptor &binDesc)
             : ITestCase(), location_(location), args_(args), argTypes_(argTypes), binDesc_(binDesc) {
-        std::memset(&returnValue, (char)binDesc_.getIdentifier(), sizeof(returnValue));
+        std::memset(&returnValue_, (char)binDesc_.getIdentifier(), sizeof(returnValue_));
     }
 
     template<typename R, typename... Args>
     void* fbf::ArgumentTestCase<R, Args...>::get_value() {
-        return (void*)returnValue;
+        return (void*)returnValue_;
     }
 
     template<typename R, typename... Args>
@@ -67,10 +67,12 @@ namespace fbf {
         std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location_);
         precall();
         try {
-            returnValue = std::apply(func, args_);
+            returnValue_ = std::apply(func, args_);
+            std::cout << "CHILD " << std::hex << returnValue_ << std::dec << std::endl;
         } catch (std::exception &e) {
             return fbf::ITestCase::FAIL;
         }
+        std::cout << "CHILD2 " << std::hex << returnValue_ << std::dec << std::endl;
         postcall();
         return testPasses_ == true ? fbf::ITestCase::PASS : fbf::ITestCase::NON_CRASHING;
     }

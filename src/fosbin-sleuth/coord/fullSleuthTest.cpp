@@ -97,6 +97,7 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
     for (auto it : candidates) {
         void* prev;
         for (auto valid_args : it.second) {
+            std::cout << "PARENT " << std::hex << valid_args->get_execution_result() << std::dec << std::endl;
             if(valid_args == it.second.front()) {
                 prev = valid_args->get_execution_result();
                 continue;
