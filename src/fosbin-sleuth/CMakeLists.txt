@@ -13,6 +13,7 @@ target_link_libraries( ${FUNC_CLASSIFIER}
         pthread
         ${Boost_LIBRARIES}
         dl
+        capstone
         )
 
 target_sources( ${FUNC_CLASSIFIER}
@@ -25,4 +26,5 @@ target_sources( ${FUNC_CLASSIFIER}
         coord/fullSleuthTest.cpp
         protectedBuffer.cpp
         TestCases.inc
+        argumentCountTestCase.cpp
         )

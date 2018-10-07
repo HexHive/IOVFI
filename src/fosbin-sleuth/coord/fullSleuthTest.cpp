@@ -3,8 +3,7 @@
 //
 
 #include <fosbin-sleuth/fullSleuthTest.h>
-#include <fosbin-sleuth/argumentTestCase.h>
-
+#include <fosbin-sleuth/argumentCountTestCase.h>
 #include "fosbin-sleuth/fullSleuthTest.h"
 
 #include <vector>
@@ -62,190 +61,21 @@ fbf::FullSleuthTest::~FullSleuthTest() {
 }
 
 void fbf::FullSleuthTest::output(std::ostream &o) {
-    std::map<uintptr_t, std::vector<std::shared_ptr<fbf::TestRun>>> candidates;
-    std::map<uintptr_t, std::vector<std::shared_ptr<fbf::TestRun>>> successes;
-    std::map<uintptr_t, std::vector<std::shared_ptr<fbf::TestRun>>> noncrashes;
-    std::vector<std::shared_ptr<fbf::TestRun>> crashed_tests;
-    std::map<uintptr_t, int> min_arg_counts;
 
-    for (std::shared_ptr<fbf::TestRun> test : testRuns_) {
-        if (test->get_result() == ITestCase::PASS) {
-            if (candidates.find(test->get_offset()) == candidates.end()) {
-                std::vector<std::shared_ptr<fbf::TestRun>> v;
-                v.push_back(test);
-                candidates[test->get_offset()] = v;
-            } else {
-                candidates[test->get_offset()].push_back(test);
-            }
-            if (noncrashes.find(test->get_offset()) != noncrashes.end()) {
-                noncrashes.erase(test->get_offset());
-            }
-        } else if (test->test_crashed()) {
-            crashed_tests.push_back(test);
-        } else if (test->get_result() == fbf::ITestCase::NON_CRASHING &&
-                   candidates.find(test->get_offset()) == candidates.end()) {
-            if (noncrashes.find(test->get_offset()) == noncrashes.end()) {
-                std::vector<std::shared_ptr<fbf::TestRun>> v;
-                v.push_back(test);
-                noncrashes[test->get_offset()] = v;
-            } else {
-                noncrashes[test->get_offset()].push_back(test);
-            }
-        }
-    }
-
-    for (auto it : candidates) {
-        std::map<uint64_t, std::vector<std::shared_ptr<fbf::TestRun>>> returnValues;
-        for (auto valid_args : it.second) {
-            uint64_t tmp = valid_args->get_execution_result();
-            if(returnValues.find(tmp) == returnValues.end()) {
-                std::vector<std::shared_ptr<fbf::TestRun>> v;
-                v.push_back(valid_args);
-                returnValues[tmp] = v;
-            } else {
-                returnValues[tmp].push_back(valid_args);
-            }
-
-            //std::cout << std::hex << "PARENT " << valid_args->get_test_name() << " " << tmp << std::dec << std::endl;
-/*            if(valid_args == it.second.front()) {
-                prev = valid_args->get_execution_result();
-                continue;
-            }
-            if(tmp != prev) {
-                prev = tmp;
-                if(successes.find(it.first) == successes.end()) {
-                    std::vector<std::shared_ptr<fbf::TestRun>> v;
-                    v.push_back(valid_args);
-                    successes[it.first] = v;
-                } else {
-                    successes[it.first].push_back(valid_args);
-                }
-            }*/
-/*            std::stringstream ss(valid_args->get_test_name());
-            std::string tok;
-            std::vector<std::string> args;
-            while (std::getline(ss, tok, ' ')) {
-                if (!tok.empty() && tok != "<>") {
-                    args.push_back(tok);
-                }
-            }
-
-            if (min_arg_counts.find(it.first) == min_arg_counts.end()) {
-                min_arg_counts[it.first] = args.size();
-                std::vector<std::shared_ptr<fbf::TestRun>> v;
-                v.push_back(valid_args);
-                successes[it.first] = v;
-            } else if (min_arg_counts[it.first] == args.size()) {
-                successes[it.first].push_back(valid_args);
-            } else if (min_arg_counts[it.first] > args.size()) {
-                successes[it.first].clear();
-                successes[it.first].push_back(valid_args);
-                min_arg_counts[it.first] = args.size();
-            }*/
-        }
-/*
-        if(successes.find(it.first) == successes.end()) {
-            std::vector<std::shared_ptr<fbf::TestRun>> v;
-            v.push_back(it.second.front());
-            successes[it.first] = v;
-        }
-*/
-
-        std::vector<std::shared_ptr<fbf::TestRun>> v;
-        if(returnValues.size() == it.second.size()) {
-            v.push_back(it.second.front());
-        } else {
-            std::cout << binDesc_.getSym(it.first) << ": " << std::endl;
-            size_t max_size = 0;
-            for (auto val : returnValues) {
-                std::cout << "\t" << val.second.front()->get_test_name() << " (" << std::hex << val.first << std::dec << ") - " << val.second.size() << std::endl;
-                if(val.second.size() > max_size) {
-                    v.clear();
-                    max_size = val.second.size();
-                    v.push_back(val.second.front());
-                } else if(val.second.size() == max_size) {
-                    v.push_back(val.second.front());
-                }
-            }
-        }
-        successes[it.first] = v;
-    }
-
-    for (auto it : successes) {
-        if (binDesc_.isSharedLibrary()) {
-            const std::string &sym = binDesc_.getSym(it.first);
-            o << sym << ": ";
-        } else {
-            o << "0x" << std::hex <<
-              it.first << std::dec <<
-              ": ";
-        }
-        for (auto arg_types : it.second) {
-            if (arg_types->get_test_name().empty() || arg_types->get_test_name() == "<>") {
-                o << "< void >";
-            } else {
-                o << "< " << arg_types->get_test_name() << " > ";
-            }
-            o << " ";
-        }
-        o << std::endl;
-    }
-
-    for (auto it : noncrashes) {
-        if (successes.find(it.first) != successes.end()) {
-            continue;
-        }
-        if (binDesc_.isSharedLibrary()) {
-            const std::string &sym = binDesc_.getSym(it.first);
-            o << sym << ": ";
-        } else {
-            o << "0x" << std::hex <<
-              it.first << std::dec <<
-              ": ";
-        }
-        for (auto arg_types : it.second) {
-            if (arg_types->get_test_name().empty() || arg_types->get_test_name() == "<>") {
-                o << "< void >";
-            } else {
-                o << "< " << arg_types->get_test_name() << " > ";
-            }
-            o << " ";
-        }
-        o << std::endl;
-    }
-
-    std::set<std::string> outputs_strs;
-    for (auto it : crashed_tests) {
-        if (successes.find(it->get_offset()) != successes.end() ||
-            noncrashes.find(it->get_offset()) != noncrashes.end()) {
-            continue;
-        }
-        if (binDesc_.isSharedLibrary()) {
-            const std::string sym = binDesc_.getSym(it->get_offset());
-            if (outputs_strs.find(sym) == outputs_strs.end()) {
-                o << sym << ": CRASHED" << std::endl;
-                outputs_strs.insert(sym);
-            }
-        } else {
-            std::stringstream ss;
-            ss << std::hex << it->get_offset();
-
-            if (outputs_strs.find(ss.str()) == outputs_strs.end()) {
-                o << ss.str() << ": CRASHED" << std::endl;
-                outputs_strs.insert(ss.str());
-            }
-        }
-    }
 }
 
 void fbf::FullSleuthTest::create_testcases() {
-    uintptr_t tmp;
-    double dnan = std::nan("1");;
-    std::memcpy(&tmp, &dnan, sizeof(dnan));
+    // This code assumes that set is sorted
+    uintptr_t prev = 0;
+    for (std::set<uintptr_t>::iterator it = binDesc_.getOffsets().begin();
+            it != binDesc_.getOffsets().end(); ++it) {
+        uintptr_t offset = compute_location(*it);
+        if(prev == 0) {
+            prev = offset;
+            continue;
+        }
 
-    for (uintptr_t offset : binDesc_.getOffsets()) {
-        uintptr_t location = compute_location(offset);
-
-#include "TestCases.inc"
+        std::shared_ptr<fbf::ArgumentCountTestCase> testcase = std::make_shared<fbf::ArgumentCountTestCase>(prev, offset-prev);
+        testRuns_.push_back(std::make_shared<fbf::TestRun>(testcase, prev));
     }
 }
