@@ -18,6 +18,7 @@ namespace fbf {
         bool test_has_run_;
         int pid_status_;
         uintptr_t offset_;
+        uint64_t execution_result_;
 
         test_result_t determine_result(pid_t);
         void set_signals();
@@ -32,7 +33,7 @@ namespace fbf {
         uintptr_t get_offset();
         const std::string get_test_name();
         bool test_crashed();
-        void* get_execution_result();
+        uint64_t get_execution_result();
     };
 }
 

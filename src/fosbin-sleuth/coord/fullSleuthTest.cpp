@@ -95,14 +95,22 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
     }
 
     for (auto it : candidates) {
-        void* prev;
+        std::map<uint64_t, std::vector<std::shared_ptr<fbf::TestRun>>> returnValues;
         for (auto valid_args : it.second) {
-            std::cout << "PARENT " << std::hex << valid_args->get_execution_result() << std::dec << std::endl;
-            if(valid_args == it.second.front()) {
+            uint64_t tmp = valid_args->get_execution_result();
+            if(returnValues.find(tmp) == returnValues.end()) {
+                std::vector<std::shared_ptr<fbf::TestRun>> v;
+                v.push_back(valid_args);
+                returnValues[tmp] = v;
+            } else {
+                returnValues[tmp].push_back(valid_args);
+            }
+
+            //std::cout << std::hex << "PARENT " << valid_args->get_test_name() << " " << tmp << std::dec << std::endl;
+/*            if(valid_args == it.second.front()) {
                 prev = valid_args->get_execution_result();
                 continue;
             }
-            void* tmp = valid_args->get_execution_result();
             if(tmp != prev) {
                 prev = tmp;
                 if(successes.find(it.first) == successes.end()) {
@@ -112,7 +120,7 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
                 } else {
                     successes[it.first].push_back(valid_args);
                 }
-            }
+            }*/
 /*            std::stringstream ss(valid_args->get_test_name());
             std::string tok;
             std::vector<std::string> args;
@@ -135,11 +143,32 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
                 min_arg_counts[it.first] = args.size();
             }*/
         }
+/*
         if(successes.find(it.first) == successes.end()) {
             std::vector<std::shared_ptr<fbf::TestRun>> v;
             v.push_back(it.second.front());
             successes[it.first] = v;
         }
+*/
+
+        std::vector<std::shared_ptr<fbf::TestRun>> v;
+        if(returnValues.size() == it.second.size()) {
+            v.push_back(it.second.front());
+        } else {
+            std::cout << binDesc_.getSym(it.first) << ": " << std::endl;
+            size_t max_size = 0;
+            for (auto val : returnValues) {
+                std::cout << "\t" << val.second.front()->get_test_name() << " (" << std::hex << val.first << std::dec << ") - " << val.second.size() << std::endl;
+                if(val.second.size() > max_size) {
+                    v.clear();
+                    max_size = val.second.size();
+                    v.push_back(val.second.front());
+                } else if(val.second.size() == max_size) {
+                    v.push_back(val.second.front());
+                }
+            }
+        }
+        successes[it.first] = v;
     }
 
     for (auto it : successes) {

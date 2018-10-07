@@ -29,9 +29,9 @@ void fbf::FunctionIdentifier::setup() {
 
 }
 
-void* fbf::FunctionIdentifier::get_value() {
+uint64_t fbf::FunctionIdentifier::get_value() {
     /* TODO: Implement this */
-    return nullptr;
+    return 0L;
 }
 
 int fbf::FunctionIdentifier::run_test() {

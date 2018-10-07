@@ -29,7 +29,7 @@ namespace fbf {
 
         int run_test();
 
-        virtual void* get_value();
+        virtual uint64_t get_value();
 
     protected:
         uintptr_t location_;
@@ -58,8 +58,8 @@ namespace fbf {
     }
 
     template<typename R, typename... Args>
-    void* fbf::ArgumentTestCase<R, Args...>::get_value() {
-        return (void*)returnValue_;
+    uint64_t fbf::ArgumentTestCase<R, Args...>::get_value() {
+        return (uint64_t)returnValue_;
     }
 
     template<typename R, typename... Args>
@@ -68,11 +68,9 @@ namespace fbf {
         precall();
         try {
             returnValue_ = std::apply(func, args_);
-            std::cout << "CHILD " << std::hex << returnValue_ << std::dec << std::endl;
         } catch (std::exception &e) {
             return fbf::ITestCase::FAIL;
         }
-        std::cout << "CHILD2 " << std::hex << returnValue_ << std::dec << std::endl;
         postcall();
         return testPasses_ == true ? fbf::ITestCase::PASS : fbf::ITestCase::NON_CRASHING;
     }
