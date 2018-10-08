@@ -124,7 +124,7 @@ def main():
             parse_xml(os.path.join(dir, filename))
 
     sym_regex = re.compile("(0[Xx][0-9A-Fa-f]+)=([A-Za-z0-9_]+)")
-    guess_regex = re.compile("([0-9A-Za-z_]+):([a-zA-Z* <>]+)")
+    guess_regex = re.compile("Function ([0-9A-Za-z_]+) has ([0-9]+) argument")
     with open(sys.argv[1], "r", errors='replace') as guesses:
         syms = {}
         addr_map = {}
@@ -146,7 +146,7 @@ def main():
                 continue
 
             name = guess_match.group(1).strip()
-            func_guesses = guess_match.group(2).strip()
+            arg_count_guess = int(guess_match.group(2).strip())
 
             addr = addr_map[name]
 
@@ -167,11 +167,7 @@ def main():
                             print("0\t0\t0\t{}: CRASHED <-> < {} > {}".format(sym, finalArgs, finalArgCount))
                             continue
                         else:
-                            print("{}\t{}\t{}\t{}: {} <-> < {} > {}".format(func_guesses.count("<"),
-                                                                            "< " + finalArgs + " >" == func_guesses,
-                                                                            func_guesses.find("< " + finalArgs + " >") >= 0,
-                                                                            sym, func_guesses, finalArgs,
-                                                                            finalArgCount))
+                            print("{}\t{}: {} <-> < {} >".format(arg_count_guess == finalArgCount, name, arg_count_guess, finalArgs))
             syms.pop(addr)
 
         for addr in syms:
