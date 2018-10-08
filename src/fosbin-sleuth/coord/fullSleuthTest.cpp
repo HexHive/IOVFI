@@ -83,7 +83,8 @@ void fbf::FullSleuthTest::create_testcases() {
         std::pair<std::string, size_t> sym = binDesc_.getSym(location);
 
         std::shared_ptr<fbf::ArgumentCountTestCase> testcase = std::make_shared<fbf::ArgumentCountTestCase>(location,
-                                                                                                            sym.second);
+                                                                                                            sym.second,
+                                                                                                            binDesc_);
         testRuns_.push_back(std::make_shared<fbf::TestRun>(testcase, location));
     }
 }

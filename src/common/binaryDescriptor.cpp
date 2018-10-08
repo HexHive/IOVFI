@@ -287,3 +287,13 @@ uint64_t fbf::BinaryDescriptor::getIdentifier() {
 void fbf::BinaryDescriptor::setIdentifier(uint64_t id) {
     identifier_ = id;
 }
+
+uintptr_t fbf::BinaryDescriptor::getSymLocation(std::pair<std::string, size_t> sym) {
+    for(auto v : syms_) {
+        if(v.second.first == sym.first) {
+            return v.first;
+        }
+    }
+
+    return (uintptr_t)-1;
+}
