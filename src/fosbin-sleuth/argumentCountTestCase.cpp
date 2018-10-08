@@ -117,7 +117,7 @@ int fbf::ArgumentCountTestCase::run_test() {
 std::pair<std::string, size_t> fbf::ArgumentCountTestCase::find_closest_sym(uintptr_t location) {
     uintptr_t curr_loc = location;
     std::pair<std::string, size_t> test = binDesc_.getSym(curr_loc);
-    while(test.second != 0 && curr_loc > 0) {
+    while(test.second == 0 && curr_loc > 0) {
         test = binDesc_.getSym(--curr_loc);
     }
 
