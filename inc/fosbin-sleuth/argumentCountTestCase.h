@@ -32,7 +32,6 @@ namespace fbf {
 
         bool reg_used_as_arg(uint16_t reg);
         uint16_t get_reg_id(uint16_t reg);
-        std::pair<std::string, size_t> find_closest_sym(uintptr_t location);
 
         inline constexpr static uint16_t REG_ABI_ORDER[]= {
             X86_REG_RDI,

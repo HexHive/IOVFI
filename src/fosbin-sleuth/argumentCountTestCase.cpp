@@ -85,7 +85,7 @@ int fbf::ArgumentCountTestCase::run_test() {
                     addr_str << std::hex << insn->op_str;
                     addr_str >> loc;
 
-                    std::pair<std::string, size_t> sym = find_closest_sym(loc);
+                    std::pair<std::string, size_t> sym = binDesc_.getSym(loc);
                     if(visited.find(sym) == visited.end()) {
                         jmp_tgts.push_back(sym);
                         curr_loc = loc;
@@ -112,22 +112,6 @@ int fbf::ArgumentCountTestCase::run_test() {
     arg_count_ = regs_used_in_args.size();
 
     return fbf::ITestCase::PASS;
-}
-
-std::pair<std::string, size_t> fbf::ArgumentCountTestCase::find_closest_sym(uintptr_t location) {
-    uintptr_t curr_loc = location;
-    std::pair<std::string, size_t> test = binDesc_.getSym(curr_loc);
-    while(test.second == 0 && curr_loc > 0) {
-        test = binDesc_.getSym(--curr_loc);
-    }
-
-    if(curr_loc == 0) {
-        std::stringstream msg;
-        msg << "No symbol located at location 0x" << std::hex << location;
-        throw std::runtime_error(msg.str());
-    }
-
-    return test;
 }
 
 bool fbf::ArgumentCountTestCase::reg_used_as_arg(uint16_t reg) {

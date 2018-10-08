@@ -273,11 +273,21 @@ bool fbf::BinaryDescriptor::isSharedLibrary() {
 }
 
 const std::pair<std::string, size_t> fbf::BinaryDescriptor::getSym(uintptr_t location) {
-    if (syms_.find(location) == syms_.end()) {
-        return std::make_pair<std::string, size_t>("", 0);
+    if(syms_.find(location) != syms_.end()) {
+        return syms_[location];
     }
 
-    return syms_[location];
+    uintptr_t sym_loc = 0;
+    int64_t min_diff = std::numeric_limits<int64_t>::max();
+    for(auto v : syms_) {
+        int64_t diff = (location - v.first);
+        if(diff > 0 && diff < min_diff) {
+            min_diff = diff;
+            sym_loc = v.first;
+        }
+    }
+
+    return syms_[sym_loc];
 }
 
 uint64_t fbf::BinaryDescriptor::getIdentifier() {
