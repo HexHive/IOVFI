@@ -12,11 +12,15 @@ namespace fbf {
     class ArgumentCountTestCase : public ITestCase {
     public:
         ArgumentCountTestCase(uintptr_t location, size_t size);
+
         virtual ~ArgumentCountTestCase();
 
         virtual const std::string get_test_name();
+
         virtual int run_test();
+
         virtual uint64_t get_value();
+
         virtual uintptr_t get_location();
 
     protected:
@@ -26,7 +30,17 @@ namespace fbf {
         csh handle_;
 
         bool reg_used_as_arg(uint16_t reg);
+
         uint16_t get_reg_id(uint16_t reg);
+
+        inline constexpr static uint16_t REG_ABI_ORDER[]= {
+            X86_REG_RDI,
+                    X86_REG_RSI,
+                    X86_REG_RDX,
+                    X86_REG_RCX,
+                    X86_REG_R8,
+                    X86_REG_R9
+        };
     };
 }
 

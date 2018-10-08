@@ -57,7 +57,12 @@ int fbf::ArgumentCountTestCase::run_test() {
                     reg_read[reg] = true;
                     if (reg_used_as_arg(reg) &&
                         reg_written.find(reg) == reg_written.end()) {
-                        regs_used_in_args.insert(reg);
+                        for(int j = 0; j < sizeof(REG_ABI_ORDER); j++) {
+                            regs_used_in_args.insert(REG_ABI_ORDER[j]);
+                            if(REG_ABI_ORDER[j] == reg) {
+                                break;
+                            }
+                        }
                     }
                 }
             }
