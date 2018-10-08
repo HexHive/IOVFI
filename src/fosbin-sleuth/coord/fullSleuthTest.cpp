@@ -78,8 +78,6 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
 }
 
 void fbf::FullSleuthTest::create_testcases() {
-    // This code assumes that set is sorted
-    uintptr_t prev = 0;
     for (std::set<uintptr_t>::iterator it = binDesc_.getOffsets().begin();
          it != binDesc_.getOffsets().end(); ++it) {
         uintptr_t location = compute_location(*it);
@@ -87,6 +85,6 @@ void fbf::FullSleuthTest::create_testcases() {
 
         std::shared_ptr<fbf::ArgumentCountTestCase> testcase = std::make_shared<fbf::ArgumentCountTestCase>(location,
                                                                                                             sym.second);
-        testRuns_.push_back(std::make_shared<fbf::TestRun>(testcase, prev));
+        testRuns_.push_back(std::make_shared<fbf::TestRun>(testcase, location));
     }
 }
