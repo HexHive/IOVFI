@@ -24,7 +24,7 @@ fbf::ArgumentCountTestCase::~ArgumentCountTestCase() {
 
 const std::string fbf::ArgumentCountTestCase::get_test_name() {
     std::stringstream ss;
-    ss << "Argument Count Test at " << std::hex << location_;
+    ss << "Argument Count Test at 0x" << std::hex << location_;
     return ss.str();
 }
 
@@ -38,8 +38,23 @@ int fbf::ArgumentCountTestCase::run_test() {
     do {
         count = cs_disasm(handle_, (uint8_t*)curr_loc, size_ - (curr_loc - location_), curr_loc, 1, &insn);
         if(count > 0) {
-            curr_loc += insn->address + insn->size;
-            if(insn->detail == NULL) {
+            curr_loc = insn->address + insn->size;
+            
+                if(cs_regs_access(handle_, insn, regs_read, &regs_read_count, regs_write, &regs_write_count) == 0) {
+                    std::cout << insn->mnemonic << ":" << std::endl;
+                    if(regs_read_count) {
+                        for(int j = 0; j < regs_read_count; j++) {
+                            std::cout << "Register " << cs_reg_name(handle_, regs_read[j]) << " read" << std::endl;
+                        }
+                    }
+
+                    if(regs_write_count) {
+                        for(int j = 0; j < regs_write_count; j++) {
+                            std::cout << "Register " << cs_reg_name(handle_, regs_write[j]) << " written" << std::endl;
+                        }
+                    }
+                }
+            /*if(insn->detail == NULL) {
                 cs_free(insn, count);
                 continue;
             }
@@ -61,7 +76,7 @@ int fbf::ArgumentCountTestCase::run_test() {
                         }
                     }
                 }
-            }
+            }*/
 
             cs_free(insn, count);
         }

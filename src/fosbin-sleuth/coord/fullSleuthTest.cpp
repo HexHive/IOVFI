@@ -70,12 +70,12 @@ void fbf::FullSleuthTest::create_testcases() {
     for (std::set<uintptr_t>::iterator it = binDesc_.getOffsets().begin();
             it != binDesc_.getOffsets().end(); ++it) {
         uintptr_t offset = compute_location(*it);
-        if(prev == 0) {
+        /*if(prev == 0) {
             prev = offset;
             continue;
-        }
+        }*/
 
-        std::shared_ptr<fbf::ArgumentCountTestCase> testcase = std::make_shared<fbf::ArgumentCountTestCase>(prev, offset-prev);
+        std::shared_ptr<fbf::ArgumentCountTestCase> testcase = std::make_shared<fbf::ArgumentCountTestCase>(offset, 110);
         testRuns_.push_back(std::make_shared<fbf::TestRun>(testcase, prev));
     }
 }
