@@ -22,7 +22,7 @@ fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t p
     /* Avoid testInt values */
     std::uniform_int_distribution<uint8_t> charRand(MAX_ARGUMENTS + 2, 0xfe);
     std::uniform_int_distribution<int> intRand(std::numeric_limits<int>::min(),
-            std::numeric_limits<int>::max());
+                                               std::numeric_limits<int>::max());
     std::uniform_real_distribution<double> dblRand(std::numeric_limits<double>::min(),
                                                    std::numeric_limits<double>::max());
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -61,21 +61,32 @@ fbf::FullSleuthTest::~FullSleuthTest() {
 }
 
 void fbf::FullSleuthTest::output(std::ostream &o) {
+    for (std::shared_ptr<fbf::TestRun> test : testRuns_) {
+        o << "Function " << binDesc_.getSym(test->get_offset());
+        if (test->get_result() == fbf::ITestCase::PASS) {
+            o << " has " << test->get_execution_result()
+              << " arguments.";
+        } else {
+            o << " CRASHED";
+        }
 
+        o << std::endl;
+    }
 }
 
 void fbf::FullSleuthTest::create_testcases() {
     // This code assumes that set is sorted
     uintptr_t prev = 0;
     for (std::set<uintptr_t>::iterator it = binDesc_.getOffsets().begin();
-            it != binDesc_.getOffsets().end(); ++it) {
+         it != binDesc_.getOffsets().end(); ++it) {
         uintptr_t offset = compute_location(*it);
         /*if(prev == 0) {
             prev = offset;
             continue;
         }*/
 
-        std::shared_ptr<fbf::ArgumentCountTestCase> testcase = std::make_shared<fbf::ArgumentCountTestCase>(offset, 110);
+        std::shared_ptr<fbf::ArgumentCountTestCase> testcase = std::make_shared<fbf::ArgumentCountTestCase>(offset,
+                                                                                                            110);
         testRuns_.push_back(std::make_shared<fbf::TestRun>(testcase, prev));
     }
 }

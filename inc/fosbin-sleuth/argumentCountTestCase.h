@@ -22,6 +22,9 @@ namespace fbf {
         size_t size_;
         uint8_t arg_count_;
         csh handle_;
+
+        bool reg_used_as_arg(uint16_t reg);
+        uint16_t get_reg_id(uint16_t reg);
     };
 }
 
