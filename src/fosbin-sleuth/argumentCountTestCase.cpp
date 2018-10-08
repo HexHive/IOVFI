@@ -79,10 +79,10 @@ int fbf::ArgumentCountTestCase::run_test() {
                     }
                 }
 
-                if (std::strcmp(insn->mnemonic, "jmp")) {
+                if (std::strcmp(insn->mnemonic, "jmp") == 0) {
                     uintptr_t loc;
                     std::stringstream addr_str;
-                    addr_str << insn->op_str;
+                    addr_str << std::hex << insn->op_str;
                     addr_str >> loc;
 
                     std::pair<std::string, size_t> sym = find_closest_sym(loc);
