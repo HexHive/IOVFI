@@ -62,7 +62,7 @@ fbf::FullSleuthTest::~FullSleuthTest() {
 
 void fbf::FullSleuthTest::output(std::ostream &o) {
     for (std::shared_ptr<fbf::TestRun> test : testRuns_) {
-        o << "Function " << binDesc_.getSym(test->get_offset());
+        o << "Function " << binDesc_.getSym(test->get_location());
         if (test->get_result() == fbf::ITestCase::PASS) {
             o << " has " << test->get_execution_result()
               << " arguments.";

@@ -131,3 +131,7 @@ uint16_t fbf::ArgumentCountTestCase::get_reg_id(uint16_t reg) {
 uint64_t fbf::ArgumentCountTestCase::get_value() {
     return arg_count_;
 }
+
+uintptr_t fbf::ArgumentCountTestCase::get_location() {
+    return location_;
+}

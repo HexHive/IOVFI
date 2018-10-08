@@ -128,3 +128,7 @@ const std::string fbf::TestRun::get_test_name() {
 bool fbf::TestRun::test_crashed() {
     return WIFSIGNALED(pid_status_) != 0;
 }
+
+uintptr_t fbf::TestRun::get_location() {
+    return test_->get_location();
+}

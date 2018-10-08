@@ -17,6 +17,8 @@ namespace fbf {
         virtual const std::string get_test_name();
         virtual int run_test();
         virtual uint64_t get_value();
+        virtual uintptr_t get_location();
+
     protected:
         uintptr_t location_;
         size_t size_;

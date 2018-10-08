@@ -31,6 +31,7 @@ namespace fbf {
         void output_results(std::ostream& out);
         test_result_t get_result();
         uintptr_t get_offset();
+        uintptr_t get_location();
         const std::string get_test_name();
         bool test_crashed();
         uint64_t get_execution_result();

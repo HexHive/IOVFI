@@ -16,6 +16,7 @@ namespace fbf {
         virtual const std::string get_test_name() = 0;
         virtual int run_test() = 0;
         virtual uint64_t get_value() = 0;
+        virtual uintptr_t get_location() = 0;
 
         const static int PASS = 0;
         const static int FAIL = 1;

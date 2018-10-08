@@ -18,7 +18,7 @@ namespace fbf {
         virtual ~FunctionIdentifier();
 
         virtual int run_test();
-        uintptr_t get_location();
+        virtual uintptr_t get_location();
         const std::string get_test_name();
         int get_total_tests();
         int get_failed_tests();

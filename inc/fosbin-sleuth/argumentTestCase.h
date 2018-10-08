@@ -30,6 +30,7 @@ namespace fbf {
         int run_test();
 
         virtual uint64_t get_value();
+        virtual uintptr_t get_location();
 
     protected:
         uintptr_t location_;
@@ -60,6 +61,11 @@ namespace fbf {
     template<typename R, typename... Args>
     uint64_t fbf::ArgumentTestCase<R, Args...>::get_value() {
         return (uint64_t)returnValue_;
+    }
+
+    template<typename R, typename... Args>
+    uintptr_t fbf::ArgumentTestCase<R, Args...>::get_location() {
+        return location_;
     }
 
     template<typename R, typename... Args>
