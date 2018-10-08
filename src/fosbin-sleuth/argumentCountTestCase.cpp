@@ -8,6 +8,7 @@
 #include <capstone/capstone.h>
 #include <capstone/platform.h>
 #include <iostream>
+#include <cstring>
 
 fbf::ArgumentCountTestCase::ArgumentCountTestCase(uintptr_t location, size_t size) :
         ITestCase(), location_(location), size_(size), arg_count_(0), handle_(0) {
@@ -64,7 +65,7 @@ int fbf::ArgumentCountTestCase::run_test() {
                 }
             }
 
-            if(*(uint16_t*)insn->detail->x86.opcode == X86_INS_JMP) {
+            if(std::strcmp(insn->mnemonic, "jmp")) {
                 std::stringstream addr_str;
                 addr_str << insn->op_str;
                 addr_str >> curr_loc;
