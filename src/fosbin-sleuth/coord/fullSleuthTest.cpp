@@ -78,9 +78,8 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
 }
 
 void fbf::FullSleuthTest::create_testcases() {
-    for (std::set<uintptr_t>::iterator it = binDesc_.getOffsets().begin();
-         it != binDesc_.getOffsets().end(); ++it) {
-        uintptr_t location = compute_location(*it);
+    for (uintptr_t loc : binDesc_.getOffsets()) {
+        uintptr_t location = compute_location(loc);
         std::pair<std::string, size_t> sym = binDesc_.getSym(location);
 
         std::shared_ptr<fbf::ArgumentCountTestCase> testcase = std::make_shared<fbf::ArgumentCountTestCase>(location,
