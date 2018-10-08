@@ -47,7 +47,20 @@ int fbf::ArgumentCountTestCase::run_test() {
             x86 = &(insn->detail->x86);
             for(int i = 0; i < x86->op_count; i++) {
                 cs_x86_op* op = &(x86->operands[i]);
-                if(!cs_reg)
+                if(cs_regs_access(handle_, insn, regs_read, &regs_read_count, regs_write, &regs_write_count) == 0) {
+                    std::cout << insn->mnemonic << ":" << std::endl;
+                    if(regs_read_count) {
+                        for(int j = 0; j < regs_read_count; j++) {
+                            std::cout << "Register " << cs_reg_name(handle_, regs_read[j]) << " read" << std::endl;
+                        }
+                    }
+
+                    if(regs_write_count) {
+                        for(int j = 0; j < regs_write_count; j++) {
+                            std::cout << "Register " << cs_reg_name(handle_, regs_write[j]) << " written" << std::endl;
+                        }
+                    }
+                }
             }
 
             cs_free(insn, count);

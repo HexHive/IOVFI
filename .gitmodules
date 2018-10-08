@@ -5,3 +5,6 @@
 [submodule "inc/CTPL"]
 	path = inc/CTPL
 	url = git@github.com:vit-vit/CTPL.git
+[submodule "src/capstone"]
+	path = src/capstone
+	url = git@github.com:aquynh/capstone.git

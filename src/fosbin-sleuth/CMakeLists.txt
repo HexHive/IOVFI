@@ -2,10 +2,15 @@ add_executable( ${FUNC_CLASSIFIER}
         main.cpp
         )
 
+add_dependencies( ${FUNC_CLASSIFIER}
+        capstone-shared
+        )
+
 target_include_directories( ${FUNC_CLASSIFIER} PRIVATE
         ../../inc/${FUNC_CLASSIFIER}
         .
         ${Boost_INCLUDE_DIRS}
+        ../capstone/include
         )
 
 target_link_libraries( ${FUNC_CLASSIFIER}
@@ -13,8 +18,9 @@ target_link_libraries( ${FUNC_CLASSIFIER}
         pthread
         ${Boost_LIBRARIES}
         dl
-        capstone
         )
+
+target_link_libraries( ${FUNC_CLASSIFIER} "-L${CMAKE_BINARY_DIR}/lib" capstone )
 
 target_sources( ${FUNC_CLASSIFIER}
     PUBLIC
