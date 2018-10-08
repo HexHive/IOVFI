@@ -43,9 +43,6 @@ int fbf::ArgumentCountTestCase::run_test() {
     do {
         count = cs_disasm(handle_, (uint8_t *) curr_loc, size_ - (curr_loc - location_), curr_loc, 1, &insn);
         if (count > 0) {
-            // TODO: Follow unconditional jumps
-            curr_loc = insn->address + insn->size;
-
             if (cs_regs_access(handle_, insn, regs_read, &regs_read_count, regs_write, &regs_write_count) == 0) {
                 for (int i = 0; i < regs_write_count; i++) {
                     uint16_t reg = get_reg_id(regs_write[i]);
@@ -65,6 +62,14 @@ int fbf::ArgumentCountTestCase::run_test() {
                         }
                     }
                 }
+            }
+
+            if(*(uint16_t*)insn->detail->x86.opcode == X86_INS_JMP) {
+                std::stringstream addr_str;
+                addr_str << insn->op_str;
+                addr_str >> curr_loc;
+            } else {
+                curr_loc = insn->address + insn->size;
             }
         }
         cs_free(insn, count);
