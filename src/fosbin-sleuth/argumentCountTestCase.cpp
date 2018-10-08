@@ -14,6 +14,7 @@ fbf::ArgumentCountTestCase::ArgumentCountTestCase(uintptr_t location, size_t siz
     if (cs_open(CS_ARCH_X86, CS_MODE_64, &handle_) != CS_ERR_OK) {
         throw std::runtime_error("Could not open capstone handle");
     }
+    cs_option(handle_, CS_OPT_DETAIL, CS_OPT_ON);
 }
 
 fbf::ArgumentCountTestCase::~ArgumentCountTestCase() {
@@ -44,13 +45,13 @@ int fbf::ArgumentCountTestCase::run_test() {
                     std::cout << insn->mnemonic << ":" << std::endl;
                     if(regs_read_count) {
                         for(int j = 0; j < regs_read_count; j++) {
-                            std::cout << "Register " << cs_reg_name(handle_, regs_read[j]) << " read" << std::endl;
+                            std::cout << "\tRegister " << cs_reg_name(handle_, regs_read[j]) << " read" << std::endl;
                         }
                     }
 
                     if(regs_write_count) {
                         for(int j = 0; j < regs_write_count; j++) {
-                            std::cout << "Register " << cs_reg_name(handle_, regs_write[j]) << " written" << std::endl;
+                            std::cout << "\tRegister " << cs_reg_name(handle_, regs_write[j]) << " written" << std::endl;
                         }
                     }
                 }
