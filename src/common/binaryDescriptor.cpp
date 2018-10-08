@@ -39,7 +39,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
     size_t line_num = 0;
     std::fstream f(path);
     std::string line;
-    std::set<std::string> syms;
+    std::set<std::pair<std::string, size_t>> syms;
 
     while (std::getline(f, line)) {
         line_num++;
@@ -95,7 +95,27 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
         } else if (key == "data_offset") {
             data_.offset_ = parse_offset(val);
         } else if (key == "sym") {
-            syms.insert(val);
+            size_t sep = val.find(',');
+            if(sep == std::string::npos) {
+                std::stringstream msg;
+                msg << "Malformed symbol entry on line " << line_num;
+                throw std::runtime_error(msg.str());
+            }
+
+            std::string name = val.substr(0, sep);
+
+            std::stringstream str_size;
+            str_size << val.substr(sep + 1);
+
+            size_t size = 0;
+            str_size >> size;
+            if(size == 0) {
+                std::stringstream msg;
+                msg << "Invalid function size on line " << line_num;
+                throw std::runtime_error(msg.str());
+            }
+
+            syms.insert(std::make_pair(name, size));
         } else {
             std::string msg = "Unknown key: ";
             msg += key;
@@ -119,16 +139,16 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
 
         dlerror();
         text_.location_ = (uintptr_t) offset;
-        for (std::string s : syms) {
-            offset = dlsym((void *) text_.location_, s.c_str());
+        for (std::pair<std::string, size_t> p : syms) {
+            offset = dlsym((void *) text_.location_, p.first.c_str());
             if (!offset) {
-                std::cerr << "Could not find symbol " << s << std::endl;
+                std::cerr << "Could not find symbol " << p.first << std::endl;
                 continue;
             }
-            std::cout << std::hex << offset << std::dec << "=" << s << std::endl;
+            std::cout << std::hex << offset << std::dec << "=" << p.first << std::endl;
 
             offsets_.insert((uintptr_t) offset);
-            syms_[(uintptr_t) offset] = s;
+            syms_[(uintptr_t) offset] = p;
         }
 
         offset = dlsym((void*)text_.location_, "__errno_location");
@@ -252,9 +272,9 @@ bool fbf::BinaryDescriptor::isSharedLibrary() {
            bin_path_.string().find(".so.") != std::string::npos;
 }
 
-const std::string fbf::BinaryDescriptor::getSym(uintptr_t location) {
+const std::pair<std::string, size_t> fbf::BinaryDescriptor::getSym(uintptr_t location) {
     if (syms_.find(location) == syms_.end()) {
-        return "";
+        return std::make_pair<std::string, size_t>("", 0);
     }
 
     return syms_[location];

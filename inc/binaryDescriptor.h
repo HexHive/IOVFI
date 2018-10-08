@@ -19,7 +19,7 @@ namespace fbf {
         BinSection text_;
         BinSection data_;
         BinSection bss_;
-        std::map<uintptr_t, std::string> syms_;
+        std::map<uintptr_t, std::pair<std::string, size_t>> syms_;
         uintptr_t errno_location_;
         uint64_t identifier_;
 
@@ -33,7 +33,7 @@ namespace fbf {
         BinSection& getBss();
         fs::path& getPath();
         std::set<uintptr_t> getOffsets();
-        const std::string getSym(uintptr_t location);
+        const std::pair<std::string, size_t> getSym(uintptr_t location);
         int getErrno();
         bool isSharedLibrary();
         uint64_t getIdentifier();
