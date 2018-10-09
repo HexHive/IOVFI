@@ -63,23 +63,26 @@ int fbf::ArgumentCountTestCase::run_test() {
             count = cs_disasm(handle_, (uint8_t *)curr_loc, size, curr_loc, 1, &insn);
             if (count > 0) {
                 if (cs_regs_access(handle_, insn, regs_read, &regs_read_count, regs_write, &regs_write_count) == 0) {
-                    for (int i = 0; i < regs_write_count; i++) {
-                        uint16_t reg = get_reg_id(regs_write[i]);
-                        reg_written[reg] = true;
-                    }
-
-                    for (int i = 0; i < regs_read_count; i++) {
-                        uint16_t reg = get_reg_id(regs_read[i]);
-                        reg_read[reg] = true;
-                        if (reg_used_as_arg(reg) &&
-                            reg_written.find(reg) == reg_written.end()) {
-                            for (int j = 0; j < sizeof(REG_ABI_ORDER); j++) {
-                                regs_used_in_args.insert(REG_ABI_ORDER[j]);
-                                if (REG_ABI_ORDER[j] == reg) {
-                                    break;
+                    /* Special case for xor reg_a, reg_a since it is so common */
+                    if(insn->id != X86_INS_XOR || regs_read_count != 1) {
+                        for (int i = 0; i < regs_read_count; i++) {
+                            uint16_t reg = get_reg_id(regs_read[i]);
+                            reg_read[reg] = true;
+                            if (reg_used_as_arg(reg) &&
+                                reg_written.find(reg) == reg_written.end()) {
+                                for (int j = 0; j < sizeof(REG_ABI_ORDER); j++) {
+                                    regs_used_in_args.insert(REG_ABI_ORDER[j]);
+                                    if (REG_ABI_ORDER[j] == reg) {
+                                        break;
+                                    }
                                 }
                             }
                         }
+                    }
+
+                    for (int i = 0; i < regs_write_count; i++) {
+                        uint16_t reg = get_reg_id(regs_write[i]);
+                        reg_written[reg] = true;
                     }
                 }
 
@@ -126,20 +129,27 @@ bool fbf::ArgumentCountTestCase::reg_used_as_arg(uint16_t reg) {
         case X86_REG_RDI:
         case X86_REG_EDI:
         case X86_REG_DI:
+        case X86_REG_XMM0:
 
         case X86_REG_RSI:
         case X86_REG_ESI:
+        case X86_REG_XMM1:
 
         case X86_REG_RDX:
         case X86_REG_EDX:
         case X86_REG_DX:
+        case X86_REG_XMM2:
 
         case X86_REG_RCX:
         case X86_REG_ECX:
         case X86_REG_CX:
+        case X86_REG_XMM3:
 
         case X86_REG_R8:
+        case X86_REG_XMM4:
+
         case X86_REG_R9:
+        case X86_REG_XMM5:
             return true;
 
         default:
@@ -152,26 +162,32 @@ uint16_t fbf::ArgumentCountTestCase::get_reg_id(uint16_t reg) {
         case X86_REG_RDI:
         case X86_REG_EDI:
         case X86_REG_DI:
+        case X86_REG_XMM0:
             return X86_REG_RDI;
 
         case X86_REG_RSI:
         case X86_REG_ESI:
+        case X86_REG_XMM1:
             return X86_REG_RSI;
 
         case X86_REG_RDX:
         case X86_REG_EDX:
         case X86_REG_DX:
+        case X86_REG_XMM2:
             return X86_REG_RDX;
 
         case X86_REG_RCX:
         case X86_REG_ECX:
         case X86_REG_CX:
+        case X86_REG_XMM3:
             return X86_REG_RCX;
 
         case X86_REG_R8:
+        case X86_REG_XMM4:
             return X86_REG_R8;
 
         case X86_REG_R9:
+        case X86_REG_XMM5:
             return X86_REG_R9;
 
         default:
