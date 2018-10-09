@@ -283,17 +283,36 @@ const std::pair<std::string, size_t> fbf::BinaryDescriptor::getSym(uintptr_t loc
         return syms_[location];
     }
 
-    uintptr_t sym_loc = 0;
-    int64_t min_diff = std::numeric_limits<int64_t>::max();
+    std::vector<uintptr_t> addrs;
     for(auto v : syms_) {
-        int64_t diff = (location - v.first);
-        if(diff > 0 && diff < min_diff) {
-            min_diff = diff;
-            sym_loc = v.first;
+        addrs.push_back(v.first);
+    }
+
+    std::pair<std::string, size_t> lower, upper;
+    std::sort(addrs.begin(), addrs.end());
+    size_t i;
+    for(i = 1; i < addrs.size(); i++) {
+        if(addrs[i] > location) {
+            upper = syms_[addrs[i]];
+            lower = syms_[addrs[i - 1]];
+            break;
         }
     }
 
-    return syms_[sym_loc];
+    if(location <= addrs[i - 1] + lower.second) {
+        return syms_[addrs[i - 1]];
+    } else {
+        /* This is a function with hidden visibility, but presumably it is there */
+        return std::make_pair("", addrs[i] - location);
+    }
+}
+
+const std::pair<std::string, size_t> fbf::BinaryDescriptor::getFunc(uintptr_t location) {
+    if(syms_.find(location) == syms_.end()) {
+        return std::make_pair("", 0);
+    }
+
+    return syms_[location];
 }
 
 uint64_t fbf::BinaryDescriptor::getIdentifier() {

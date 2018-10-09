@@ -65,7 +65,7 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
         o << "Function " << binDesc_.getSym(test->get_location()).first;
         if (test->get_result() == fbf::ITestCase::PASS) {
             o << " has " << test->get_execution_result() << " argument";
-            if(test->get_result() != 1) {
+            if(test->get_execution_result() != 1) {
                 o << "s";
             }
             o << ".";

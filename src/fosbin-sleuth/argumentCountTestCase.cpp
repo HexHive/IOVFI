@@ -54,9 +54,8 @@ int fbf::ArgumentCountTestCase::run_test() {
         visited.insert(curr_loc);
         uintptr_t start_loc = binDesc_.getSymLocation(curr_func);
         if(start_loc == (uintptr_t)-1) {
-            std::stringstream msg;
-            msg << "Could not find location for " << curr_func.first;
-            throw std::runtime_error(msg.str());
+            /* Hidden visibility function, so we don't have its location */
+            start_loc = curr_loc;
         }
 
         do {
@@ -84,15 +83,22 @@ int fbf::ArgumentCountTestCase::run_test() {
                     }
                 }
 
-                if (insn->id == X86_INS_JMP) {
+                if (insn->id == X86_INS_JMP || insn->id == X86_INS_CALL) {
                     uintptr_t loc;
                     std::stringstream addr_str;
                     addr_str << std::hex << insn->op_str;
                     addr_str >> loc;
-                    
+
                     if(visited.find(loc) == visited.end()) {
                         jmp_tgts.back() = insn->address + insn->size;
                         jmp_tgts.push_back(loc);
+                        if(insn->id == X86_INS_CALL) {
+                            std::pair<std::string, size_t> func = binDesc_.getFunc(loc);
+                            if(func.first.empty()) {
+                                /* This is a function with hidden visibility, and we won't have it */
+                                jmp_tgts.pop_back();
+                            }
+                        }
                         cs_free(insn, count);
                         break;
                     } else {

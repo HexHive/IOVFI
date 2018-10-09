@@ -34,6 +34,7 @@ namespace fbf {
         fs::path& getPath();
         std::set<uintptr_t> getOffsets();
         const std::pair<std::string, size_t> getSym(uintptr_t location);
+        const std::pair<std::string, size_t> getFunc(uintptr_t location);
         uintptr_t getSymLocation(std::pair<std::string, size_t> sym);
         int getErrno();
         bool isSharedLibrary();
