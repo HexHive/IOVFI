@@ -40,6 +40,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
     std::fstream f(path);
     std::string line;
     std::set<std::pair<std::string, size_t>> syms;
+    std::set<std::string> tests;
 
     while (std::getline(f, line)) {
         line_num++;
@@ -68,13 +69,6 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
                 throw std::runtime_error(msg.c_str());
             }
             continue;
-        } else if (key == "addr") {
-            uintptr_t addr = parse_offset(val);
-            if (offsets_.find(addr) != offsets_.end()) {
-                continue;
-            }
-            offsets_.insert(addr);
-            continue;
         } else if (key == "data_size" ||
                    key == "bss_size") {
             size_t size = (size_t) parse_offset(val);
@@ -87,13 +81,17 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
         } else if (key == "bss_location") {
             uintptr_t location = parse_offset(val);
             bss_.location_ = location;
+            continue;
         } else if (key == "bss_offset") {
             bss_.offset_ = parse_offset(val);
+            continue;
         } else if (key == "data_location") {
             uintptr_t location = parse_offset(val);
             data_.location_ = location;
+            continue;
         } else if (key == "data_offset") {
             data_.offset_ = parse_offset(val);
+            continue;
         } else if (key == "sym") {
             size_t sep = val.find(',');
             if(sep == std::string::npos) {
@@ -116,6 +114,10 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
             }
 
             syms.insert(std::make_pair(name, size));
+            continue;
+        } else if (key == "test") {
+            tests.insert(val);
+            continue;
         } else {
             std::string msg = "Unknown key: ";
             msg += key;
@@ -147,8 +149,12 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
             }
             std::cout << std::hex << offset << std::dec << "=" << p.first << std::endl;
 
-            offsets_.insert((uintptr_t) offset);
             syms_[(uintptr_t) offset] = p;
+            if(tests.find(p.first) != tests.end()) {
+                offsets_.insert((uintptr_t)offset);
+            } else if(tests.empty()) {
+                offsets_.insert((uintptr_t)offset);
+            }
         }
 
         offset = dlsym((void*)text_.location_, "__errno_location");

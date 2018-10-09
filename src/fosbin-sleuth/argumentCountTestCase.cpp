@@ -9,6 +9,7 @@
 #include <capstone/platform.h>
 #include <iostream>
 #include <cstring>
+#include <unistd.h>
 
 fbf::ArgumentCountTestCase::ArgumentCountTestCase(uintptr_t location, size_t size, BinaryDescriptor& binDesc) :
         ITestCase(), location_(location), size_(size), arg_count_(0), handle_(0), binDesc_(binDesc) {
@@ -31,23 +32,26 @@ const std::string fbf::ArgumentCountTestCase::get_test_name() {
 }
 
 int fbf::ArgumentCountTestCase::run_test() {
+    alarm(0);
+
     size_t count;
     cs_insn *insn;
     uint64_t curr_loc = (uint64_t) location_;
     cs_regs regs_read, regs_write;
     uint8_t regs_read_count, regs_write_count;
 
-    std::vector<std::pair<std::string, size_t>> jmp_tgts;
-    jmp_tgts.push_back(binDesc_.getSym(location_));
+    std::vector<uintptr_t> jmp_tgts;
+    jmp_tgts.push_back(location_);
 
     std::map<uint16_t, bool> reg_read;
     std::map<uint16_t, bool> reg_written;
-    std::set<std::pair<std::string, size_t>> visited;
+    std::set<uintptr_t> visited;
     std::set<uint16_t> regs_used_in_args;
 
     while(!jmp_tgts.empty()) {
-        std::pair<std::string, size_t> curr_func = jmp_tgts.back();
-        visited.insert(curr_func);
+        curr_loc = jmp_tgts.back();
+        std::pair<std::string, size_t> curr_func = binDesc_.getSym(jmp_tgts.back());
+        visited.insert(curr_loc);
         uintptr_t start_loc = binDesc_.getSymLocation(curr_func);
         if(start_loc == (uintptr_t)-1) {
             std::stringstream msg;
@@ -56,7 +60,8 @@ int fbf::ArgumentCountTestCase::run_test() {
         }
 
         do {
-            count = cs_disasm(handle_, (uint8_t *)curr_loc, curr_func.second - (curr_loc - start_loc), curr_loc, 1, &insn);
+            int64_t size = curr_func.second - (curr_loc - start_loc);
+            count = cs_disasm(handle_, (uint8_t *)curr_loc, size, curr_loc, 1, &insn);
             if (count > 0) {
                 if (cs_regs_access(handle_, insn, regs_read, &regs_read_count, regs_write, &regs_write_count) == 0) {
                     for (int i = 0; i < regs_write_count; i++) {
@@ -79,23 +84,17 @@ int fbf::ArgumentCountTestCase::run_test() {
                     }
                 }
 
-                if (std::strcmp(insn->mnemonic, "jmp") == 0) {
+                if (insn->id == X86_INS_JMP) {
                     uintptr_t loc;
                     std::stringstream addr_str;
                     addr_str << std::hex << insn->op_str;
                     addr_str >> loc;
-
-                    std::pair<std::string, size_t> sym = binDesc_.getSym(loc);
-                    if(visited.find(sym) == visited.end()) {
-                        jmp_tgts.push_back(sym);
-                        curr_loc = loc;
-                        curr_func = sym;
-                        start_loc = binDesc_.getSymLocation(curr_func);
-                        if(start_loc == (uintptr_t)-1) {
-                            std::stringstream msg;
-                            msg << "Could not find location for " << curr_func.first;
-                            throw std::runtime_error(msg.str());
-                        }
+                    
+                    if(visited.find(loc) == visited.end()) {
+                        jmp_tgts.back() = insn->address + insn->size;
+                        jmp_tgts.push_back(loc);
+                        cs_free(insn, count);
+                        break;
                     } else {
                         curr_loc = insn->address + insn->size;
                     }
@@ -106,7 +105,9 @@ int fbf::ArgumentCountTestCase::run_test() {
             cs_free(insn, count);
         } while (count > 0);
 
-        jmp_tgts.pop_back();
+        if(count <= 0) {
+            jmp_tgts.pop_back();
+        }
     }
 
     arg_count_ = regs_used_in_args.size();
