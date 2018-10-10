@@ -41,6 +41,8 @@ namespace fbf {
                     X86_REG_R8,
                     X86_REG_R9
         };
+
+        inline constexpr static size_t NUM_ARG_REGS = sizeof(REG_ABI_ORDER)/sizeof(uint16_t);
     };
 }
 

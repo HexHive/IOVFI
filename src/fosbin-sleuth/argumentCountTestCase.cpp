@@ -47,6 +47,7 @@ int fbf::ArgumentCountTestCase::run_test() {
     std::map<uint16_t, bool> reg_written;
     std::set<uintptr_t> visited;
     std::set<uint16_t> regs_used_in_args;
+    std::set<uint16_t> determined_regs;
 
     while(!jmp_tgts.empty()) {
         curr_loc = jmp_tgts.back();
@@ -71,8 +72,9 @@ int fbf::ArgumentCountTestCase::run_test() {
                             reg_read[reg] = true;
                             if (reg_used_as_arg(reg) &&
                                 reg_written.find(reg) == reg_written.end()) {
-                                for (int j = 0; j < sizeof(REG_ABI_ORDER) / sizeof(uint16_t); j++) {
+                                for (int j = 0; j < NUM_ARG_REGS; j++) {
                                     regs_used_in_args.insert(REG_ABI_ORDER[j]);
+                                    determined_regs.insert(REG_ABI_ORDER[j]);
                                     if (REG_ABI_ORDER[j] == reg) {
                                         break;
                                     }
@@ -84,6 +86,18 @@ int fbf::ArgumentCountTestCase::run_test() {
                     for (int i = 0; i < regs_write_count; i++) {
                         uint16_t reg = get_reg_id(regs_write[i]);
                         reg_written[reg] = true;
+                        if(reg_used_as_arg(reg) && reg_read.find(reg) == reg_read.end()) {
+                            bool found = false;
+                            for(int j = 0; j < NUM_ARG_REGS; j++) {
+                                if(REG_ABI_ORDER[j] == reg) {
+                                    found = true;
+                                }
+
+                                if(found) {
+                                    determined_regs.insert(REG_ABI_ORDER[j]);
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -109,10 +123,12 @@ int fbf::ArgumentCountTestCase::run_test() {
             if(visited.find(curr_loc) != visited.end()) {
                 count = 0;
             }
-        } while (count > 0);
+        } while (count > 0 && determined_regs.size() < NUM_ARG_REGS);
 
         if(count <= 0) {
             jmp_tgts.pop_back();
+        } else if(determined_regs.size() >= NUM_ARG_REGS) {
+            break;
         }
     }
 
