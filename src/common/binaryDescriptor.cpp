@@ -299,7 +299,7 @@ const std::pair<std::string, size_t> fbf::BinaryDescriptor::getSym(uintptr_t loc
         }
     }
 
-    if(location <= addrs[i - 1] + lower.second) {
+    if(location < addrs[i - 1] + lower.second) {
         return syms_[addrs[i - 1]];
     } else {
         /* This is a function with hidden visibility, but presumably it is there */

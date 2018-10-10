@@ -50,8 +50,7 @@ int fbf::ArgumentCountTestCase::run_test() {
 
     while(!jmp_tgts.empty()) {
         curr_loc = jmp_tgts.back();
-        std::pair<std::string, size_t> curr_func = binDesc_.getSym(jmp_tgts.back());
-        visited.insert(curr_loc);
+        std::pair<std::string, size_t> curr_func = binDesc_.getSym(curr_loc);
         uintptr_t start_loc = binDesc_.getSymLocation(curr_func);
         if(start_loc == (uintptr_t)-1) {
             /* Hidden visibility function, so we don't have its location */
@@ -62,6 +61,8 @@ int fbf::ArgumentCountTestCase::run_test() {
             int64_t size = curr_func.second - (curr_loc - start_loc);
             count = cs_disasm(handle_, (uint8_t *)curr_loc, size, curr_loc, 1, &insn);
             if (count > 0) {
+                visited.insert(curr_loc);
+
                 if (cs_regs_access(handle_, insn, regs_read, &regs_read_count, regs_write, &regs_write_count) == 0) {
                     /* Special case for xor reg_a, reg_a since it is so common */
                     if(insn->id != X86_INS_XOR || regs_read_count != 1) {
@@ -70,7 +71,7 @@ int fbf::ArgumentCountTestCase::run_test() {
                             reg_read[reg] = true;
                             if (reg_used_as_arg(reg) &&
                                 reg_written.find(reg) == reg_written.end()) {
-                                for (int j = 0; j < sizeof(REG_ABI_ORDER); j++) {
+                                for (int j = 0; j < sizeof(REG_ABI_ORDER) / sizeof(uint16_t); j++) {
                                     regs_used_in_args.insert(REG_ABI_ORDER[j]);
                                     if (REG_ABI_ORDER[j] == reg) {
                                         break;
@@ -87,21 +88,14 @@ int fbf::ArgumentCountTestCase::run_test() {
                 }
 
                 if (insn->id == X86_INS_JMP || insn->id == X86_INS_CALL) {
-                    uintptr_t loc;
+                    uintptr_t loc = 0;
                     std::stringstream addr_str;
                     addr_str << std::hex << insn->op_str;
                     addr_str >> loc;
-
-                    if(visited.find(loc) == visited.end()) {
+                    /* loc == 0 implies an indirect call, ignore for now... */
+                    if(loc > 0 && visited.find(loc) == visited.end()) {
                         jmp_tgts.back() = insn->address + insn->size;
                         jmp_tgts.push_back(loc);
-                        if(insn->id == X86_INS_CALL) {
-                            std::pair<std::string, size_t> func = binDesc_.getFunc(loc);
-                            if(func.first.empty()) {
-                                /* This is a function with hidden visibility, and we won't have it */
-                                jmp_tgts.pop_back();
-                            }
-                        }
                         cs_free(insn, count);
                         break;
                     } else {
@@ -112,6 +106,9 @@ int fbf::ArgumentCountTestCase::run_test() {
                 }
             }
             cs_free(insn, count);
+            if(visited.find(curr_loc) != visited.end()) {
+                count = 0;
+            }
         } while (count > 0);
 
         if(count <= 0) {
