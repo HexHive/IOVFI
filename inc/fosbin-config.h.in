@@ -4,3 +4,10 @@
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
+
+#define BOOST_LOG_TRIVIAL(trace)    LOG_TRACE
+#define BOOST_LOG_TRIVIAL(debug)    LOG_DEBUG
+#define BOOST_LOG_TRIVIAL(info)     LOG_INFO
+#define BOOST_LOG_TRIVIAL(warning)  LOG_WARN
+#define BOOST_LOG_TRIVIAL(error)    LOG_ERR
+#define BOOST_LOG_TRIVIAL(fatal)    LOG_FATAL

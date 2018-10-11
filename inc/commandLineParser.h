@@ -36,11 +36,10 @@ namespace fbf {
         po::positional_options_description positional_;
         const char* name_;
         fs::path log_path_;
+        logging::trivial::severity_level log_level_;
+        bool cmd_parsed_;
 
         void init_logging();
-
-    private:
-        bool cmd_parsed;
     };
 }
 

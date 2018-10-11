@@ -51,6 +51,7 @@ int fbf::ArgumentCountTestCase::run_test() {
 
     while (!jmp_tgts.empty()) {
         curr_loc = jmp_tgts.back();
+
         std::pair<std::string, size_t> curr_func = binDesc_.getSym(curr_loc);
         uintptr_t start_loc = binDesc_.getSymLocation(curr_func);
         if (start_loc == (uintptr_t) -1) {
