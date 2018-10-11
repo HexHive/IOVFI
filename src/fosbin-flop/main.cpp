@@ -2,6 +2,7 @@
 #include "fosbin-flop/fosbin-flop.h"
 #include <experimental/filesystem>
 #include <fosbin-flop/fullIdentifierTest.h>
+#include <commandLineParser.h>
 
 void usage() {
     std::cout << "fosbin-flop <path to binary descriptor>" << std::endl;
@@ -10,16 +11,12 @@ void usage() {
 namespace fs = std::experimental::filesystem;
 
 int main(int argc, char **argv) {
-    std::cout << IDENTIFIER_NAME << " v. " << FOSBIN_VERSION_MAJOR << "." << FOSBIN_VERSION_MINOR << std::endl;
+    fbf::CommandLineParser parser(argc, argv, IDENTIFIER_NAME);
+    parser.parse();
 
-    if(argc != 2) {
-        usage();
-        exit(0);
-    }
-    fs::path descriptor(argv[1]);
     try {
         std::cout << "Parsing descriptor...";
-        fbf::FullIdentifierTest test(descriptor);
+        fbf::FullIdentifierTest test(parser["binary-desc"].as<fs::path>());
         std::cout << "Done!" << std::endl;
 
         test.run();

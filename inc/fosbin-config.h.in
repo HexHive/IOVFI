@@ -1,2 +1,6 @@
 #define FOSBIN_VERSION_MAJOR @fosbin-VERSION-MAJOR@
 #define FOSBIN_VERSION_MINOR @fosbin-VERSION-MINOR@
+
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
