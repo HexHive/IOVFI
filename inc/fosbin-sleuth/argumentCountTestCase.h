@@ -11,7 +11,7 @@
 namespace fbf {
     class ArgumentCountTestCase : public ITestCase {
     public:
-        ArgumentCountTestCase(uintptr_t location, size_t size, BinaryDescriptor& binDesc);
+        ArgumentCountTestCase(uintptr_t location, size_t size, BinaryDescriptor &binDesc);
 
         virtual ~ArgumentCountTestCase();
 
@@ -31,18 +31,21 @@ namespace fbf {
         BinaryDescriptor binDesc_;
 
         bool reg_used_as_arg(uint16_t reg);
+
         uint16_t get_reg_id(uint16_t reg);
 
-        inline constexpr static uint16_t REG_ABI_ORDER[]= {
-            X86_REG_RDI,
-                    X86_REG_RSI,
-                    X86_REG_RDX,
-                    X86_REG_RCX,
-                    X86_REG_R8,
-                    X86_REG_R9
+        bool is_floating_reg(uint16_t reg);
+
+        inline constexpr static uint16_t REG_ABI_ORDER[] = {
+                X86_REG_RDI,
+                X86_REG_RSI,
+                X86_REG_RDX,
+                X86_REG_RCX,
+                X86_REG_R8,
+                X86_REG_R9
         };
 
-        inline constexpr static size_t NUM_ARG_REGS = sizeof(REG_ABI_ORDER)/sizeof(uint16_t);
+        inline constexpr static size_t NUM_ARG_REGS = sizeof(REG_ABI_ORDER) / sizeof(uint16_t);
     };
 }
 

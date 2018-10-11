@@ -4,46 +4,34 @@
 
 #include "argumentTestCase.h"
 #include "binaryDescriptor.h"
-
-#include <boost/program_options.hpp>
+#include "commandLineParser.h"
 
 int main(int argc, char **argv) {
     uint32_t thread_count;
 
-    namespace po = boost::program_options;
-
-    po::options_description generic("Generic options");
-    generic.add_options()
-            ("version,v", "Prints version string")
-            ("help,h", "Prints this message")
-            ("num-threads,t",
-             po::value<uint32_t>(&thread_count)->default_value(std::thread::hardware_concurrency()),
-             "Number of threads to use")
-            ("binary-desc,i", po::value<fs::path>()->required(), "/path/to/binary/descriptor");
-
-    po::positional_options_description p;
-    p.add("binary-desc", -1);
-
-    po::variables_map vm;
+    fbf::CommandLineParser parser(argc, argv);
+//    generic.add_options()
+//            ("version,v", "Prints version string")
+//            ("help,h", "Prints this message")
+//            ("num-threads,t",
+//             po::value<uint32_t>(&thread_count)->default_value(std::thread::hardware_concurrency()),
+//             "Number of threads to use")
+//            ("binary-desc,i", po::value<fs::path>()->required(), "/path/to/binary/descriptor");
     try {
-        po::store(po::command_line_parser(argc, argv)
-                          .options(generic)
-                          .positional(p)
-                          .run(), vm);
-        po::notify(vm);
-    } catch (const po::error &e) {
-        std::cout << generic << std::endl;
+        parser.parse();
+    } catch (const boost::program_options::error &e) {
+        parser.print_help();
         exit(1);
     }
 
-    if (vm.count("version")) {
+    if (parser.count("version")) {
         std::cout << SLEUTH_NAME
                   << " v. " << FOSBIN_VERSION_MAJOR << "." << FOSBIN_VERSION_MINOR << std::endl;
         exit(0);
     }
 
-    if (vm.count("help")) {
-        std::cout << generic << std::endl;
+    if (parser.count("help")) {
+        parser.print_help();
         exit(0);
     }
 

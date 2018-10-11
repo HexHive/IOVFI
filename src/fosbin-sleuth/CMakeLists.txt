@@ -24,11 +24,7 @@ target_link_libraries( ${FUNC_CLASSIFIER} "-L${CMAKE_BINARY_DIR}/lib" capstone )
 
 target_sources( ${FUNC_CLASSIFIER}
     PUBLIC
-        ../common/binaryDescriptor.cpp
-        ../common/binSection.cpp
-        ../common/fullTest.cpp
-        ../common/testRun.cpp
-        ../common/iTestCase.cpp
+        ${COMMON_SRC}
         coord/fullSleuthTest.cpp
         protectedBuffer.cpp
         TestCases.inc
