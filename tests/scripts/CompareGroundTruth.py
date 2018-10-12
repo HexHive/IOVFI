@@ -94,9 +94,9 @@ def parse_xml(xml_file_name):
             if memberdef.get('kind') == "function":
                 name = memberdef.find("name").text
                 groundTruth[name] = []
-                for param in memberdef.find("argsstring").text.split(", "):
-                    arg = transform_arg(param)
-                    groundTruth[name].append(transform_arg(param))
+                # for param in memberdef.find("argsstring").text.split(", "):
+                #     groundTruth[name].append(transform_arg(param))
+                groundTruth[name].append(memberdef.find("argsstring").text)
                 if len(groundTruth[name]) == 0:
                     groundTruth[name].append("void")
 
