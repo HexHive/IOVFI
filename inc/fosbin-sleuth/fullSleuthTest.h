@@ -13,6 +13,7 @@ namespace fbf {
     class FullSleuthTest : public FullTest {
     public:
         FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen, uint32_t thread_count = 1);
+        FullSleuthTest(fs::path descriptor, fs::path syscall_mapping, size_t strLen, size_t ptrLen, uint32_t thread_count = 1);
         FullSleuthTest(const FullSleuthTest& other);
 
         virtual ~FullSleuthTest();
@@ -28,6 +29,9 @@ namespace fbf {
         std::vector<double> testDbls;
 
         virtual void create_testcases() override;
+
+    private:
+        void init(size_t strLen, size_t ptrLen);
     };
 }
 

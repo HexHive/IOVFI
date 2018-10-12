@@ -23,11 +23,13 @@ namespace fbf {
         std::map<uintptr_t, std::pair<std::string, size_t>> syms_;
         uintptr_t errno_location_;
         uint64_t identifier_;
+        std::map<int32_t, std::set<uint16_t>> syscall_mapping_;
 
         uintptr_t parse_offset(std::string &offset);
 
     public:
-        BinaryDescriptor(fs::path path);
+        BinaryDescriptor(fs::path desc_path);
+        BinaryDescriptor(fs::path desc_path, fs::path syscall_mapping);
         ~BinaryDescriptor();
         BinSection& getText();
         BinSection& getData();
@@ -41,6 +43,8 @@ namespace fbf {
         bool isSharedLibrary();
         uint64_t getIdentifier();
         void setIdentifier(uint64_t id);
+        std::set<uint16_t> getSyscallRegisters(uint32_t syscall);
+        void parse_syscall_mapping(fs::path syscall_mapping);
     };
 }
 

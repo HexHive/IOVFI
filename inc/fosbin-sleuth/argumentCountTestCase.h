@@ -46,6 +46,7 @@ namespace fbf {
         };
 
         inline constexpr static size_t NUM_ARG_REGS = sizeof(REG_ABI_ORDER) / sizeof(uint16_t);
+        const static int32_t INVALID_SYSCALL_VAL = -1;
     };
 }
 

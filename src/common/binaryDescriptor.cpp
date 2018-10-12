@@ -16,11 +16,90 @@
 #include <iostream>
 #include <functional>
 #include <random>
+#include <capstone/capstone.h>
+#include <capstone/x86.h>
+
 
 namespace fs = std::experimental::filesystem;
 
-fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
-        desc_path_(path), errno_location_(0) {
+fbf::BinaryDescriptor::BinaryDescriptor(fs::path desc_path, fs::path syscall_mapping) :
+    BinaryDescriptor(desc_path)
+{
+    parse_syscall_mapping(syscall_mapping);
+}
+
+void fbf::BinaryDescriptor::parse_syscall_mapping(fs::path syscall_mapping) {
+    if (fs::is_empty(syscall_mapping)) {
+        throw std::runtime_error("Syscall mapping is empty");
+    }
+
+    if (fs::is_directory(syscall_mapping)) {
+        throw std::runtime_error("Syscall mapping is a directory");
+    }
+
+    std::fstream syscallMappingFile(syscall_mapping);
+    std::string line;
+    while(std::getline(syscallMappingFile, line)) {
+        if (line.empty()) {
+            continue;
+        }
+
+        /* Format of syscall mapping is
+         * <syscall id>,<rdi used>,<rsi used>,<rdx used>,<r10 used>,<r8 used>,<r9 used>
+         */
+        int token_count = 0;
+        std::stringstream ss;
+        int32_t syscall_id;
+        while (token_count < 7) {
+            size_t pos = line.find(',');
+            std::string token = line.substr(0, pos);
+            line.erase(0, pos + 1);
+            switch (token_count) {
+                case 0:
+                    ss.clear();
+                    ss << token;
+                    ss >> syscall_id;
+                    break;
+                case 1:
+                    if (token == "1") {
+                        syscall_mapping_[syscall_id].insert(X86_REG_RDI);
+                    }
+                    break;
+                case 2:
+                    if (token == "1") {
+                        syscall_mapping_[syscall_id].insert(X86_REG_RSI);
+                    }
+                    break;
+                case 3:
+                    if (token == "1") {
+                        syscall_mapping_[syscall_id].insert(X86_REG_RDX);
+                    }
+                    break;
+                case 4:
+                    if (token == "1") {
+                        syscall_mapping_[syscall_id].insert(X86_REG_R10);
+                    }
+                    break;
+                case 5:
+                    if (token == "1") {
+                        syscall_mapping_[syscall_id].insert(X86_REG_R8);
+                    }
+                    break;
+                case 6:
+                    if (token == "1") {
+                        syscall_mapping_[syscall_id].insert(X86_REG_R9);
+                    }
+                    break;
+                default:
+                    throw std::runtime_error("Invalid token count");
+            }
+            token_count++;
+        }
+    }
+}
+
+fbf::BinaryDescriptor::BinaryDescriptor(fs::path desc_path) :
+        desc_path_(desc_path), errno_location_(0), syscall_mapping_() {
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::default_random_engine re(seed);
     std::uniform_int_distribution<uint64_t> longrand(std::numeric_limits<uint64_t>::min(),
@@ -36,12 +115,12 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
     }
 
     size_t line_num = 0;
-    std::fstream f(path);
+    std::fstream binDescFile(desc_path);
     std::string line;
     std::set<std::pair<std::string, size_t>> syms;
     std::set<std::string> tests;
 
-    while (std::getline(f, line)) {
+    while (std::getline(binDescFile, line)) {
         line_num++;
         std::remove_if(line.begin(), line.end(), isspace);
         if (line.empty() || line[0] == '#') {
@@ -130,8 +209,8 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
     }
 
     if (bin_path_.empty()) {
-        LOG_ERR << "Binary path is required.";
-        throw std::runtime_error("Binary path is required.");
+        LOG_ERR << "Binary desc_path is required.";
+        throw std::runtime_error("Binary desc_path is required.");
     }
 
     if (isSharedLibrary()) {
@@ -155,8 +234,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
                 LOG_ERR << "Could not find symbol " << p.first << std::endl;
                 continue;
             }
-            LOG_DEBUG << std::hex << offset << std::dec << "=" << p.first << std::endl;
-            std::cout << std::hex << offset << std::dec << "=" << p.first << std::endl;
+            LOG_DEBUG << std::hex << offset << std::dec << "=" << p.first;
 
             syms_[(uintptr_t) offset] = p;
             if(tests.find(p.first) != tests.end()) {
@@ -347,4 +425,12 @@ uintptr_t fbf::BinaryDescriptor::getSymLocation(std::pair<std::string, size_t> s
     }
 
     return (uintptr_t)-1;
+}
+
+std::set<uint16_t> fbf::BinaryDescriptor::getSyscallRegisters(uint32_t syscall) {
+    if(syscall_mapping_.find(syscall) != syscall_mapping_.end()) {
+        return syscall_mapping_[syscall];
+    }
+
+    return std::set<uint16_t>();
 }

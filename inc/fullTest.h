@@ -26,6 +26,7 @@ namespace fbf {
 
     public:
         FullTest(fs::path descriptor, uint32_t thread_count);
+        FullTest(fs::path descriptor, fs::path syscall_mapping, uint32_t thread_count);
         FullTest(const FullTest& other);
         ~FullTest();
 
@@ -36,6 +37,7 @@ namespace fbf {
     private:
             std::uniform_int_distribution<uint64_t> rand_int;
             std::default_random_engine re;
+            void seed_rand();
     };
 }
 

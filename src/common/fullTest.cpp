@@ -16,6 +16,18 @@ fbf::FullTest::FullTest(fs::path descriptor, uint32_t thread_count) :
         thread_count_(thread_count),
         pool_(thread_count),
         rand_int(std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max()) {
+    seed_rand();
+}
+
+fbf::FullTest::FullTest(fs::path descriptor, fs::path syscall_mapping, uint32_t thread_count) :
+    binDesc_(descriptor, syscall_mapping),
+    thread_count_(thread_count),
+    pool_(thread_count),
+    rand_int(std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max()) {
+    seed_rand();
+}
+
+void fbf::FullTest::seed_rand() {
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     re.seed(seed);
 }
@@ -49,7 +61,7 @@ void fbf::FullTest::run() {
     tcgetattr(0, &in);
     tcgetattr(1, &out);
     tcgetattr(2, &err);
-    LOG_DEBUG << "Running tests on " << binDesc_.getOffsets().size() << " offsets" << std::endl;
+    std::cout << "Running tests on " << binDesc_.getOffsets().size() << " offsets" << std::endl;
 
     for (std::vector<std::shared_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
          it != testRuns_.end(); ++it) {
@@ -73,9 +85,9 @@ void fbf::FullTest::run() {
         }
     }
 
-    LOG_DEBUG << "Waiting for all tests to complete...";
+    std::cout << "Waiting for all tests to complete...";
     pool_.stop(true);
-    LOG_DEBUG << "done!" << std::endl;
+    std::cout << "done!" << std::endl;
 }
 
 void fbf::FullTest::output(std::ostream &out) {

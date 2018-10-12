@@ -29,7 +29,7 @@ int fbf::ArgumentCountTestCase::run_test() {
 
     size_t count;
     cs_insn *insn;
-    uint64_t curr_loc = (uint64_t) location_;
+    uint64_t curr_loc;
     cs_regs regs_read, regs_write;
     uint8_t regs_read_count, regs_write_count;
 
@@ -42,8 +42,12 @@ int fbf::ArgumentCountTestCase::run_test() {
     std::set<uint16_t> regs_used_in_args;
     std::set<uint16_t> determined_regs;
 
+    std::vector<int64_t> syscall_vals;
+
     while (!jmp_tgts.empty()) {
         curr_loc = jmp_tgts.back();
+        syscall_vals.push_back(INVALID_SYSCALL_VAL);
+
         LOG_DEBUG << "curr_loc = " << std::hex << curr_loc;
 
         std::pair<std::string, size_t> curr_func = binDesc_.getSym(curr_loc);
@@ -61,6 +65,43 @@ int fbf::ArgumentCountTestCase::run_test() {
             count = cs_disasm(handle_, (uint8_t *) curr_loc, size, curr_loc, 1, &insn);
             if (count > 0) {
                 visited.insert(curr_loc);
+
+                cs_x86 x86 = insn->detail->x86;
+
+                if(insn->id == X86_INS_SYSCALL) {
+                    if(syscall_vals.back() == 0) {
+                        LOG_DEBUG << curr_func.first << " uses unknown syscall";
+                    } else {
+                        int syscall_val_count = 0;
+                        for(int j = syscall_vals.size() - 1; syscall_vals[j] != INVALID_SYSCALL_VAL; j--) {
+                            syscall_val_count++;
+                        }
+                        std::stringstream ss;
+                        ss << curr_func.first << " uses syscall with "
+                                << syscall_val_count << " potential targets: [ ";
+                        for(int j = syscall_vals.size() - 1; syscall_vals[j] != INVALID_SYSCALL_VAL; j--) {
+                            ss << "0x" << std::hex << syscall_vals[j] << " ";
+                        }
+                        ss << "]";
+
+                        LOG_DEBUG << ss.str();
+
+                        while(syscall_vals.back() != INVALID_SYSCALL_VAL) {
+                            std::set<uint16_t> syscall_regs = binDesc_.getSyscallRegisters(syscall_vals.back());
+                            for(uint16_t syscall_reg : syscall_regs) {
+                                uint16_t reg = get_reg_id(syscall_reg);
+                                reg_read[reg] = true;
+                                if (reg_used_as_arg(reg) &&
+                                    reg_written.find(reg) == reg_written.end()) {
+                                    regs_used_in_args.insert(reg);
+                                    determined_regs.insert(reg);
+                                }
+                            }
+
+                            syscall_vals.pop_back();
+                        }
+                    }
+                }
 
                 if (cs_regs_access(handle_, insn, regs_read, &regs_read_count, regs_write, &regs_write_count) == 0) {
                     /* Special case for xor reg_a, reg_a since it is so common */
@@ -95,6 +136,14 @@ int fbf::ArgumentCountTestCase::run_test() {
 
                     for (int i = 0; i < regs_write_count; i++) {
                         uint16_t reg = get_reg_id(regs_write[i]);
+                        if(reg == X86_REG_RAX) {
+                            for(int j = 0; j < x86.op_count; j++) {
+                                if(x86.operands[j].type == X86_OP_IMM && x86.operands[j].imm > INVALID_SYSCALL_VAL) {
+                                    syscall_vals.push_back(x86.operands[j].imm);
+                                }
+                            }
+                        }
+
                         reg_written[reg] = true;
                         if (reg_used_as_arg(reg) && reg_read.find(reg) == reg_read.end()) {
                             bool found = false;
@@ -134,6 +183,10 @@ int fbf::ArgumentCountTestCase::run_test() {
                 count = 0;
             }
         } while (count > 0 && determined_regs.size() < NUM_ARG_REGS);
+
+        while(syscall_vals.back() != INVALID_SYSCALL_VAL) {
+            syscall_vals.pop_back();
+        }
 
         if (count <= 0) {
             jmp_tgts.pop_back();
@@ -226,6 +279,11 @@ uint16_t fbf::ArgumentCountTestCase::get_reg_id(uint16_t reg) {
 
         case X86_REG_R9:
             return X86_REG_R9;
+
+        case X86_REG_RAX:
+        case X86_REG_AX:
+        case X86_REG_EAX:
+            return X86_REG_RAX;
 
         default:
             return reg;

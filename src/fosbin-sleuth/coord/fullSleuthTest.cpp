@@ -17,8 +17,17 @@
 #include <sys/mman.h>
 #include <set>
 
+fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, fs::path syscall_mapping, size_t strLen, size_t ptrLen,
+                                    uint32_t thread_count) : FullTest(descriptor, syscall_mapping, thread_count) {
+    init(strLen, ptrLen);
+}
+
 fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen, uint32_t thread_count) :
         FullTest(descriptor, thread_count) {
+    init(strLen, ptrLen);
+}
+
+void fbf::FullSleuthTest::init(size_t strLen, size_t ptrLen) {
     /* Avoid testInt values */
     std::uniform_int_distribution<uint8_t> charRand(MAX_ARGUMENTS + 2, 0xfe);
     std::uniform_int_distribution<int> intRand(std::numeric_limits<int>::min(),
@@ -65,7 +74,7 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
         o << "Function " << binDesc_.getSym(test->get_location()).first;
         if (test->get_result() == fbf::ITestCase::PASS) {
             o << " has " << test->get_execution_result() << " argument";
-            if(test->get_execution_result() != 1) {
+            if (test->get_execution_result() != 1) {
                 o << "s";
             }
             o << ".";

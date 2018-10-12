@@ -126,20 +126,20 @@ def main():
     sym_regex = re.compile("(0[Xx][0-9A-Fa-f]+)=([A-Za-z0-9_]+)")
     guess_regex = re.compile("Function ([0-9A-Za-z_]+) has ([0-9]+) argument")
     with open(sys.argv[1], "r", errors='replace') as guesses:
-        syms = {}
-        addr_map = {}
+        # syms = {}
+        # addr_map = {}
 
         for guess in guesses.readlines():
             # Skip over junk output from the test run, and only get <addr>=<sym>
-            sym_match = sym_regex.match(guess)
-            if sym_match:
-                sym = sym_match.group(2)
-                addr = sym_match.group(1)
-                if addr not in syms:
-                    syms[addr] = set()
-                syms[addr].add(sym)
-                addr_map[sym] = addr
-                continue
+            # sym_match = sym_regex.match(guess)
+            # if sym_match:
+            #     sym = sym_match.group(2)
+            #     addr = sym_match.group(1)
+            #     if addr not in syms:
+            #         syms[addr] = set()
+            #     syms[addr].add(sym)
+            #     addr_map[sym] = addr
+            #     continue
 
             guess_match = guess_regex.match(guess)
             if not guess_match:
@@ -148,30 +148,30 @@ def main():
             name = guess_match.group(1).strip()
             arg_count_guess = int(guess_match.group(2).strip())
 
-            addr = addr_map[name]
+            # addr = addr_map[name]
 
-            for name2 in syms[addr]:
-                if name2 in groundTruth:
-                    transformedArgs = []
-                    for arg in groundTruth[name2]:
-                        transformedArgs.append(arg)
+            # for name2 in syms[addr]:
+            if name in groundTruth:
+                transformedArgs = []
+                for arg in groundTruth[name]:
+                    transformedArgs.append(arg)
 
-                    finalArgs = " ".join(transformedArgs)
-                    if transformedArgs[0] == "void":
-                        finalArgCount = 0
-                    else:
-                        finalArgCount = len(transformedArgs)
+                finalArgs = " ".join(transformedArgs)
+                if transformedArgs[0] == "void":
+                    finalArgCount = 0
+                else:
+                    finalArgCount = len(transformedArgs)
 
-                    for sym in syms[addr]:
-                        if guess.find("CRASH") >= 0:
-                            print("0\t0\t0\t{}: CRASHED <-> < {} > {}".format(sym, finalArgs, finalArgCount))
-                            continue
-                        else:
-                            print("{}\t{}: {} <-> < {} >".format(arg_count_guess == finalArgCount, name, arg_count_guess, finalArgs))
-            syms.pop(addr)
+                # for sym in syms[addr]:
+                if guess.find("CRASH") >= 0:
+                    print("0\t{}: CRASHED <-> < {} >".format(name, finalArgs))
+                    continue
+                else:
+                    print("{}\t{}: {} <-> < {} >".format(arg_count_guess == finalArgCount, name, arg_count_guess, finalArgs))
+            # syms.pop(addr)
 
-        for addr in syms:
-            print("MISSING " + str(syms[addr]))
+        # for addr in syms:
+        #     print("MISSING " + str(syms[addr]))
 
 
 if __name__ == "__main__":
