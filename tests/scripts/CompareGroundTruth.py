@@ -152,15 +152,20 @@ def main():
 
             # for name2 in syms[addr]:
             if name in groundTruth:
-                transformedArgs = []
-                for arg in groundTruth[name]:
-                    transformedArgs.append(arg)
-
-                finalArgs = " ".join(transformedArgs)
-                if transformedArgs[0] == "void":
+                # transformedArgs = []
+                # for arg in groundTruth[name]:
+                #     transformedArgs.append(arg)
+                #
+                # finalArgs = " ".join(transformedArgs)
+                # if transformedArgs[0] == "void":
+                #     finalArgCount = 0
+                # else:
+                #     finalArgCount = len()
+                finalArgs = groundTruth[name][0]
+                if finalArgs == "(void)":
                     finalArgCount = 0
                 else:
-                    finalArgCount = len(transformedArgs)
+                    finalArgCount = finalArgs.count(',') + 1
 
                 # for sym in syms[addr]:
                 if guess.find("CRASH") >= 0:
