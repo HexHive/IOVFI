@@ -15,6 +15,11 @@ int main(int argc, char **argv) {
              boost::program_options::value<uint32_t>(&thread_count)->default_value(std::thread::hardware_concurrency()),
              "Number of threads to use");
     parser.parse();
+    if(thread_count < 0) {
+        thread_count = 1;
+    } else if(thread_count > std::thread::hardware_concurrency()) {
+        thread_count = std::thread::hardware_concurrency();
+    }
 
     fbf::FullSleuthTest test(parser["binary-desc"].as<fs::path>(), STR_LEN, PTR_LEN, thread_count);
     test.run();

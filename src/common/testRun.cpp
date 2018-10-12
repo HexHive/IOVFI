@@ -42,7 +42,7 @@ void fbf::TestRun::run_test() {
     int pipefd[2];
     test_has_run_ = true;
 
-    std::cout << "Running test " 
+    LOG_INFO << "Running test "
         << get_test_name() 
         << " on offset 0x"
         << std::hex << offset_ << std::dec

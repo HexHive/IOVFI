@@ -155,7 +155,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
                 LOG_ERR << "Could not find symbol " << p.first << std::endl;
                 continue;
             }
-            std::cout << std::hex << offset << std::dec << "=" << p.first << std::endl;
+            LOG_DEBUG << std::hex << offset << std::dec << "=" << p.first << std::endl;
 
             syms_[(uintptr_t) offset] = p;
             if(tests.find(p.first) != tests.end()) {

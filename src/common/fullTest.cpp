@@ -49,7 +49,7 @@ void fbf::FullTest::run() {
     tcgetattr(0, &in);
     tcgetattr(1, &out);
     tcgetattr(2, &err);
-    std::cout << "Running tests on " << binDesc_.getOffsets().size() << " offsets" << std::endl;
+    LOG_DEBUG << "Running tests on " << binDesc_.getOffsets().size() << " offsets" << std::endl;
 
     for (std::vector<std::shared_ptr<fbf::TestRun>>::iterator it = testRuns_.begin();
          it != testRuns_.end(); ++it) {
@@ -58,7 +58,7 @@ void fbf::FullTest::run() {
         tcsetattr(0, 0, &in);
         tcsetattr(1, 0, &out);
         tcsetattr(2, 0, &err);
-        std::cout << "Queueing measurement " << ++test_num
+        LOG_DEBUG << "Queueing measurement " << ++test_num
                   << " of " << testRuns_.size()
                   << " (offset 0x" << offset.str() << " - "
                   << (*it)->get_test_name()
@@ -73,9 +73,9 @@ void fbf::FullTest::run() {
         }
     }
 
-    std::cout << "Waiting for all tests to complete...";
+    LOG_DEBUG << "Waiting for all tests to complete...";
     pool_.stop(true);
-    std::cout << "done!" << std::endl;
+    LOG_DEBUG << "done!" << std::endl;
 }
 
 void fbf::FullTest::output(std::ostream &out) {

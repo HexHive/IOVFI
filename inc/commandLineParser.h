@@ -29,7 +29,7 @@ namespace fbf {
                    const po::value_semantic* s,
                    const char* description);
     protected:
-        int argc_;
+        int argc_, log_level_i_;
         char** argv_;
         po::variables_map vm_;
         po::options_description generic_;
