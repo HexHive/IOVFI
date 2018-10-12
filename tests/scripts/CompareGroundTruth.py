@@ -162,8 +162,10 @@ def main():
                 # else:
                 #     finalArgCount = len()
                 finalArgs = groundTruth[name][0]
-                if finalArgs == "(void)":
+                if finalArgs == "(void)" or finalArgs == "()":
                     finalArgCount = 0
+                elif finalArgs.find("...") >= 0:
+                    finalArgCount = 6
                 else:
                     finalArgCount = finalArgs.count(',') + 1
 
