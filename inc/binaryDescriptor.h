@@ -8,6 +8,7 @@
 #include <map>
 #include "binSection.h"
 #include <experimental/filesystem>
+#include "fosbin-config.h"
 
 namespace fs = std::experimental::filesystem;
 

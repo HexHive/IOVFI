@@ -4,13 +4,6 @@
 
 #include <fosbin-sleuth/argumentCountTestCase.h>
 
-#include "fosbin-sleuth/argumentCountTestCase.h"
-#include <capstone/capstone.h>
-#include <capstone/platform.h>
-#include <iostream>
-#include <cstring>
-#include <unistd.h>
-
 fbf::ArgumentCountTestCase::ArgumentCountTestCase(uintptr_t location, size_t size, BinaryDescriptor &binDesc) :
         ITestCase(), location_(location), size_(size), arg_count_(0), handle_(0), binDesc_(binDesc) {
     if (cs_open(CS_ARCH_X86, CS_MODE_64, &handle_) != CS_ERR_OK) {
@@ -51,11 +44,15 @@ int fbf::ArgumentCountTestCase::run_test() {
 
     while (!jmp_tgts.empty()) {
         curr_loc = jmp_tgts.back();
+        LOG_DEBUG << "curr_loc = " << std::hex << curr_loc;
 
         std::pair<std::string, size_t> curr_func = binDesc_.getSym(curr_loc);
+        LOG_DEBUG << "curr_func: " << curr_func.first << " size: " << curr_func.second;
+
         uintptr_t start_loc = binDesc_.getSymLocation(curr_func);
         if (start_loc == (uintptr_t) -1) {
             /* Hidden visibility function, so we don't have its location */
+            LOG_DEBUG << "Hidden visibility";
             start_loc = curr_loc;
         }
 
@@ -146,6 +143,10 @@ int fbf::ArgumentCountTestCase::run_test() {
     }
 
     arg_count_ = regs_used_in_args.size();
+    LOG_DEBUG << arg_count_ << " registers used in " << binDesc_.getSym(location_).first << " to pass arguments:";
+    for(auto reg : regs_used_in_args) {
+        LOG_DEBUG << cs_reg_name(handle_, reg);
+    }
 
     return fbf::ITestCase::PASS;
 }

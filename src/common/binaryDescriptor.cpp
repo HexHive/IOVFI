@@ -2,7 +2,6 @@
 // Created by derrick on 9/17/18.
 //
 
-#include "binaryDescriptor.h"
 #include <fstream>
 #include <string>
 #include <algorithm>
@@ -55,6 +54,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
             msg += line_num;
             msg += ": ";
             msg += line;
+            LOG_ERR << msg;
             throw std::runtime_error(msg.c_str());
         }
 
@@ -66,6 +66,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
             if (!fs::exists(bin_path_)) {
                 std::string msg = "Could not find binary at ";
                 msg += val;
+                LOG_ERR << msg;
                 throw std::runtime_error(msg.c_str());
             }
             continue;
@@ -97,6 +98,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
             if(sep == std::string::npos) {
                 std::stringstream msg;
                 msg << "Malformed symbol entry on line " << line_num;
+                LOG_ERR << msg.str();
                 throw std::runtime_error(msg.str());
             }
 
@@ -110,6 +112,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
             if(size == 0) {
                 std::stringstream msg;
                 msg << "Invalid function size on line " << line_num;
+                LOG_ERR << msg.str();
                 throw std::runtime_error(msg.str());
             }
 
@@ -121,22 +124,27 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
         } else {
             std::string msg = "Unknown key: ";
             msg += key;
+            LOG_ERR << msg;
             throw std::runtime_error(msg.c_str());
         }
     }
 
     if (bin_path_.empty()) {
+        LOG_ERR << "Binary path is required.";
         throw std::runtime_error("Binary path is required.");
     }
 
     if (isSharedLibrary()) {
         if (syms.empty()) {
+            LOG_ERR << "At least one symbol must be provided.";
             throw std::runtime_error("At least one symbol must be provided.");
         }
 
         void *offset = dlopen(bin_path_.c_str(), RTLD_LAZY);
         if (!offset) {
-            throw std::runtime_error(dlerror());
+            std::string msg(dlerror());
+            LOG_ERR << msg;
+            throw std::runtime_error(msg);
         }
 
         dlerror();
@@ -144,7 +152,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
         for (std::pair<std::string, size_t> p : syms) {
             offset = dlsym((void *) text_.location_, p.first.c_str());
             if (!offset) {
-                std::cerr << "Could not find symbol " << p.first << std::endl;
+                LOG_ERR << "Could not find symbol " << p.first << std::endl;
                 continue;
             }
             std::cout << std::hex << offset << std::dec << "=" << p.first << std::endl;
@@ -159,11 +167,13 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
 
         offset = dlsym((void*)text_.location_, "__errno_location");
         if(offset) {
+            LOG_DEBUG << "Found __errno_location at " << std::hex << offset;
             errno_location_ = (uintptr_t)offset;
         }
 
     } else {
         if (offsets_.empty()) {
+            LOG_ERR << "At least one offset required.";
             throw std::runtime_error("At least one offset required.");
         }
 
@@ -171,10 +181,12 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
 
         int fd = open(bin_path_.c_str(), O_RDONLY);
         if (fd < 0) {
+            LOG_ERR << "Could not open binary " << bin_path_;
             throw std::runtime_error("Could not open binary");
         }
         if (fstat(fd, &st) < 0) {
             close(fd);
+            LOG_ERR << "Failed to get binary stats";
             throw std::runtime_error("Failed to get binary stats");
         }
         text_.size_ = st.st_size;
@@ -185,6 +197,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
 
         if (offset == MAP_FAILED) {
             close(fd);
+            LOG_FATAL << "Failed to memory map binary";
             throw std::runtime_error("Failed to memory map binary");
         }
         close(fd);
@@ -198,6 +211,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
                 char *err = strerror(errno);
                 std::string msg = "Failed to memory map BSS: ";
                 msg += err;
+                LOG_ERR << msg;
                 throw std::runtime_error(msg);
             }
             bss_.location_ = (uintptr_t) offset;
@@ -212,6 +226,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path path) :
                 char *err = strerror(errno);
                 std::string msg = "Failed to memory map data: ";
                 msg += err;
+                LOG_ERR << msg;
                 throw std::runtime_error(msg);
             }
             data_.location_ = (uintptr_t) offset;
