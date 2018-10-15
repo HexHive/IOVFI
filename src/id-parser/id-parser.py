@@ -139,7 +139,7 @@ def output_identifier():
     for func in functions:
         output_header(func)
         output_definition(func)
-        
+
 
 def main():
     if len(sys.argv) < 3:

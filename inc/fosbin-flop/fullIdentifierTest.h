@@ -10,6 +10,7 @@
 #include <iostream>
 #include "binaryDescriptor.h"
 #include "fullTest.h"
+#include <boost/graph/adjacency_list.hpp>
 
 namespace fs = std::experimental::filesystem;
 
@@ -20,6 +21,7 @@ namespace fbf {
         virtual ~FullIdentifierTest();
     protected:
         virtual void create_testcases();
+        std::map<uint8_t, boost::adjacency_list
     };
 }
 

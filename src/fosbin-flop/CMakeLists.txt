@@ -23,4 +23,5 @@ TARGET_SOURCES( ${IDENTIFIER_NAME}
         ${CMAKE_CURRENT_LIST_DIR}/coord/fullIdentifierTest.cpp
         ${CMAKE_CURRENT_LIST_DIR}/../common/binaryDescriptor.cpp
         ${COMMON_SRC}
+        testNode.cpp
         )

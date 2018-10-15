@@ -40,7 +40,7 @@ set( CMAKE_VERBOSE_MAKEFILE True )
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-find_package( Boost COMPONENTS program_options log log_setup REQUIRED )
+find_package( Boost COMPONENTS program_options log log_setup graph REQUIRED )
 
 find_package( Threads REQUIRED )
 
