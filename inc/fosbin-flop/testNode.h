@@ -8,23 +8,39 @@
 #include <fosbin-config.h>
 #include <vector>
 #include <any>
+#include <tuple>
 
 namespace fbf {
+    typedef arg_count_t size_t;
+
+    template<typename R, typename... Args>
     class TestNode {
     public:
-        TestNode(std::vector<std::any> args, std::any returnValue);
-
+        TestNode(R& retValue, Args... &args);
         bool test(uintptr_t location);
-
-        std::vector<std::any>& getArgs();
-        std::any& getReturnValue();
-
-        const static uint8_t MAX_ARGS;
+        arg_count_t getArgCount();
 
     protected:
-        std::vector<std::any> args_;
-        std::any retVal_;
+        R& retVal_;
+        std::tuple<Args> args_;
     };
+
+
+    template<typename R, typename... Args>
+    arg_count_t TestNode<R, Args>::getArgCount() { return sizeof...(Args); }
+
+    template<typename R, typename... Args>
+    TestNode<R, Args>::TestNode(R& retVal, Args... &args) {
+        args_ = std::make_tuple(args);
+        retVal_ = retVal;
+    }
+
+    template<typename R, typename... Args>
+    bool test(uintptr_t location) {
+        std::function<R(Args)> func = reinterpret_cast<R(*)(Args)>(location);
+        R retVal = std::apply(func, args_);
+        return retVal == retVal_;
+    }
 }
 
 
