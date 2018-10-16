@@ -11,7 +11,8 @@
 #include "binaryDescriptor.h"
 #include "fullTest.h"
 #include <boost/graph/adjacency_list.hpp>
-#include "fosbin-flop/testNode.h"
+#include "fosbin-flop/identifiers/functionIdentifierNode.h"
+#include <any>
 
 namespace fs = std::experimental::filesystem;
 
@@ -22,6 +23,8 @@ namespace fbf {
         virtual ~FullIdentifierTest();
     protected:
         virtual void create_testcases();
+        std::map<arg_count_t, std::shared_ptr<fbf::FunctionIdentifierNodeI>> testGraphs_;
+        void insertFunctionIdentifier(std::shared_ptr<fbf::FunctionIdentifierNodeI> node);
     };
 }
 

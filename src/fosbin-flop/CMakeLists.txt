@@ -13,14 +13,9 @@ target_link_libraries( ${IDENTIFIER_NAME}
 
 TARGET_SOURCES( ${IDENTIFIER_NAME}
         PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/identifiers/functionIdentifier.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/identifiers/identifierFactory.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/identifiers/fbf-memcpy.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/identifiers/fbf-strcpy.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/identifiers/fbf-sprintf.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/identifiers/fbf-strncpy.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/identifiers/fbf-memmove.cpp
         ${CMAKE_CURRENT_LIST_DIR}/coord/fullIdentifierTest.cpp
         ${CMAKE_CURRENT_LIST_DIR}/../common/binaryDescriptor.cpp
         ${COMMON_SRC}
+        identifiers/identifierNodeTestCase.cpp
+        identifiers/functionIdentifierNodeI.cpp
         )
