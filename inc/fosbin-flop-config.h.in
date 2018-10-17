@@ -1,2 +1,3 @@
 #include "fosbin-config.h"
+
 #define IDENTIFIER_NAME "@IDENTIFIER_NAME@"

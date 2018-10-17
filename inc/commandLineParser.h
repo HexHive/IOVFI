@@ -28,6 +28,7 @@ namespace fbf {
         void add_option(const char* name,
                    const po::value_semantic* s,
                    const char* description);
+        uint32_t get_thread_count();
     protected:
         int argc_, log_level_i_;
         char** argv_;
@@ -38,6 +39,7 @@ namespace fbf {
         fs::path log_path_;
         logging::trivial::severity_level log_level_;
         bool cmd_parsed_;
+        uint32_t thread_count_;
 
         void init_logging();
     };

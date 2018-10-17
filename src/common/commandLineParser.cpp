@@ -5,6 +5,7 @@
 #include <commandLineParser.h>
 #include <boost/log/sinks/text_file_backend.hpp>
 #include <boost/log/utility/setup/file.hpp>
+#include <thread>
 
 static void log_range_check(const int log_level) {
     if (log_level < boost::log::trivial::severity_level::trace ||
@@ -16,6 +17,7 @@ static void log_range_check(const int log_level) {
 fbf::CommandLineParser::CommandLineParser(int argc, char **argv, const char *name) :
         argc_(argc),
         argv_(argv),
+        thread_count_(1),
         generic_("Generic Options"),
         positional_(),
         vm_(),
@@ -35,6 +37,10 @@ fbf::CommandLineParser::CommandLineParser(int argc, char **argv, const char *nam
     generic_.add_options()
             ("version,v", "Prints version string")
             ("help,h", "Prints this message")
+            ("num-threads,t",
+             boost::program_options::value<uint32_t>(&thread_count_)->default_value(
+                     thread_count_),
+             "Number of threads to use")
             ("log", po::value<fs::path>(&log_path_), "/path/to/log/file")
             ("log-level", po::value<int>(&log_level_i_)->default_value(log_level_i_)->notifier(
                     &log_range_check), log_level_msg.str().c_str())
@@ -68,6 +74,14 @@ void fbf::CommandLineParser::parse() {
         exit(0);
     }
 
+    if (thread_count_ < 1) {
+        LOG_WARN << "Thread count too low...using 1";
+        thread_count_ = 1;
+    } else if (thread_count_ > std::thread::hardware_concurrency()) {
+        LOG_WARN << "Thread count too high...using " << std::thread::hardware_concurrency();
+        thread_count_ = std::thread::hardware_concurrency();
+    }
+
     log_level_ = static_cast<boost::log::trivial::severity_level>(log_level_i_);
     init_logging();
 }
@@ -78,6 +92,10 @@ size_t fbf::CommandLineParser::count(const char *key) {
     }
 
     return vm_.count(key);
+}
+
+uint32_t fbf::CommandLineParser::get_thread_count() {
+    return thread_count_;
 }
 
 void fbf::CommandLineParser::print_help() {

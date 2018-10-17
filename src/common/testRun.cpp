@@ -109,8 +109,10 @@ void fbf::TestRun::output_results(std::ostream &out) {
         << " at offset 0x"
         << ss.str()
         << " : "
-        << ((result_ == fbf::ITestCase::PASS) ? "positive" : "negative")
-        << std::endl;
+        << ((result_ == fbf::ITestCase::PASS) ? "positive -- " : "negative -- ");
+
+    test_->output_result(out);
+    out << std::endl;
 }
 
 test_result_t fbf::TestRun::get_result() {

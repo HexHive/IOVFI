@@ -16,19 +16,20 @@ int main(int argc, char **argv) {
             "arg-counts,a",
             boost::program_options::value<fs::path>()->required(),
             "/path/to/argument/counts"
-            );
+    );
 
     parser.parse();
 
     try {
         std::cout << "Parsing descriptor...";
-        fbf::FullIdentifierTest test(parser["binary-desc"].as<fs::path>(), parser["arg-counts"].as<fs::path>());
+        fbf::FullIdentifierTest test(parser["binary-desc"].as<fs::path>(), parser["arg-counts"].as<fs::path>(),
+                                     parser.get_thread_count());
         std::cout << "Done!" << std::endl;
 
         test.run();
 
         test.output(std::cout);
-    } catch(std::exception& e) {
+    } catch (std::exception &e) {
         std::cout << "ERROR: " << e.what() << std::endl;
         exit(1);
     }

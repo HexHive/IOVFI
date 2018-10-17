@@ -17,10 +17,13 @@ namespace fbf {
         virtual int run_test() = 0;
         virtual uint64_t get_value() = 0;
         virtual uintptr_t get_location() = 0;
+        virtual void output_result(std::ostream& out);
 
         const static int PASS = 0;
         const static int FAIL = 1;
         const static int NON_CRASHING = 2;
+
+        /* TODO: overload << operator for easier outputting */
 
     protected:
         int rand();

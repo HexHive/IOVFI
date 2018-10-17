@@ -64,9 +64,13 @@ namespace fbf {
 
     template<typename R, typename... Args>
     bool FunctionIdentifierNode<R, Args...>::test(uintptr_t location) {
+        /* TODO: fork here and return false in case of error */
         std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location);
         R retVal = std::apply(func, args_);
-        return retVal == retVal_;
+        long double comparison = (long double)(retVal - retVal_);
+        if(comparison < 0) { comparison *= -1.0; }
+
+        return comparison < 0.0001;
     }
 
     template<typename R, typename... Args>

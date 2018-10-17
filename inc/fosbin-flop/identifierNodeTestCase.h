@@ -21,10 +21,12 @@ namespace fbf {
 
         virtual uintptr_t get_location();
 
+        virtual void output_result(std::ostream &out);
+
     protected:
         std::shared_ptr<fbf::FunctionIdentifierNodeI> root_;
         uintptr_t location_;
-        std::string ided_function_;
+        std::set<std::string> ided_functions_;
     };
 }
 

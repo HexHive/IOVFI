@@ -2,6 +2,8 @@
 // Created by derrick on 9/18/18.
 //
 
+#include <iTestCase.h>
+
 #include "iTestCase.h"
 
 fbf::ITestCase::ITestCase() :
@@ -14,4 +16,8 @@ fbf::ITestCase::ITestCase() :
 
 int fbf::ITestCase::rand() {
     return dist_(re_);
+}
+
+void fbf::ITestCase::output_result(std::ostream &out) {
+    return;
 }

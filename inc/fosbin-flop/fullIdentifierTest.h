@@ -5,14 +5,9 @@
 #ifndef FOSBIN_FLOP_FULLTEST_H
 #define FOSBIN_FLOP_FULLTEST_H
 
-#include <experimental/filesystem>
-#include <testRun.h>
-#include <iostream>
-#include "binaryDescriptor.h"
+#include <fosbin-flop.h>
 #include "fullTest.h"
-#include <boost/graph/adjacency_list.hpp>
-#include "fosbin-flop/identifiers/functionIdentifierNode.h"
-#include <any>
+#include <fosbin-flop/functionIdentifierNodeGraphVisitor.h>
 
 namespace fs = std::experimental::filesystem;
 
@@ -20,12 +15,17 @@ namespace fbf {
     class FullIdentifierTest : public FullTest {
     public:
         FullIdentifierTest(fs::path descriptor, fs::path arg_counts, uint32_t thread_count = 1);
+
         virtual ~FullIdentifierTest();
+
     protected:
         virtual void create_testcases();
+
         virtual void parse_arg_counts(fs::path arg_counts);
+
         std::map<arg_count_t, std::shared_ptr<fbf::FunctionIdentifierNodeI>> testGraphs_;
         std::map<arg_count_t, std::set<uintptr_t>> locations_;
+
         virtual void insertFunctionIdentifier(std::shared_ptr<fbf::FunctionIdentifierNodeI> node);
     };
 }

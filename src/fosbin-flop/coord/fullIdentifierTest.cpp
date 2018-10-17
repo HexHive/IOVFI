@@ -2,7 +2,6 @@
 // Created by derrick on 7/8/18.
 //
 
-#include "fosbin-flop/fullIdentifierTest.h"
 #include <fstream>
 #include <set>
 #include <algorithm>
@@ -16,7 +15,6 @@
 #include <termios.h>
 #include <identifierNodeTestCase.h>
 #include <fosbin-flop/fullIdentifierTest.h>
-
 
 namespace fs = std::experimental::filesystem;
 
@@ -78,11 +76,13 @@ void fbf::FullIdentifierTest::create_testcases() {
             name, 0.0, 0.0);
     insertFunctionIdentifier(tanNode0);
     std::shared_ptr<fbf::FunctionIdentifierNode<double, double>> tanNode1 = std::make_shared<fbf::FunctionIdentifierNode<double, double>>(
-            name, 1.0, 1.570796327);
+            name, 1.0, 0.78539816339000000);
     insertFunctionIdentifier(tanNode1);
 }
 
 void fbf::FullIdentifierTest::insertFunctionIdentifier(std::shared_ptr<fbf::FunctionIdentifierNodeI> node) {
+    node->register_passing(node);
+
     if (testGraphs_.find(node->get_arg_count()) == testGraphs_.end()) {
         testGraphs_.emplace(std::make_pair(node->get_arg_count(), node));
 
@@ -96,21 +96,22 @@ void fbf::FullIdentifierTest::insertFunctionIdentifier(std::shared_ptr<fbf::Func
 
         return;
     }
-
     std::shared_ptr<fbf::FunctionIdentifierNodeI> curr = testGraphs_[node->get_arg_count()];
     std::shared_ptr<fbf::FunctionIdentifierNodeI> prev = curr;
-    while (curr != nullptr) {
+    while(curr != nullptr) {
         prev = curr;
-        if (*curr == *node) {
-            curr = curr->get_pass_node();
+        if(*node == *curr || curr->function_in_passing(node->get_name())) {
+            curr->register_passing(node);
+            curr = curr->get_passing_node();
         } else {
-            curr = curr->get_fail_node();
+            curr->register_failing(node);
+            curr = curr->get_failing_node();
         }
     }
 
-    if (*prev == *node) {
-        prev->set_pass_node(node);
-    } else {
+    if(*prev != *node && prev->function_in_failing(node->get_name())) {
         prev->set_fail_node(node);
+    } else if(*prev != *node && prev->function_in_passing(node->get_name())) {
+        prev->set_pass_node(node);
     }
 }
