@@ -39,6 +39,7 @@ namespace fbf {
         const std::pair<std::string, size_t> getSym(uintptr_t location);
         const std::pair<std::string, size_t> getFunc(uintptr_t location);
         uintptr_t getSymLocation(std::pair<std::string, size_t> sym);
+        uintptr_t getSymLocation(std::string sym);
         int getErrno();
         bool isSharedLibrary();
         uint64_t getIdentifier();

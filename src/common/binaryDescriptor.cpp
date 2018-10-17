@@ -427,6 +427,11 @@ uintptr_t fbf::BinaryDescriptor::getSymLocation(std::pair<std::string, size_t> s
     return (uintptr_t)-1;
 }
 
+uintptr_t fbf::BinaryDescriptor::getSymLocation(std::string sym) {
+    std::pair<std::string, size_t> tmp = std::make_pair(sym, 0);
+    return getSymLocation(tmp);
+}
+
 std::set<uint16_t> fbf::BinaryDescriptor::getSyscallRegisters(uint32_t syscall) {
     if(syscall_mapping_.find(syscall) != syscall_mapping_.end()) {
         return syscall_mapping_[syscall];

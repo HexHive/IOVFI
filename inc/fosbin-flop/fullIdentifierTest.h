@@ -19,12 +19,14 @@ namespace fs = std::experimental::filesystem;
 namespace fbf {
     class FullIdentifierTest : public FullTest {
     public:
-        FullIdentifierTest(fs::path descriptor, uint32_t thread_count = 1);
+        FullIdentifierTest(fs::path descriptor, fs::path arg_counts, uint32_t thread_count = 1);
         virtual ~FullIdentifierTest();
     protected:
         virtual void create_testcases();
+        virtual void parse_arg_counts(fs::path arg_counts);
         std::map<arg_count_t, std::shared_ptr<fbf::FunctionIdentifierNodeI>> testGraphs_;
-        void insertFunctionIdentifier(std::shared_ptr<fbf::FunctionIdentifierNodeI> node);
+        std::map<arg_count_t, std::set<uintptr_t>> locations_;
+        virtual void insertFunctionIdentifier(std::shared_ptr<fbf::FunctionIdentifierNodeI> node);
     };
 }
 
