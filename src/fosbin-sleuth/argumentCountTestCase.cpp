@@ -20,7 +20,13 @@ fbf::ArgumentCountTestCase::~ArgumentCountTestCase() {
 
 const std::string fbf::ArgumentCountTestCase::get_test_name() {
     std::stringstream ss;
-    ss << "Argument Count Test at 0x" << std::hex << location_;
+    std::pair<std::string, size_t> curr_func = binDesc_.getFunc(location_);
+
+    if(curr_func.second == 0) {
+        ss << "Argument Count Test at 0x" << std::hex << location_;
+    } else {
+        ss << "Argument Count Test for " << curr_func.first << " (0x" << std::hex << location_ << ")";
+    }
     return ss.str();
 }
 
@@ -33,8 +39,10 @@ int fbf::ArgumentCountTestCase::run_test() {
     cs_regs regs_read, regs_write;
     uint8_t regs_read_count, regs_write_count;
 
-    std::vector<uintptr_t> jmp_tgts;
-    jmp_tgts.push_back(location_);
+    std::vector<std::pair<uintptr_t, std::vector<int64_t>>> jmp_tgt_states;
+    std::vector<int64_t> syscalls;
+    syscalls.push_back(INVALID_SYSCALL_VAL);
+    jmp_tgt_states.push_back(std::make_pair(location_, syscalls));
 
     std::map<uint16_t, bool> reg_read;
     std::map<uint16_t, bool> reg_written;
@@ -42,11 +50,9 @@ int fbf::ArgumentCountTestCase::run_test() {
     std::set<uint16_t> regs_used_in_args;
     std::set<uint16_t> determined_regs;
 
-    std::vector<int64_t> syscall_vals;
-    syscall_vals.push_back(INVALID_SYSCALL_VAL);
-
-    while (!jmp_tgts.empty()) {
-        curr_loc = jmp_tgts.back();
+    while (!jmp_tgt_states.empty()) {
+        curr_loc = jmp_tgt_states.back().first;
+        std::vector<int64_t> &syscall_vals = jmp_tgt_states.back().second;
 
         LOG_DEBUG << "curr_loc = " << std::hex << curr_loc;
 
@@ -179,11 +185,11 @@ int fbf::ArgumentCountTestCase::run_test() {
                         }
                         if(insn->id != X86_INS_JMP) {
                             /* Return back to the next instruction */
-                            jmp_tgts.back() = insn->address + insn->size;
+                            jmp_tgt_states.back().first = insn->address + insn->size;
                         }
 
                         /* Follow jump targets */
-                        jmp_tgts.push_back(loc);
+                        jmp_tgt_states.push_back(std::make_pair(loc, syscall_vals));
                         cs_free(insn, count);
                         count = -1;
                         break;
@@ -211,11 +217,11 @@ int fbf::ArgumentCountTestCase::run_test() {
 
         if (count <= 0) {
             if(count == 0) {
-                jmp_tgts.pop_back();
-                while (syscall_vals.back() != INVALID_SYSCALL_VAL) {
-                    syscall_vals.pop_back();
-                }
-                syscall_vals.pop_back();
+                jmp_tgt_states.pop_back();
+//                while (syscall_vals.back() != INVALID_SYSCALL_VAL) {
+//                    syscall_vals.pop_back();
+//                }
+//                syscall_vals.pop_back();
             }
         } else if (determined_regs.size() >= NUM_ARG_REGS) {
             break;
