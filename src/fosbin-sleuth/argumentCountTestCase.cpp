@@ -27,7 +27,7 @@ const std::string fbf::ArgumentCountTestCase::get_test_name() {
 int fbf::ArgumentCountTestCase::run_test() {
     alarm(0);
 
-    size_t count = 0;
+    int64_t count = 0;
     cs_insn *insn;
     uint64_t curr_loc;
     cs_regs regs_read, regs_write;
@@ -104,7 +104,8 @@ int fbf::ArgumentCountTestCase::run_test() {
                 }
 
                 if (cs_regs_access(handle_, insn, regs_read, &regs_read_count, regs_write, &regs_write_count) == 0) {
-                    /* Special case for xor reg_a, reg_a since it is so common */
+                    /* Special case for xor reg_a, reg_a since it is so common but is technically
+                     * a read before a write */
                     if ((insn->id != X86_INS_XOR && insn->id != X86_INS_XORPS && insn->id != X86_INS_XORPD) ||
                         regs_read_count != 1) {
                         for (int i = 0; i < regs_read_count; i++) {
@@ -160,20 +161,43 @@ int fbf::ArgumentCountTestCase::run_test() {
                     }
                 }
 
-                if (insn->id == X86_INS_JMP || insn->id == X86_INS_CALL) {
+                bool insn_is_jmp_type = (insn->id == X86_INS_CALL);
+                for(uint8_t i = 0; i < insn->detail->groups_count && !insn_is_jmp_type; i++) {
+                    if(insn->detail->groups[i] == X86_GRP_JUMP) {
+                        insn_is_jmp_type = true;
+                    }
+                }
+                if (insn_is_jmp_type) {
                     uintptr_t loc = 0;
                     std::stringstream addr_str;
                     addr_str << std::hex << insn->op_str;
                     addr_str >> loc;
                     /* loc == 0 implies an indirect call, ignore for now... */
                     if (loc > 0 && visited.find(loc) == visited.end()) {
-                        jmp_tgts.back() = insn->address + insn->size;
+                        if(insn->id == X86_INS_CALL) {
+                            syscall_vals.push_back(INVALID_SYSCALL_VAL);
+                        }
+                        if(insn->id != X86_INS_JMP) {
+                            /* Return back to the next instruction */
+                            jmp_tgts.back() = insn->address + insn->size;
+                        }
+
+                        /* Follow jump targets */
                         jmp_tgts.push_back(loc);
-                        syscall_vals.push_back(INVALID_SYSCALL_VAL);
                         cs_free(insn, count);
+                        count = -1;
                         break;
-                    } else {
+                    } else if(insn->id != X86_INS_JMP){
+                        /* We have either visited the jump target or we don't know where we
+                         * are going. Go onto the next instruction if the current instruction
+                         * is not an unconditional jump */
                         curr_loc = insn->address + insn->size;
+                    } else {
+                        /* This is an unconditional jump to a target we have already analyzed,
+                         * so we're done */
+                        cs_free(insn, count);
+                        count = 0;
+                        break;
                     }
                 } else {
                     curr_loc = insn->address + insn->size;
@@ -186,11 +210,13 @@ int fbf::ArgumentCountTestCase::run_test() {
         } while (count > 0 && determined_regs.size() < NUM_ARG_REGS);
 
         if (count <= 0) {
-            jmp_tgts.pop_back();
-            while(syscall_vals.back() != INVALID_SYSCALL_VAL) {
+            if(count == 0) {
+                jmp_tgts.pop_back();
+                while (syscall_vals.back() != INVALID_SYSCALL_VAL) {
+                    syscall_vals.pop_back();
+                }
                 syscall_vals.pop_back();
             }
-            syscall_vals.pop_back();
         } else if (determined_regs.size() >= NUM_ARG_REGS) {
             break;
         }
