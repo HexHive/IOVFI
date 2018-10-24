@@ -5,7 +5,19 @@ import sys
 
 functions = []
 
-pointer_types = { 15 }
+added_lines = set()
+
+pointer_types = {15}
+
+
+def output_value(value):
+    if value['type'] in pointer_types:
+        if value['precall'][-3:] == "\\00" and int(value['size']) == len(value['precall']):
+            # This is a string
+            return "\"{}\"".format(value['precall'])
+        return "{}".format(value['precall'])
+    else:
+        return "{}".format(value['value'])
 
 
 def main():
@@ -25,10 +37,13 @@ def main():
                     if line[len(line) - 1] == ',':
                         line = line[:-1]
                     try:
-                        func = json.loads(line)['function']
-                        if len(func['args']) > max_args:
-                            max_args = len(func['args'])
-                        functions.append(func)
+                        if line not in added_lines:
+                            func = json.loads(line)['function']
+                            if len(func['args']) > max_args:
+                                max_args = len(func['args'])
+
+                            functions.append(func)
+                            added_lines.add(line)
                     except json.JSONDecodeError as e:
                         total_error += 1
                         continue
@@ -38,7 +53,7 @@ def main():
     print("Found {} functions".format(len(functions)), file=sys.stderr)
 
     # Print header
-    print("name, return, arg_count", end="")
+    print("name,return,arg_count", end="")
     if max_args > 0:
         print(",", end="")
 
@@ -52,21 +67,15 @@ def main():
     # Print values
     for func in functions:
         try:
-            print("{}, ".format(func['name']), end="")
+            print("{},".format(func['name']), end="")
             if 'return' in func:
-                if func['return']['type'] in pointer_types:
-                    print("{}, {}".format(func['return']['precall'], len(func['args'])), end="")
-                else:
-                    print("{}, {}".format(func['return']['value'], len(func['args'])), end="")
+                print("{},{}".format(output_value(func['return']), len(func['args'])), end="")
                 if max_args > 0:
-                    print(",", end = "")
+                    print(",", end="")
 
             for i in range(max_args):
                 if i < len(func['args']):
-                        if func['args'][i]['type'] in pointer_types:
-                            print(func['args'][i]['precall'], end="")
-                        else:
-                            print(func['args'][i]['value'], end="")
+                    print(output_value(func['args'][i]), end="")
                 else:
                     print("?", end="")
 
@@ -76,6 +85,7 @@ def main():
             print("ERROR: " + str(func), file=sys.stderr)
             exit(1)
         print("")
+
 
 if __name__ == "__main__":
     main()
