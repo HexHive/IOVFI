@@ -45,6 +45,15 @@ namespace fbf {
                 X86_REG_R9
         };
 
+        inline constexpr static uint16_t FLOAT_REG_ABI_ORDER[] = {
+                X86_REG_XMM0,
+                X86_REG_XMM1,
+                X86_REG_XMM2,
+                X86_REG_XMM3,
+                X86_REG_XMM4,
+                X86_REG_XMM5
+        };
+
         inline constexpr static size_t NUM_ARG_REGS = sizeof(REG_ABI_ORDER) / sizeof(uint16_t);
         const static int32_t INVALID_SYSCALL_VAL = -1;
     };

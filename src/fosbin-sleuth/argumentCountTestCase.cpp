@@ -22,7 +22,7 @@ const std::string fbf::ArgumentCountTestCase::get_test_name() {
     std::stringstream ss;
     std::pair<std::string, size_t> curr_func = binDesc_.getFunc(location_);
 
-    if(curr_func.second == 0) {
+    if (curr_func.second == 0) {
         ss << "Argument Count Test at 0x" << std::hex << location_;
     } else {
         ss << "Argument Count Test for " << curr_func.first << " (0x" << std::hex << location_ << ")";
@@ -38,21 +38,34 @@ int fbf::ArgumentCountTestCase::run_test() {
     uint64_t curr_loc;
     cs_regs regs_read, regs_write;
     uint8_t regs_read_count, regs_write_count;
+    bool first_determined_regs = true;
 
-    std::vector<std::pair<uintptr_t, std::vector<int64_t>>> jmp_tgt_states;
-    std::vector<int64_t> syscalls;
-    syscalls.push_back(INVALID_SYSCALL_VAL);
-    jmp_tgt_states.push_back(std::make_pair(location_, syscalls));
+    typedef uint16_t register_t;
 
-    std::map<uint16_t, bool> reg_read;
-    std::map<uint16_t, bool> reg_written;
+    typedef struct register_state {
+        std::vector<int64_t> syscall_values;
+        std::set<register_t> regs_used_in_args;
+        std::set<register_t> determined_regs;
+        std::map<register_t, bool> reg_read;
+        std::map<register_t, bool> reg_written;
+    } register_state;
+
+    std::vector<std::pair<uintptr_t, register_state>> register_states;
+    register_state initial_state;
+
+    register_states.push_back(std::make_pair(location_, initial_state));
+
     std::set<uintptr_t> visited;
-    std::set<uint16_t> regs_used_in_args;
-    std::set<uint16_t> determined_regs;
+    std::set<register_t> all_regs_used_in_args;
+    std::set<register_t> all_determined_regs;
 
-    while (!jmp_tgt_states.empty()) {
-        curr_loc = jmp_tgt_states.back().first;
-        std::vector<int64_t> &syscall_vals = jmp_tgt_states.back().second;
+    while (!register_states.empty()) {
+        curr_loc = register_states.back().first;
+        std::vector<int64_t> &syscall_vals = register_states.back().second.syscall_values;
+        std::set<register_t> &regs_used_in_args = register_states.back().second.regs_used_in_args;
+        std::set<register_t> &determined_regs = register_states.back().second.determined_regs;
+        std::map<register_t, bool> &reg_written = register_states.back().second.reg_written;
+        std::map<register_t, bool> &reg_read = register_states.back().second.reg_read;
 
         LOG_DEBUG << "curr_loc = " << std::hex << curr_loc;
 
@@ -66,7 +79,11 @@ int fbf::ArgumentCountTestCase::run_test() {
             start_loc = curr_loc;
         }
 
+        bool jump = false;
+        bool pop_state = false;
         do {
+            jump = false;
+            pop_state = false;
             int64_t size = curr_func.second - (curr_loc - start_loc);
             count = cs_disasm(handle_, (uint8_t *) curr_loc, size, curr_loc, 1, &insn);
             if (count > 0) {
@@ -74,38 +91,34 @@ int fbf::ArgumentCountTestCase::run_test() {
 
                 cs_x86 x86 = insn->detail->x86;
 
-                if(insn->id == X86_INS_SYSCALL) {
-                    if(syscall_vals.back() == 0) {
+                if (insn->id == X86_INS_SYSCALL) {
+                    if (syscall_vals.back() == 0) {
                         LOG_DEBUG << curr_func.first << " uses unknown syscall";
                     } else {
-                        int syscall_val_count = 0;
-                        for(int j = syscall_vals.size() - 1; syscall_vals[j] != INVALID_SYSCALL_VAL; j--) {
-                            syscall_val_count++;
-                        }
                         std::stringstream ss;
                         ss << curr_func.first << " uses syscall with "
-                                << syscall_val_count << " potential targets: [ ";
-                        for(int j = syscall_vals.size() - 1; syscall_vals[j] != INVALID_SYSCALL_VAL; j--) {
-                            ss << "0x" << std::hex << syscall_vals[j] << " ";
+                           << syscall_vals.size() << " potential targets: [ ";
+                        for (int64_t val : syscall_vals) {
+                            ss << "0x" << std::hex << val << " ";
                         }
                         ss << "]";
 
                         LOG_DEBUG << ss.str();
 
-                        while(syscall_vals.back() != INVALID_SYSCALL_VAL) {
-                            std::set<uint16_t> syscall_regs = binDesc_.getSyscallRegisters(syscall_vals.back());
-                            for(uint16_t syscall_reg : syscall_regs) {
-                                uint16_t reg = get_reg_id(syscall_reg);
-                                reg_read[reg] = true;
-                                if (reg_used_as_arg(reg) &&
-                                    reg_written.find(reg) == reg_written.end()) {
-                                    regs_used_in_args.insert(reg);
-                                    determined_regs.insert(reg);
-                                }
+//                        while (syscall_vals.back() != INVALID_SYSCALL_VAL) {
+                        std::set<register_t> syscall_regs = binDesc_.getSyscallRegisters(syscall_vals.back());
+                        for (register_t syscall_reg : syscall_regs) {
+                            register_t reg = get_reg_id(syscall_reg);
+                            reg_read[reg] = true;
+                            if (reg_used_as_arg(reg) &&
+                                reg_written.find(reg) == reg_written.end()) {
+                                regs_used_in_args.insert(reg);
+                                determined_regs.insert(reg);
                             }
-
-                            syscall_vals.pop_back();
                         }
+
+                        syscall_vals.pop_back();
+//                        }
                     }
                 }
 
@@ -115,7 +128,7 @@ int fbf::ArgumentCountTestCase::run_test() {
                     if ((insn->id != X86_INS_XOR && insn->id != X86_INS_XORPS && insn->id != X86_INS_XORPD) ||
                         regs_read_count != 1) {
                         for (int i = 0; i < regs_read_count; i++) {
-                            uint16_t reg = get_reg_id(regs_read[i]);
+                            register_t reg = get_reg_id(regs_read[i]);
                             reg_read[reg] = true;
                             if (reg_used_as_arg(reg) &&
                                 reg_written.find(reg) == reg_written.end()) {
@@ -142,10 +155,10 @@ int fbf::ArgumentCountTestCase::run_test() {
                     }
 
                     for (int i = 0; i < regs_write_count; i++) {
-                        uint16_t reg = get_reg_id(regs_write[i]);
-                        if(reg == X86_REG_RAX) {
-                            for(int j = 0; j < x86.op_count; j++) {
-                                if(x86.operands[j].type == X86_OP_IMM && x86.operands[j].imm > INVALID_SYSCALL_VAL) {
+                        register_t reg = get_reg_id(regs_write[i]);
+                        if (reg == X86_REG_RAX) {
+                            for (int j = 0; j < x86.op_count; j++) {
+                                if (x86.operands[j].type == X86_OP_IMM && x86.operands[j].imm > INVALID_SYSCALL_VAL) {
                                     syscall_vals.push_back(x86.operands[j].imm);
                                 }
                             }
@@ -155,7 +168,7 @@ int fbf::ArgumentCountTestCase::run_test() {
                         if (reg_used_as_arg(reg) && reg_read.find(reg) == reg_read.end()) {
                             bool found = false;
                             for (int j = 0; j < NUM_ARG_REGS; j++) {
-                                if (REG_ABI_ORDER[j] == reg) {
+                                if (REG_ABI_ORDER[j] == reg || FLOAT_REG_ABI_ORDER[j] == reg) {
                                     found = true;
                                 }
 
@@ -168,9 +181,12 @@ int fbf::ArgumentCountTestCase::run_test() {
                 }
 
                 bool insn_is_jmp_type = (insn->id == X86_INS_CALL);
-                for(uint8_t i = 0; i < insn->detail->groups_count && !insn_is_jmp_type; i++) {
-                    if(insn->detail->groups[i] == X86_GRP_JUMP) {
+                bool insn_is_ret_type = false;
+                for (uint8_t i = 0; i < insn->detail->groups_count && (!insn_is_jmp_type || !insn_is_ret_type); i++) {
+                    if (insn->detail->groups[i] == X86_GRP_JUMP) {
                         insn_is_jmp_type = true;
+                    } else if (insn->detail->groups[i] == X86_GRP_RET) {
+                        insn_is_ret_type = true;
                     }
                 }
                 if (insn_is_jmp_type) {
@@ -180,20 +196,22 @@ int fbf::ArgumentCountTestCase::run_test() {
                     addr_str >> loc;
                     /* loc == 0 implies an indirect call, ignore for now... */
                     if (loc > 0 && visited.find(loc) == visited.end()) {
-                        if(insn->id == X86_INS_CALL) {
-                            syscall_vals.push_back(INVALID_SYSCALL_VAL);
-                        }
-                        if(insn->id != X86_INS_JMP) {
+//                        if (insn->id == X86_INS_CALL) {
+//                            syscall_vals.push_back(INVALID_SYSCALL_VAL);
+//                        }
+                        if (insn->id != X86_INS_JMP) {
                             /* Return back to the next instruction */
-                            jmp_tgt_states.back().first = insn->address + insn->size;
+                            register_states.back().first = insn->address + insn->size;
+                        } else if (register_states.size() > 1) {
+                            /* This is an unconditional jump, so do not return to this block */
+                            register_states.pop_back();
                         }
 
                         /* Follow jump targets */
-                        jmp_tgt_states.push_back(std::make_pair(loc, syscall_vals));
-                        cs_free(insn, count);
-                        count = -1;
-                        break;
-                    } else if(insn->id != X86_INS_JMP){
+                        register_states.push_back(std::make_pair(loc, register_states.back().second));
+                        curr_loc = loc;
+                        jump = true;
+                    } else if (insn->id != X86_INS_JMP) {
                         /* We have either visited the jump target or we don't know where we
                          * are going. Go onto the next instruction if the current instruction
                          * is not an unconditional jump */
@@ -201,36 +219,54 @@ int fbf::ArgumentCountTestCase::run_test() {
                     } else {
                         /* This is an unconditional jump to a target we have already analyzed,
                          * so we're done */
-                        cs_free(insn, count);
-                        count = 0;
+                        pop_state = true;
                         break;
                     }
+                } else if (insn_is_ret_type) {
+                    jump = true;
+                    pop_state = true;
+                    break;
                 } else {
                     curr_loc = insn->address + insn->size;
                 }
             }
             cs_free(insn, count);
             if (visited.find(curr_loc) != visited.end()) {
-                count = 0;
+                pop_state = true;
+                jump = true;
             }
-        } while (count > 0 && determined_regs.size() < NUM_ARG_REGS);
+        } while (count > 0 && !jump && determined_regs.size() < NUM_ARG_REGS);
 
-        if (count <= 0) {
-            if(count == 0) {
-                jmp_tgt_states.pop_back();
-//                while (syscall_vals.back() != INVALID_SYSCALL_VAL) {
-//                    syscall_vals.pop_back();
-//                }
-//                syscall_vals.pop_back();
+        if (determined_regs.size() >= NUM_ARG_REGS || count == 0) {
+            pop_state = true;
+        }
+
+        if (pop_state) {
+            for (register_t reg : register_states.back().second.regs_used_in_args) {
+                all_regs_used_in_args.insert(reg);
             }
-        } else if (determined_regs.size() >= NUM_ARG_REGS) {
+            std::set<register_t> intersect;
+            if (first_determined_regs) {
+                intersect = register_states.back().second.determined_regs;
+                first_determined_regs = false;
+            } else {
+                std::set_intersection(all_determined_regs.begin(), all_determined_regs.end(),
+                                      determined_regs.begin(), determined_regs.end(),
+                                      std::inserter(intersect, intersect.begin()));
+            }
+            all_determined_regs = intersect;
+
+            register_states.pop_back();
+        }
+
+        if (all_determined_regs.size() >= NUM_ARG_REGS) {
             break;
         }
     }
 
-    arg_count_ = regs_used_in_args.size();
+    arg_count_ = all_regs_used_in_args.size();
     LOG_DEBUG << arg_count_ << " registers used in " << binDesc_.getSym(location_).first << " to pass arguments:";
-    for(auto reg : regs_used_in_args) {
+    for (auto reg : all_regs_used_in_args) {
         LOG_DEBUG << cs_reg_name(handle_, reg);
     }
 
