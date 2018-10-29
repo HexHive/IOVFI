@@ -30,12 +30,21 @@ def main():
 
     for i in range(1, len(sys.argv)):
         with open(sys.argv[i], "r", errors='ignore') as f:
+            line_num = 0
             print("Reading {} (file {} of {})".format(sys.argv[i], i, len(sys.argv) - 1), file=sys.stderr)
             for line in f.readlines():
+                line_num += 1
                 line = line.strip()
-                if line.find("\"function\":") >= 0:
-                    if line[len(line) - 1] == ',':
-                        line = line[:-1]
+                start_idx = line.find("{ \"function\":")
+                if start_idx >= 0:
+                    line = line[start_idx:]
+                    end_idx = line.find("] }")
+                    line = line[:end_idx + len("] }")]
+
+                    line += "}"
+
+                    print(line)
+
                     try:
                         if line not in added_lines:
                             func = json.loads(line)['function']
@@ -45,6 +54,7 @@ def main():
                             functions.append(func)
                             added_lines.add(line)
                     except json.JSONDecodeError as e:
+                        print("Invalid json in {}:{}: {}".format(sys.argv[i], line_num, e.msg), file=sys.stderr)
                         total_error += 1
                         continue
     if total_error > 0:
