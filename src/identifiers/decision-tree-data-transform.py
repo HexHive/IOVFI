@@ -46,7 +46,8 @@ def load_file(fname):
     fvdicts = defaultdict(dict)
 
     for idx in range(len(label)):
-        fvdicts[label[idx]][idx] = 1
+        fv = tuple(examples[idx])
+        fvdicts[label[idx]][fv] = 1
 
     dual_labels = list()
     dual_features = list()
