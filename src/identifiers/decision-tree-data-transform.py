@@ -1,12 +1,35 @@
+#!/usr/bin/python3
+
 import argparse
 from sklearn import tree
 from sklearn.feature_extraction import DictVectorizer
 import pandas as pd
 from collections import defaultdict
+import sys
+
+
+def parser(value):
+    if value is None:
+        return None
+
+    try:
+        ret = float(value)
+        return ret
+    except:
+
+    try:
+        ret = int(value)
+        return ret
+    except:
+
+    return str(value)
 
 
 def load_file(fname):
-    data = pd.read_csv(fname)
+    print("parsing CSV...", end="")
+    sys.stdout.flush()
+    data = pd.read_csv(fname, error_bad_lines=False, warn_bad_lines=True)
+    print("done!")
 
     examples = list()
     label = list()

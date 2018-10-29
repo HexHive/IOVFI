@@ -8,6 +8,7 @@ functions = []
 added_lines = set()
 
 pointer_types = {15}
+MAX_INPUT_LEN = 1024
 
 
 def output_value(value):
@@ -40,14 +41,15 @@ def main():
                     line = line[start_idx:]
                     end_idx = line.find("] }")
                     line = line[:end_idx + len("] }")]
-
                     line += "}"
-
-                    print(line)
 
                     try:
                         if line not in added_lines:
                             func = json.loads(line)['function']
+                            if len(line) > MAX_INPUT_LEN:
+                                print("Skipping {}:{}; too long".format(sys.argv[i], line_num), file=sys.stderr)
+                                continue
+
                             if len(func['args']) > max_args:
                                 max_args = len(func['args'])
 
@@ -57,6 +59,9 @@ def main():
                         print("Invalid json in {}:{}: {}".format(sys.argv[i], line_num, e.msg), file=sys.stderr)
                         total_error += 1
                         continue
+                    except KeyError as e:
+                        print("KeyError ({}): {}".format(e, line),
+                                file=sys.stderr)
     if total_error > 0:
         print("There were {} invalid JSON entries".format(total_error), file=sys.stderr)
 
