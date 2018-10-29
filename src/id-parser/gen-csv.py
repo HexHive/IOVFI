@@ -81,9 +81,10 @@ def main():
 
                 if i < max_args - 1:
                     print(",", end="")
-        except:
-            print("ERROR: " + str(func), file=sys.stderr)
-            exit(1)
+        except KeyError as e:
+            print("ERROR ({}): {}".format(e, str(func)), file=sys.stderr)
+            continue
+            #exit(1)
         print("")
 
 
