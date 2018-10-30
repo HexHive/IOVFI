@@ -9,22 +9,8 @@ import sys
 
 
 def parser(value):
-    print("value = '{}'".format(value))
-
     if value is None or value == '?':
         return None
-
-    try:
-        ret = float(value)
-        return ret
-    except:
-        pass
-
-    try:
-        ret = int(value, 16)
-        return ret
-    except:
-        pass
 
     return str(value)
 
@@ -63,8 +49,6 @@ def load_file(fname):
     dtree.fit(X, dual_labels)
 
     tree.export_graphviz(dtree, out_file="dtree.dot")
-
-    print("{}: {}".format(label[581], examples[581]))
 
 
 if __name__ == "__main__":
