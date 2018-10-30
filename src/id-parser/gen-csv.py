@@ -2,13 +2,15 @@
 
 import json
 import sys
+import argparse
+import re
 
 functions = []
 
 added_lines = set()
 
 pointer_types = {15}
-MAX_INPUT_LEN = 1024
+MAX_INPUT_LEN = 4096
 
 
 def output_value(value):
@@ -21,18 +23,28 @@ def output_value(value):
         return "{}".format(value['value'])
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("gen-csv.py /path/to/json ...", file=sys.stderr)
-        exit(1)
+def main(included_funcs_path, json_paths):
+    if included_funcs_path is None:
+        # Match Anything
+        match_regex = re.compile(".*")
+    else:
+        with open(included_funcs_path, "r") as f:
+            func_names = set()
+            for line in f.readlines():
+                line = line.strip()
+                if line[0] == '#':
+                    continue
+                func_names.insert(line)
+            match_regex = re.compile("\|")
+
 
     max_args = -1
     total_error = 0
 
-    for i in range(1, len(sys.argv)):
-        with open(sys.argv[i], "r", errors='ignore') as f:
+    for i in range(len(json_paths)):
+        with open(json_paths[i], "r", errors='ignore') as f:
             line_num = 0
-            print("Reading {} (file {} of {})".format(sys.argv[i], i, len(sys.argv) - 1), file=sys.stderr)
+            print("Reading {} (file {} of {})".format(json_paths[i], i, len(json_paths) - 1), file=sys.stderr)
             for line in f.readlines():
                 line_num += 1
                 line = line.strip()
@@ -47,7 +59,7 @@ def main():
                         if line not in added_lines:
                             func = json.loads(line)['function']
                             if len(line) > MAX_INPUT_LEN:
-                                print("Skipping {}:{}; too long".format(sys.argv[i], line_num), file=sys.stderr)
+                                print("Skipping {}:{}; too long".format(json_paths[i], line_num), file=sys.stderr)
                                 continue
 
                             if len(func['args']) > max_args:
@@ -56,7 +68,7 @@ def main():
                             functions.append(func)
                             added_lines.add(line)
                     except json.JSONDecodeError as e:
-                        print("Invalid json in {}:{}: {}".format(sys.argv[i], line_num, e.msg), file=sys.stderr)
+                        print("Invalid json in {}:{}: {}".format(json_paths[i], line_num, e.msg), file=sys.stderr)
                         total_error += 1
                         continue
                     except KeyError as e:
@@ -104,4 +116,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    argp = argparse.ArgumentParser()
+    argp.add_argument('--funcs', help="Functions to include in output")
+    argp.add_argument('jsons', metavar='/path/to/json', type=str, nargs='+')
+    main(argp.funcs, argp.jsons)
