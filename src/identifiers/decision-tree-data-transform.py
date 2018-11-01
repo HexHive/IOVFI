@@ -27,7 +27,7 @@ def load_file(fname):
                                    "arg11": parser})
     print("done!")
 
-    examples = data.values[:, 1:13]
+    examples = data.values[:, 1:]
     label = data.values[:, 0]
 
     fvdicts = defaultdict(dict)
@@ -46,7 +46,7 @@ def load_file(fname):
     dv = DictVectorizer()
     X = dv.fit_transform(dual_features)
 
-    dtree = tree.DecisionTreeClassifier(criterion="entropy")
+    dtree = tree.DecisionTreeClassifier()
     dtree.fit(X, dual_labels)
 
     tree.export_graphviz(dtree, out_file="dtree.dot")
@@ -55,11 +55,11 @@ def load_file(fname):
     node_count = classifier_tree.node_count
     node_depth = np.zeros(shape=node_count, dtype=np.int64)
     is_leaves = np.zeros(shape=node_count, dtype=bool)
-    working_stack = [(0, -1)]
 
     children_left = classifier_tree.children_left
     children_right = classifier_tree.children_right
     feature = classifier_tree.feature
+    working_stack = [(0, -1)]
 
     while len(working_stack) > 0:
         node_id, parent_depth = working_stack.pop()
@@ -74,17 +74,22 @@ def load_file(fname):
     print("The binary tree structure has %s nodes and has "
           "the following tree structure:"
           % node_count)
-    for i in range(node_count):
-        if is_leaves[i]:
-            print("%snode=%s leaf node." % (node_depth[i] * "\t", label[feature[i]]))
-        else:
-            io_vec = examples[feature[i]]
-            function_name = label[feature[i]]
 
+    for i in range(node_count):
+        io_vec = dv.get_feature_names()[feature[i]]
+        if is_leaves[i]:
+            idx = 0
+            for leaf in dtree.apply(X):
+                if leaf == i:
+                    break
+                idx += 1
+            function_name = dual_labels[idx]
+            print("%snode=%d leaf node (%s)." % (node_depth[i] * "\t", i, function_name))
+        else:
             function_test = "func("
             idx = 2
             count = 0
-            while io_vec[idx] is not None and idx < len(io_vec):
+            while idx < len(io_vec) and io_vec[idx] is not None:
                 function_test += str(io_vec[idx])
                 function_test += ","
                 idx += 1
@@ -94,17 +99,15 @@ def load_file(fname):
             function_test += ") == "
             function_test += str(io_vec[0])
 
-            print("%snode=%s(%s) test node: go to node %s if %s else to "
+            print("%snode=%s test node: go to node %s if %s else to "
                   "node %s."
                   % (node_depth[i] * "\t",
                      i,
-                     function_name,
                      children_right[i],
                      function_test,
                      children_left[i],
                      ))
     print()
-
 
 
 if __name__ == "__main__":

@@ -34,13 +34,14 @@ def main(included_funcs_path, json_paths):
                 line = line.strip()
                 if line[0] == '#':
                     continue
-                func_names.insert(line)
-            match_regex = re.compile("\|")
-
+                func_names.add("^" + line + "$")
+            regex_str = "|".join(func_names)
+            match_regex = re.compile(regex_str)
 
     max_args = -1
     total_error = 0
 
+    uniq_funcs = set()
     for i in range(len(json_paths)):
         with open(json_paths[i], "r", errors='ignore') as f:
             line_num = 0
@@ -61,12 +62,16 @@ def main(included_funcs_path, json_paths):
                             if len(line) > MAX_INPUT_LEN:
                                 print("Skipping {}:{}; too long".format(json_paths[i], line_num), file=sys.stderr)
                                 continue
+                            elif match_regex.match(func['name']) is None:
+                                print("Skipping {}:{}; Not in function list".format(json_paths[i], line_num), file=sys.stderr)
+                                continue
 
                             if len(func['args']) > max_args:
                                 max_args = len(func['args'])
 
                             functions.append(func)
                             added_lines.add(line)
+                            uniq_funcs.add(func['name'])
                     except json.JSONDecodeError as e:
                         print("Invalid json in {}:{}: {}".format(json_paths[i], line_num, e.msg), file=sys.stderr)
                         total_error += 1
@@ -114,9 +119,13 @@ def main(included_funcs_path, json_paths):
             #exit(1)
         print("")
 
+    print("Total unique functions: {}".format(len(uniq_funcs)), file=sys.stderr)
+    print("\n".join(uniq_funcs), file=sys.stderr)
+
 
 if __name__ == "__main__":
-    argp = argparse.ArgumentParser()
+    argp = argparse.ArgumentParser(description="Generate CSV for learning")
     argp.add_argument('--funcs', help="Functions to include in output")
     argp.add_argument('jsons', metavar='/path/to/json', type=str, nargs='+')
-    main(argp.funcs, argp.jsons)
+    args = argp.parse_args()
+    main(args.funcs, args.jsons)
