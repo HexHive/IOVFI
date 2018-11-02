@@ -19,8 +19,6 @@ namespace fbf {
 
         virtual int run_test();
 
-        virtual uint64_t get_value();
-
         virtual uintptr_t get_location();
 
     protected:

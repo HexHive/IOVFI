@@ -25,17 +25,9 @@ namespace fbf {
 
         virtual arg_count_t get_arg_count();
 
-        virtual bool is_same_return(const FunctionIdentifierNodeI &node) const;
-
-        virtual bool is_same_args(const FunctionIdentifierNodeI &node) const;
-
         virtual std::any get_return() const;
 
-        virtual bool args_changed();
-
         const virtual std::vector<std::any> get_args() const;
-
-        virtual bool operator==(const FunctionIdentifierNodeI &node) const;
 
     protected:
         R retVal_;
@@ -77,44 +69,12 @@ namespace fbf {
     arg_count_t FunctionIdentifierNode<R, Args...>::get_arg_count() { return sizeof...(Args); }
 
     template<typename R, typename... Args>
-    bool FunctionIdentifierNode<R, Args...>::is_same_return(const FunctionIdentifierNodeI &node) const {
-        std::any thisAny = get_return();
-        std::any thatAny = node.get_return();
-        return compare_any(thisAny, thatAny);
-    }
-
-    template<typename R, typename... Args>
     FunctionIdentifierNode<R, Args...>::FunctionIdentifierNode(const FunctionIdentifierNode &other) {
         args_ = other.args_;
         retVal_ = other.retVal_;
         left_ = other.left_;
         right_ = other.right_;
     }
-
-    template<typename R, typename... Args>
-    bool FunctionIdentifierNode<R, Args...>::args_changed() {
-        return false;
-    }
-
-    template<typename R, typename... Args>
-    bool FunctionIdentifierNode<R, Args...>::operator==(const FunctionIdentifierNodeI &node) const {
-        return is_same_return(node) && is_same_args(node);
-    }
-
-    template<typename R, typename... Args>
-    bool FunctionIdentifierNode<R, Args...>::is_same_args(const FunctionIdentifierNodeI &node) const {
-        std::vector<std::any> thisArgs = get_args();
-        std::vector<std::any> thatArgs = node.get_args();
-        bool same = thisArgs.size() == thatArgs.size();
-        size_t i = 0;
-        while (same && i < thisArgs.size()) {
-            same = compare_any(thisArgs[i], thatArgs[i]);
-            i++;
-        }
-
-        return same;
-    }
 }
-
 
 #endif //FOSBIN_TESTNODE_H

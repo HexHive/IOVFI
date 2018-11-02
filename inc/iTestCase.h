@@ -15,7 +15,6 @@ namespace fbf {
         ITestCase();
         virtual const std::string get_test_name() = 0;
         virtual int run_test() = 0;
-        virtual uint64_t get_value() = 0;
         virtual uintptr_t get_location() = 0;
         virtual void output_result(std::ostream& out);
 

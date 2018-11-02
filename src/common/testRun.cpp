@@ -39,7 +39,6 @@ void fbf::TestRun::run_test() {
     if (test_has_run_) {
         return;
     }
-    int pipefd[2];
     test_has_run_ = true;
 
     LOG_INFO << "Running test "
@@ -47,24 +46,14 @@ void fbf::TestRun::run_test() {
         << " on offset 0x"
         << std::hex << offset_ << std::dec
         << std::endl;
-    pipe(pipefd);
     pid_t pid = fork();
     if (pid < 0) {
-        close(pipefd[0]);
-        close(pipefd[1]);
         throw std::runtime_error("Failed to fork");
     } else if (pid == 0) {
-        close(pipefd[0]);
         set_signals();
         int result = test_->run_test();
-        uint64_t retVal = test_->get_value();
-        write(pipefd[1], &retVal, sizeof(retVal));
-        close(pipefd[1]);
         exit(result);
     } else {
-        close(pipefd[1]);
-        read(pipefd[0], &execution_result_, sizeof(execution_result_));
-        close(pipefd[0]);
         result_ = determine_result(pid);
     }
 }

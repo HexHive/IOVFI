@@ -8,7 +8,7 @@
 
 fbf::IdentifierNodeTestCase::IdentifierNodeTestCase(std::shared_ptr<fbf::FunctionIdentifierNodeI> root,
                                                     uintptr_t location)
-        : ITestCase(), location_(location), root_(root) {
+        : ITestCase(), location_(location), root_(root), leaf_(nullptr) {
 
 }
 
@@ -32,33 +32,18 @@ int fbf::IdentifierNodeTestCase::run_test() {
         }
     }
 
-    std::set<std::shared_ptr<fbf::FunctionIdentifierNodeI>> identified_funcs;
-
-    if (prev_result) {
-        identified_funcs = prev->get_passing_funcs();
-    } else {
-        identified_funcs = prev->get_failing_funcs();
-    }
-
-    if (identified_funcs.empty()) {
-        return FAIL;
-    }
-
-    for (auto func : identified_funcs) {
-        ided_functions_.insert(func->get_name());
-    }
-
-    /* TODO: Report back the results in a better way */
-    std::cout << "0x" << std::hex << location_ << ": ";
-    output_result(std::cout);
-    std::cout << std::endl;
-
-    return PASS;
+    /* We have made it to a leaf. Either the last result was
+     * true, in which case, we can identify the function, or
+     * false and the function is unknown
+     */
+    leaf_ = prev;
 }
 
 void fbf::IdentifierNodeTestCase::output_result(std::ostream &out) {
-    for (std::string name : ided_functions_) {
-        out << name << " ";
+    if(leaf_) {
+        out << leaf_->get_name();
+    } else {
+        out << "UNKNOWN";
     }
 }
 
@@ -69,5 +54,3 @@ uint64_t fbf::IdentifierNodeTestCase::get_value() {
 uintptr_t fbf::IdentifierNodeTestCase::get_location() {
     return location_;
 }
-
-

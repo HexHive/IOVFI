@@ -24,9 +24,8 @@ namespace fbf {
         virtual void output_result(std::ostream &out);
 
     protected:
-        std::shared_ptr<fbf::FunctionIdentifierNodeI> root_;
+        std::shared_ptr<fbf::FunctionIdentifierNodeI> root_, leaf_;
         uintptr_t location_;
-        std::set<std::string> ided_functions_;
     };
 }
 

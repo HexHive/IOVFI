@@ -7,7 +7,6 @@
 
 #include <fosbin-flop.h>
 #include "fullTest.h"
-#include <fosbin-flop/functionIdentifierNodeGraphVisitor.h>
 
 namespace fs = std::experimental::filesystem;
 
@@ -20,13 +19,6 @@ namespace fbf {
 
     protected:
         virtual void create_testcases();
-
-        virtual void parse_arg_counts(fs::path arg_counts);
-
-        std::map<arg_count_t, std::shared_ptr<fbf::FunctionIdentifierNodeI>> testGraphs_;
-        std::map<arg_count_t, std::set<uintptr_t>> locations_;
-
-        virtual void insertFunctionIdentifier(std::shared_ptr<fbf::FunctionIdentifierNodeI> node);
     };
 }
 

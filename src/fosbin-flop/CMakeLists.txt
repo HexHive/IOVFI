@@ -18,5 +18,4 @@ TARGET_SOURCES( ${IDENTIFIER_NAME}
         ${COMMON_SRC}
         identifiers/identifierNodeTestCase.cpp
         identifiers/functionIdentifierNodeI.cpp
-        functionIdentifierNodeGraphVisitor.cpp
         )
