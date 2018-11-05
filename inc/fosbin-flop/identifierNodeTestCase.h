@@ -5,7 +5,7 @@
 #ifndef FOSBIN_IDENTIFIERNODETESTCASE_H
 #define FOSBIN_IDENTIFIERNODETESTCASE_H
 
-#include <fosbin-flop/identifiers/functionIdentifierNode.h>
+#include <fosbin-flop/identifiers/functionIdentifierInteriorNode.h>
 #include "iTestCase.h"
 
 namespace fbf {
@@ -16,8 +16,6 @@ namespace fbf {
         virtual const std::string get_test_name();
 
         virtual int run_test();
-
-        virtual uint64_t get_value();
 
         virtual uintptr_t get_location();
 

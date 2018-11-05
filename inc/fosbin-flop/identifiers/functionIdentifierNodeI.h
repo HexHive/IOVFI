@@ -14,6 +14,7 @@ namespace fbf {
     class FunctionIdentifierNodeI {
     public:
         FunctionIdentifierNodeI(std::string &functionName);
+        FunctionIdentifierNodeI(const char* functionName);
 
         virtual ~FunctionIdentifierNodeI();
 
@@ -26,12 +27,6 @@ namespace fbf {
         virtual void set_fail_node(std::shared_ptr<FunctionIdentifierNodeI> node);
 
         virtual bool test(uintptr_t location) = 0;
-
-        virtual arg_count_t get_arg_count() = 0;
-
-        virtual std::any get_return() const = 0;
-
-        const virtual std::vector<std::any> get_args() const = 0;
 
         static bool compare_any(const std::any v1, const std::any v2);
 

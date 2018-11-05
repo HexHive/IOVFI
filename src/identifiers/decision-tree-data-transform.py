@@ -7,6 +7,10 @@ import pandas as pd
 from collections import defaultdict
 import sys
 import numpy as np
+import decimal
+
+pointer_count = 0
+identifier_node_names = {}
 
 
 def parser(value):
@@ -14,6 +18,87 @@ def parser(value):
         return None
 
     return str(value)
+
+
+def find_type_name(val):
+    try:
+        int(val)
+        return "int"
+    except ValueError:
+        # print("{} is not an int".format(val))
+        pass
+
+    try:
+        decimal.Decimal(val)
+        return "double"
+    except decimal.InvalidOperation:
+        # print("{} is not a double".format(val))
+        pass
+
+    try:
+        np.longdouble(val)
+        return "long double"
+    except:
+        pass
+
+    return "char*"
+
+
+def output_leaf(function_name, node_id):
+    name = "{}_".format(function_name)
+    identifier_node_names[node_id] = name
+    leaf_str = "std::shared_ptr<fbf::FunctionIdentifierNode> {} = std::make_shared<fbf::FunctionIdentifierNode>(\"{" \
+               "}\");".format(name,
+                              function_name)
+    return leaf_str
+
+
+def output_identifier(io_vec, node_id):
+    template_sig = []
+    args = []
+
+    prestring = ""
+    pointer_count = 0
+
+    idx = 0
+    while idx < len(io_vec) and io_vec[idx] is not None:
+        if idx == 1:
+            # Skip over argument count
+            idx += 1
+            continue
+
+        type_name = find_type_name(io_vec[idx])
+        template_sig.append(type_name)
+
+        if type_name.find("*") >= 0:
+            buffer_name = "buf_" + str(pointer_count)
+            # 4 comes from the fact that hex digits are written as \xFF or 4 characters per one value
+            buffer_len = int(len(io_vec[idx]) / 4)
+            prestring += "{} {} = ({}) malloc({});\n".format(type_name, buffer_name, type_name, buffer_len + 1)
+            prestring += "if({}) {{ buffers_.push_back({}); std::memcpy({}, \"{}\", {}); }} else {{ throw " \
+                         "std::runtime_error(\"malloc failed\"); " \
+                         "}}\n".format(buffer_name, buffer_name, buffer_name, io_vec[idx], buffer_len)
+            pointer_count += 1
+            args.append(buffer_name)
+        else:
+            args.append(io_vec[idx])
+
+        idx += 1
+
+    if len(template_sig) == 1:
+        template_sig.append("void")
+
+    name = "node" + str(node_id)
+    identifier_node_names[node_id] = name
+    template_str = ", ".join(template_sig)
+    arg_str = ", ".join(args)
+
+    obj_str = "{}std::shared_ptr<fbf::FunctionIdentifierInternalNode<{}>> {} = " \
+              "std::make_shared<fbf::FunctionIdentifierInternalNode<{" \
+              "}>>({});".format(
+        prestring, template_str, name, template_str, arg_str)
+
+    return obj_str
 
 
 def load_file(fname):
@@ -61,6 +146,8 @@ def load_file(fname):
     feature = classifier_tree.feature
     working_stack = [(0, -1)]
 
+    parents = {}
+
     while len(working_stack) > 0:
         node_id, parent_depth = working_stack.pop()
         node_depth[node_id] = parent_depth + 1
@@ -68,46 +155,73 @@ def load_file(fname):
         if children_left[node_id] != children_right[node_id]:
             working_stack.append((children_left[node_id], parent_depth + 1))
             working_stack.append((children_right[node_id], parent_depth + 1))
+            parents[children_left[node_id]] = node_id
+            parents[children_right[node_id]] = node_id
         else:
             is_leaves[node_id] = True
 
-    print("The binary tree structure has %s nodes and has "
-          "the following tree structure:"
-          % node_count)
-
     for i in range(node_count):
         io_vec = dv.get_feature_names()[feature[i]]
+        idx = 0
         if is_leaves[i]:
-            idx = 0
             for leaf in dtree.apply(X):
                 if leaf == i:
                     break
                 idx += 1
             function_name = dual_labels[idx]
-            print("%snode=%d leaf node (%s)." % (node_depth[i] * "\t", i, function_name))
+            leaf_str = output_leaf(function_name, i)
+            print(leaf_str)
         else:
-            function_test = "func("
-            idx = 2
-            count = 0
-            while idx < len(io_vec) and io_vec[idx] is not None:
-                function_test += str(io_vec[idx])
-                function_test += ","
-                idx += 1
-                count += 1
-            if count > 0:
-                function_test = function_test[:-1]
-            function_test += ") == "
-            function_test += str(io_vec[0])
+            obj_str = output_identifier(io_vec, i)
+            print(obj_str)
 
-            print("%snode=%s test node: go to node %s if %s else to "
-                  "node %s."
-                  % (node_depth[i] * "\t",
-                     i,
-                     children_right[i],
-                     function_test,
-                     children_left[i],
-                     ))
-    print()
+    for child in children_right:
+        if child in parents:
+            p = identifier_node_names[parents[child]]
+            c = identifier_node_names[child]
+            parent_str = "{}->set_pass_node({});".format(p, c)
+            print(parent_str)
+
+    for child in children_left:
+        if child in parents:
+            p = identifier_node_names[parents[child]]
+            c = identifier_node_names[child]
+            parent_str = "{}->set_fail_node({});".format(p, c)
+            print(parent_str)
+
+    # for i in range(node_count):
+    #     io_vec = dv.get_feature_names()[feature[i]]
+    #     if is_leaves[i]:
+    #         idx = 0
+    #         for leaf in dtree.apply(X):
+    #             if leaf == i:
+    #                 break
+    #             idx += 1
+    #         function_name = dual_labels[idx]
+    #         print("%snode=%d leaf node (%s)." % (node_depth[i] * "\t", i, function_name))
+    #     else:
+    #         function_test = "func("
+    #         idx = 2
+    #         count = 0
+    #         while idx < len(io_vec) and io_vec[idx] is not None:
+    #             function_test += str(io_vec[idx])
+    #             function_test += ","
+    #             idx += 1
+    #             count += 1
+    #         if count > 0:
+    #             function_test = function_test[:-1]
+    #         function_test += ") == "
+    #         function_test += str(io_vec[0])
+    #
+    #         print("%snode=%s test node: go to node %s if %s else to "
+    #               "node %s."
+    #               % (node_depth[i] * "\t",
+    #                  i,
+    #                  children_right[i],
+    #                  function_test,
+    #                  children_left[i],
+    #                  ))
+    # print()
 
 
 if __name__ == "__main__":

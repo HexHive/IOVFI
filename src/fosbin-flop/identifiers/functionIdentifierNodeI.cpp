@@ -10,6 +10,10 @@ fbf::FunctionIdentifierNodeI::FunctionIdentifierNodeI(std::string &functionName)
                                                                               right_(nullptr) {
 }
 
+fbf::FunctionIdentifierNodeI::FunctionIdentifierNodeI(const char* functionName) : name_(functionName), left_(nullptr),
+                                                                                   right_(nullptr) {
+}
+
 fbf::FunctionIdentifierNodeI::~FunctionIdentifierNodeI() {
 
 }

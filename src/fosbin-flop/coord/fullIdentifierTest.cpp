@@ -14,6 +14,7 @@
 #include <termios.h>
 #include <identifierNodeTestCase.h>
 #include <fosbin-flop/fullIdentifierTest.h>
+#include <fosbin-flop/identifiers/FunctionIdentifierNode.h>
 
 namespace fs = std::experimental::filesystem;
 
@@ -22,8 +23,16 @@ fbf::FullIdentifierTest::FullIdentifierTest(fs::path descriptor, fs::path arg_co
     create_testcases();
 }
 
-fbf::FullIdentifierTest::~FullIdentifierTest() = default;
+fbf::FullIdentifierTest::~FullIdentifierTest() {
+    for(void* buffer : buffers_) {
+        free(buffer);
+    }
+};
 
 void fbf::FullIdentifierTest::create_testcases() {
-
+    std::shared_ptr<fbf::FunctionIdentifierInternalNode<double, double>> node0 = std::make_shared<fbf::FunctionIdentifierInternalNode<double, double>>(0.46800071937081683, -0.7592854459485416);
+    std::shared_ptr<fbf::FunctionIdentifierNode> strcmp_ = std::make_shared<fbf::FunctionIdentifierNode>("strcmp");
+    std::shared_ptr<fbf::FunctionIdentifierNode> exp_ = std::make_shared<fbf::FunctionIdentifierNode>("exp");
+    node0->set_pass_node(exp_);
+    node0->set_fail_node(strcmp_);
 }

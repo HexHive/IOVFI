@@ -19,6 +19,8 @@ namespace fbf {
 
     protected:
         virtual void create_testcases();
+
+        std::vector<void*> buffers_;
     };
 }
 

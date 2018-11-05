@@ -37,6 +37,11 @@ int fbf::IdentifierNodeTestCase::run_test() {
      * false and the function is unknown
      */
     leaf_ = prev;
+    if(prev_result) {
+        return fbf::ITestCase::PASS;
+    } else {
+        return fbf::ITestCase::FAIL;
+    }
 }
 
 void fbf::IdentifierNodeTestCase::output_result(std::ostream &out) {
@@ -45,10 +50,6 @@ void fbf::IdentifierNodeTestCase::output_result(std::ostream &out) {
     } else {
         out << "UNKNOWN";
     }
-}
-
-uint64_t fbf::IdentifierNodeTestCase::get_value() {
-    return 0;
 }
 
 uintptr_t fbf::IdentifierNodeTestCase::get_location() {
