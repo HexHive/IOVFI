@@ -22,18 +22,15 @@ namespace fbf {
 
         R get_return_val();
 
-        virtual bool test(uintptr_t location);
+        virtual bool test(uintptr_t location) override;
 
         virtual arg_count_t get_arg_count();
 
         virtual std::any get_return() const;
 
-        const virtual std::vector<std::any> get_args() const;
-
     protected:
         R retVal_;
         std::tuple<Args...> args_;
-        std::vector<std::any> args_v_;
     };
 
     template<typename R, typename... Args>
@@ -44,29 +41,30 @@ namespace fbf {
 
     template<typename R, typename... Args>
     FunctionIdentifierInternalNode<R, Args...>::FunctionIdentifierInternalNode(R retVal,
-                                                               Args... args):
+                                                                               Args... args):
             FunctionIdentifierNodeI(""), retVal_(retVal) {
         args_ = std::make_tuple(args...);
-        args_v_ = {args...};
-    }
-
-    template<typename R, typename... Args>
-    const std::vector<std::any> FunctionIdentifierInternalNode<R, Args...>::get_args() const {
-        return args_v_;
     }
 
     template<typename R, typename... Args>
     bool FunctionIdentifierInternalNode<R, Args...>::test(uintptr_t location) {
         pid_t pid = fork();
-        if(pid == 0) {
+        if (pid == 0) {
+            bool check_args = true;
             std::function<R(Args...)> func = reinterpret_cast<R(*)(
                     Args...)>(location);
-            R retVal = std::apply(func, args_);
-            if constexpr (std::is_pointer_v<R>) {
-                exit(std::strcmp(retVal, retVal_) == 0);
+            if constexpr (std::is_void_v<R>) {
+                std::apply(func, args_);
             } else {
-                exit(retVal == retVal_);
+                R retVal = std::apply(func, args_);
+                if constexpr (std::is_pointer_v<R>) {
+                    check_args = (std::strcmp(retVal, retVal_) == 0);
+                } else {
+                    check_args = (retVal == retVal_);
+                }
             }
+            /* TODO: Check argument changes */
+            exit(check_args == true);
         } else {
             int status = 0;
             waitpid(pid, &status, 0);
@@ -78,7 +76,8 @@ namespace fbf {
     arg_count_t FunctionIdentifierInternalNode<R, Args...>::get_arg_count() { return sizeof...(Args); }
 
     template<typename R, typename... Args>
-    FunctionIdentifierInternalNode<R, Args...>::FunctionIdentifierInternalNode(const FunctionIdentifierInternalNode &other) {
+    FunctionIdentifierInternalNode<R, Args...>::FunctionIdentifierInternalNode(
+            const FunctionIdentifierInternalNode &other) {
         args_ = other.args_;
         retVal_ = other.retVal_;
         left_ = other.left_;

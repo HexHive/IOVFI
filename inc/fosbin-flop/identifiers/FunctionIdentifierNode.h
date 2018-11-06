@@ -11,7 +11,7 @@ namespace fbf{
         class FunctionIdentifierNode : public FunctionIdentifierNodeI {
         public:
             FunctionIdentifierNode(const char* functionName);
-            virtual bool test(uintptr_t location);
+            virtual bool test(uintptr_t location) override;
 
             virtual void set_pass_node(std::shared_ptr<FunctionIdentifierNodeI> node) override;
             virtual void set_fail_node(std::shared_ptr<FunctionIdentifierNodeI> node) override;

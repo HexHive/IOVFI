@@ -45,7 +45,11 @@ def find_type_name(val):
 
 
 def output_leaf(function_name, node_id):
-    name = "{}_".format(function_name)
+    if node_id == 0:
+        name = "root_"
+    else:
+        name = "{}_".format(function_name)
+
     identifier_node_names[node_id] = name
     leaf_str = "std::shared_ptr<fbf::FunctionIdentifierNode> {} = std::make_shared<fbf::FunctionIdentifierNode>(\"{" \
                "}\");".format(name,
@@ -58,8 +62,8 @@ def output_identifier(io_vec, node_id):
     args = []
 
     prestring = ""
-    pointer_count = 0
 
+    global pointer_count
     idx = 0
     while idx < len(io_vec) and io_vec[idx] is not None:
         if idx == 1:
@@ -85,10 +89,14 @@ def output_identifier(io_vec, node_id):
 
         idx += 1
 
-    if len(template_sig) == 1:
-        template_sig.append("void")
+    # if len(template_sig) == 1:
+    #     template_sig.append("void")
 
-    name = "node" + str(node_id)
+    if node_id == 0:
+        name = "root"
+    else:
+        name = "node" + str(node_id)
+
     identifier_node_names[node_id] = name
     template_str = ", ".join(template_sig)
     arg_str = ", ".join(args)
@@ -102,15 +110,15 @@ def output_identifier(io_vec, node_id):
 
 
 def load_file(fname):
-    print("parsing CSV...", end="")
-    sys.stdout.flush()
+    print("parsing CSV...", end="", file=sys.stderr)
+    sys.stderr.flush()
     data = pd.read_csv(fname, error_bad_lines=False, warn_bad_lines=True,
                        converters={"return": parser, "arg0": parser, "arg1": parser,
                                    "arg2": parser, "arg3": parser, "arg4": parser,
                                    "arg5": parser, "arg6": parser, "arg7": parser,
                                    "arg8": parser, "arg9": parser, "arg10": parser,
                                    "arg11": parser})
-    print("done!")
+    print("done!", file=sys.stderr)
 
     examples = data.values[:, 1:]
     label = data.values[:, 0]
