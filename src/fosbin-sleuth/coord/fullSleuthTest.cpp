@@ -71,7 +71,7 @@ fbf::FullSleuthTest::~FullSleuthTest() {
 
 void fbf::FullSleuthTest::output(std::ostream &o) {
     for (std::shared_ptr<fbf::TestRun> test : testRuns_) {
-        o << "Function " << binDesc_.getSym(test->get_location()).first;
+        o << "Function " << binDesc_.getSym(test->get_location()).name;
         if (test->get_result() == fbf::ITestCase::PASS) {
             o << " has " << test->get_execution_result() << " argument";
             if (test->get_execution_result() != 1) {
@@ -89,10 +89,10 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
 void fbf::FullSleuthTest::create_testcases() {
     for (uintptr_t loc : binDesc_.getOffsets()) {
         uintptr_t location = compute_location(loc);
-        std::pair<std::string, size_t> sym = binDesc_.getSym(location);
+        const LofSymbol& sym = binDesc_.getSym(location);
 
         std::shared_ptr<fbf::ArgumentCountTestCase> testcase = std::make_shared<fbf::ArgumentCountTestCase>(location,
-                                                                                                            sym.second,
+                                                                                                            sym.size,
                                                                                                             binDesc_);
         testRuns_.push_back(std::make_shared<fbf::TestRun>(testcase, location));
     }

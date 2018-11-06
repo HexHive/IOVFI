@@ -22,6 +22,48 @@
 
 namespace fs = std::experimental::filesystem;
 
+void fbf::BinaryDescriptor::check_for_good_file(fs::path path) {
+    if (fs::is_empty(path)) {
+        throw std::runtime_error("Syscall mapping is empty");
+    }
+
+    if (fs::is_directory(path)) {
+        throw std::runtime_error("Syscall mapping is a directory");
+    }
+}
+
+bool fbf::BinaryDescriptor::getline(std::fstream &f, std::string &s) {
+    bool got_line = false;
+    while(std::getline(f, s)) {
+        if(s.empty() || s[0] == '#') {
+            continue;
+        }
+        got_line = true;
+        break;
+    }
+    if(got_line) {
+        std::remove_if(s.begin(), s.end(), isspace);
+    }
+    return got_line;
+}
+
+void fbf::BinaryDescriptor::parse_aritys(fs::path aritys) {
+    check_for_good_file(aritys);
+    std::fstream aritysMappingFile(aritys);
+    std::string line;
+    while(getline(aritysMappingFile, line)) {
+        size_t pos = line.find('=');
+        std::string name = line.substr(0, pos);
+        std::string arity = line.substr(pos + 1);
+
+        uintptr_t loc = getSymLocation(name);
+        if(loc > 0) {
+            syms_[loc]->arity = std::stoi(arity);
+        }
+    }
+
+}
+
 fbf::BinaryDescriptor::BinaryDescriptor(fs::path desc_path, fs::path syscall_mapping) :
     BinaryDescriptor(desc_path)
 {
@@ -29,13 +71,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path desc_path, fs::path syscall_map
 }
 
 void fbf::BinaryDescriptor::parse_syscall_mapping(fs::path syscall_mapping) {
-    if (fs::is_empty(syscall_mapping)) {
-        throw std::runtime_error("Syscall mapping is empty");
-    }
-
-    if (fs::is_directory(syscall_mapping)) {
-        throw std::runtime_error("Syscall mapping is a directory");
-    }
+    check_for_good_file(syscall_mapping);
 
     std::fstream syscallMappingFile(syscall_mapping);
     std::string line;
@@ -236,7 +272,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path desc_path) :
             }
             LOG_DEBUG << std::hex << offset << std::dec << "=" << p.first;
 
-            syms_[(uintptr_t) offset] = p;
+            syms_[(uintptr_t) offset] = std::make_shared<fbf::LofSymbol>(p.first, p.second, 0, false);
             if(tests.find(p.first) != tests.end()) {
                 offsets_.insert((uintptr_t)offset);
             } else if(tests.empty()) {
@@ -372,41 +408,42 @@ bool fbf::BinaryDescriptor::isSharedLibrary() {
            bin_path_.string().find(".so.") != std::string::npos;
 }
 
-const std::pair<std::string, size_t> fbf::BinaryDescriptor::getSym(uintptr_t location) {
+const fbf::LofSymbol& fbf::BinaryDescriptor::getSym(uintptr_t location) {
     if(syms_.find(location) != syms_.end()) {
-        return syms_[location];
+        return *syms_[location];
     }
 
     std::vector<uintptr_t> addrs;
-    for(auto v : syms_) {
+    for(const auto& v : syms_) {
         addrs.push_back(v.first);
     }
 
-    std::pair<std::string, size_t> lower, upper;
     std::sort(addrs.begin(), addrs.end());
+
+    LofSymbol& lower = *syms_[addrs[0]];
+
     size_t i;
     for(i = 1; i < addrs.size(); i++) {
         if(addrs[i] > location) {
-            upper = syms_[addrs[i]];
-            lower = syms_[addrs[i - 1]];
+            lower = *syms_[addrs[i - 1]];
             break;
         }
     }
 
-    if(location < addrs[i - 1] + lower.second) {
-        return syms_[addrs[i - 1]];
+    if(location < addrs[i - 1] + lower.size) {
+        return *syms_[addrs[i - 1]];
     } else {
         /* This is a function with hidden visibility, but presumably it is there */
-        return std::make_pair("", addrs[i] - location);
+        return {"", addrs[i] - location, 0, true};
     }
 }
 
-const std::pair<std::string, size_t> fbf::BinaryDescriptor::getFunc(uintptr_t location) {
+const fbf::LofSymbol& fbf::BinaryDescriptor::getFunc(uintptr_t location) {
     if(syms_.find(location) == syms_.end()) {
-        return std::make_pair("", 0);
+        return {"", 0, 0, false};
     }
 
-    return syms_[location];
+    return *syms_[location];
 }
 
 uint64_t fbf::BinaryDescriptor::getIdentifier() {
@@ -417,9 +454,9 @@ void fbf::BinaryDescriptor::setIdentifier(uint64_t id) {
     identifier_ = id;
 }
 
-uintptr_t fbf::BinaryDescriptor::getSymLocation(std::pair<std::string, size_t> sym) {
-    for(auto v : syms_) {
-        if(v.second.first == sym.first) {
+uintptr_t fbf::BinaryDescriptor::getSymLocation(const LofSymbol& sym) {
+    for(const auto& v : syms_) {
+        if(v.second->name == sym.name) {
             return v.first;
         }
     }
@@ -427,8 +464,8 @@ uintptr_t fbf::BinaryDescriptor::getSymLocation(std::pair<std::string, size_t> s
     return (uintptr_t)-1;
 }
 
-uintptr_t fbf::BinaryDescriptor::getSymLocation(std::string sym) {
-    std::pair<std::string, size_t> tmp = std::make_pair(sym, 0);
+uintptr_t fbf::BinaryDescriptor::getSymLocation(const std::string sym) {
+    LofSymbol tmp(sym, 0, 0);
     return getSymLocation(tmp);
 }
 

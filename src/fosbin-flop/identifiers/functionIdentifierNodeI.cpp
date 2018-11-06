@@ -2,9 +2,9 @@
 // Created by derrick on 10/16/18.
 //
 
-#include <fosbin-flop/identifiers/functionIdentifierNodeI.h>
-
 #include "fosbin-flop/identifiers/functionIdentifierNodeI.h"
+#include "iTestCase.h"
+#include <signal.h>
 
 fbf::FunctionIdentifierNodeI::FunctionIdentifierNodeI(std::string &functionName) : name_(functionName), left_(nullptr),
                                                                               right_(nullptr) {
@@ -64,4 +64,8 @@ bool fbf::FunctionIdentifierNodeI::compare_any(const std::any v1, const std::any
     } catch (const std::bad_any_cast &e) {}
 
     return false;
+}
+
+bool fbf::FunctionIdentifierNodeI::test_arity(uintptr_t location, uint32_t arity) {
+    return test(location);
 }

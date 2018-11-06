@@ -28,6 +28,8 @@ namespace fbf {
 
         virtual bool test(uintptr_t location) = 0;
 
+        virtual bool test_arity(uintptr_t location, uint32_t arity);
+
         static bool compare_any(const std::any v1, const std::any v2);
 
         virtual const std::string &get_name() const;

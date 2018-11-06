@@ -20,12 +20,12 @@ fbf::ArgumentCountTestCase::~ArgumentCountTestCase() {
 
 const std::string fbf::ArgumentCountTestCase::get_test_name() {
     std::stringstream ss;
-    std::pair<std::string, size_t> curr_func = binDesc_.getFunc(location_);
+    const LofSymbol& curr_func = binDesc_.getFunc(location_);
 
-    if (curr_func.second == 0) {
+    if (curr_func.size == 0) {
         ss << "Argument Count Test at 0x" << std::hex << location_;
     } else {
-        ss << "Argument Count Test for " << curr_func.first << " (0x" << std::hex << location_ << ")";
+        ss << "Argument Count Test for " << curr_func.name << " (0x" << std::hex << location_ << ")";
     }
     return ss.str();
 }
@@ -69,8 +69,8 @@ int fbf::ArgumentCountTestCase::run_test() {
 
         LOG_DEBUG << "curr_loc = " << std::hex << curr_loc;
 
-        std::pair<std::string, size_t> curr_func = binDesc_.getSym(curr_loc);
-        LOG_DEBUG << "curr_func: " << curr_func.first << " size: " << curr_func.second;
+        const LofSymbol& curr_func = binDesc_.getSym(curr_loc);
+        LOG_DEBUG << "curr_func: " << curr_func.name << " size: " << curr_func.size;
 
         uintptr_t start_loc = binDesc_.getSymLocation(curr_func);
         if (start_loc == (uintptr_t) -1) {
@@ -84,7 +84,7 @@ int fbf::ArgumentCountTestCase::run_test() {
         do {
             jump = false;
             pop_state = false;
-            int64_t size = curr_func.second - (curr_loc - start_loc);
+            int64_t size = curr_func.size - (curr_loc - start_loc);
             count = cs_disasm(handle_, (uint8_t *) curr_loc, size, curr_loc, 1, &insn);
             if (count > 0) {
                 visited.insert(curr_loc);
@@ -93,10 +93,10 @@ int fbf::ArgumentCountTestCase::run_test() {
 
                 if (insn->id == X86_INS_SYSCALL) {
                     if (syscall_vals.back() == 0) {
-                        LOG_DEBUG << curr_func.first << " uses unknown syscall";
+                        LOG_DEBUG << curr_func.name << " uses unknown syscall";
                     } else {
                         std::stringstream ss;
-                        ss << curr_func.first << " uses syscall with "
+                        ss << curr_func.name << " uses syscall with "
                            << syscall_vals.size() << " potential targets: [ ";
                         for (int64_t val : syscall_vals) {
                             ss << "0x" << std::hex << val << " ";
@@ -265,7 +265,7 @@ int fbf::ArgumentCountTestCase::run_test() {
     }
 
     arg_count_ = all_regs_used_in_args.size();
-    LOG_DEBUG << arg_count_ << " registers used in " << binDesc_.getSym(location_).first << " to pass arguments:";
+    LOG_DEBUG << arg_count_ << " registers used in " << binDesc_.getSym(location_).name << " to pass arguments:";
     for (auto reg : all_regs_used_in_args) {
         LOG_DEBUG << cs_reg_name(handle_, reg);
     }

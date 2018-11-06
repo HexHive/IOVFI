@@ -12,12 +12,17 @@ namespace fs = std::experimental::filesystem;
 
 int main(int argc, char **argv) {
     fbf::CommandLineParser parser(argc, argv, IDENTIFIER_NAME);
+    parser.add_option(
+            "arg-counts,a",
+            boost::program_options::value<fs::path>()->required(),
+            "/path/to/argument/counts"
+    );
 
     parser.parse();
 
     try {
         std::cout << "Parsing descriptor...";
-        fbf::FullIdentifierTest test(parser["binary-desc"].as<fs::path>(),
+        fbf::FullIdentifierTest test(parser["binary-desc"].as<fs::path>(), parser["arg-counts"].as<fs::path>(),
                                      parser.get_thread_count());
         std::cout << "Done!" << std::endl;
 

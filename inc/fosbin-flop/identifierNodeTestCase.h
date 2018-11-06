@@ -11,7 +11,7 @@
 namespace fbf {
     class IdentifierNodeTestCase : public ITestCase {
     public:
-        IdentifierNodeTestCase(std::shared_ptr<fbf::FunctionIdentifierNodeI> root, uintptr_t location);
+        IdentifierNodeTestCase(std::shared_ptr<fbf::FunctionIdentifierNodeI> root, uintptr_t location, uint32_t arity);
 
         virtual const std::string get_test_name();
 
@@ -24,6 +24,7 @@ namespace fbf {
     protected:
         std::shared_ptr<fbf::FunctionIdentifierNodeI> root_, leaf_;
         uintptr_t location_;
+        uint32_t arity_;
     };
 }
 

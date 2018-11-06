@@ -18,9 +18,10 @@
 
 namespace fs = std::experimental::filesystem;
 
-fbf::FullIdentifierTest::FullIdentifierTest(fs::path descriptor, uint32_t thread_count) :
+fbf::FullIdentifierTest::FullIdentifierTest(fs::path descriptor, fs::path arg_counts, uint32_t thread_count) :
         FullTest(descriptor, thread_count) {
     create_testcases();
+    binDesc_.parse_aritys(arg_counts);
 }
 
 fbf::FullIdentifierTest::~FullIdentifierTest() {
@@ -32,8 +33,9 @@ fbf::FullIdentifierTest::~FullIdentifierTest() {
 void fbf::FullIdentifierTest::create_testcases() {
 #include "Identifiers.inc"
     for(uintptr_t location : binDesc_.getOffsets()) {
+        const LofSymbol& sym = binDesc_.getSym(location);
         std::shared_ptr<fbf::IdentifierNodeTestCase> test = std::make_shared<fbf::IdentifierNodeTestCase>(root,
-                location);
+                location, sym.arity);
         testRuns_.push_back(std::make_shared<fbf::TestRun>(test, test->get_location()));
     }
 }

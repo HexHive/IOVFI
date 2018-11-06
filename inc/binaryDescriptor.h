@@ -4,6 +4,7 @@
 
 #ifndef FOSBIN_BINARYDESCRIPTOR_H
 #define FOSBIN_BINARYDESCRIPTOR_H
+
 #include <set>
 #include <map>
 #include "binSection.h"
@@ -13,6 +14,29 @@
 namespace fs = std::experimental::filesystem;
 
 namespace fbf {
+    struct LofSymbol {
+        std::string name;
+        size_t size;
+        uint32_t arity;
+        bool isHidden;
+
+        LofSymbol(std::string n, size_t s, uint32_t a, bool h = false) : name(n), size(s), arity(a), isHidden(h) {}
+
+        LofSymbol(const LofSymbol &other) {
+            name = other.name;
+            size = other.size;
+            arity = other.arity;
+            isHidden = other.isHidden;
+        }
+
+        void operator=(const LofSymbol &other) {
+            name = other.name;
+            size = other.size;
+            arity = other.arity;
+            isHidden = other.isHidden;
+        }
+    };
+
     class BinaryDescriptor {
     protected:
         std::set<uintptr_t> offsets_;
@@ -20,32 +44,55 @@ namespace fbf {
         BinSection text_;
         BinSection data_;
         BinSection bss_;
-        std::map<uintptr_t, std::pair<std::string, size_t>> syms_;
+        std::map<uintptr_t, std::shared_ptr<LofSymbol>> syms_;
         uintptr_t errno_location_;
         uint64_t identifier_;
         std::map<int32_t, std::set<uint16_t>> syscall_mapping_;
 
         uintptr_t parse_offset(std::string &offset);
 
+        void check_for_good_file(fs::path path);
+
+        bool getline(std::fstream &f, std::string &s);
+
     public:
         BinaryDescriptor(fs::path desc_path);
+
         BinaryDescriptor(fs::path desc_path, fs::path syscall_mapping);
+
         ~BinaryDescriptor();
-        BinSection& getText();
-        BinSection& getData();
-        BinSection& getBss();
-        fs::path& getPath();
+
+        BinSection &getText();
+
+        BinSection &getData();
+
+        BinSection &getBss();
+
+        fs::path &getPath();
+
         std::set<uintptr_t> getOffsets();
-        const std::pair<std::string, size_t> getSym(uintptr_t location);
-        const std::pair<std::string, size_t> getFunc(uintptr_t location);
-        uintptr_t getSymLocation(std::pair<std::string, size_t> sym);
-        uintptr_t getSymLocation(std::string sym);
+
+        const LofSymbol &getSym(uintptr_t location);
+
+        const LofSymbol &getFunc(uintptr_t location);
+
+        uintptr_t getSymLocation(const LofSymbol &sym);
+
+        uintptr_t getSymLocation(const std::string sym);
+
         int getErrno();
+
         bool isSharedLibrary();
+
         uint64_t getIdentifier();
+
         void setIdentifier(uint64_t id);
+
         std::set<uint16_t> getSyscallRegisters(uint32_t syscall);
+
         void parse_syscall_mapping(fs::path syscall_mapping);
+
+        void parse_aritys(fs::path aritys);
     };
 }
 

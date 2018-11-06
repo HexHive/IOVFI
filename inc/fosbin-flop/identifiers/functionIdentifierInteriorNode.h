@@ -24,6 +24,8 @@ namespace fbf {
 
         virtual bool test(uintptr_t location) override;
 
+        virtual bool test_arity(uintptr_t location, uint32_t arity) override;
+
         virtual arg_count_t get_arg_count();
 
         virtual std::any get_return() const;
@@ -82,6 +84,15 @@ namespace fbf {
         retVal_ = other.retVal_;
         left_ = other.left_;
         right_ = other.right_;
+    }
+
+    template<typename R, typename... Args>
+    bool FunctionIdentifierInternalNode<R, Args...>::test_arity(uintptr_t location, uint32_t arity) {
+        if(arity != get_arg_count()) {
+            return false;
+        }
+
+        return test(location);
     }
 }
 
