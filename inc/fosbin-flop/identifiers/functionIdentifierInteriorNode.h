@@ -88,7 +88,9 @@ namespace fbf {
 
     template<typename R, typename... Args>
     bool FunctionIdentifierInternalNode<R, Args...>::test_arity(uintptr_t location, uint32_t arity) {
-        if(arity != get_arg_count()) {
+        if (arity != get_arg_count()) {
+            LOG_DEBUG << std::hex << location << std::dec << " has arity " << arity << " and does not match " <<
+                      get_arg_count();
             return false;
         }
 
