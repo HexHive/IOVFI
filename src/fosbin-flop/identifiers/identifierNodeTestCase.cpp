@@ -35,7 +35,7 @@ int fbf::IdentifierNodeTestCase::run_test() {
      * false and the function is unknown
      */
     leaf_ = prev;
-    std::cout << "FOUND: " << prev->get_name() << std::endl;
+    std::cout << "FOUND: 0x" << std::hex << location_ << std::dec << " is " << prev->get_name() << std::endl;
     if(prev_result) {
         return fbf::ITestCase::PASS;
     } else {

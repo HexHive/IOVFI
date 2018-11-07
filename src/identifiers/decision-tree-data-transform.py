@@ -8,9 +8,11 @@ from collections import defaultdict
 import sys
 import numpy as np
 import decimal
+import pygraphviz as pgv
 
 pointer_count = 0
 identifier_node_names = {}
+dtree_graph = pgv.AGraph()
 
 
 def parser(value):
@@ -21,6 +23,9 @@ def parser(value):
 
 
 def find_type_name(val):
+    if val == "(nil)":
+        return "void"
+
     try:
         int(val)
         return "int"
@@ -54,12 +59,15 @@ def output_leaf(function_name, node_id):
     leaf_str = "std::shared_ptr<fbf::FunctionIdentifierNode> {} = std::make_shared<fbf::FunctionIdentifierNode>(\"{" \
                "}\");".format(name,
                               function_name)
+    dtree_graph.add_node(node_id)
+    dtree_graph.get_node(node_id).attr['label'] = function_name
     return leaf_str
 
 
 def output_identifier(io_vec, node_id):
     template_sig = []
     args = []
+    label = []
 
     prestring = ""
 
@@ -84,8 +92,13 @@ def output_identifier(io_vec, node_id):
                          "}}\n".format(buffer_name, buffer_name, buffer_name, io_vec[idx], buffer_len)
             pointer_count += 1
             args.append(buffer_name)
+            label.append(buffer_name)
         else:
-            args.append(io_vec[idx])
+            if type_name is not "void":
+                args.append(io_vec[idx])
+                label.append(io_vec[idx])
+            else:
+                label.append("void")
 
         idx += 1
 
@@ -100,6 +113,8 @@ def output_identifier(io_vec, node_id):
     identifier_node_names[node_id] = name
     template_str = ", ".join(template_sig)
     arg_str = ", ".join(args)
+    dtree_graph.add_node(node_id)
+    dtree_graph.get_node(node_id).attr['label'] = ",".join(label)
 
     obj_str = "{}std::shared_ptr<fbf::FunctionIdentifierInternalNode<{}>> {} = " \
               "std::make_shared<fbf::FunctionIdentifierInternalNode<{" \
@@ -187,6 +202,7 @@ def load_file(fname):
         if child in parents:
             p = identifier_node_names[parents[child]]
             c = identifier_node_names[child]
+            dtree_graph.add_edge(parents[child], child)
             parent_str = "{}->set_pass_node({});".format(p, c)
             print(parent_str)
 
@@ -194,9 +210,11 @@ def load_file(fname):
         if child in parents:
             p = identifier_node_names[parents[child]]
             c = identifier_node_names[child]
+            dtree_graph.add_edge(parents[child], child)
             parent_str = "{}->set_fail_node({});".format(p, c)
             print(parent_str)
 
+    dtree_graph.write('dtree_labeled.dot')
     # for i in range(node_count):
     #     io_vec = dv.get_feature_names()[feature[i]]
     #     if is_leaves[i]:

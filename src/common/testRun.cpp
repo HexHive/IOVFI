@@ -14,7 +14,7 @@ fbf::TestRun::TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset) :
     test_(test),
     test_has_run_(false),
     offset_(offset),
-    result_(std::numeric_limits<int>::max()) { }
+    result_(std::numeric_limits<int>::max()) { pipe[0] = 0; pipe[1] = 0; }
 
 fbf::TestRun::~TestRun() = default;
 
@@ -41,6 +41,8 @@ void fbf::TestRun::run_test() {
     }
     test_has_run_ = true;
 
+    open_pipe();
+
     LOG_INFO << "Running test "
         << get_test_name() 
         << " on offset 0x"
@@ -48,10 +50,13 @@ void fbf::TestRun::run_test() {
         << std::endl;
     pid_t pid = fork();
     if (pid < 0) {
+        close_pipe();
         throw std::runtime_error("Failed to fork");
     } else if (pid == 0) {
         set_signals();
         int result = test_->run_test();
+        write_to_parent();
+        close_pipe();
         exit(result);
     } else {
         result_ = determine_result(pid);
@@ -60,6 +65,9 @@ void fbf::TestRun::run_test() {
 
 test_result_t fbf::TestRun::determine_result(pid_t child) {
     waitpid(child, &pid_status_, 0);
+    read_from_child();
+    close_pipe();
+
     if (WIFSIGNALED(pid_status_)) {
         /* SIGILL, SIGSEGV, etc. caused the child to stop...not what we are looking for */
         return fbf::ITestCase::FAIL;
@@ -72,6 +80,25 @@ test_result_t fbf::TestRun::determine_result(pid_t child) {
         msg += pid_status_;
         throw std::runtime_error(msg.c_str());
     }
+}
+
+void fbf::TestRun::write_to_parent() {
+/* TODO: Implement me */
+}
+
+void fbf::TestRun::read_from_child() {
+/* TODO: Implement me */
+
+}
+
+void fbf::TestRun::open_pipe() {
+    /* TODO: Implement me */
+
+}
+
+void fbf::TestRun::close_pipe() {
+/* TODO: Implement me */
+
 }
 
 uint64_t fbf::TestRun::get_execution_result() {

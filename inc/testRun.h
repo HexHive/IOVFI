@@ -23,6 +23,13 @@ namespace fbf {
         test_result_t determine_result(pid_t);
         void set_signals();
 
+        void write_to_parent();
+        void read_from_child();
+        void open_pipe();
+        void close_pipe();
+
+        int pipe[2];
+
         static const unsigned int TIMEOUT;
     public:
         TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset);

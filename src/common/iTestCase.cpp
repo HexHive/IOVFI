@@ -21,3 +21,7 @@ int fbf::ITestCase::rand() {
 void fbf::ITestCase::output_result(std::ostream &out) {
     return;
 }
+
+void fbf::ITestCase::input_result(std::istream &in) {
+    return;
+}

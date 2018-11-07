@@ -17,6 +17,7 @@ namespace fbf {
         virtual int run_test() = 0;
         virtual uintptr_t get_location() = 0;
         virtual void output_result(std::ostream& out);
+        virtual void input_result(std::istream& in);
 
         const static int PASS = 0;
         const static int FAIL = 1;

@@ -20,26 +20,16 @@ namespace fbf {
 
         FunctionIdentifierInternalNode(const FunctionIdentifierInternalNode &other);
 
-        R get_return_val();
-
         virtual bool test(uintptr_t location) override;
 
         virtual bool test_arity(uintptr_t location, uint32_t arity) override;
 
         virtual arg_count_t get_arg_count();
 
-        virtual std::any get_return() const;
-
     protected:
         R retVal_;
         std::tuple<Args...> args_;
     };
-
-    template<typename R, typename... Args>
-    R FunctionIdentifierInternalNode<R, Args...>::get_return_val() { return retVal_; }
-
-    template<typename R, typename... Args>
-    std::any FunctionIdentifierInternalNode<R, Args...>::get_return() const { return retVal_; }
 
     template<typename R, typename... Args>
     FunctionIdentifierInternalNode<R, Args...>::FunctionIdentifierInternalNode(R retVal,
@@ -55,15 +45,11 @@ namespace fbf {
             bool check_args = true;
             std::function<R(Args...)> func = reinterpret_cast<R(*)(
                     Args...)>(location);
-            if constexpr (std::is_void_v<R>) {
-                std::apply(func, args_);
+            R retVal = std::apply(func, args_);
+            if constexpr (std::is_pointer_v<R>) {
+                check_args = (std::strcmp(retVal, retVal_) == 0);
             } else {
-                R retVal = std::apply(func, args_);
-                if constexpr (std::is_pointer_v<R>) {
-                    check_args = (std::strcmp(retVal, retVal_) == 0);
-                } else {
-                    check_args = (retVal == retVal_);
-                }
+                check_args = (retVal == retVal_);
             }
             /* TODO: Check argument changes */
             exit(check_args == true);
@@ -95,6 +81,68 @@ namespace fbf {
         }
 
         return test(location);
+    }
+
+    template<typename... Args>
+    class FunctionIdentifierInternalNode<void, Args...> : public FunctionIdentifierNodeI {
+    public:
+        FunctionIdentifierInternalNode(Args... args);
+
+        FunctionIdentifierInternalNode(const FunctionIdentifierInternalNode &other);
+
+        virtual bool test(uintptr_t location) override;
+
+        virtual bool test_arity(uintptr_t location, uint32_t arity) override;
+
+        virtual arg_count_t get_arg_count();
+
+    protected:
+        std::tuple<Args...> args_;
+    };
+
+    template<typename... Args>
+    FunctionIdentifierInternalNode<void, Args...>::FunctionIdentifierInternalNode(
+            const FunctionIdentifierInternalNode &other) {
+        args_ = other.args_;
+        left_ = other.left_;
+        right_ = other.right_;
+    }
+
+    template<typename... Args>
+    FunctionIdentifierInternalNode<void, Args...>::FunctionIdentifierInternalNode(Args... args):
+            FunctionIdentifierNodeI("") {
+        args_ = std::make_tuple(args...);
+    }
+
+    template<typename... Args>
+    arg_count_t FunctionIdentifierInternalNode<void, Args...>::get_arg_count() { return sizeof...(Args); }
+
+    template<typename... Args>
+    bool FunctionIdentifierInternalNode<void, Args...>::test_arity(uintptr_t location, uint32_t arity) {
+        if (arity != get_arg_count()) {
+            LOG_DEBUG << std::hex << location << std::dec << " has arity " << arity << " and does not match " <<
+                      get_arg_count();
+            return false;
+        }
+
+        return test(location);
+    }
+
+    template<typename... Args>
+    bool FunctionIdentifierInternalNode<void, Args...>::test(uintptr_t location) {
+        pid_t pid = fork();
+        if (pid == 0) {
+            bool check_args = true;
+            std::function<void(Args...)> func = reinterpret_cast<void (*)(
+                    Args...)>(location);
+            std::apply(func, args_);
+            /* TODO: Check argument changes */
+            exit(check_args == true);
+        } else {
+            int status = 0;
+            waitpid(pid, &status, 0);
+            return (WIFEXITED(status) && WEXITSTATUS(status) == 1);
+        }
     }
 }
 
