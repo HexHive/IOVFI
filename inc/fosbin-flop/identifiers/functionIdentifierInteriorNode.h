@@ -13,6 +13,7 @@
 #include "functionIdentifierNodeI.h"
 
 namespace fbf {
+
     template<typename R, typename... Args>
     class FunctionIdentifierInternalNode : public FunctionIdentifierNodeI {
     public:
@@ -42,17 +43,17 @@ namespace fbf {
     bool FunctionIdentifierInternalNode<R, Args...>::test(uintptr_t location) {
         pid_t pid = fork();
         if (pid == 0) {
-            bool check_args = true;
+            bool is_equiv = true;
             std::function<R(Args...)> func = reinterpret_cast<R(*)(
                     Args...)>(location);
             R retVal = std::apply(func, args_);
             if constexpr (std::is_pointer_v<R>) {
-                check_args = (std::strcmp(retVal, retVal_) == 0);
+                is_equiv = (std::strcmp(retVal, retVal_) == 0);
             } else {
-                check_args = (retVal == retVal_);
+                is_equiv = (retVal == retVal_);
             }
-            /* TODO: Check argument changes */
-            exit(check_args == true);
+
+            exit(is_equiv == true);
         } else {
             int status = 0;
             waitpid(pid, &status, 0);
