@@ -32,7 +32,7 @@ namespace fbf {
 
         static const unsigned int TIMEOUT;
     public:
-        TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset, bool fork);
+        TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset, bool fork = false);
         ~TestRun();
         void run_test();
         void output_results(std::ostream& out);

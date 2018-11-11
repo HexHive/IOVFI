@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 #include <sstream>
 
-fbf::TestRun::TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset, bool fork = true) :
+fbf::TestRun::TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset, bool fork) :
     test_(test),
     fork_(fork),
     test_has_run_(false),
@@ -47,7 +47,7 @@ void fbf::TestRun::run_test() {
         << " on offset 0x"
         << std::hex << offset_ << std::dec
         << std::endl;
-    if(fork) {
+    if(fork_) {
         open_pipe();
         pid_t pid = fork();
         if (pid < 0) {
