@@ -15,7 +15,7 @@ namespace fbf {
     protected:
         std::shared_ptr<fbf::ITestCase> test_;
         test_result_t result_;
-        bool test_has_run_;
+        bool test_has_run_, fork_;
         int pid_status_;
         uintptr_t offset_;
         uint64_t execution_result_;
@@ -32,7 +32,7 @@ namespace fbf {
 
         static const unsigned int TIMEOUT;
     public:
-        TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset);
+        TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset, bool fork);
         ~TestRun();
         void run_test();
         void output_results(std::ostream& out);

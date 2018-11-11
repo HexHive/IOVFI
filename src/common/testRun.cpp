@@ -10,8 +10,9 @@
 #include <sys/wait.h>
 #include <sstream>
 
-fbf::TestRun::TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset) :
+fbf::TestRun::TestRun(std::shared_ptr<fbf::ITestCase> test, uintptr_t offset, bool fork = true) :
     test_(test),
+    fork_(fork),
     test_has_run_(false),
     offset_(offset),
     result_(std::numeric_limits<int>::max()) { pipe[0] = 0; pipe[1] = 0; }
@@ -41,25 +42,28 @@ void fbf::TestRun::run_test() {
     }
     test_has_run_ = true;
 
-    open_pipe();
-
     LOG_INFO << "Running test "
         << get_test_name() 
         << " on offset 0x"
         << std::hex << offset_ << std::dec
         << std::endl;
-    pid_t pid = fork();
-    if (pid < 0) {
-        close_pipe();
-        throw std::runtime_error("Failed to fork");
-    } else if (pid == 0) {
-        set_signals();
-        int result = test_->run_test();
-        write_to_parent();
-        close_pipe();
-        exit(result);
+    if(fork) {
+        open_pipe();
+        pid_t pid = fork();
+        if (pid < 0) {
+            close_pipe();
+            throw std::runtime_error("Failed to fork");
+        } else if (pid == 0) {
+            set_signals();
+            int result = test_->run_test();
+            write_to_parent();
+            close_pipe();
+            exit(result);
+        } else {
+            result_ = determine_result(pid);
+        }
     } else {
-        result_ = determine_result(pid);
+        result_ = test_->run_test();
     }
 }
 

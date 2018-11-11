@@ -36,6 +36,6 @@ void fbf::FullIdentifierTest::create_testcases() {
         const LofSymbol& sym = binDesc_.getSym(location);
         std::shared_ptr<fbf::IdentifierNodeTestCase> test = std::make_shared<fbf::IdentifierNodeTestCase>(root,
                 location, sym.arity);
-        testRuns_.push_back(std::make_shared<fbf::TestRun>(test, test->get_location()));
+        testRuns_.push_back(std::make_shared<fbf::TestRun>(test, test->get_location(), false));
     }
 }
