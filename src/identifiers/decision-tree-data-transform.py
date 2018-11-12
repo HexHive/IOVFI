@@ -80,7 +80,7 @@ def output_identifier(io_vec, node_id):
         if io_vec[idx] is None:
             idx += 1
             continue
-    # while idx < len(io_vec) and io_vec[idx] is not None:
+
         if idx == 1:
             arg_count = int(io_vec[idx])
             idx += 1
