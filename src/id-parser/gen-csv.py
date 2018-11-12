@@ -13,12 +13,16 @@ pointer_types = {15}
 MAX_INPUT_LEN = 4096
 
 
-def output_value(value):
+def output_value(value, output_post = False):
     if value['type'] in pointer_types:
-        if value['precall'][-3:] == "\\00" and int(value['size']) == len(value['precall']):
+        val = value['precall']
+        if output_post:
+            val = value['postcall']
+
+        if val[-3:] == "\\00" and int(value['size']) == len(val):
             # This is a string
-            return "\"{}\"".format(value['precall'])
-        return "{}".format(value['precall'])
+            return "\"{}\"".format(val)
+        return "{}".format(val)
     else:
         return "{}".format(value['value'])
 
@@ -91,6 +95,9 @@ def main(included_funcs_path, json_paths):
 
     for i in range(max_args):
         print("arg{}".format(i), end="")
+        print(",", end="")
+    for i in range(max_args):
+        print("post{}".format(i), end="")
         if i < max_args - 1:
             print(",", end="")
 
@@ -99,25 +106,30 @@ def main(included_funcs_path, json_paths):
     # Print values
     for func in functions:
         try:
-            print("{},".format(func['name']), end="")
+            precall_str = ""
+            postcall_str = ""
+            precall_str += "{},".format(func['name'])
             if 'return' in func:
-                print("{},{}".format(output_value(func['return']), len(func['args'])), end="")
+                precall_str += "{},{}".format(output_value(func['return']), len(func['args']))
                 if max_args > 0:
-                    print(",", end="")
+                    precall_str += ","
 
             for i in range(max_args):
                 if i < len(func['args']):
-                    print(output_value(func['args'][i]), end="")
+                    precall_str += output_value(func['args'][i])
+                    postcall_str += output_value(func['args'][i], True)
                 else:
-                    print("?", end="")
+                    precall_str += "?"
+                    postcall_str += "?"
 
                 if i < max_args - 1:
-                    print(",", end="")
+                    precall_str += ","
+                    postcall_str += ","
+
+            print("{},{}".format(precall_str, postcall_str))
         except KeyError as e:
             print("ERROR ({}): {}".format(e, str(func)), file=sys.stderr)
             continue
-            #exit(1)
-        print("")
 
     print("Total unique functions: {}".format(len(uniq_funcs)), file=sys.stderr)
     print("\n".join(uniq_funcs), file=sys.stderr)

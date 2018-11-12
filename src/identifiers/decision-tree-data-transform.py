@@ -67,20 +67,28 @@ def output_leaf(function_name, node_id):
 def output_identifier(io_vec, node_id):
     template_sig = []
     args = []
+    sizes = []
     label = []
 
     prestring = ""
+    arg_count = 0
+    postcall = []
 
     global pointer_count
     idx = 0
-    while idx < len(io_vec) and io_vec[idx] is not None:
+    while idx < len(io_vec):
+        if io_vec[idx] is None:
+            idx += 1
+            continue
+    # while idx < len(io_vec) and io_vec[idx] is not None:
         if idx == 1:
-            # Skip over argument count
+            arg_count = int(io_vec[idx])
             idx += 1
             continue
 
         type_name = find_type_name(io_vec[idx])
-        template_sig.append(type_name)
+        if idx - 2 <= arg_count:
+            template_sig.append(type_name)
 
         if type_name.find("*") >= 0:
             buffer_name = "buf_" + str(pointer_count)
@@ -91,19 +99,24 @@ def output_identifier(io_vec, node_id):
                          "std::runtime_error(\"malloc failed\"); " \
                          "}}\n".format(buffer_name, buffer_name, buffer_name, io_vec[idx], buffer_len)
             pointer_count += 1
-            args.append(buffer_name)
-            label.append(buffer_name)
+            if idx >= arg_count:
+                postcall.append(buffer_name)
+            else:
+                args.append(buffer_name)
+                sizes.append(str(buffer_len))
+                label.append(buffer_name)
         else:
             if type_name is not "void":
-                args.append(io_vec[idx])
-                label.append(io_vec[idx])
+                if idx - 2 >= arg_count:
+                    postcall.append(io_vec[idx])
+                else:
+                    args.append(io_vec[idx])
+                    label.append(io_vec[idx])
+                    sizes.append("sizeof({})".format(type_name))
             else:
                 label.append("void")
 
         idx += 1
-
-    # if len(template_sig) == 1:
-    #     template_sig.append("void")
 
     if node_id == 0:
         name = "root"
@@ -112,7 +125,16 @@ def output_identifier(io_vec, node_id):
 
     identifier_node_names[node_id] = name
     template_str = ", ".join(template_sig)
-    arg_str = ", ".join(args)
+    if label[0] != "void":
+        arg_str = "{}, {}, std::make_tuple({}), std::make_tuple({}), std::make_tuple({})".format(args[0], sizes[0],
+                                                                                                 ",".join(sizes[1:]),
+                                                                                                 ",".join(args[1:]),
+                                                                                                 ",".join(postcall))
+    else:
+        arg_str = "std::make_tuple({}), std::make_tuple({}), std::make_tuple({})".format(",".join(sizes[1:]),
+                                                                                         ",".join(args[1:]),
+                                                                                         ",".join(postcall))
+
     dtree_graph.add_node(node_id)
     dtree_graph.get_node(node_id).attr['label'] = ",".join(label)
 
@@ -132,7 +154,11 @@ def load_file(fname):
                                    "arg2": parser, "arg3": parser, "arg4": parser,
                                    "arg5": parser, "arg6": parser, "arg7": parser,
                                    "arg8": parser, "arg9": parser, "arg10": parser,
-                                   "arg11": parser})
+                                   "arg11": parser, "post0": parser, "post1": parser,
+                                   "post2": parser, "post3": parser, "post4": parser,
+                                   "post5": parser, "post6": parser, "post7": parser,
+                                   "post8": parser, "post9": parser, "post10": parser,
+                                   "post11": parser})
     print("done!", file=sys.stderr)
 
     examples = data.values[:, 1:]

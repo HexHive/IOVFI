@@ -13,11 +13,36 @@
 #include "functionIdentifierNodeI.h"
 
 namespace fbf {
+    template<size_t index, typename... Args>
+    struct arg_checker {
+        static constexpr bool check_args(std::tuple<size_t> &sizes, const std::tuple<Args...> &preargs,
+                                  const std::tuple<Args...> &postargs) {
+            if constexpr (index < sizeof...(Args)) {
+                bool expected = false;
+                if constexpr(std::is_pointer_v<decltype(std::get<index>(preargs))>) {
+                    expected = std::memcmp(std::get<index>(preargs), std::get<index>(postargs), std::get<index>(sizes)
+                    ) == 0;
+                } else {
+                    expected = true;
+                }
+
+                return expected && arg_checker<index + 1, Args...>::check_args(sizes, preargs, postargs);
+            } else {
+                return true;
+            }
+        }
+    };
+
 
     template<typename R, typename... Args>
     class FunctionIdentifierInternalNode : public FunctionIdentifierNodeI {
     public:
-        FunctionIdentifierInternalNode(R retValue, Args... args);
+        FunctionIdentifierInternalNode(R retValue,
+                                       size_t retSize,
+                                       std::tuple<size_t> arg_sizes,
+                                       std::tuple<Args...> preargs,
+                                       std::tuple<Args...> postargs
+        );
 
         FunctionIdentifierInternalNode(const FunctionIdentifierInternalNode &other);
 
@@ -29,14 +54,31 @@ namespace fbf {
 
     protected:
         R retVal_;
-        std::tuple<Args...> args_;
+        size_t retSize_;
+        std::tuple<Args...> preargs_;
+        std::tuple<Args...> postargs_;
+        std::tuple<size_t> arg_sizes_;
     };
 
     template<typename R, typename... Args>
     FunctionIdentifierInternalNode<R, Args...>::FunctionIdentifierInternalNode(R retVal,
-                                                                               Args... args):
-            FunctionIdentifierNodeI(""), retVal_(retVal) {
-        args_ = std::make_tuple(args...);
+                                                                               size_t retSize,
+                                                                               std::tuple<size_t> arg_sizes,
+                                                                               std::tuple<Args...> preargs,
+                                                                               std::tuple<Args...> postargs):
+            FunctionIdentifierNodeI(""), retVal_(retVal), retSize_(retSize),
+            arg_sizes_(arg_sizes), preargs_(preargs), postargs_(postargs) {
+    }
+
+    template<typename R, typename... Args>
+    FunctionIdentifierInternalNode<R, Args...>::FunctionIdentifierInternalNode(const
+                                                                               FunctionIdentifierInternalNode<R, Args...>
+                                                                               &other): FunctionIdentifierNodeI("") {
+        retVal_ = other.retVal_;
+        retSize_ = other.retSize_;
+        preargs_ = other.preargs_;
+        postargs_ = other.postargs_;
+        arg_sizes_ = other.arg_sizes_;
     }
 
     template<typename R, typename... Args>
@@ -46,11 +88,15 @@ namespace fbf {
             bool is_equiv = true;
             std::function<R(Args...)> func = reinterpret_cast<R(*)(
                     Args...)>(location);
-            R retVal = std::apply(func, args_);
+            R retVal = std::apply(func, preargs_);
             if constexpr (std::is_pointer_v<R>) {
-                is_equiv = (std::strcmp(retVal, retVal_) == 0);
+                is_equiv = (std::memcmp(retVal, retVal_, retSize_) == 0);
             } else {
                 is_equiv = (retVal == retVal_);
+            }
+
+            if constexpr(sizeof...(Args) > 0) {
+                is_equiv &= arg_checker<0, Args...>::check_args(arg_sizes_, preargs_, postargs_);
             }
 
             exit(is_equiv == true);
@@ -63,15 +109,6 @@ namespace fbf {
 
     template<typename R, typename... Args>
     arg_count_t FunctionIdentifierInternalNode<R, Args...>::get_arg_count() { return sizeof...(Args); }
-
-    template<typename R, typename... Args>
-    FunctionIdentifierInternalNode<R, Args...>::FunctionIdentifierInternalNode(
-            const FunctionIdentifierInternalNode &other) {
-        args_ = other.args_;
-        retVal_ = other.retVal_;
-        left_ = other.left_;
-        right_ = other.right_;
-    }
 
     template<typename R, typename... Args>
     bool FunctionIdentifierInternalNode<R, Args...>::test_arity(uintptr_t location, uint32_t arity) {
@@ -87,7 +124,9 @@ namespace fbf {
     template<typename... Args>
     class FunctionIdentifierInternalNode<void, Args...> : public FunctionIdentifierNodeI {
     public:
-        FunctionIdentifierInternalNode(Args... args);
+        FunctionIdentifierInternalNode(std::tuple<size_t> arg_sizes,
+                                       std::tuple<Args...> preargs,
+                                       std::tuple<Args...> postargs);
 
         FunctionIdentifierInternalNode(const FunctionIdentifierInternalNode &other);
 
@@ -98,21 +137,17 @@ namespace fbf {
         virtual arg_count_t get_arg_count();
 
     protected:
-        std::tuple<Args...> args_;
+        std::tuple<Args...> preargs_;
+        std::tuple<Args...> postargs_;
+        std::tuple<size_t> arg_sizes_;
     };
 
-    template<typename... Args>
-    FunctionIdentifierInternalNode<void, Args...>::FunctionIdentifierInternalNode(
-            const FunctionIdentifierInternalNode &other) {
-        args_ = other.args_;
-        left_ = other.left_;
-        right_ = other.right_;
-    }
 
     template<typename... Args>
-    FunctionIdentifierInternalNode<void, Args...>::FunctionIdentifierInternalNode(Args... args):
-            FunctionIdentifierNodeI("") {
-        args_ = std::make_tuple(args...);
+    FunctionIdentifierInternalNode<void, Args...>::FunctionIdentifierInternalNode(std::tuple<size_t> arg_sizes,
+                                                                                  std::tuple<Args...> preargs,
+                                                                                  std::tuple<Args...> postargs):
+            FunctionIdentifierNodeI(""), arg_sizes_(arg_sizes), preargs_(preargs), postargs_(postargs) {
     }
 
     template<typename... Args>
@@ -133,17 +168,31 @@ namespace fbf {
     bool FunctionIdentifierInternalNode<void, Args...>::test(uintptr_t location) {
         pid_t pid = fork();
         if (pid == 0) {
-            bool check_args = true;
+            bool is_equiv = false;
             std::function<void(Args...)> func = reinterpret_cast<void (*)(
                     Args...)>(location);
-            std::apply(func, args_);
-            /* TODO: Check argument changes */
-            exit(check_args == true);
+            std::apply(func, preargs_);
+
+            if constexpr(sizeof...(Args) > 0) {
+                is_equiv = arg_checker<0, Args...>::check_args(arg_sizes_, preargs_, postargs_);
+            }
+
+            exit(is_equiv == true);
         } else {
             int status = 0;
             waitpid(pid, &status, 0);
             return (WIFEXITED(status) && WEXITSTATUS(status) == 1);
         }
+    }
+
+    template<typename... Args>
+    FunctionIdentifierInternalNode<void, Args...>::FunctionIdentifierInternalNode(const
+                                                                                  FunctionIdentifierInternalNode<void, Args...>
+                                                                                  &other) : FunctionIdentifierNodeI(
+            "") {
+        preargs_ = other.preargs_;
+        postargs_ = other.postargs_;
+        arg_sizes_ = other.arg_sizes_;
     }
 }
 
