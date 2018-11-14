@@ -10,12 +10,15 @@
 namespace fbf{
         class FunctionIdentifierNode : public FunctionIdentifierNodeI {
         public:
-            FunctionIdentifierNode(const char* functionName);
+            FunctionIdentifierNode(const char* functionName, std::shared_ptr<FunctionIdentifierNodeI> confirmation);
             virtual bool test(uintptr_t location) override;
+            virtual bool test_arity(uintptr_t location, arg_count_t arity) override;
+            virtual arg_count_t get_arg_count() override;
 
             virtual void set_pass_node(std::shared_ptr<FunctionIdentifierNodeI> node) override;
             virtual void set_fail_node(std::shared_ptr<FunctionIdentifierNodeI> node) override;
-
+        protected:
+            std::shared_ptr<FunctionIdentifierNodeI> confirmation_;
         };
 }
 

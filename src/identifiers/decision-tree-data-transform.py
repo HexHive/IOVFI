@@ -9,6 +9,7 @@ import sys
 import numpy as np
 import decimal
 import pygraphviz as pgv
+import random
 
 pointer_count = 0
 identifier_node_names = {}
@@ -19,6 +20,9 @@ def parser(value):
     if value is None or value == '?':
         return None
 
+    # if value[-1] in 'lf':
+    #     return str(value[:-1])
+
     return str(value)
 
 
@@ -27,44 +31,54 @@ def find_type_name(val):
         return "void"
 
     try:
+        if 'l' in val:
+            float(str(val)[:-1])
+            return "long double"
+    except ValueError:
+        pass
+
+    try:
+        if 'f' in val:
+            float(str(val)[:-1])
+            return "float"
+    except ValueError:
+        pass
+
+    try:
         int(val)
         return "int"
     except ValueError:
-        # print("{} is not an int".format(val))
         pass
 
     try:
         decimal.Decimal(val)
         return "double"
     except decimal.InvalidOperation:
-        # print("{} is not a double".format(val))
-        pass
-
-    try:
-        np.longdouble(val)
-        return "long double"
-    except:
         pass
 
     return "char*"
 
 
-def output_leaf(function_name, node_id):
+def output_leaf(function_name, node_id, node_count, feature_dict):
     if node_id == 0:
         name = "root_"
     else:
         name = "{}_".format(function_name)
 
+    confirmation_id = node_id + node_count
     identifier_node_names[node_id] = name
-    leaf_str = "std::shared_ptr<fbf::FunctionIdentifierNode> {} = std::make_shared<fbf::FunctionIdentifierNode>(\"{" \
-               "}\");".format(name,
-                              function_name)
+    io_vec_set = list(feature_dict[function_name].keys())
+    io_vec = io_vec_set[random.randint(0, len(io_vec_set) - 1)]
+    leaf_str = output_identifier(io_vec, confirmation_id, True)
+    leaf_str += "std::shared_ptr<fbf::FunctionIdentifierNode> {} = std::make_shared<fbf::FunctionIdentifierNode>(\"{" \
+               "}\", {});".format(name,
+                              function_name, identifier_node_names[confirmation_id])
     dtree_graph.add_node(node_id)
     dtree_graph.get_node(node_id).attr['label'] = function_name
     return leaf_str
 
 
-def output_identifier(io_vec, node_id):
+def output_identifier(io_vec, node_id, is_confirmation = False):
     template_sig = []
     args = []
     sizes = []
@@ -99,7 +113,7 @@ def output_identifier(io_vec, node_id):
                          "std::runtime_error(\"malloc failed\"); " \
                          "}}\n".format(buffer_name, buffer_name, buffer_name, io_vec[idx], buffer_len)
             pointer_count += 1
-            if idx >= arg_count:
+            if idx - 2 >= arg_count:
                 postcall.append(buffer_name)
             else:
                 args.append(buffer_name)
@@ -126,17 +140,19 @@ def output_identifier(io_vec, node_id):
     identifier_node_names[node_id] = name
     template_str = ", ".join(template_sig)
     if label[0] != "void":
-        arg_str = "{}, {}, std::make_tuple({}), std::make_tuple({}), std::make_tuple({})".format(args[0], sizes[0],
+        arg_str = "{}, {}, std::vector<size_t>({{{}}}), std::make_tuple({}), std::make_tuple({})".format(args[0],
+                                                                                                       sizes[0],
                                                                                                  ",".join(sizes[1:]),
                                                                                                  ",".join(args[1:]),
                                                                                                  ",".join(postcall))
     else:
-        arg_str = "std::make_tuple({}), std::make_tuple({}), std::make_tuple({})".format(",".join(sizes[1:]),
-                                                                                         ",".join(args[1:]),
+        arg_str = "std::vector<size_t>({{{}}}), std::make_tuple({}), std::make_tuple({})".format(",".join(sizes),
+                                                                                         ",".join(args),
                                                                                          ",".join(postcall))
 
-    dtree_graph.add_node(node_id)
-    dtree_graph.get_node(node_id).attr['label'] = ",".join(label)
+    if not is_confirmation:
+        dtree_graph.add_node(node_id)
+        dtree_graph.get_node(node_id).attr['label'] = ",".join(label)
 
     obj_str = "{}std::shared_ptr<fbf::FunctionIdentifierInternalNode<{}>> {} = " \
               "std::make_shared<fbf::FunctionIdentifierInternalNode<{" \
@@ -183,8 +199,6 @@ def load_file(fname):
     dtree = tree.DecisionTreeClassifier()
     dtree.fit(X, dual_labels)
 
-    tree.export_graphviz(dtree, out_file="dtree.dot")
-
     classifier_tree = dtree.tree_
     node_count = classifier_tree.node_count
     node_depth = np.zeros(shape=node_count, dtype=np.int64)
@@ -210,17 +224,17 @@ def load_file(fname):
             is_leaves[node_id] = True
 
     for i in range(node_count):
-        io_vec = dv.get_feature_names()[feature[i]]
-        idx = 0
         if is_leaves[i]:
+            idx = 0
             for leaf in dtree.apply(X):
                 if leaf == i:
                     break
                 idx += 1
             function_name = dual_labels[idx]
-            leaf_str = output_leaf(function_name, i)
+            leaf_str = output_leaf(function_name, i, node_count, fvdicts)
             print(leaf_str)
         else:
+            io_vec = dv.get_feature_names()[feature[i]]
             obj_str = output_identifier(io_vec, i)
             print(obj_str)
 
@@ -241,39 +255,6 @@ def load_file(fname):
             print(parent_str)
 
     dtree_graph.write('dtree_labeled.dot')
-    # for i in range(node_count):
-    #     io_vec = dv.get_feature_names()[feature[i]]
-    #     if is_leaves[i]:
-    #         idx = 0
-    #         for leaf in dtree.apply(X):
-    #             if leaf == i:
-    #                 break
-    #             idx += 1
-    #         function_name = dual_labels[idx]
-    #         print("%snode=%d leaf node (%s)." % (node_depth[i] * "\t", i, function_name))
-    #     else:
-    #         function_test = "func("
-    #         idx = 2
-    #         count = 0
-    #         while idx < len(io_vec) and io_vec[idx] is not None:
-    #             function_test += str(io_vec[idx])
-    #             function_test += ","
-    #             idx += 1
-    #             count += 1
-    #         if count > 0:
-    #             function_test = function_test[:-1]
-    #         function_test += ") == "
-    #         function_test += str(io_vec[0])
-    #
-    #         print("%snode=%s test node: go to node %s if %s else to "
-    #               "node %s."
-    #               % (node_depth[i] * "\t",
-    #                  i,
-    #                  children_right[i],
-    #                  function_test,
-    #                  children_left[i],
-    #                  ))
-    # print()
 
 
 if __name__ == "__main__":
@@ -282,4 +263,5 @@ if __name__ == "__main__":
 
     args = argp.parse_args()
 
+    random.seed()
     load_file(args.dataf)

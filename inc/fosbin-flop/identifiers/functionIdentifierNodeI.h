@@ -28,11 +28,13 @@ namespace fbf {
 
         virtual bool test(uintptr_t location) = 0;
 
-        virtual bool test_arity(uintptr_t location, uint32_t arity);
+        virtual bool test_arity(uintptr_t location, arg_count_t arity) = 0;
 
         static bool compare_any(const std::any v1, const std::any v2);
 
         virtual const std::string &get_name() const;
+
+        virtual arg_count_t get_arg_count() = 0;
 
     protected:
         std::shared_ptr<FunctionIdentifierNodeI> left_, right_;

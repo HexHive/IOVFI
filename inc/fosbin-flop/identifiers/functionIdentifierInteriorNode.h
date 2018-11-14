@@ -7,7 +7,7 @@
 
 #include <fosbin-config.h>
 #include <initializer_list>
-#include <any>
+#include <vector>
 #include <tuple>
 #include <sys/wait.h>
 #include "functionIdentifierNodeI.h"
@@ -15,13 +15,12 @@
 namespace fbf {
     template<size_t index, typename... Args>
     struct arg_checker {
-        static constexpr bool check_args(std::tuple<size_t> &sizes, const std::tuple<Args...> &preargs,
-                                  const std::tuple<Args...> &postargs) {
+        static constexpr bool check_args(std::vector<size_t> &sizes, const std::tuple<Args...> &preargs,
+                                         const std::tuple<Args...> &postargs) {
             if constexpr (index < sizeof...(Args)) {
                 bool expected = false;
                 if constexpr(std::is_pointer_v<decltype(std::get<index>(preargs))>) {
-                    expected = std::memcmp(std::get<index>(preargs), std::get<index>(postargs), std::get<index>(sizes)
-                    ) == 0;
+                    expected = std::memcmp(std::get<index>(preargs), std::get<index>(postargs), sizes[index]) == 0;
                 } else {
                     expected = true;
                 }
@@ -39,7 +38,7 @@ namespace fbf {
     public:
         FunctionIdentifierInternalNode(R retValue,
                                        size_t retSize,
-                                       std::tuple<size_t> arg_sizes,
+                                       std::vector<size_t> arg_sizes,
                                        std::tuple<Args...> preargs,
                                        std::tuple<Args...> postargs
         );
@@ -48,22 +47,22 @@ namespace fbf {
 
         virtual bool test(uintptr_t location) override;
 
-        virtual bool test_arity(uintptr_t location, uint32_t arity) override;
+        virtual bool test_arity(uintptr_t location, arg_count_t arity) override;
 
-        virtual arg_count_t get_arg_count();
+        virtual arg_count_t get_arg_count() override;
 
     protected:
         R retVal_;
         size_t retSize_;
         std::tuple<Args...> preargs_;
         std::tuple<Args...> postargs_;
-        std::tuple<size_t> arg_sizes_;
+        std::vector<size_t> arg_sizes_;
     };
 
     template<typename R, typename... Args>
     FunctionIdentifierInternalNode<R, Args...>::FunctionIdentifierInternalNode(R retVal,
                                                                                size_t retSize,
-                                                                               std::tuple<size_t> arg_sizes,
+                                                                               std::vector<size_t> arg_sizes,
                                                                                std::tuple<Args...> preargs,
                                                                                std::tuple<Args...> postargs):
             FunctionIdentifierNodeI(""), retVal_(retVal), retSize_(retSize),
@@ -111,7 +110,7 @@ namespace fbf {
     arg_count_t FunctionIdentifierInternalNode<R, Args...>::get_arg_count() { return sizeof...(Args); }
 
     template<typename R, typename... Args>
-    bool FunctionIdentifierInternalNode<R, Args...>::test_arity(uintptr_t location, uint32_t arity) {
+    bool FunctionIdentifierInternalNode<R, Args...>::test_arity(uintptr_t location, arg_count_t arity) {
         if (arity != get_arg_count()) {
             LOG_DEBUG << std::hex << location << std::dec << " has arity " << arity << " and does not match " <<
                       get_arg_count();
@@ -124,7 +123,7 @@ namespace fbf {
     template<typename... Args>
     class FunctionIdentifierInternalNode<void, Args...> : public FunctionIdentifierNodeI {
     public:
-        FunctionIdentifierInternalNode(std::tuple<size_t> arg_sizes,
+        FunctionIdentifierInternalNode(std::vector<size_t> arg_sizes,
                                        std::tuple<Args...> preargs,
                                        std::tuple<Args...> postargs);
 
@@ -132,19 +131,19 @@ namespace fbf {
 
         virtual bool test(uintptr_t location) override;
 
-        virtual bool test_arity(uintptr_t location, uint32_t arity) override;
+        virtual bool test_arity(uintptr_t location, arg_count_t arity) override;
 
-        virtual arg_count_t get_arg_count();
+        virtual arg_count_t get_arg_count() override;
 
     protected:
         std::tuple<Args...> preargs_;
         std::tuple<Args...> postargs_;
-        std::tuple<size_t> arg_sizes_;
+        std::vector<size_t> arg_sizes_;
     };
 
 
     template<typename... Args>
-    FunctionIdentifierInternalNode<void, Args...>::FunctionIdentifierInternalNode(std::tuple<size_t> arg_sizes,
+    FunctionIdentifierInternalNode<void, Args...>::FunctionIdentifierInternalNode(std::vector<size_t> arg_sizes,
                                                                                   std::tuple<Args...> preargs,
                                                                                   std::tuple<Args...> postargs):
             FunctionIdentifierNodeI(""), arg_sizes_(arg_sizes), preargs_(preargs), postargs_(postargs) {
@@ -154,7 +153,7 @@ namespace fbf {
     arg_count_t FunctionIdentifierInternalNode<void, Args...>::get_arg_count() { return sizeof...(Args); }
 
     template<typename... Args>
-    bool FunctionIdentifierInternalNode<void, Args...>::test_arity(uintptr_t location, uint32_t arity) {
+    bool FunctionIdentifierInternalNode<void, Args...>::test_arity(uintptr_t location, arg_count_t arity) {
         if (arity != get_arg_count()) {
             LOG_DEBUG << std::hex << location << std::dec << " has arity " << arity << " and does not match " <<
                       get_arg_count();

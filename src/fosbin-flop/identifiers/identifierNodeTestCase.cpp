@@ -5,6 +5,7 @@
 #include <fosbin-flop/identifierNodeTestCase.h>
 
 fbf::IdentifierNodeTestCase::IdentifierNodeTestCase(std::shared_ptr<fbf::FunctionIdentifierNodeI> root,
+
                                                     uintptr_t location, uint32_t arity)
         : ITestCase(), location_(location), root_(root), leaf_(nullptr), arity_(arity) {
 
@@ -34,9 +35,8 @@ int fbf::IdentifierNodeTestCase::run_test() {
      * true, in which case, we can identify the function, or
      * false and the function is unknown
      */
-    leaf_ = prev;
-    std::cout << "FOUND: 0x" << std::hex << location_ << std::dec << " is " << prev->get_name() << std::endl;
     if(prev_result) {
+        leaf_ = prev;
         return fbf::ITestCase::PASS;
     } else {
         return fbf::ITestCase::FAIL;

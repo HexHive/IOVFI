@@ -65,7 +65,3 @@ bool fbf::FunctionIdentifierNodeI::compare_any(const std::any v1, const std::any
 
     return false;
 }
-
-bool fbf::FunctionIdentifierNodeI::test_arity(uintptr_t location, uint32_t arity) {
-    return test(location);
-}

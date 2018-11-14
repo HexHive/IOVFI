@@ -10,21 +10,58 @@ functions = []
 added_lines = set()
 
 pointer_types = {15}
+long_double_types = {4}
+float_types = {2}
 MAX_INPUT_LEN = 4096
+
+post_states = dict()
+first_funcs = dict()
 
 
 def output_value(value, output_post = False):
     if value['type'] in pointer_types:
         val = value['precall']
         if output_post:
-            val = value['postcall']
+            if 'postcall' in value:
+                val = value['postcall']
+            else:
+                val = ''
 
         if val[-3:] == "\\00" and int(value['size']) == len(val):
             # This is a string
             return "\"{}\"".format(val)
         return "{}".format(val)
     else:
-        return "{}".format(value['value'])
+        val = str(value['value'])
+        if value['type'] in long_double_types:
+            val += 'l'
+        elif value['type'] in float_types:
+            val += 'f'
+        return "{}".format(val)
+
+
+def check_post_state(func):
+    if func['name'] not in post_states:
+        post_states[func['name']] = set()
+        first_funcs[func['name']] = func
+
+    if 'value' in func['return']:
+        post_state = str(func['return']['value'])
+    elif 'postcall' in func['return']:
+        post_state = str(func['return']['postcall'])
+    else:
+        post_state = ''
+
+    for arg in func['args']:
+        if 'postcall' in arg:
+            post_state += str(arg['postcall'])
+
+    post_states[func['name']].add(post_state)
+    # We skipped over the first input, so make sure that we add that in
+    if len(post_states[func['name']]) == 2:
+        functions.append(first_funcs[func['name']])
+
+    return len(post_states[func['name']]) > 1
 
 
 def main(included_funcs_path, json_paths):
@@ -73,16 +110,17 @@ def main(included_funcs_path, json_paths):
                             if len(func['args']) > max_args:
                                 max_args = len(func['args'])
 
-                            functions.append(func)
-                            added_lines.add(line)
-                            uniq_funcs.add(func['name'])
+                            if check_post_state(func):
+                                functions.append(func)
+                                added_lines.add(line)
+                                uniq_funcs.add(func['name'])
                     except json.JSONDecodeError as e:
                         print("Invalid json in {}:{}: {}".format(json_paths[i], line_num, e.msg), file=sys.stderr)
                         total_error += 1
                         continue
                     except KeyError as e:
-                        print("KeyError ({}): {}".format(e, line),
-                                file=sys.stderr)
+                        print("KeyError ({}): {}".format(e, line), file=sys.stderr)
+                        continue
     if total_error > 0:
         print("There were {} invalid JSON entries".format(total_error), file=sys.stderr)
 
