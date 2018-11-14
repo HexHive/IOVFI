@@ -91,7 +91,11 @@ namespace fbf {
             if constexpr (std::is_pointer_v<R>) {
                 is_equiv = (std::memcmp(retVal, retVal_, retSize_) == 0);
             } else {
-                is_equiv = (retVal == retVal_);
+                R diff = retVal - retVal_;
+                if(diff < 0) {
+                    diff *= -1;
+                }
+                is_equiv = (diff <= 0.00000001l);
             }
 
             if constexpr(sizeof...(Args) > 0) {

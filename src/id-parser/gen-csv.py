@@ -4,6 +4,7 @@ import json
 import sys
 import argparse
 import re
+from decimal import Decimal
 
 functions = []
 
@@ -24,9 +25,9 @@ def output_value(value, output_post = False):
         if output_post:
             if 'postcall' in value:
                 val = value['postcall']
-            else:
-                val = ''
 
+        if val is None or val == "":
+            val = "nullptr"
         if val[-3:] == "\\00" and int(value['size']) == len(val):
             # This is a string
             return "\"{}\"".format(val)
@@ -99,7 +100,7 @@ def main(included_funcs_path, json_paths):
 
                     try:
                         if line not in added_lines:
-                            func = json.loads(line)['function']
+                            func = json.loads(line, parse_float=Decimal)['function']
                             if len(line) > MAX_INPUT_LEN:
                                 print("Skipping {}:{}; too long".format(json_paths[i], line_num), file=sys.stderr)
                                 continue
@@ -148,14 +149,15 @@ def main(included_funcs_path, json_paths):
             postcall_str = ""
             precall_str += "{},".format(func['name'])
             if 'return' in func:
-                precall_str += "{},{}".format(output_value(func['return']), len(func['args']))
+                precall_str += "{},{}".format(output_value(func['return'], True), len(func['args']))
                 if max_args > 0:
                     precall_str += ","
 
             for i in range(max_args):
                 if i < len(func['args']):
                     precall_str += output_value(func['args'][i])
-                    postcall_str += output_value(func['args'][i], True)
+                    tmp_postcall_str = output_value(func['args'][i], True)
+                    postcall_str += tmp_postcall_str
                 else:
                     precall_str += "?"
                     postcall_str += "?"

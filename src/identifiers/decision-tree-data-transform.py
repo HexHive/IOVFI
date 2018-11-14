@@ -70,7 +70,8 @@ def output_leaf(function_name, node_id, node_count, feature_dict):
     io_vec_set = list(feature_dict[function_name].keys())
     io_vec = io_vec_set[random.randint(0, len(io_vec_set) - 1)]
     leaf_str = output_identifier(io_vec, confirmation_id, True)
-    leaf_str += "std::shared_ptr<fbf::FunctionIdentifierNode> {} = std::make_shared<fbf::FunctionIdentifierNode>(\"{" \
+    leaf_str += "\nstd::shared_ptr<fbf::FunctionIdentifierNode> {} = std::make_shared<fbf::FunctionIdentifierNode>(" \
+                "\"{" \
                "}\", {});".format(name,
                               function_name, identifier_node_names[confirmation_id])
     dtree_graph.add_node(node_id)
@@ -101,6 +102,7 @@ def output_identifier(io_vec, node_id, is_confirmation = False):
             continue
 
         type_name = find_type_name(io_vec[idx])
+        # The first two arguments are return value and arity
         if idx - 2 <= arg_count:
             template_sig.append(type_name)
 

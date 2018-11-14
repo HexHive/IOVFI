@@ -22,13 +22,13 @@ int fbf::IdentifierNodeTestCase::run_test() {
     std::shared_ptr<fbf::FunctionIdentifierNodeI> prev = curr;
     bool prev_result = false;
     while (curr != nullptr) {
-        prev = curr;
         prev_result = curr->test_arity(location_, arity_);
         if (!prev_result) {
             curr = curr->get_failing_node();
         } else {
             curr = curr->get_passing_node();
         }
+        prev = curr;
     }
 
     /* We have made it to a leaf. Either the last result was
