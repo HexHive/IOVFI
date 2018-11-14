@@ -57,9 +57,11 @@ void fbf::BinaryDescriptor::parse_aritys(fs::path aritys) {
         std::string arity = line.substr(pos + 1);
 
         uintptr_t loc = getSymLocation(name);
-        if(loc > 0) {
+        if(loc > 0 && loc != (uintptr_t)-1) {
             std::shared_ptr<LofSymbol> sym = syms_[loc];
             sym->arity = std::stoi(arity);
+        } else {
+            LOG_DEBUG << "Could not find symbol " << name;
         }
     }
 

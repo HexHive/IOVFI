@@ -22,23 +22,28 @@ int fbf::IdentifierNodeTestCase::run_test() {
     std::shared_ptr<fbf::FunctionIdentifierNodeI> prev = curr;
     bool prev_result = false;
     while (curr != nullptr) {
+        prev = curr;
         prev_result = curr->test_arity(location_, arity_);
         if (!prev_result) {
+            LOG_DEBUG << std::hex << location_ << std::dec << " failed";
             curr = curr->get_failing_node();
         } else {
+            LOG_DEBUG << std::hex << location_ << std::dec << " succeeded";
             curr = curr->get_passing_node();
         }
-        prev = curr;
     }
 
     /* We have made it to a leaf. Either the last result was
      * true, in which case, we can identify the function, or
      * false and the function is unknown
      */
+    LOG_DEBUG << std::hex << location_ << std::dec << " is at leaf " << prev->get_name();
     if(prev_result) {
         leaf_ = prev;
+        LOG_INFO << "FOUND 0x" << std::hex << location_ << std::dec << " to be " << leaf_->get_name() << std::endl;
         return fbf::ITestCase::PASS;
     } else {
+        LOG_DEBUG << "Leaf at " << std::hex << location_ << " unconfirmed";
         return fbf::ITestCase::FAIL;
     }
 }
