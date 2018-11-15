@@ -15,33 +15,93 @@ pointer_count = 0
 identifier_node_names = {}
 dtree_graph = pgv.AGraph()
 
+class CSVArg(object):
+    def __init__(self, val):
+        temp_val = str(val)
+        try:
+            if temp_val[-1] == 'l':
+                self.value = decimal.Decimal(temp_val[:-1])
+                self.type_str = "long double"
+                return
+        except decimal.InvalidOperation:
+            pass
+
+        try:
+            if temp_val[-1] == 'f':
+                self.value = decimal.Decimal(temp_val[:-1])
+                self.type_str = "float"
+                return
+        except decimal.InvalidOperation:
+            pass
+
+        try:
+            self.value = int(temp_val)
+            self.type_str = "int"
+        except ValueError:
+            pass
+
+        try:
+            self.value = decimal.Decimal(temp_val)
+            self.type_str = "double"
+        except decimal.InvalidOperation:
+            pass
+
+        self.value = temp_val
+        self.type_str = "char*"
+    def __cmp__(self, other):
+        if self.type_str == "char*":
+            if other.type_str == "char*":
+                if self.value < other.value:
+                    return -1
+                elif self.value == other.value:
+                    return 0
+                else:
+                    return 1
+            else:
+                return 1
+        else:
+            if other.type_str == "char*":
+                return -1
+            else:
+                if self.value < other.value:
+                    return -1
+                elif self.value == other.value:
+                    return 0
+                else:
+                    return 1
+    def __lt__(self, other):
+        return self.__cmp__(other) < 0
+    def __eq__(self, other):
+        return self.__cmp__(other) == 0
+    def __hash__(self):
+        return hash(self.value)
+    def __str__(self):
+        return str(self.value)
 
 def parser(value):
     if value is None or value == '?':
         return None
 
-    # if value[-1] in 'lf':
-    #     return str(value[:-1])
-
-    return str(value)
+    return CSVArg(value)
 
 
 def find_type_name(val):
+    print(val)
     if val == "(nil)":
         return "void"
 
     try:
         if 'l' in val:
-            float(str(val)[:-1])
+            decimal.Decimal(str(val)[:-1])
             return "long double"
-    except ValueError:
+    except decimal.InvalidOperation:
         pass
 
     try:
         if 'f' in val:
-            float(str(val)[:-1])
+            decimal.Decimal(str(val)[:-1])
             return "float"
-    except ValueError:
+    except decimal.InvalidOperation:
         pass
 
     try:
@@ -237,6 +297,7 @@ def load_file(fname):
             print(leaf_str)
         else:
             io_vec = dv.get_feature_names()[feature[i]]
+            print(io_vec)
             obj_str = output_identifier(io_vec, i)
             print(obj_str)
 

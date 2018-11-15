@@ -21,34 +21,41 @@ namespace fbf {
         exit(ITestCase::FAIL);
     }
 
-    template<size_t index, typename... Args>
-    struct arg_checker {
-        static constexpr bool check_args(std::vector<size_t> &sizes, const std::tuple<Args...> &preargs,
-                                         const std::tuple<Args...> &postargs) {
-            if constexpr (index < sizeof...(Args)) {
-                bool expected = false;
-                if constexpr(std::is_pointer_v<decltype(std::get<index>(preargs))>) {
-                    expected = std::memcmp(std::get<index>(preargs), std::get<index>(postargs), sizes[index]) == 0;
-                } else {
-                    expected = true;
-                }
+    template<typename Arg, typename std::enable_if<std::is_pointer_v<Arg>, int>::type = 0>
+    static bool check_arg2(const Arg prearg, const Arg postarg, size_t size) {
+        bool is_same = std::memcmp(prearg, postarg, size) == 0;
+        LOG_DEBUG << "pointer args are " << (is_same ? "" : "NOT ") << "the same";
+        return is_same;
+    }
 
-                return expected && arg_checker<index + 1, Args...>::check_args(sizes, preargs, postargs);
-            } else {
-                return true;
-            }
-        }
-    };
+    template<typename Arg, typename std::enable_if<!std::is_pointer_v<Arg>, int>::type = 0>
+    static bool check_arg2(const Arg prearg, const Arg postarg, size_t size) {
+        LOG_DEBUG << "Non-pointer arg";
+        return true;
+    }
 
     template<typename Tup, size_t... I>
-    void print_arg(std::ostream& out, const Tup& tup, std::index_sequence<I...>) {
+    static bool check_arg(const Tup &pretup, const Tup &posttup, const std::vector<size_t> &sizes,
+                          std::index_sequence<I...>) {
+        return (
+        ((check_arg2(std::get<I>(pretup), std::get<I>(posttup), sizes[I]))) && ...);
+    }
+
+    template<typename... T>
+    static bool check_args(const std::tuple<T...> &pretup, const std::tuple<T...> &posttup, const std::vector<size_t>
+    &sizes) {
+        return check_arg(pretup, posttup, sizes, std::make_index_sequence<sizeof...(T)>());
+    }
+
+    template<typename Tup, size_t... I>
+    void print_arg(std::ostream &out, const Tup &tup, std::index_sequence<I...>) {
         out << "(";
         (..., (out << (I == 0 ? "" : ", ") << std::hex << std::get<I>(tup)));
         out << ")";
     }
 
     template<typename... T>
-    std::string print_args(const std::tuple<T...>& tup) {
+    std::string print_args(const std::tuple<T...> &tup) {
         std::stringstream out;
         print_arg(out, tup, std::make_index_sequence<sizeof...(T)>());
         return out.str();
@@ -114,24 +121,24 @@ namespace fbf {
     bool FunctionIdentifierInternalNode<R, Args...>::test(uintptr_t location) {
         pid_t pid = fork();
         if (pid == 0) {
-//            set_signals();
             bool is_equiv = true;
             std::function<R(Args...)> func = reinterpret_cast<R(*)(
                     Args...)>(location);
             LOG_DEBUG << "Calling function with " << print_args(preargs_) << " Expecting " << retVal_;
             R retVal = std::apply(func, preargs_);
+            LOG_DEBUG << "Function returned " << retVal;
             if constexpr (std::is_pointer_v<R>) {
                 is_equiv = (std::memcmp(retVal, retVal_, retSize_) == 0);
             } else {
                 R diff = retVal - retVal_;
-                if(diff < 0) {
+                if (diff < 0) {
                     diff *= -1;
                 }
                 is_equiv = (diff <= 0.00000001l);
             }
 
             if constexpr(sizeof...(Args) > 0) {
-                is_equiv &= arg_checker<0, Args...>::check_args(arg_sizes_, preargs_, postargs_);
+                is_equiv &= check_args(preargs_, postargs_, arg_sizes_);
             }
 
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
@@ -148,7 +155,7 @@ namespace fbf {
     template<typename R, typename... Args>
     bool FunctionIdentifierInternalNode<R, Args...>::test_arity(uintptr_t location, arg_count_t arity) {
         if (arity != get_arg_count()) {
-            LOG_TRACE << std::hex << location << std::dec << " has arity " << arity << " and does not match " <<
+            LOG_DEBUG << std::hex << location << std::dec << " has arity " << arity << " and does not match " <<
                       get_arg_count();
             return false;
         }
@@ -175,6 +182,7 @@ namespace fbf {
         std::tuple<Args...> preargs_;
         std::tuple<Args...> postargs_;
         std::vector<size_t> arg_sizes_;
+
         void set_signals();
     };
 
@@ -192,7 +200,7 @@ namespace fbf {
     template<typename... Args>
     bool FunctionIdentifierInternalNode<void, Args...>::test_arity(uintptr_t location, arg_count_t arity) {
         if (arity != get_arg_count()) {
-            LOG_TRACE << std::hex << location << std::dec << " has arity " << arity << " and does not match " <<
+            LOG_DEBUG << std::hex << location << std::dec << " has arity " << arity << " and does not match " <<
                       get_arg_count();
             return false;
         }
@@ -204,15 +212,15 @@ namespace fbf {
     bool FunctionIdentifierInternalNode<void, Args...>::test(uintptr_t location) {
         pid_t pid = fork();
         if (pid == 0) {
-//            set_signals();
             bool is_equiv = false;
             std::function<void(Args...)> func = reinterpret_cast<void (*)(
                     Args...)>(location);
             LOG_DEBUG << "Calling void function with " << print_args(preargs_);
             std::apply(func, preargs_);
+            LOG_DEBUG << "Function returned";
 
             if constexpr(sizeof...(Args) > 0) {
-                is_equiv = arg_checker<0, Args...>::check_args(arg_sizes_, preargs_, postargs_);
+                is_equiv = check_args(preargs_, postargs_, arg_sizes_);
             }
 
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
