@@ -47,7 +47,10 @@ class CSVArg(object):
             pass
 
         self.value = temp_val
-        self.type_str = "char*"
+        if temp_val == "(nil)":
+            self.type_str = "void"
+        else:
+            self.type_str = "char*"
     def __cmp__(self, other):
         if self.type_str == "char*":
             if other.type_str == "char*":
@@ -86,37 +89,38 @@ def parser(value):
 
 
 def find_type_name(val):
-    print(val)
-    if val == "(nil)":
-        return "void"
-
-    try:
-        if 'l' in val:
-            decimal.Decimal(str(val)[:-1])
-            return "long double"
-    except decimal.InvalidOperation:
-        pass
-
-    try:
-        if 'f' in val:
-            decimal.Decimal(str(val)[:-1])
-            return "float"
-    except decimal.InvalidOperation:
-        pass
-
-    try:
-        int(val)
-        return "int"
-    except ValueError:
-        pass
-
-    try:
-        decimal.Decimal(val)
-        return "double"
-    except decimal.InvalidOperation:
-        pass
-
-    return "char*"
+    return val.type_str
+    # print("{}: {}".format(type(val), val))
+    # if val.value == "(nil)":
+    #     return "void"
+    #
+    # try:
+    #     if 'l' in val:
+    #         decimal.Decimal(str(val)[:-1])
+    #         return "long double"
+    # except decimal.InvalidOperation:
+    #     pass
+    #
+    # try:
+    #     if 'f' in val:
+    #         decimal.Decimal(str(val)[:-1])
+    #         return "float"
+    # except decimal.InvalidOperation:
+    #     pass
+    #
+    # try:
+    #     int(val)
+    #     return "int"
+    # except ValueError:
+    #     pass
+    #
+    # try:
+    #     decimal.Decimal(val)
+    #     return "double"
+    # except decimal.InvalidOperation:
+    #     pass
+    #
+    # return "char*"
 
 
 def output_leaf(function_name, node_id, node_count, feature_dict):
