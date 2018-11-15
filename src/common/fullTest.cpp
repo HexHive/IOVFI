@@ -74,6 +74,7 @@ void fbf::FullTest::run() {
                   << " of " << testRuns_.size()
                   << " (offset 0x" << offset.str() << " - "
                   << (*it)->get_test_name()
+                  << " " << binDesc_.getSym((*it)->get_offset()).name
                   << ")" << std::endl;
 
         std::shared_ptr<fbf::TestRun> sp = *it;

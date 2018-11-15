@@ -134,8 +134,10 @@ namespace fbf {
                 if (diff < 0) {
                     diff *= -1;
                 }
-                is_equiv = (diff <= 0.00000001l);
+                is_equiv = (diff <= 0.0000000001l);
             }
+
+            LOG_DEBUG << "return values are " << (is_equiv ? "" : "NOT ") << "the same";
 
             if constexpr(sizeof...(Args) > 0) {
                 is_equiv &= check_args(preargs_, postargs_, arg_sizes_);
@@ -145,6 +147,11 @@ namespace fbf {
         } else {
             int status = 0;
             waitpid(pid, &status, 0);
+            if(!WIFEXITED(status)) {
+                LOG_DEBUG << "Function faulted";
+            } else if(WEXITSTATUS(status) != ITestCase::PASS) {
+                LOG_DEBUG << "Function exited with exit code " << WEXITSTATUS(status);
+            }
             return (WIFEXITED(status) && WEXITSTATUS(status) == ITestCase::PASS);
         }
     }

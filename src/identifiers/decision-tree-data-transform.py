@@ -22,6 +22,7 @@ class CSVArg(object):
             if temp_val[-1] == 'l':
                 self.value = decimal.Decimal(temp_val[:-1])
                 self.type_str = "long double"
+                self.len = 10
                 return
         except decimal.InvalidOperation:
             pass
@@ -30,6 +31,7 @@ class CSVArg(object):
             if temp_val[-1] == 'f':
                 self.value = decimal.Decimal(temp_val[:-1])
                 self.type_str = "float"
+                self.len = 4
                 return
         except decimal.InvalidOperation:
             pass
@@ -37,33 +39,46 @@ class CSVArg(object):
         try:
             self.value = int(temp_val)
             self.type_str = "int"
+            self.len = 4
+            return
         except ValueError:
             pass
 
         try:
             self.value = decimal.Decimal(temp_val)
             self.type_str = "double"
+            self.len = 8
+            return
         except decimal.InvalidOperation:
             pass
 
         self.value = temp_val
         if temp_val == "(nil)":
             self.type_str = "void"
+            self.len = 0
         else:
             self.type_str = "char*"
+            # 4 comes from the fact that hex digits are written as \xFF or 4 characters per one value
+            self.len = int(len(self.value) / 4)
     def __cmp__(self, other):
-        if self.type_str == "char*":
-            if other.type_str == "char*":
-                if self.value < other.value:
-                    return -1
-                elif self.value == other.value:
-                    return 0
-                else:
-                    return 1
+        if self.type_str == other.type_str:
+            if self.type_str == "void":
+                return 0
+            if self.value < other.value:
+                return -1
+            elif self.value == other.value:
+                return 0
             else:
                 return 1
         else:
-            if other.type_str == "char*":
+            if self.type_str == "void":
+                return -1
+            elif other.type_str == "void":
+                return 1
+
+            if self.type_str == "char*":
+                return 1
+            elif other.type_str == "char*":
                 return -1
             else:
                 if self.value < other.value:
@@ -72,6 +87,7 @@ class CSVArg(object):
                     return 0
                 else:
                     return 1
+
     def __lt__(self, other):
         return self.__cmp__(other) < 0
     def __eq__(self, other):
@@ -79,7 +95,15 @@ class CSVArg(object):
     def __hash__(self):
         return hash(self.value)
     def __str__(self):
-        return str(self.value)
+        s = str(self.value)
+        if self.type_str == "long double":
+            s += "l"
+        elif self.type_str == "float":
+            s += "f"
+
+        return s
+    def __len__(self):
+        return int(self.len)
 
 def parser(value):
     if value is None or value == '?':
@@ -90,37 +114,6 @@ def parser(value):
 
 def find_type_name(val):
     return val.type_str
-    # print("{}: {}".format(type(val), val))
-    # if val.value == "(nil)":
-    #     return "void"
-    #
-    # try:
-    #     if 'l' in val:
-    #         decimal.Decimal(str(val)[:-1])
-    #         return "long double"
-    # except decimal.InvalidOperation:
-    #     pass
-    #
-    # try:
-    #     if 'f' in val:
-    #         decimal.Decimal(str(val)[:-1])
-    #         return "float"
-    # except decimal.InvalidOperation:
-    #     pass
-    #
-    # try:
-    #     int(val)
-    #     return "int"
-    # except ValueError:
-    #     pass
-    #
-    # try:
-    #     decimal.Decimal(val)
-    #     return "double"
-    # except decimal.InvalidOperation:
-    #     pass
-    #
-    # return "char*"
 
 
 def output_leaf(function_name, node_id, node_count, feature_dict):
@@ -172,12 +165,11 @@ def output_identifier(io_vec, node_id, is_confirmation = False):
 
         if type_name.find("*") >= 0:
             buffer_name = "buf_" + str(pointer_count)
-            # 4 comes from the fact that hex digits are written as \xFF or 4 characters per one value
-            buffer_len = int(len(io_vec[idx]) / 4)
+            buffer_len = io_vec[idx].len
             prestring += "{} {} = ({}) malloc({});\n".format(type_name, buffer_name, type_name, buffer_len + 1)
             prestring += "if({}) {{ buffers_.push_back({}); std::memcpy({}, \"{}\", {}); }} else {{ throw " \
                          "std::runtime_error(\"malloc failed\"); " \
-                         "}}\n".format(buffer_name, buffer_name, buffer_name, io_vec[idx], buffer_len)
+                         "}}\n".format(buffer_name, buffer_name, buffer_name, str(io_vec[idx]), buffer_len)
             pointer_count += 1
             if idx - 2 >= arg_count:
                 postcall.append(buffer_name)
@@ -188,10 +180,10 @@ def output_identifier(io_vec, node_id, is_confirmation = False):
         else:
             if type_name is not "void":
                 if idx - 2 >= arg_count:
-                    postcall.append(io_vec[idx])
+                    postcall.append(str(io_vec[idx]))
                 else:
-                    args.append(io_vec[idx])
-                    label.append(io_vec[idx])
+                    args.append(str(io_vec[idx]))
+                    label.append(str(io_vec[idx]))
                     sizes.append("sizeof({})".format(type_name))
             else:
                 label.append("void")
@@ -206,6 +198,7 @@ def output_identifier(io_vec, node_id, is_confirmation = False):
     identifier_node_names[node_id] = name
     template_str = ", ".join(template_sig)
     if label[0] != "void":
+
         arg_str = "{}, {}, std::vector<size_t>({{{}}}), std::make_tuple({}), std::make_tuple({})".format(args[0],
                                                                                                        sizes[0],
                                                                                                  ",".join(sizes[1:]),
@@ -301,7 +294,6 @@ def load_file(fname):
             print(leaf_str)
         else:
             io_vec = dv.get_feature_names()[feature[i]]
-            print(io_vec)
             obj_str = output_identifier(io_vec, i)
             print(obj_str)
 
