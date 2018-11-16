@@ -8,6 +8,7 @@
 #include <termios.h>
 #include <fullTest.h>
 #include <limits>
+#include <unistd.h>
 
 namespace fs = std::experimental::filesystem;
 
@@ -75,7 +76,8 @@ void fbf::FullTest::run() {
                   << " (offset 0x" << offset.str() << " - "
                   << (*it)->get_test_name()
                   << " " << binDesc_.getSym((*it)->get_offset()).name
-                  << ")" << std::endl;
+                  << ")"
+                  << " as pid " << getpid() << std::endl;
 
         std::shared_ptr<fbf::TestRun> sp = *it;
         if(thread_count_ > 1) {

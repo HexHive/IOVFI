@@ -23,7 +23,10 @@ namespace fbf {
 
     template<typename Arg, typename std::enable_if<std::is_pointer_v<Arg>, int>::type = 0>
     static bool check_arg2(const Arg prearg, const Arg postarg, size_t size) {
-        bool is_same = std::memcmp(prearg, postarg, size) == 0;
+        bool is_same = true;
+        if(prearg && postarg) {
+            is_same = std::strncmp(prearg, postarg, size) == 0;
+        }
         LOG_DEBUG << "pointer args are " << (is_same ? "" : "NOT ") << "the same";
         return is_same;
     }
@@ -126,9 +129,23 @@ namespace fbf {
                     Args...)>(location);
             LOG_DEBUG << "Calling function with " << print_args(preargs_) << " Expecting " << retVal_;
             R retVal = std::apply(func, preargs_);
-            LOG_DEBUG << "Function returned " << retVal;
+            if(retVal) {
+                LOG_DEBUG << "Function returned " << retVal;
+            } else {
+                LOG_DEBUG << "Function returned nullptr";
+            }
+
             if constexpr (std::is_pointer_v<R>) {
-                int test = std::memcmp(retVal, retVal_, retSize_);
+                int test = 0;
+                if(retVal && retVal_) {
+                    test = std::strncmp(retVal, retVal_, retSize_);
+                } else {
+                    if(retVal && !retVal_) {
+                        test = 1;
+                    } else if(!retVal && retVal_ && std::strcmp(retVal_, "") != 0) {
+                        test = 1;
+                    }
+                }
                 LOG_DEBUG << "Comparing " << retSize_ << " bytes resulted in " << test;
                 is_equiv = (test == 0);
             } else {
@@ -146,6 +163,8 @@ namespace fbf {
                     is_equiv &= check_args(preargs_, postargs_, arg_sizes_);
                 }
             }
+
+            LOG_DEBUG << std::hex << location << std::dec << " is returning " << (is_equiv ? "PASS" : "FAIL");
 
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
         } else {
@@ -234,6 +253,7 @@ namespace fbf {
                 is_equiv = check_args(preargs_, postargs_, arg_sizes_);
             }
 
+            LOG_DEBUG << std::hex << location << std::dec << " is returning " << (is_equiv ? "PASS" : "FAIL");
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
         } else {
             int status = 0;
