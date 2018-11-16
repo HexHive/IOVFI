@@ -124,7 +124,7 @@ namespace fbf {
             LOG_DEBUG << std::hex << location << std::dec << " is returning " << (is_equiv ? "PASS" : "FAIL");
 
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
-        } else {
+        } else if(pid > 0) {
             int status = 0;
             LOG_DEBUG << "Process " << getpid() << " is waiting on " << pid;
             waitpid(pid, &status, 0);
@@ -134,6 +134,8 @@ namespace fbf {
                 LOG_DEBUG << "Function exited with exit code " << WEXITSTATUS(status);
             }
             return (WIFEXITED(status) && WEXITSTATUS(status) == ITestCase::PASS);
+        } else {
+            throw std::runtime_error("Could not fork!");
         }
     }
 
@@ -211,7 +213,8 @@ namespace fbf {
                 is_equiv = check_args(preargs_, postargs_, arg_sizes_);
             }
 
-            LOG_DEBUG << std::hex << location << std::dec << " is returning " << (is_equiv ? "PASS" : "FAIL");
+            LOG_DEBUG << std::hex << location << std::dec 
+                    << " is returning " << (is_equiv ? "PASS" : "FAIL");
 
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
         } else if(pid > 0){
@@ -224,7 +227,10 @@ namespace fbf {
                 LOG_DEBUG << "Function exited with exit code " << WEXITSTATUS(status);
             }
             return (WIFEXITED(status) && WEXITSTATUS(status) == fbf::ITestCase::PASS);
+        } else {
+            throw std::runtime_error("Could not fork!");
         }
+
     }
 
     template<typename... Args>
