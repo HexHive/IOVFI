@@ -128,7 +128,9 @@ namespace fbf {
             R retVal = std::apply(func, preargs_);
             LOG_DEBUG << "Function returned " << retVal;
             if constexpr (std::is_pointer_v<R>) {
-                is_equiv = (std::memcmp(retVal, retVal_, retSize_) == 0);
+                int test = std::memcmp(retVal, retVal_, retSize_);
+                LOG_DEBUG << "Comparing " << retSize_ << " bytes resulted in " << test;
+                is_equiv = (test == 0);
             } else {
                 R diff = retVal - retVal_;
                 if (diff < 0) {
@@ -140,7 +142,9 @@ namespace fbf {
             LOG_DEBUG << "return values are " << (is_equiv ? "" : "NOT ") << "the same";
 
             if constexpr(sizeof...(Args) > 0) {
-                is_equiv &= check_args(preargs_, postargs_, arg_sizes_);
+                if(is_equiv) {
+                    is_equiv &= check_args(preargs_, postargs_, arg_sizes_);
+                }
             }
 
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
@@ -234,6 +238,11 @@ namespace fbf {
         } else {
             int status = 0;
             waitpid(pid, &status, 0);
+            if(!WIFEXITED(status)) {
+                LOG_DEBUG << "Function faulted";
+            } else if(WEXITSTATUS(status) != ITestCase::PASS) {
+                LOG_DEBUG << "Function exited with exit code " << WEXITSTATUS(status);
+            }
             return (WIFEXITED(status) && WEXITSTATUS(status) == fbf::ITestCase::PASS);
         }
     }
