@@ -122,7 +122,7 @@ namespace fbf {
 
     template<typename R, typename... Args>
     bool FunctionIdentifierInternalNode<R, Args...>::test(uintptr_t location) {
-        pid_t pid = fork();
+        pid_t pid = test_fork();
         if (pid == 0) {
             bool is_equiv = true;
             std::function<R(Args...)> func = reinterpret_cast<R(*)(
@@ -169,6 +169,7 @@ namespace fbf {
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
         } else {
             int status = 0;
+            LOG_DEBUG << "Process " << getpid() << " is waiting on " << pid;
             waitpid(pid, &status, 0);
             if(!WIFEXITED(status)) {
                 LOG_DEBUG << "Function faulted";
@@ -240,7 +241,7 @@ namespace fbf {
 
     template<typename... Args>
     bool FunctionIdentifierInternalNode<void, Args...>::test(uintptr_t location) {
-        pid_t pid = fork();
+        pid_t pid = test_fork();
         if (pid == 0) {
             bool is_equiv = false;
             std::function<void(Args...)> func = reinterpret_cast<void (*)(
@@ -254,9 +255,11 @@ namespace fbf {
             }
 
             LOG_DEBUG << std::hex << location << std::dec << " is returning " << (is_equiv ? "PASS" : "FAIL");
+
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
-        } else {
+        } else if(pid > 0){
             int status = 0;
+            LOG_DEBUG << "Process " << getpid() << " is waiting on " << pid;
             waitpid(pid, &status, 0);
             if(!WIFEXITED(status)) {
                 LOG_DEBUG << "Function faulted";

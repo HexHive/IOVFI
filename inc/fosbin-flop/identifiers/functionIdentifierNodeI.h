@@ -39,6 +39,8 @@ namespace fbf {
     protected:
         std::shared_ptr<FunctionIdentifierNodeI> left_, right_;
         std::string name_;
+
+        pid_t test_fork();
     };
 }
 

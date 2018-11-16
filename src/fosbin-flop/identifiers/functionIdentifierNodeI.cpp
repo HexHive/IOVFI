@@ -38,6 +38,11 @@ void fbf::FunctionIdentifierNodeI::set_fail_node(std::shared_ptr<fbf::FunctionId
     left_ = node;
 }
 
+pid_t fbf::FunctionIdentifierNodeI::test_fork() {
+    std::cout << std::flush;
+    return fork();
+}
+
 bool fbf::FunctionIdentifierNodeI::compare_any(const std::any v1, const std::any v2) {
     try {
         if (std::any_cast<int>(v1) == std::any_cast<int>(v2)) {
