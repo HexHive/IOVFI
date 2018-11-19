@@ -7,13 +7,12 @@
 
 #include <fosbin-config.h>
 #include <initializer_list>
-#include <vector>
 #include <tuple>
 #include <sys/wait.h>
 #include <iTestCase.h>
-#include "functionIdentifierNodeI.h"
 #include <signal.h>
-#include "TupleHelpers.h"
+#include <TupleHelpers.h>
+#include <identifiers/functionIdentifierNodeI.h>
 
 #define TIMEOUT_INTERNAL    100
 
@@ -117,7 +116,7 @@ namespace fbf {
 
             if constexpr(sizeof...(Args) > 0) {
                 if(is_equiv) {
-                    is_equiv &= check_args(preargs_, postargs_, arg_sizes_);
+                    is_equiv &= check_tuple_args(preargs_, postargs_, arg_sizes_);
                 }
             }
 
@@ -210,7 +209,7 @@ namespace fbf {
             LOG_DEBUG << "Function returned";
 
             if constexpr(sizeof...(Args) > 0) {
-                is_equiv = check_args(preargs_, postargs_, arg_sizes_);
+                is_equiv = check_tuple_args(preargs_, postargs_, arg_sizes_);
             }
 
             LOG_DEBUG << std::hex << location << std::dec 

@@ -4,11 +4,10 @@
 
 #ifndef FOSBIN_FULLTEST_H
 #define FOSBIN_FULLTEST_H
-#include <vector>
+
 #include "binaryDescriptor.h"
 #include "testRun.h"
 #include "CTPL/ctpl.h"
-#include <cstddef>
 #include <limits>
 
 namespace fbf {

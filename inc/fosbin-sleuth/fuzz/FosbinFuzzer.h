@@ -1,0 +1,252 @@
+//
+// Created by derrick on 11/19/18.
+//
+
+#ifndef FOSBIN_FOSBINFUZZER_H
+#define FOSBIN_FOSBINFUZZER_H
+
+#include <iTestCase.h>
+#include <tuple>
+#include <TupleHelpers.h>
+#include <random>
+#include <sys/wait.h>
+
+namespace fbf {
+    /*****************************************************************************************************
+     * ********************************* Fuzz argument functions *****************************************
+     ******************************************************************************************************/
+    template<typename Arg, typename std::enable_if<std::is_pointer_v<Arg>, int>::type = 0>
+    static Arg generate_arg(Arg arg, size_t size) {
+        /* Purposefully return original pointer argument, because the pointer is
+         * supposed to be backed by a valid memory region */
+        Arg buf = std::malloc(size);
+        std::memcpy(buf, arg, size);
+        return buf;
+    }
+
+    template<typename Arg, typename std::enable_if<std::is_integral_v<Arg>, int>::type = 0>
+    static Arg generate_arg(Arg arg, size_t size) {
+        std::default_random_engine generator;
+        std::uniform_int_distribution<Arg> distribution;
+        return distribution(generator);
+    }
+
+    template<typename Arg, typename std::enable_if<std::is_floating_point_v<Arg>, int>::type = 0>
+    static Arg generate_arg(Arg arg, size_t size) {
+        std::default_random_engine generator;
+        std::uniform_real_distribution<Arg> distribution;
+        return distribution(generator);
+    }
+
+    template<typename... Args, size_t... I>
+    static void fuzz_argument(size_t pointer_size, std::tuple<Args...> &tup, std::index_sequence<I...>) {
+        ((std::get<I>(tup) = generate_arg(std::get<I>(tup), pointer_size)), ...);
+    }
+
+    template<typename... Args>
+    static void fuzz_arguments(size_t pointer_size, std::tuple<Args...> &tup) {
+        fuzz_argument(pointer_size, tup, std::make_index_sequence<sizeof...(Args)>());
+    }
+
+    /*****************************************************************************************************
+     * ***************************** Clean up argument functions *****************************************
+     ******************************************************************************************************/
+    template<typename Arg, typename std::enable_if<std::is_pointer_v<Arg>, int>::type = 0>
+    static void cleanup_arg(Arg arg) {
+        return free(arg);
+    }
+
+    template<typename Arg, typename std::enable_if<!std::is_pointer_v<Arg>, int>::type = 0>
+    static void cleanup_arg(Arg arg) {
+        return;
+    }
+
+    template<typename... Args, size_t... I>
+    static void cleanup_fold(std::tuple<Args...> &tup, std::index_sequence<I...>) {
+        ((cleanup_arg(std::get<I>(tup))), ...);
+    }
+
+    template<typename... Args>
+    static void cleanup_args(std::tuple<Args...> &tup) {
+        cleanup_fold(tup, std::make_index_sequence<sizeof...(Args)>());
+    }
+
+    /*****************************************************************************************************
+     * ******************************* Output argument functions *****************************************
+     ******************************************************************************************************/
+    template<typename Arg, typename std::enable_if<std::is_void_v<Arg>, int>::type = 0>
+    static std::string output_arg_json() {
+        std::stringstream s;
+        s << "{";
+        s << "\"type\": " << 0 << ", \"value\": (nil)";
+        s << "}";
+        return s.str();
+    }
+
+    template<typename Arg, typename std::enable_if<!std::is_void_v<Arg>, int>::type = 0>
+    static std::string output_arg_json(size_t pointer_size, Arg prearg, Arg postarg) {
+        std::stringstream s;
+        s << "{";
+        /* TODO: Replace hard coded values with values from TypeID enum */
+        if constexpr (std::is_pointer_v<Arg>) {
+            char *tmp_pre = reinterpret_cast<char *>(prearg);
+            char *tmp_post = reinterpret_cast<char *>(postarg);
+            s << "\"type\": " << 15
+              << ", \"size\": " << pointer_size
+              << ", \"precall\": \"";
+            for (size_t i = 0; i < pointer_size; i++) {
+                s << "\\\\x" << std::hex << tmp_pre[i] << std::dec;
+            }
+
+            s << "\", postcall: \"";
+            for (size_t i = 0; i < pointer_size; i++) {
+                s << "\\\\x" << std::hex << tmp_post[i] << std::dec;
+            }
+
+            s << "\"";
+        } else {
+            int type = 0;
+            int size = sizeof(Arg);
+            if constexpr(std::is_integral_v<Arg>) {
+                type = 11;
+            } else {
+                if (typeid(Arg) == typeid(float)) {
+                    type = 2;
+                } else if (typeid(Arg) == typeid(double)) {
+                    type = 3;
+                } else if (typeid(Arg) == typeid(long double)) {
+                    type = 4;
+                }
+            }
+            s << "\"type\": " << type << ", \"size\": " << size << ", \"value\": " << prearg;
+        }
+        s << "}";
+        return s.str();
+    }
+
+    template<typename... Args, size_t... I>
+    static void output_json_args(std::ostream &out, size_t pointer_size, std::tuple<Args...> &precall,
+                                 std::tuple<Args...> &postcall, std::index_sequence<I...>) {
+        out << ((output_arg_json(pointer_size, std::get<I>(precall), std::get<I>(postcall))
+                << ((I == sizeof...(Args) - 1 ? "" : ", "))), ...);
+    }
+
+    template<typename... Args>
+    static std::string output_args(size_t pointer_size, std::tuple<Args...> &precall,
+                                   std::tuple<Args...> &postcall) {
+        return output_json_args(pointer_size, precall, postcall, std::make_index_sequence<sizeof...(Args)>());
+    }
+
+    /* ************************************************************************************************
+     * ************************************** Class Declaration ***************************************
+     * ************************************************************************************************/
+    template<typename R, typename... Args>
+    class FosbinFuzzer : public ITestCase {
+    public:
+        FosbinFuzzer(BinaryDescriptor &binDesc, uint32_t fuzz_count = 60, Args... args);
+
+        virtual const std::string get_test_name();
+
+        virtual int run_test();
+
+        virtual uintptr_t get_location();
+
+        virtual void set_location(uintptr_t location);
+
+    protected:
+        std::tuple<Args...> original_;
+        std::tuple<Args...> curr_args_;
+        BinaryDescriptor &bin_desc_;
+
+        void mutate_args();
+
+        uintptr_t curr_location_;
+        uint32_t fuzz_count_;
+    };
+
+    /* ************************************************************************************************
+     * ************************************** Class Definition ****************************************
+     * ************************************************************************************************/
+    template<typename R, typename... Args>
+    FosbinFuzzer<R, Args...>::FosbinFuzzer(BinaryDescriptor &binDesc, uint32_t fuzz_count, Args... args) :
+            ITestCase(),
+            curr_location_(0),
+            fuzz_count_(fuzz_count),
+            bin_desc_(binDesc) {
+        original_ = std::make_tuple({args...});
+        curr_args_ = original_;
+    }
+
+    template<typename R, typename... Args>
+    const std::string FosbinFuzzer<R, Args...>::get_test_name() {
+        return print_args(curr_args_);
+    }
+
+    template<typename R, typename... Args>
+    int FosbinFuzzer<R, Args...>::run_test() {
+        if (curr_location_ == 0) {
+            throw std::runtime_error("Unset fuzzing location");
+        }
+
+        std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(curr_location_);
+        const LofSymbol &symbol = bin_desc_.getSym(curr_location_);
+        pid_t pid = test_fork();
+        if (pid == 0) {
+            for (int i = 0; i < fuzz_count_; i++) {
+                mutate_args();
+
+                LOG_DEBUG << "Fuzzing 0x" << std::hex << curr_location_ << std::dec
+                          << " with arguments " << print_args(curr_args_);
+
+                std::stringstream s;
+                s << "{ \"function\": { \"name\": \"" << symbol.name << "\", "
+                  << "\"return\": ";
+
+                if constexpr (std::is_void_v<R>) {
+                    std::apply(func, curr_args_);
+                    s << output_arg_json<void>();
+                    LOG_DEBUG << "Void function returned";
+                } else {
+                    R retVal = std::apply(func, curr_args_);
+                    LOG_DEBUG << "Function returned " << retVal;
+                    s << output_arg_json(ITestCase::POINTER_SIZE, retVal, retVal);
+                }
+
+                s << ", \"args\": ["
+                  << output_args(ITestCase::POINTER_SIZE, original_, curr_args_)
+                  << "]} }" << std::endl;
+            }
+
+            exit(ITestCase::PASS);
+        } else if (pid > 0) {
+            int status;
+            LOG_DEBUG << "Process " << getpid() << " is waiting on " << pid << " to finish fuzzing";
+            waitpid(pid, &status, 0);
+            if (!WIFEXITED(status)) {
+                LOG_DEBUG << "Function faulted";
+            } else if (WEXITSTATUS(status) != ITestCase::PASS) {
+                LOG_DEBUG << "Function exited with exit code " << WEXITSTATUS(status);
+            }
+            return (WIFEXITED(status) && WEXITSTATUS(status) == ITestCase::PASS);
+        }
+    }
+
+    template<typename R, typename... Args>
+    uintptr_t FosbinFuzzer<R, Args...>::get_location() {
+        return curr_location_;
+    }
+
+    template<typename R, typename... Args>
+    void FosbinFuzzer<R, Args...>::set_location(uintptr_t location) {
+        curr_location_ = location;
+    }
+
+    template<typename R, typename... Args>
+    void FosbinFuzzer<R, Args...>::mutate_args() {
+        /* TODO: Remove hardcoded pointer size value */
+        fuzz_arguments(ITestCase::POINTER_SIZE, original_);
+    }
+}
+
+
+#endif //FOSBIN_FOSBINFUZZER_H

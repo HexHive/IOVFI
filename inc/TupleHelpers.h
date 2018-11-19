@@ -7,6 +7,8 @@
 
 #include <iostream>
 #include <sstream>
+#include <string>
+#include "fosbin-config.h"
 
 namespace fbf {
     template<typename Arg, typename std::enable_if<std::is_pointer_v<Arg>, int>::type = 0>

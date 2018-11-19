@@ -5,7 +5,7 @@
 #ifndef FOSBIN_FOSBIN_SLEUTH_H
 #define FOSBIN_FOSBIN_SLEUTH_H
 
-#include "fosbin-sleuth-config.h"
+#include <fosbin-sleuth-config.h>
 
 #define MAX_ARG_COUNT   8
 #define STR_LEN         48

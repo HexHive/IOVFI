@@ -5,13 +5,9 @@
 #ifndef FOSBIN_BINARYDESCRIPTOR_H
 #define FOSBIN_BINARYDESCRIPTOR_H
 
-#include <set>
 #include <map>
-#include "binSection.h"
-#include <experimental/filesystem>
-#include "fosbin-config.h"
-
-namespace fs = std::experimental::filesystem;
+#include <binSection.h>
+#include <fosbin-config.h>
 
 namespace fbf {
     struct LofSymbol {

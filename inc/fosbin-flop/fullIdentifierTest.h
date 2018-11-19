@@ -5,8 +5,8 @@
 #ifndef FOSBIN_FLOP_FULLTEST_H
 #define FOSBIN_FLOP_FULLTEST_H
 
-#include <fosbin-flop.h>
-#include "fullTest.h"
+#include <fosbin-flop-config.h>
+#include <fullTest.h>
 
 namespace fs = std::experimental::filesystem;
 

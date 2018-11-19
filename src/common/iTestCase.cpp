@@ -6,6 +6,8 @@
 
 #include "iTestCase.h"
 
+const size_t fbf::ITestCase::POINTER_SIZE = 512;
+
 fbf::ITestCase::ITestCase() :
         re_(),
         dist_(std::numeric_limits<int>::min(),
@@ -24,4 +26,13 @@ void fbf::ITestCase::output_result(std::ostream &out) {
 
 void fbf::ITestCase::input_result(std::istream &in) {
     return;
+}
+
+pid_t fbf::ITestCase::test_fork() {
+    std::cout << std::flush;
+    pid_t child = fork();
+    if(child < 0) {
+        throw std::runtime_error("Could not fork child test");
+    }
+    return child;
 }

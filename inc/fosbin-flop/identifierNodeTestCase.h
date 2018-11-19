@@ -5,8 +5,8 @@
 #ifndef FOSBIN_IDENTIFIERNODETESTCASE_H
 #define FOSBIN_IDENTIFIERNODETESTCASE_H
 
-#include <fosbin-flop/identifiers/functionIdentifierInteriorNode.h>
-#include "iTestCase.h"
+#include <identifiers/functionIdentifierInteriorNode.h>
+#include <iTestCase.h>
 
 namespace fbf {
     class IdentifierNodeTestCase : public ITestCase {

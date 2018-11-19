@@ -1,5 +1,4 @@
-#include <iostream>
-#include "fosbin-flop/fosbin-flop.h"
+#include "fosbin-flop-config.h"
 #include <experimental/filesystem>
 #include <fosbin-flop/fullIdentifierTest.h>
 #include <commandLineParser.h>

@@ -5,7 +5,7 @@
 #ifndef FOSBIN_FUNCTIONIDENTIFIERNODE_H
 #define FOSBIN_FUNCTIONIDENTIFIERNODE_H
 
-#include "functionIdentifierNodeI.h"
+#include <identifiers/functionIdentifierNodeI.h>
 
 namespace fbf{
         class FunctionIdentifierNode : public FunctionIdentifierNodeI {

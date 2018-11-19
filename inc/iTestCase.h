@@ -5,9 +5,8 @@
 #ifndef FOSBIN_ITESTCASE_H
 #define FOSBIN_ITESTCASE_H
 
-#include <string>
 #include <random>
-#include "binaryDescriptor.h"
+#include <binaryDescriptor.h>
 
 namespace fbf {
     class ITestCase {
@@ -24,9 +23,11 @@ namespace fbf {
         const static int NON_CRASHING = 2;
 
         /* TODO: overload << operator for easier outputting */
+        const static size_t POINTER_SIZE;
 
     protected:
         int rand();
+        pid_t test_fork();
 
     private:
         std::default_random_engine re_;

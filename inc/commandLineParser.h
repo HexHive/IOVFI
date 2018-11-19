@@ -6,14 +6,11 @@
 #define FOSBIN_COMMANDLINEPARSER_H
 
 #include <boost/program_options.hpp>
-#include <experimental/filesystem>
 #include "fosbin-config.h"
 
-namespace fbf {
-    namespace po = boost::program_options;
-    namespace fs = std::experimental::filesystem;
-    namespace logging = boost::log;
+namespace po = boost::program_options;
 
+namespace fbf {
     class CommandLineParser {
     public:
         CommandLineParser(int argc, char** argv, const char* name);
