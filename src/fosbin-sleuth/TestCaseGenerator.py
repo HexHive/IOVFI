@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+# DEPRECATED -- This generates every possible combination of supported arguments
+# and runs it. This is an old version of sleuth.  Instead, we now use static
+# analysis to determine arity
+
 import sys
 
 # NB: THESE TYPES CANNOT HAVE SPACES!
