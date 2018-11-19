@@ -57,6 +57,8 @@ fbf::FullTest &fbf::FullTest::operator=(const fbf::FullTest &other) {
 }
 
 void fbf::FullTest::run() {
+    create_testcases();
+
     size_t test_num = 0;
     struct termios in, out, err;
     tcgetattr(0, &in);

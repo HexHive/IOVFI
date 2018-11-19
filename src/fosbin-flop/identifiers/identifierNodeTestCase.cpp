@@ -5,10 +5,9 @@
 #include <fosbin-flop/identifierNodeTestCase.h>
 
 fbf::IdentifierNodeTestCase::IdentifierNodeTestCase(std::shared_ptr<fbf::FunctionIdentifierNodeI> root,
-
                                                     uintptr_t location, uint32_t arity)
-        : ITestCase(), location_(location), root_(root), leaf_(nullptr), arity_(arity) {
-
+        : ITestCase(), root_(root), leaf_(nullptr), arity_(arity) {
+    set_location(location);
 }
 
 const std::string fbf::IdentifierNodeTestCase::get_test_name() {
@@ -54,8 +53,4 @@ void fbf::IdentifierNodeTestCase::output_result(std::ostream &out) {
     } else {
         out << "UNKNOWN";
     }
-}
-
-uintptr_t fbf::IdentifierNodeTestCase::get_location() {
-    return location_;
 }

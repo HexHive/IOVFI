@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
     fbf::CommandLineParser parser(argc, argv, IDENTIFIER_NAME);
     parser.add_option(
             "arg-counts,a",
-            boost::program_options::value<fs::path>()->required(),
+            po::value<fs::path>()->required(),
             "/path/to/argument/counts"
     );
 

@@ -29,10 +29,7 @@ namespace fbf {
 
         int run_test();
 
-        virtual uintptr_t get_location();
-
     protected:
-        uintptr_t location_;
         std::tuple<Args...> args_;
 
         BinaryDescriptor &binDesc_;
@@ -53,13 +50,9 @@ namespace fbf {
     fbf::ArgumentTestCase<R, Args...>::ArgumentTestCase(uintptr_t location,
                                                         std::tuple<Args...> args,
                                                         std::vector<std::string> argTypes, BinaryDescriptor &binDesc)
-            : ITestCase(), location_(location), args_(args), argTypes_(argTypes), binDesc_(binDesc) {
+            : ITestCase(), args_(args), argTypes_(argTypes), binDesc_(binDesc) {
         std::memset(&returnValue_, (char) binDesc_.getIdentifier(), sizeof(returnValue_));
-    }
-
-    template<typename R, typename... Args>
-    uintptr_t fbf::ArgumentTestCase<R, Args...>::get_location() {
-        return location_;
+        set_location(location);
     }
 
     template<typename R, typename... Args>

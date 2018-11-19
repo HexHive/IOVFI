@@ -5,11 +5,12 @@
 #include <fosbin-sleuth/argumentCountTestCase.h>
 
 fbf::ArgumentCountTestCase::ArgumentCountTestCase(uintptr_t location, size_t size, BinaryDescriptor &binDesc) :
-        ITestCase(), location_(location), size_(size), arg_count_(0), handle_(0), binDesc_(binDesc) {
+        ITestCase(), size_(size), arg_count_(0), handle_(0), binDesc_(binDesc) {
     if (cs_open(CS_ARCH_X86, CS_MODE_64, &handle_) != CS_ERR_OK) {
         throw std::runtime_error("Could not open capstone handle");
     }
     cs_option(handle_, CS_OPT_DETAIL, CS_OPT_ON);
+    set_location(location);
 }
 
 fbf::ArgumentCountTestCase::~ArgumentCountTestCase() {
@@ -357,8 +358,4 @@ uint16_t fbf::ArgumentCountTestCase::get_reg_id(uint16_t reg) {
         default:
             return reg;
     }
-}
-
-uintptr_t fbf::ArgumentCountTestCase::get_location() {
-    return location_;
 }

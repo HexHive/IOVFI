@@ -127,14 +127,17 @@ namespace fbf {
     template<typename... Args, size_t... I>
     static void output_json_args(std::ostream &out, size_t pointer_size, std::tuple<Args...> &precall,
                                  std::tuple<Args...> &postcall, std::index_sequence<I...>) {
-        out << ((output_arg_json(pointer_size, std::get<I>(precall), std::get<I>(postcall))
-                << ((I == sizeof...(Args) - 1 ? "" : ", "))), ...);
+
+        ((out << output_arg_json(pointer_size, std::get<I>(precall), std::get<I>(postcall))
+            << (I < sizeof...(Args) ? "," : "")), ...);
     }
 
     template<typename... Args>
     static std::string output_args(size_t pointer_size, std::tuple<Args...> &precall,
                                    std::tuple<Args...> &postcall) {
-        return output_json_args(pointer_size, precall, postcall, std::make_index_sequence<sizeof...(Args)>());
+        std::stringstream s;
+        output_json_args(s, pointer_size, precall, postcall, std::make_index_sequence<sizeof...(Args)>());
+        return s.str();
     }
 
     /* ************************************************************************************************
@@ -143,15 +146,13 @@ namespace fbf {
     template<typename R, typename... Args>
     class FosbinFuzzer : public ITestCase {
     public:
-        FosbinFuzzer(BinaryDescriptor &binDesc, uint32_t fuzz_count = 60, Args... args);
+        FosbinFuzzer(BinaryDescriptor &binDesc, std::tuple<Args...> args, uint32_t fuzz_count = 60);
 
         virtual const std::string get_test_name();
 
         virtual int run_test();
 
-        virtual uintptr_t get_location();
-
-        virtual void set_location(uintptr_t location);
+        virtual arity_t get_arity();
 
     protected:
         std::tuple<Args...> original_;
@@ -159,8 +160,6 @@ namespace fbf {
         BinaryDescriptor &bin_desc_;
 
         void mutate_args();
-
-        uintptr_t curr_location_;
         uint32_t fuzz_count_;
     };
 
@@ -168,13 +167,13 @@ namespace fbf {
      * ************************************** Class Definition ****************************************
      * ************************************************************************************************/
     template<typename R, typename... Args>
-    FosbinFuzzer<R, Args...>::FosbinFuzzer(BinaryDescriptor &binDesc, uint32_t fuzz_count, Args... args) :
+    FosbinFuzzer<R, Args...>::FosbinFuzzer(BinaryDescriptor &binDesc, std::tuple<Args...> args, uint32_t fuzz_count) :
             ITestCase(),
-            curr_location_(0),
             fuzz_count_(fuzz_count),
             bin_desc_(binDesc) {
-        original_ = std::make_tuple({args...});
+        original_ = args;
         curr_args_ = original_;
+        set_location(0);
     }
 
     template<typename R, typename... Args>
@@ -184,18 +183,18 @@ namespace fbf {
 
     template<typename R, typename... Args>
     int FosbinFuzzer<R, Args...>::run_test() {
-        if (curr_location_ == 0) {
+        if (location_ == 0) {
             throw std::runtime_error("Unset fuzzing location");
         }
 
-        std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(curr_location_);
-        const LofSymbol &symbol = bin_desc_.getSym(curr_location_);
+        std::function<R(Args...)> func = reinterpret_cast<R(*)(Args...)>(location_);
+        const LofSymbol &symbol = bin_desc_.getSym(location_);
         pid_t pid = test_fork();
         if (pid == 0) {
             for (int i = 0; i < fuzz_count_; i++) {
                 mutate_args();
 
-                LOG_DEBUG << "Fuzzing 0x" << std::hex << curr_location_ << std::dec
+                LOG_DEBUG << "Fuzzing 0x" << std::hex << location_ << std::dec
                           << " with arguments " << print_args(curr_args_);
 
                 std::stringstream s;
@@ -229,22 +228,20 @@ namespace fbf {
             }
             return (WIFEXITED(status) && WEXITSTATUS(status) == ITestCase::PASS);
         }
-    }
 
-    template<typename R, typename... Args>
-    uintptr_t FosbinFuzzer<R, Args...>::get_location() {
-        return curr_location_;
-    }
-
-    template<typename R, typename... Args>
-    void FosbinFuzzer<R, Args...>::set_location(uintptr_t location) {
-        curr_location_ = location;
+        /* This shouldn't happen, but I don't want warnings */
+        return 0;
     }
 
     template<typename R, typename... Args>
     void FosbinFuzzer<R, Args...>::mutate_args() {
         /* TODO: Remove hardcoded pointer size value */
         fuzz_arguments(ITestCase::POINTER_SIZE, original_);
+    }
+
+    template<typename R, typename... Args>
+    arity_t FosbinFuzzer<R, Args...>::get_arity() {
+        return sizeof...(Args);
     }
 }
 

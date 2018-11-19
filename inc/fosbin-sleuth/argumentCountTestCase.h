@@ -19,10 +19,7 @@ namespace fbf {
 
         virtual int run_test();
 
-        virtual uintptr_t get_location();
-
     protected:
-        uintptr_t location_;
         size_t size_;
         uint8_t arg_count_;
         csh handle_;

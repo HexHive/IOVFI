@@ -12,8 +12,8 @@ namespace fbf{
         public:
             FunctionIdentifierNode(const char* functionName, std::shared_ptr<FunctionIdentifierNodeI> confirmation);
             virtual bool test(uintptr_t location) override;
-            virtual bool test_arity(uintptr_t location, arg_count_t arity) override;
-            virtual arg_count_t get_arg_count() override;
+            virtual bool test_arity(uintptr_t location, arity_t arity) override;
+            virtual arity_t get_arg_count() override;
 
             virtual void set_pass_node(std::shared_ptr<FunctionIdentifierNodeI> node) override;
             virtual void set_fail_node(std::shared_ptr<FunctionIdentifierNodeI> node) override;

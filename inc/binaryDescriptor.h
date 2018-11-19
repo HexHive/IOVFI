@@ -13,10 +13,10 @@ namespace fbf {
     struct LofSymbol {
         std::string name;
         size_t size;
-        uint32_t arity;
+        arity_t arity;
         bool isHidden;
 
-        LofSymbol(std::string n, size_t s, uint32_t a, bool h = false) : name(n), size(s), arity(a), isHidden(h) {}
+        LofSymbol(std::string n, size_t s, arity_t a, bool h = false) : name(n), size(s), arity(a), isHidden(h) {}
 
         LofSymbol(const LofSymbol &other) {
             name = other.name;

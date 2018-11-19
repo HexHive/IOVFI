@@ -25,6 +25,8 @@ namespace logging = boost::log;
 #define LOG_ERR     BOOST_LOG_TRIVIAL(error) << std::dec
 #define LOG_FATAL   BOOST_LOG_TRIVIAL(fatal) << std::dec
 
+typedef size_t arity_t;
+
 namespace fbf {
 /* This is copied from include/llvm/IR/Type.h. If this changes, then
  * those changes will have to be reflected here. It is just easier

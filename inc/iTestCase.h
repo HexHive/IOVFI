@@ -14,7 +14,8 @@ namespace fbf {
         ITestCase();
         virtual const std::string get_test_name() = 0;
         virtual int run_test() = 0;
-        virtual uintptr_t get_location() = 0;
+        virtual uintptr_t get_location();
+        virtual void set_location(uintptr_t location);
         virtual void output_result(std::ostream& out);
         virtual void input_result(std::istream& in);
 
@@ -26,6 +27,8 @@ namespace fbf {
         const static size_t POINTER_SIZE;
 
     protected:
+        uintptr_t location_;
+
         int rand();
         pid_t test_fork();
 

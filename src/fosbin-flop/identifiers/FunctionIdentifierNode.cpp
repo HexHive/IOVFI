@@ -14,11 +14,11 @@ bool fbf::FunctionIdentifierNode::test(uintptr_t location) {
     return confirmation_->test(location);
 }
 
-bool fbf::FunctionIdentifierNode::test_arity(uintptr_t location, arg_count_t arity) {
+bool fbf::FunctionIdentifierNode::test_arity(uintptr_t location, arity_t arity) {
     return confirmation_->test_arity(location, arity);
 }
 
-fbf::arg_count_t fbf::FunctionIdentifierNode::get_arg_count() {
+arity_t fbf::FunctionIdentifierNode::get_arg_count() {
     return confirmation_->get_arg_count();
 }
 

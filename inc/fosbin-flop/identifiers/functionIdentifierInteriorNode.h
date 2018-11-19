@@ -35,9 +35,9 @@ namespace fbf {
 
         virtual bool test(uintptr_t location) override;
 
-        virtual bool test_arity(uintptr_t location, arg_count_t arity) override;
+        virtual bool test_arity(uintptr_t location, arity_t arity) override;
 
-        virtual arg_count_t get_arg_count() override;
+        virtual arity_t get_arg_count() override;
 
     protected:
         R retVal_;
@@ -139,10 +139,10 @@ namespace fbf {
     }
 
     template<typename R, typename... Args>
-    arg_count_t FunctionIdentifierInternalNode<R, Args...>::get_arg_count() { return sizeof...(Args); }
+    arity_t FunctionIdentifierInternalNode<R, Args...>::get_arg_count() { return sizeof...(Args); }
 
     template<typename R, typename... Args>
-    bool FunctionIdentifierInternalNode<R, Args...>::test_arity(uintptr_t location, arg_count_t arity) {
+    bool FunctionIdentifierInternalNode<R, Args...>::test_arity(uintptr_t location, arity_t arity) {
         if (arity != get_arg_count()) {
             LOG_DEBUG << std::hex << location << std::dec << " has arity " << arity << " and does not match " <<
                       get_arg_count();
@@ -163,9 +163,9 @@ namespace fbf {
 
         virtual bool test(uintptr_t location) override;
 
-        virtual bool test_arity(uintptr_t location, arg_count_t arity) override;
+        virtual bool test_arity(uintptr_t location, arity_t arity) override;
 
-        virtual arg_count_t get_arg_count() override;
+        virtual arity_t get_arg_count() override;
 
     protected:
         std::tuple<Args...> preargs_;
@@ -184,10 +184,10 @@ namespace fbf {
     }
 
     template<typename... Args>
-    arg_count_t FunctionIdentifierInternalNode<void, Args...>::get_arg_count() { return sizeof...(Args); }
+    arity_t FunctionIdentifierInternalNode<void, Args...>::get_arg_count() { return sizeof...(Args); }
 
     template<typename... Args>
-    bool FunctionIdentifierInternalNode<void, Args...>::test_arity(uintptr_t location, arg_count_t arity) {
+    bool FunctionIdentifierInternalNode<void, Args...>::test_arity(uintptr_t location, arity_t arity) {
         if (arity != get_arg_count()) {
             LOG_DEBUG << std::hex << location << std::dec << " has arity " << arity << " and does not match " <<
                       get_arg_count();

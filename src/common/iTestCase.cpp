@@ -36,3 +36,11 @@ pid_t fbf::ITestCase::test_fork() {
     }
     return child;
 }
+
+uintptr_t fbf::ITestCase::get_location() {
+    return location_;
+}
+
+void fbf::ITestCase::set_location(uintptr_t location) {
+    location_ = location;
+}

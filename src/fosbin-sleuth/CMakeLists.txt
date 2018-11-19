@@ -25,8 +25,9 @@ target_link_libraries( ${FUNC_CLASSIFIER} "-L${CMAKE_BINARY_DIR}/lib" capstone )
 target_sources( ${FUNC_CLASSIFIER}
     PUBLIC
         ${COMMON_SRC}
-        coord/fullSleuthTest.cpp
+        coord/fullArityTest.cpp
         protectedBuffer.cpp
         TestCases.inc
         argumentCountTestCase.cpp
+        fuzz/FullFuzzTest.cpp
         )

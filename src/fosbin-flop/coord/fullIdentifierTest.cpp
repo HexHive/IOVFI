@@ -21,7 +21,6 @@ namespace fs = std::experimental::filesystem;
 fbf::FullIdentifierTest::FullIdentifierTest(fs::path descriptor, fs::path arg_counts, uint32_t thread_count) :
         FullTest(descriptor, thread_count) {
     binDesc_.parse_aritys(arg_counts);
-    create_testcases();
 }
 
 fbf::FullIdentifierTest::~FullIdentifierTest() {

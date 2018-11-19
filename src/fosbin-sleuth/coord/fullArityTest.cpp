@@ -2,11 +2,9 @@
 // Created by derrick on 9/17/18.
 //
 
-#include <fosbin-sleuth/fullSleuthTest.h>
+#include <fosbin-sleuth/fullArityTest.h>
 #include <fosbin-sleuth/argumentCountTestCase.h>
-#include "fosbin-sleuth/fullSleuthTest.h"
 
-#include <vector>
 #include <map>
 #include <cstring>
 #include <random>
@@ -17,17 +15,17 @@
 #include <sys/mman.h>
 #include <set>
 
-fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, fs::path syscall_mapping, size_t strLen, size_t ptrLen,
+fbf::FullArityTest::FullArityTest(fs::path descriptor, fs::path syscall_mapping, size_t strLen, size_t ptrLen,
                                     uint32_t thread_count) : FullTest(descriptor, syscall_mapping, thread_count) {
     init(strLen, ptrLen);
 }
 
-fbf::FullSleuthTest::FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen, uint32_t thread_count) :
+fbf::FullArityTest::FullArityTest(fs::path descriptor, size_t strLen, size_t ptrLen, uint32_t thread_count) :
         FullTest(descriptor, thread_count) {
     init(strLen, ptrLen);
 }
 
-void fbf::FullSleuthTest::init(size_t strLen, size_t ptrLen) {
+void fbf::FullArityTest::init(size_t strLen, size_t ptrLen) {
     /* Avoid testInt values */
     std::uniform_int_distribution<uint8_t> charRand(MAX_ARGUMENTS + 2, 0xfe);
     std::uniform_int_distribution<int> intRand(std::numeric_limits<int>::min(),
@@ -59,17 +57,15 @@ void fbf::FullSleuthTest::init(size_t strLen, size_t ptrLen) {
             }
         }
     }
-
-    create_testcases();
 }
 
-fbf::FullSleuthTest::~FullSleuthTest() {
+fbf::FullArityTest::~FullArityTest() {
     for (char *str : testStrs) {
         std::free(str);
     }
 }
 
-void fbf::FullSleuthTest::output(std::ostream &o) {
+void fbf::FullArityTest::output(std::ostream &o) {
     for (std::shared_ptr<fbf::TestRun> test : testRuns_) {
         o << "Function " << binDesc_.getSym(test->get_location()).name;
         if (test->get_result() == fbf::ITestCase::PASS) {
@@ -86,7 +82,7 @@ void fbf::FullSleuthTest::output(std::ostream &o) {
     }
 }
 
-void fbf::FullSleuthTest::create_testcases() {
+void fbf::FullArityTest::create_testcases() {
     for (uintptr_t loc : binDesc_.getOffsets()) {
         uintptr_t location = compute_location(loc);
         const LofSymbol& sym = binDesc_.getSym(location);

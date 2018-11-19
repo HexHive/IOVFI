@@ -10,17 +10,17 @@
 #include <vector>
 
 namespace fbf {
-    class FullSleuthTest : public FullTest {
+    class FullArityTest : public FullTest {
     public:
-        FullSleuthTest(fs::path descriptor, size_t strLen, size_t ptrLen, uint32_t thread_count = 1);
-        FullSleuthTest(fs::path descriptor, fs::path syscall_mapping, size_t strLen, size_t ptrLen, uint32_t thread_count = 1);
-        FullSleuthTest(const FullSleuthTest& other);
+        FullArityTest(fs::path descriptor, size_t strLen, size_t ptrLen, uint32_t thread_count = 1);
+        FullArityTest(fs::path descriptor, fs::path syscall_mapping, size_t strLen, size_t ptrLen, uint32_t thread_count = 1);
+        FullArityTest(const FullArityTest& other);
 
-        virtual ~FullSleuthTest();
+        virtual ~FullArityTest();
 
         virtual void output(std::ostream &o) override;
 
-        const static int MAX_ARGUMENTS = 8;
+        const static int MAX_ARGUMENTS = 6;
 
     protected:
         std::vector<ProtectedBuffer> testPtrs;

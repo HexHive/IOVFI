@@ -17,13 +17,10 @@ namespace fbf {
 
         virtual int run_test();
 
-        virtual uintptr_t get_location();
-
         virtual void output_result(std::ostream &out);
 
     protected:
         std::shared_ptr<fbf::FunctionIdentifierNodeI> root_, leaf_;
-        uintptr_t location_;
         uint32_t arity_;
     };
 }
