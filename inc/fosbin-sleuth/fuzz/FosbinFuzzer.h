@@ -242,7 +242,7 @@ namespace fbf {
     template<typename R, typename... Args>
     void FosbinFuzzer<R, Args...>::mutate_args() {
         /* TODO: Remove hardcoded pointer size value */
-        fuzz_arguments(ITestCase::POINTER_SIZE, original_, this->rand());
+        fuzz_arguments(ITestCase::POINTER_SIZE, this->rand(), original_);
     }
 
     template<typename R, typename... Args>
