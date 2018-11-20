@@ -10,6 +10,7 @@
 #include <TupleHelpers.h>
 #include <random>
 #include <sys/wait.h>
+#include <iomanip>
 
 namespace fbf {
     /*****************************************************************************************************
@@ -51,9 +52,7 @@ namespace fbf {
 
     template<typename... Args>
     static void fuzz_arguments(size_t pointer_size, int seed, std::tuple<Args...> &tup) {
-        LOG_DEBUG << "Tuple before: {" << print_args(tup) << "}";
         fuzz_argument(pointer_size, seed, tup, std::make_index_sequence<sizeof...(Args)>());
-        LOG_DEBUG << "Tuple after: {" << print_args(tup) << "}";
     }
 
     /*****************************************************************************************************
@@ -97,18 +96,26 @@ namespace fbf {
         s << "{";
         /* TODO: Replace hard coded values with values from TypeID enum */
         if constexpr (std::is_pointer_v<Arg>) {
-            char *tmp_pre = reinterpret_cast<char *>(prearg);
-            char *tmp_post = reinterpret_cast<char *>(postarg);
+            uint8_t *tmp_pre = reinterpret_cast<uint8_t *>(prearg);
+            uint8_t *tmp_post = reinterpret_cast<uint8_t *>(postarg);
             s << "\"type\": " << 15
               << ", \"size\": " << pointer_size
               << ", \"precall\": \"";
             for (size_t i = 0; i < pointer_size; i++) {
-                s << "\\\\x" << std::hex << tmp_pre[i] << std::dec;
+                if(tmp_pre[i] == 0) {
+                    s << "\\\\x00";
+                } else {
+                    s << "\\\\x" << std::hex << ((int)tmp_pre[i] & 0x000000FF) << std::dec;
+                }
             }
 
             s << "\", postcall: \"";
             for (size_t i = 0; i < pointer_size; i++) {
-                s << "\\\\x" << std::hex << tmp_post[i] << std::dec;
+                if(tmp_post[i] == 0) {
+                    s << "\\\\x00";
+                } else {
+                    s << "\\\\x" << std::hex << ((int)tmp_post[i] & 0x000000FF) << std::dec;
+                }
             }
 
             s << "\"";
@@ -126,7 +133,7 @@ namespace fbf {
                     type = 4;
                 }
             }
-            s << "\"type\": " << type << ", \"size\": " << size << ", \"value\": " << prearg;
+            s << "\"type\": " << type << ", \"size\": " << size << ", \"value\": " << std::setprecision(std::numeric_limits<Arg>::digits10) << postarg;
         }
         s << "}";
         return s.str();
@@ -137,7 +144,7 @@ namespace fbf {
                                  std::tuple<Args...> &postcall, std::index_sequence<I...>) {
 
         ((out << output_arg_json(pointer_size, std::get<I>(precall), std::get<I>(postcall))
-            << (I < sizeof...(Args) ? "," : "")), ...);
+            << (I < sizeof...(Args) - 1 ? ", " : "")), ...);
     }
 
     template<typename... Args>
@@ -222,6 +229,8 @@ namespace fbf {
                 s << ", \"args\": ["
                   << output_args(ITestCase::POINTER_SIZE, original_, curr_args_)
                   << "]} }" << std::endl;
+
+                std::cout << s.str();
             }
 
             exit(ITestCase::PASS);
@@ -237,8 +246,8 @@ namespace fbf {
             return (WIFEXITED(status) && WEXITSTATUS(status) == ITestCase::PASS);
         }
 
-        /* This shouldn't happen, but I don't want warnings */
-        return 0;
+        /* This shouldn't happen, but I don't want compile warnings */
+        throw std::runtime_error("Invalid fork value");
     }
 
     template<typename R, typename... Args>

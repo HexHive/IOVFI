@@ -17,8 +17,12 @@ fbf::FullFuzzTest::~FullFuzzTest() = default;
 
 void fbf::FullFuzzTest::create_testcases() {
     /* TODO: Adapt python script to generate these class definitions */
-    std::shared_ptr<fbf::FosbinFuzzer<double, double>> fuzzer0 =
-            std::make_shared<fbf::FosbinFuzzer<double, double>>(binDesc_, 0.0);
+    void* buf0 = malloc(ITestCase::POINTER_SIZE);
+    std::memset(buf0, 0, ITestCase::POINTER_SIZE);
+    void* buf1 = malloc(ITestCase::POINTER_SIZE);
+    std::memset(buf1, 0, ITestCase::POINTER_SIZE);
+    std::shared_ptr<fbf::FosbinFuzzer<void, double, void*, void*>> fuzzer0 =
+            std::make_shared<fbf::FosbinFuzzer<void, double, void*, void*>>(binDesc_, std::make_tuple(0.0, buf0, buf1));
     fuzzers[fuzzer0->get_arity()].push_back(fuzzer0);
 
     for(uintptr_t loc : binDesc_.getOffsets()) {
