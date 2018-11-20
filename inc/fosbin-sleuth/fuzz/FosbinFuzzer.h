@@ -16,7 +16,7 @@ namespace fbf {
      * ********************************* Fuzz argument functions *****************************************
      ******************************************************************************************************/
     template<typename Arg, typename std::enable_if<std::is_pointer_v<Arg>, int>::type = 0>
-    static Arg generate_arg(Arg arg, size_t size) {
+    static Arg generate_arg(Arg arg, size_t size, int seed) {
         /* Purposefully return original pointer argument, because the pointer is
          * supposed to be backed by a valid memory region */
         Arg buf = std::malloc(size);
@@ -25,8 +25,9 @@ namespace fbf {
     }
 
     template<typename Arg, typename std::enable_if<std::is_integral_v<Arg>, int>::type = 0>
-    static Arg generate_arg(Arg arg, size_t size) {
+    static Arg generate_arg(Arg arg, size_t size, int seed) {
         std::default_random_engine generator;
+        generator.seed(seed);
         std::uniform_int_distribution<Arg> distribution;
         Arg retVal = distribution(generator);
         LOG_DEBUG << "Returning integer " << retVal;
@@ -34,8 +35,9 @@ namespace fbf {
     }
 
     template<typename Arg, typename std::enable_if<std::is_floating_point_v<Arg>, int>::type = 0>
-    static Arg generate_arg(Arg arg, size_t size) {
+    static Arg generate_arg(Arg arg, size_t size, int seed) {
         std::default_random_engine generator;
+        generator.seed(seed);
         std::uniform_real_distribution<Arg> distribution;
         Arg retVal = distribution(generator);
         LOG_DEBUG << "Returning float " << retVal;
@@ -43,13 +45,13 @@ namespace fbf {
     }
 
     template<typename... Args, size_t... I>
-    static void fuzz_argument(size_t pointer_size, std::tuple<Args...> &tup, std::index_sequence<I...>) {
-        ((std::get<I>(tup) = generate_arg(std::get<I>(tup), pointer_size)), ...);
+    static void fuzz_argument(size_t pointer_size, int seed, std::tuple<Args...> &tup, std::index_sequence<I...>) {
+        ((std::get<I>(tup) = generate_arg(std::get<I>(tup), pointer_size, seed)), ...);
     }
 
     template<typename... Args>
-    static void fuzz_arguments(size_t pointer_size, std::tuple<Args...> &tup) {
-        fuzz_argument(pointer_size, tup, std::make_index_sequence<sizeof...(Args)>());
+    static void fuzz_arguments(size_t pointer_size, int seed, std::tuple<Args...> &tup) {
+        fuzz_argument(pointer_size, seed, tup, std::make_index_sequence<sizeof...(Args)>());
     }
 
     /*****************************************************************************************************
@@ -240,7 +242,7 @@ namespace fbf {
     template<typename R, typename... Args>
     void FosbinFuzzer<R, Args...>::mutate_args() {
         /* TODO: Remove hardcoded pointer size value */
-        fuzz_arguments(ITestCase::POINTER_SIZE, original_);
+        fuzz_arguments(ITestCase::POINTER_SIZE, original_, this->rand());
     }
 
     template<typename R, typename... Args>
