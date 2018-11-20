@@ -21,6 +21,8 @@ namespace fbf {
 
     protected:
         std::map<arity_t, std::vector<std::shared_ptr<ITestCase>>> fuzzers;
+        void* create_buffer(size_t size);
+        std::set<void*> buffers;
     };
 }
 

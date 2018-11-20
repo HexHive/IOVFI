@@ -233,6 +233,7 @@ namespace fbf {
                 std::cout << s.str();
             }
 
+            LOG_DEBUG << "Done fuzzing 0x" << std::hex << location_;
             exit(ITestCase::PASS);
         } else if (pid > 0) {
             int status;
