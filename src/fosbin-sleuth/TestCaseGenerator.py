@@ -1,32 +1,20 @@
 #!/usr/bin/python3
 
-# DEPRECATED -- This generates every possible combination of supported arguments
-# and runs it. This is an old version of sleuth.  Instead, we now use static
-# analysis to determine arity
-
 import sys
 
 # NB: THESE TYPES CANNOT HAVE SPACES!
 supported_types = {
-    'int': 'testInts[{}]',
-    # 'double': 'testDbls[{}]',
-    # 'char*': 'testStrs[{}]',
-    'void*': '&testPtrs[{}]',
+    'int': '0',
+    'double': '0.0',
+    'void*': 'buffers[{}]',
+    'float': '0.0f',
+    'long double': '0.0l'
 }
 
 # Number of args we support
 max_args = 5
 
-# Number of args passed into the function
-total_args = 8
-
 sigs = []
-
-INVALID_TYPE = "uintptr_t"
-INVALID_VALUE = "getRandLong()"
-INVALID_ARGUMENT = "({}){}".format(INVALID_TYPE, INVALID_VALUE)
-DEFAULT_RET_TYPE = "void*"
-
 
 def main():
     for index in range(0, len(supported_types)):
@@ -50,56 +38,36 @@ def main():
                     sigs[index][arg_num][i] = newsig
                     i += 1
 
-    typeStr = ""
-    for x in range(0, total_args):
-        typeStr += "{}, ".format(INVALID_TYPE)
+    max_arity = 3
 
-    typeStr = typeStr[:-2]
-    print("{{\n\tstd::tuple<{}> t;".format(typeStr))
-
-    print("\tstd::vector<std::string> l;")
-    for i in range(0, total_args):
-        print("\tstd::get<{}>(t) = {};".format(i, INVALID_ARGUMENT));
-
-    print("\tstd::shared_ptr<fbf::ArgumentTestCase<{}, {}>> v = ".format(DEFAULT_RET_TYPE, typeStr))
-    print("\tstd::make_shared<fbf::ArgumentTestCase<{}, {}>>(location, t, l, binDesc_);".format(DEFAULT_RET_TYPE, typeStr))
-    print("\ttestRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));\n}")
-
-    for index in range(0, len(supported_types)):
-        allsigs = sigs[index]
-        for arg_num in range(0, max_args):
-            siglist = allsigs[arg_num]
-            for sig in siglist:
-                typeStr = ", ".join(sig)
-                for filler in range(arg_num, total_args):
-                    typeStr += ", {}".format(INVALID_TYPE)
-
-                print("{{\n\tstd::tuple<{}> t;".format(typeStr))
-                argTypeStr = "\", \"".join(sig)
-                print("\tstd::vector<std::string> s = {{\"{}\"}};".format(argTypeStr))
-
-                i = 0
-                type_counts = {}
-                for type in supported_types.keys():
-                    type_counts[type] = 0
-                type_counts[INVALID_TYPE] = 0
-
-                for t in typeStr.split(', '):
-                    if t == INVALID_TYPE:
-                        val = INVALID_ARGUMENT
+    for type in range(0, len(supported_types)):
+        for arity in range(0, max_arity):
+            for template in sigs[type][arity]:
+                ptr_count = 0
+                func_input = list()
+                for ctype in template:
+                    if ctype == "void*":
+                        func_input.append(supported_types[ctype].format(ptr_count))
+                        ptr_count += 1
                     else:
-                        val = supported_types[t]
-                    tupleStr = "\tstd::get<{}>(t) = {};".format(i, val)
-                    tupleStr = tupleStr.format(type_counts[t])
-                    type_counts[t] = type_counts[t] + 1
+                        func_input.append(supported_types[ctype])
 
-                    print(tupleStr)
-                    i += 1
+                print("make_fuzzer<void, {}>({});".format(", ".join(template), ", ".join(func_input)))
 
-                print("\tstd::shared_ptr<fbf::ArgumentTestCase<{}, {}>> v =".format(DEFAULT_RET_TYPE, typeStr))
-                print("\t\tstd::make_shared<fbf::ArgumentTestCase<{}, {}>>(location, t, s, binDesc_);".format(DEFAULT_RET_TYPE, typeStr))
-                print("\ttestRuns_.push_back(std::make_shared<fbf::TestRun>(v, offset));")
-                print("}")
+    for type in range(0, len(supported_types)):
+        for arity in range(0, max_arity):
+            for template in sigs[type][arity]:
+                ptr_count = 0
+                func_input = list()
+                for ctype in template[1:]:
+                    if ctype == "void*":
+                        func_input.append(supported_types[ctype].format(ptr_count))
+                        ptr_count += 1
+                    else:
+                        func_input.append(supported_types[ctype])
+
+                print("make_fuzzer<{}>({});".format(", ".join(template), ", ".join(func_input)))
+
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ void fbf::FullFuzzTest::create_testcases() {
         create_buffer(ITestCase::POINTER_SIZE);
     }
 
-    make_fuzzer<void, double, void*, void*>(0.0, buffers[0], buffers[1]);
+#include "Fuzzers.inc"
 
     for(uintptr_t loc : binDesc_.getOffsets()) {
         const LofSymbol &sym = binDesc_.getSym(loc);
@@ -48,18 +48,18 @@ void *fbf::FullFuzzTest::create_buffer(size_t size) {
      */
     uintptr_t *curr = (uintptr_t*) ret;
     while(curr < (uintptr_t*)((uintptr_t)ret + size)) {
-        LOG_DEBUG << "Writing 0x"
-            << std::hex << (uintptr_t)((uintptr_t)curr + sizeof(uintptr_t))
-            << " to location 0x"
-            << std::hex << curr;
+//        LOG_DEBUG << "Writing 0x"
+//            << std::hex << (uintptr_t)((uintptr_t)curr + sizeof(uintptr_t))
+//            << " to location 0x"
+//            << std::hex << curr;
         *curr = (uintptr_t)((uintptr_t)curr + sizeof(uintptr_t));
         curr++;
     }
     /* Make the last uintptr_t-sized area point to the beginning */
-    LOG_DEBUG << "Writing 0x"
-              << std::hex << (uintptr_t)ret
-              << " to location 0x"
-              << std::hex << (uintptr_t*)((char*)ret + size - sizeof(uintptr_t));
+//    LOG_DEBUG << "Writing 0x"
+//              << std::hex << (uintptr_t)ret
+//              << " to location 0x"
+//              << std::hex << (uintptr_t*)((char*)ret + size - sizeof(uintptr_t));
     *(uintptr_t*)((char*)ret + size - sizeof(uintptr_t)) = (uintptr_t)ret;
     buffers.push_back(ret);
     return ret;
@@ -70,6 +70,6 @@ std::shared_ptr<fbf::FosbinFuzzer<R, Args...>> fbf::FullFuzzTest::make_fuzzer(Ar
     std::shared_ptr<fbf::FosbinFuzzer<R, Args...>> tmp =
             std::make_shared<fbf::FosbinFuzzer<R, Args...>>(binDesc_, std::make_tuple(args...));
 
-    fuzzers[sizeof...(Args)].push_back(tmp);
+    fuzzers[tmp->get_arity()].push_back(tmp);
     return tmp;
 }

@@ -27,7 +27,6 @@ target_sources( ${FUNC_CLASSIFIER}
         ${COMMON_SRC}
         coord/fullArityTest.cpp
         protectedBuffer.cpp
-        TestCases.inc
         argumentCountTestCase.cpp
         fuzz/FullFuzzTest.cpp
         )
