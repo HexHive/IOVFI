@@ -197,7 +197,7 @@ namespace fbf {
 
     template<typename R, typename... Args>
     const std::string FosbinFuzzer<R, Args...>::get_test_name() {
-        return print_args(curr_args_);
+        return bin_desc_.getSym(get_location()).name;
     }
 
     template<typename R, typename... Args>

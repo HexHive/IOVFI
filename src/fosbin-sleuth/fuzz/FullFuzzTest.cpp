@@ -48,11 +48,19 @@ void *fbf::FullFuzzTest::create_buffer(size_t size) {
      */
     uintptr_t *curr = (uintptr_t*) ret;
     while(curr < (uintptr_t*)((uintptr_t)ret + size)) {
+        LOG_DEBUG << "Writing 0x"
+            << std::hex << (uintptr_t)((uintptr_t)curr + sizeof(uintptr_t))
+            << " to location 0x"
+            << std::hex << curr;
         *curr = (uintptr_t)((uintptr_t)curr + sizeof(uintptr_t));
-        curr += sizeof(uintptr_t);
+        curr++;
     }
     /* Make the last uintptr_t-sized area point to the beginning */
-    *((uintptr_t*)ret + size - sizeof(uintptr_t)) = (uintptr_t)ret;
+    LOG_DEBUG << "Writing 0x"
+              << std::hex << (uintptr_t)ret
+              << " to location 0x"
+              << std::hex << (uintptr_t*)((char*)ret + size - sizeof(uintptr_t));
+    *(uintptr_t*)((char*)ret + size - sizeof(uintptr_t)) = (uintptr_t)ret;
     buffers.push_back(ret);
     return ret;
 }
