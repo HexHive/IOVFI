@@ -102,20 +102,24 @@ namespace fbf {
               << ", \"size\": " << pointer_size
               << ", \"precall\": \"";
             for (size_t i = 0; i < pointer_size; i++) {
-                if(tmp_pre[i] == 0) {
-                    s << "\\\\x00";
+                int val = ((int)tmp_pre[i] & 0x000000FF);
+                if(tmp_pre[i] < 0x10) {
+                    s << "\\\\x0";
                 } else {
-                    s << "\\\\x" << std::hex << ((int)tmp_pre[i] & 0x000000FF) << std::dec;
+                    s << "\\\\x";
                 }
+                s << std::hex << val << std::dec;
             }
 
             s << "\", postcall: \"";
             for (size_t i = 0; i < pointer_size; i++) {
-                if(tmp_post[i] == 0) {
-                    s << "\\\\x00";
+                int val = ((int)tmp_post[i] & 0x000000FF);
+                if(tmp_post[i] < 0x10) {
+                    s << "\\\\x0";
                 } else {
-                    s << "\\\\x" << std::hex << ((int)tmp_post[i] & 0x000000FF) << std::dec;
+                    s << "\\\\x";
                 }
+                s << std::hex << val << std::dec;
             }
 
             s << "\"";

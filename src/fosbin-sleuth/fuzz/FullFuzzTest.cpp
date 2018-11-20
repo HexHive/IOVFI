@@ -41,13 +41,14 @@ void *fbf::FullFuzzTest::create_buffer(size_t size) {
     if(!ret) {
         throw std::runtime_error("Could not allocate fuzzing buffer");
     }
+    LOG_DEBUG << "Allocated buffer at 0x" << std::hex << ret;
 
     /* Make each uintptr_t-sized area point to the immediate next
      * uintptr_t-sized area in the buffer to handle pointers to pointers
      */
     uintptr_t *curr = (uintptr_t*) ret;
-    while(curr < ((uintptr_t*)ret + size)) {
-        *curr = (uintptr_t)curr + sizeof(uintptr_t);
+    while(curr < (uintptr_t*)((uintptr_t)ret + size)) {
+        *curr = (uintptr_t)((uintptr_t)curr + sizeof(uintptr_t));
         curr += sizeof(uintptr_t);
     }
     /* Make the last uintptr_t-sized area point to the beginning */
