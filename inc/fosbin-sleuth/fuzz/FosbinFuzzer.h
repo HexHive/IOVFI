@@ -28,14 +28,18 @@ namespace fbf {
     static Arg generate_arg(Arg arg, size_t size) {
         std::default_random_engine generator;
         std::uniform_int_distribution<Arg> distribution;
-        return distribution(generator);
+        Arg retVal = distribution(generator);
+        LOG_DEBUG << "Returning integer " << retVal;
+        return retVal;
     }
 
     template<typename Arg, typename std::enable_if<std::is_floating_point_v<Arg>, int>::type = 0>
     static Arg generate_arg(Arg arg, size_t size) {
         std::default_random_engine generator;
         std::uniform_real_distribution<Arg> distribution;
-        return distribution(generator);
+        Arg retVal = distribution(generator);
+        LOG_DEBUG << "Returning float " << retVal;
+        return retVal;
     }
 
     template<typename... Args, size_t... I>
