@@ -22,11 +22,11 @@ fbf::FullFuzzTest::~FullFuzzTest() {
 
 void fbf::FullFuzzTest::create_testcases() {
     /* TODO: Adapt python script to generate these class definitions */
-    void* buf0 = create_buffer(ITestCase::POINTER_SIZE);
-    void* buf1 = create_buffer(ITestCase::POINTER_SIZE);
-    std::shared_ptr<fbf::FosbinFuzzer<void, double, void*, void*>> fuzzer0 =
-            std::make_shared<fbf::FosbinFuzzer<void, double, void*, void*>>(binDesc_, std::make_tuple(0.0, buf0, buf1));
-    fuzzers[fuzzer0->get_arity()].push_back(fuzzer0);
+    for(size_t i = 0; i < MAX_ARGUMENTS; i++) {
+        create_buffer(ITestCase::POINTER_SIZE);
+    }
+
+    make_fuzzer<void, double, void*, void*>(0.0, buffers[0], buffers[1]);
 
     for(uintptr_t loc : binDesc_.getOffsets()) {
         const LofSymbol &sym = binDesc_.getSym(loc);
@@ -53,6 +53,15 @@ void *fbf::FullFuzzTest::create_buffer(size_t size) {
     }
     /* Make the last uintptr_t-sized area point to the beginning */
     *((uintptr_t*)ret + size - sizeof(uintptr_t)) = (uintptr_t)ret;
-    buffers.insert(ret);
+    buffers.push_back(ret);
     return ret;
+}
+
+template<typename R, typename... Args>
+std::shared_ptr<fbf::FosbinFuzzer<R, Args...>> fbf::FullFuzzTest::make_fuzzer(Args... args) {
+    std::shared_ptr<fbf::FosbinFuzzer<R, Args...>> tmp =
+            std::make_shared<fbf::FosbinFuzzer<R, Args...>>(binDesc_, std::make_tuple(args...));
+
+    fuzzers[sizeof...(Args)].push_back(tmp);
+    return tmp;
 }
