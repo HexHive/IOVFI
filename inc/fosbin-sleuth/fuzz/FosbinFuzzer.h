@@ -51,7 +51,9 @@ namespace fbf {
 
     template<typename... Args>
     static void fuzz_arguments(size_t pointer_size, int seed, std::tuple<Args...> &tup) {
+        LOG_DEBUG << "Tuple before: {" << print_args(tup) << "}";
         fuzz_argument(pointer_size, seed, tup, std::make_index_sequence<sizeof...(Args)>());
+        LOG_DEBUG << "Tuple after: {" << print_args(tup) << "}";
     }
 
     /*****************************************************************************************************
@@ -242,7 +244,7 @@ namespace fbf {
     template<typename R, typename... Args>
     void FosbinFuzzer<R, Args...>::mutate_args() {
         /* TODO: Remove hardcoded pointer size value */
-        fuzz_arguments(ITestCase::POINTER_SIZE, this->rand(), original_);
+        fuzz_arguments(ITestCase::POINTER_SIZE, this->rand(), curr_args_);
     }
 
     template<typename R, typename... Args>
