@@ -6,7 +6,7 @@
 
 #include "iTestCase.h"
 
-const size_t fbf::ITestCase::POINTER_SIZE = 512;
+const size_t fbf::ITestCase::POINTER_SIZE = 128;
 
 fbf::ITestCase::ITestCase() :
         re_(),

@@ -87,41 +87,41 @@ def main(included_funcs_path, json_paths):
     for i in range(len(json_paths)):
         with open(json_paths[i], "r", errors='ignore') as f:
             line_num = 0
-            print("Reading {} (file {} of {})".format(json_paths[i], i, len(json_paths) - 1), file=sys.stderr)
+            print("Reading {} (file {} of {})".format(json_paths[i], i + 1, len(json_paths)), file=sys.stderr)
             for line in f.readlines():
                 line_num += 1
                 line = line.strip()
-                start_idx = line.find("{ \"function\":")
-                if start_idx >= 0:
-                    line = line[start_idx:]
-                    end_idx = line.find("] }")
-                    line = line[:end_idx + len("] }")]
-                    line += "}"
+                # start_idx = re.match("")
+                # if start_idx >= 0:
+                #     line = line[start_idx:]
+                #     end_idx = line.find("] }")
+                #     line = line[:end_idx + len("] }")]
+                #     line += "}"
 
-                    try:
-                        if line not in added_lines:
-                            func = json.loads(line, parse_float=Decimal)['function']
-                            if len(line) > MAX_INPUT_LEN:
-                                print("Skipping {}:{}; too long".format(json_paths[i], line_num), file=sys.stderr)
-                                continue
-                            elif match_regex.match(func['name']) is None:
-                                print("Skipping {}:{}; Not in function list".format(json_paths[i], line_num), file=sys.stderr)
-                                continue
+                try:
+                    if line not in added_lines:
+                        func = json.loads(line, parse_float=Decimal)['function']
+                        if len(line) > MAX_INPUT_LEN:
+                            print("Skipping {}:{}; too long".format(json_paths[i], line_num), file=sys.stderr)
+                            continue
+                        elif match_regex.match(func['name']) is None:
+                            print("Skipping {}:{}; Not in function list".format(json_paths[i], line_num), file=sys.stderr)
+                            continue
 
-                            if len(func['args']) > max_args:
-                                max_args = len(func['args'])
+                        if len(func['args']) > max_args:
+                            max_args = len(func['args'])
 
-                            if check_post_state(func):
-                                functions.append(func)
-                                added_lines.add(line)
-                                uniq_funcs.add(func['name'])
-                    except json.JSONDecodeError as e:
-                        print("Invalid json in {}:{}: {}".format(json_paths[i], line_num, e.msg), file=sys.stderr)
-                        total_error += 1
-                        continue
-                    except KeyError as e:
-                        print("KeyError ({}): {}".format(e, line), file=sys.stderr)
-                        continue
+                        if check_post_state(func):
+                            functions.append(func)
+                            added_lines.add(line)
+                            uniq_funcs.add(func['name'])
+                except json.JSONDecodeError as e:
+                    print("Invalid json in {}:{}: {}".format(json_paths[i], line_num, e.msg), file=sys.stderr)
+                    total_error += 1
+                    continue
+                except KeyError as e:
+                    print("KeyError ({}): {}".format(e, line), file=sys.stderr)
+                    continue
     if total_error > 0:
         print("There were {} invalid JSON entries".format(total_error), file=sys.stderr)
 

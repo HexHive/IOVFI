@@ -11,6 +11,7 @@
 #include <random>
 #include <sys/wait.h>
 #include <iomanip>
+#include <fstream>
 
 namespace fbf {
     /*****************************************************************************************************
@@ -85,7 +86,7 @@ namespace fbf {
     static std::string output_arg_json() {
         std::stringstream s;
         s << "{";
-        s << "\"type\": " << 0 << ", \"value\": (nil)";
+        s << "\"type\": " << 0 << ", \"value\": \"(nil)\"";
         s << "}";
         return s.str();
     }
@@ -111,7 +112,7 @@ namespace fbf {
                 s << std::hex << val << std::dec;
             }
 
-            s << "\", postcall: \"";
+            s << "\", \"postcall\": \"";
             for (size_t i = 0; i < pointer_size; i++) {
                 int val = ((int)tmp_post[i] & 0x000000FF);
                 if(tmp_post[i] < 0x10) {
@@ -210,6 +211,10 @@ namespace fbf {
         const LofSymbol &symbol = bin_desc_.getSym(location_);
         pid_t pid = test_fork();
         if (pid == 0) {
+            std::ofstream file;
+            std::stringstream file_name;
+            file_name << "io_vecs_" << symbol.name << ".json";
+            file.open(file_name.str().c_str(), std::ios::out | std::ios::app);
             for (int i = 0; i < fuzz_count_; i++) {
                 mutate_args();
 
@@ -234,7 +239,7 @@ namespace fbf {
                   << output_args(ITestCase::POINTER_SIZE, original_, curr_args_)
                   << "]} }" << std::endl;
 
-                std::cout << s.str();
+                file << s.str();
             }
 
             LOG_DEBUG << "Done fuzzing 0x" << std::hex << location_;
