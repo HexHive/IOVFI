@@ -8,4 +8,3 @@
 [submodule "src/capstone"]
 	path = src/capstone
     url = git@github.com:aquynh/capstone.git
-    branch = 3.0.5
