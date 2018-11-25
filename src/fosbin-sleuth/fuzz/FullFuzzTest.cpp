@@ -31,6 +31,7 @@ void fbf::FullFuzzTest::create_testcases() {
 
     for(uintptr_t loc : binDesc_.getOffsets()) {
         const LofSymbol &sym = binDesc_.getSym(loc);
+        LOG_DEBUG << "Creating " << fuzzers[sym.arity].size() << " TestRuns for location 0x" << std::hex << loc;
         for(std::shared_ptr<fbf::ITestCase> arity_fuzzer : fuzzers[sym.arity]) {
             testRuns_.push_back(std::make_shared<fbf::TestRun>(arity_fuzzer, loc));
         }

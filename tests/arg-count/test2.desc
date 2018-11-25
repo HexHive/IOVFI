@@ -1,10 +1,11 @@
-binary=/home/derrick/code/musl/install/lib/libc.so
+binary=/home/derrick/code/musl/lib/libc.so
 test=sincos
-test=cosl
-test=sin
-test=sinl
-test=memmem
-test=cos
+#test=cosl
+#test=sin
+#test=sinl
+#test=memmem
+test=strncpy
+#test=cos
 sym=y0f,348
 sym=vfprintf,361
 sym=strlen,110

@@ -8,3 +8,4 @@ asin=1
 sin=1
 asinhl=1
 sinl=1
+strncpy=3
