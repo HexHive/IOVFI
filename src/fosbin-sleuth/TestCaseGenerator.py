@@ -38,7 +38,7 @@ def main():
                     sigs[index][arg_num][i] = newsig
                     i += 1
 
-    max_arity = 3
+    max_arity = 4
 
     for type in range(0, len(supported_types)):
         for arity in range(0, max_arity):

@@ -1,0 +1,1569 @@
+True	aio_read: 1 <-> < (struct aiocb *cb) >
+True	aio_write: 1 <-> < (struct aiocb *cb) >
+True	aio_fsync: 2 <-> < (int op, struct aiocb *cb) >
+True	aio_return: 1 <-> < (struct aiocb *cb) >
+True	aio_error: 1 <-> < (const struct aiocb *cb) >
+True	aio_cancel: 2 <-> < (int fd, struct aiocb *cb) >
+True	__aio_close: 1 <-> < (int fd) >
+True	aio_suspend: 3 <-> < (const struct aiocb *const cbs[], int cnt, const struct timespec *ts) >
+False	lio_listio: 6 <-> < (int mode, struct aiocb *restrict const *restrict cbs, int cnt, struct sigevent *restrict sev) >
+False	__ldexp_cexp: 3 <-> < (double complex z, int expt) >
+True	__ldexp_cexpf: 2 <-> < (float complex z, int expt) >
+False	cabs: 2 <-> < (double complex z) >
+True	cabsf: 1 <-> < (float complex z) >
+False	cabsl: 0 <-> < (long double complex z) >
+False	cacos: 2 <-> < (double complex z) >
+False	cacosf: 5 <-> < (float complex z) >
+False	cacosh: 2 <-> < (double complex z) >
+False	cacoshf: 5 <-> < (float complex) >
+False	cacoshl: 0 <-> < (long double complex z) >
+False	cacosl: 0 <-> < (long double complex z) >
+False	carg: 2 <-> < (double complex z) >
+True	cargf: 1 <-> < (float complex z) >
+False	cargl: 0 <-> < (long double complex z) >
+False	casin: 2 <-> < (double complex) >
+False	casinf: 5 <-> < (float complex) >
+False	casinh: 2 <-> < (double complex) >
+False	casinhf: 5 <-> < (float complex z) >
+False	casinhl: 0 <-> < (long double complex) >
+False	casinl: 0 <-> < (long double complex z) >
+False	catan: 2 <-> < (double complex z) >
+True	catanf: 1 <-> < (float complex z) >
+False	catanh: 2 <-> < (double complex z) >
+True	catanhf: 1 <-> < (float complex z) >
+False	catanhl: 0 <-> < (long double complex z) >
+False	catanl: 0 <-> < (long double complex z) >
+False	ccos: 2 <-> < (double complex z) >
+True	ccosf: 1 <-> < (float complex z) >
+False	ccosh: 2 <-> < (double complex z) >
+True	ccoshf: 1 <-> < (float complex z) >
+False	ccoshl: 0 <-> < (long double complex z) >
+False	ccosl: 0 <-> < (long double complex z) >
+False	cexp: 2 <-> < (double complex z) >
+True	cexpf: 1 <-> < (float complex z) >
+False	cexpl: 0 <-> < (long double complex z) >
+True	cimag: 1 <-> < (double complex z) >
+True	cimagf: 1 <-> < (float complex z) >
+False	cimagl: 0 <-> < (long double complex z) >
+False	clog: 2 <-> < (double complex) >
+True	clogf: 1 <-> < (float complex z) >
+False	clogl: 0 <-> < (long double complex) >
+True	conj: 1 <-> < (double complex z) >
+True	conjf: 1 <-> < (float complex z) >
+False	conjl: 0 <-> < (long double complex z) >
+False	cpow: 4 <-> < (double complex z, double complex c) >
+True	cpowf: 2 <-> < (float complex z, float complex c) >
+False	cpowl: 0 <-> < (long double complex z, long double complex c) >
+False	cproj: 2 <-> < (double complex z) >
+True	cprojf: 1 <-> < (float complex z) >
+False	cprojl: 0 <-> < (long double complex) >
+False	creal: 0 <-> < (double complex) >
+False	crealf: 0 <-> < (float complex z) >
+False	creall: 0 <-> < (long double complex z) >
+False	csin: 2 <-> < (double complex) >
+True	csinf: 1 <-> < (float complex) >
+False	csinh: 2 <-> < (double complex) >
+True	csinhf: 1 <-> < (float complex z) >
+False	csinhl: 0 <-> < (long double complex) >
+False	csinl: 0 <-> < (long double complex z) >
+False	csqrt: 2 <-> < (double complex z) >
+False	csqrtf: 5 <-> < (float complex z) >
+False	csqrtl: 0 <-> < (long double complex) >
+False	ctan: 2 <-> < (double complex z) >
+True	ctanf: 1 <-> < (float complex) >
+False	ctanh: 2 <-> < (double complex z) >
+True	ctanhf: 1 <-> < (float complex z) >
+False	ctanhl: 0 <-> < (long double complex) >
+False	ctanl: 0 <-> < (long double complex z) >
+True	confstr: 3 <-> < (int name, char *buf, size_t len) >
+True	fpathconf: 2 <-> < (int, int) >
+True	get_nprocs_conf: 0 <-> < (void) >
+True	get_nprocs: 0 <-> < (void) >
+True	get_phys_pages: 0 <-> < (void) >
+True	get_avphys_pages: 0 <-> < (void) >
+False	pathconf: 0 <-> < (const char *, int) >
+True	sysconf: 1 <-> < (int name) >
+True	crypt: 2 <-> < (const char *, const char *) >
+True	__crypt_blowfish: 3 <-> < (const char *, const char *, char *) >
+True	__des_setkey: 2 <-> < (const unsigned char *key, struct expanded_key *ekey) >
+False	__do_des: 4 <-> < (uint32_t l_in, uint32_t r_in, uint32_t *l_out, uint32_t *r_out, uint32_t count, uint32_t saltbits, const struct expanded_key *ekey) >
+True	__crypt_des: 3 <-> < (const char *key, const char *setting, char *output) >
+True	__crypt_md5: 3 <-> < (const char *, const char *, char *) >
+True	__crypt_r: 3 <-> < (const char *key, const char *salt, struct crypt_data *data) >
+True	__crypt_sha256: 3 <-> < (const char *, const char *, char *) >
+True	__crypt_sha512: 3 <-> < (const char *, const char *, char *) >
+True	setkey: 1 <-> < (const char *key) >
+True	encrypt: 2 <-> < (char *block, int edflag) >
+True	__ctype_b_loc: 0 <-> < (void) >
+True	__ctype_get_mb_cur_max: 0 <-> < () >
+True	__ctype_tolower_loc: 0 <-> < (void) >
+True	__ctype_toupper_loc: 0 <-> < (void) >
+True	isalnum: 1 <-> < (int) >
+False	__isalnum_l: 1 <-> < (int c, locale_t l) >
+True	isalpha: 1 <-> < (int c) >
+False	__isalpha_l: 1 <-> < (int c, locale_t l) >
+True	isascii: 1 <-> < (int c) >
+True	isblank: 1 <-> < (int) >
+False	__isblank_l: 1 <-> < (int c, locale_t l) >
+True	iscntrl: 1 <-> < (int) >
+False	__iscntrl_l: 1 <-> < (int c, locale_t l) >
+True	isdigit: 1 <-> < (int) >
+False	__isdigit_l: 1 <-> < (int c, locale_t l) >
+True	isgraph: 1 <-> < (int) >
+False	__isgraph_l: 1 <-> < (int c, locale_t l) >
+True	islower: 1 <-> < (int) >
+False	__islower_l: 1 <-> < (int c, locale_t l) >
+True	isprint: 1 <-> < (int) >
+False	__isprint_l: 1 <-> < (int c, locale_t l) >
+True	ispunct: 1 <-> < (int) >
+False	__ispunct_l: 1 <-> < (int c, locale_t l) >
+True	isspace: 1 <-> < (int) >
+False	__isspace_l: 1 <-> < (int c, locale_t l) >
+True	isupper: 1 <-> < (int) >
+False	__isupper_l: 1 <-> < (int c, locale_t l) >
+True	iswalnum: 1 <-> < (wint_t wc) >
+False	__iswalnum_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswalpha: 1 <-> < (wint_t) >
+False	__iswalpha_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswblank: 1 <-> < (wint_t) >
+False	__iswblank_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswcntrl: 1 <-> < (wint_t wc) >
+False	__iswcntrl_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswctype: 2 <-> < (wint_t wc, wctype_t type) >
+True	wctype: 1 <-> < (const char *s) >
+False	__iswctype_l: 2 <-> < (wint_t c, wctype_t t, locale_t l) >
+False	__wctype_l: 1 <-> < (const char *s, locale_t l) >
+True	iswdigit: 1 <-> < (wint_t) >
+False	__iswdigit_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswgraph: 1 <-> < (wint_t wc) >
+False	__iswgraph_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswlower: 1 <-> < (wint_t wc) >
+False	__iswlower_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswprint: 1 <-> < (wint_t wc) >
+False	__iswprint_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswpunct: 1 <-> < (wint_t) >
+False	__iswpunct_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswspace: 1 <-> < (wint_t wc) >
+False	__iswspace_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswupper: 1 <-> < (wint_t) >
+False	__iswupper_l: 1 <-> < (wint_t c, locale_t l) >
+True	iswxdigit: 1 <-> < (wint_t) >
+False	__iswxdigit_l: 1 <-> < (wint_t c, locale_t l) >
+True	isxdigit: 1 <-> < (int) >
+False	__isxdigit_l: 1 <-> < (int c, locale_t l) >
+True	toascii: 1 <-> < (int c) >
+True	tolower: 1 <-> < (int) >
+False	__tolower_l: 1 <-> < (int c, locale_t l) >
+True	toupper: 1 <-> < (int) >
+False	__toupper_l: 1 <-> < (int c, locale_t l) >
+True	towupper: 1 <-> < (wint_t wc) >
+True	towlower: 1 <-> < (wint_t wc) >
+False	__towupper_l: 1 <-> < (wint_t c, locale_t l) >
+False	__towlower_l: 1 <-> < (wint_t c, locale_t l) >
+False	wcswidth: 4 <-> < (const wchar_t *wcs, size_t n) >
+True	wctrans: 1 <-> < (const char *class) >
+True	towctrans: 2 <-> < (wint_t wc, wctrans_t trans) >
+False	__wctrans_l: 1 <-> < (const char *s, locale_t l) >
+False	__towctrans_l: 2 <-> < (wint_t c, wctrans_t t, locale_t l) >
+False	wcwidth: 4 <-> < (wchar_t) >
+False	__getdents: 1 <-> < (int fd, struct dirent *buf, size_t len) >
+True	alphasort: 2 <-> < (const struct dirent **, const struct dirent **) >
+True	closedir: 1 <-> < (DIR *) >
+True	dirfd: 1 <-> < (DIR *) >
+True	fdopendir: 1 <-> < (int fd) >
+True	opendir: 1 <-> < (const char *) >
+True	readdir: 1 <-> < (DIR *) >
+True	readdir_r: 3 <-> < (DIR *restrict dir, struct dirent *restrict buf, struct dirent **restrict result) >
+True	rewinddir: 1 <-> < (DIR *) >
+False	scandir: 6 <-> < (const char *, struct dirent ***, int(*)(const struct dirent *), int(*)(const struct dirent **, const struct dirent **)) >
+True	seekdir: 2 <-> < (DIR *, long) >
+True	telldir: 1 <-> < (DIR *dir) >
+True	versionsort: 2 <-> < (const struct dirent **a, const struct dirent **b) >
+True	__init_tp: 1 <-> < (void *p) >
+False	__init_tls: 0 <-> < (size_t *aux) >
+True	__init_libc: 2 <-> < (char **envp, char *pn) >
+False	__libc_start_main: 3 <-> < (int(*main)(int, char **, char **), int argc, char **argv) >
+True	__init_ssp: 1 <-> < (void *entropy) >
+True	__stack_chk_fail: 0 <-> < (void) >
+True	clearenv: 0 <-> < () >
+True	getenv: 1 <-> < (const char *) >
+True	__putenv: 2 <-> < (char *s, int a) >
+True	putenv: 1 <-> < (char *s) >
+True	setenv: 3 <-> < (const char *var, const char *value, int overwrite) >
+True	unsetenv: 1 <-> < (const char *) >
+True	__errno_location: 0 <-> < (void) >
+True	__strerror_l: 2 <-> < (int e, locale_t loc) >
+True	strerror: 1 <-> < (int) >
+True	_Exit: 1 <-> < (int ec) >
+True	abort: 0 <-> < (void) >
+True	__assert_fail: 4 <-> < (const char *, const char *, int, const char *) >
+True	__funcs_on_quick_exit: 0 <-> < () >
+True	at_quick_exit: 1 <-> < (void(*func)(void)) >
+True	__funcs_on_exit: 0 <-> < () >
+False	__cxa_finalize: 0 <-> < (void *dso) >
+False	__cxa_atexit: 2 <-> < (void(*func)(void *), void *arg, void *dso) >
+True	atexit: 1 <-> < (void(*func)(void)) >
+True	exit: 1 <-> < (int) >
+True	quick_exit: 1 <-> < (int code) >
+True	creat: 2 <-> < (const char *filename, mode_t mode) >
+False	fcntl: 6 <-> < (int, int,...) >
+False	open: 6 <-> < (const char *, int,...) >
+False	openat: 6 <-> < (int, const char *, int,...) >
+False	posix_fadvise: 6 <-> < (int, off_t, off_t, int) >
+True	posix_fallocate: 3 <-> < (int, off_t, off_t) >
+True	__flt_rounds: 0 <-> < (void) >
+True	fegetexceptflag: 2 <-> < (fexcept_t *fp, int mask) >
+True	feholdexcept: 1 <-> < (fenv_t *) >
+True	feclearexcept: 1 <-> < (int mask) >
+True	feraiseexcept: 1 <-> < (int mask) >
+True	__fesetround: 1 <-> < (int) >
+True	fegetround: 0 <-> < (void) >
+True	fegetenv: 1 <-> < (fenv_t *envp) >
+True	fesetenv: 1 <-> < (const fenv_t *envp) >
+True	fetestexcept: 1 <-> < (int mask) >
+True	fesetexceptflag: 2 <-> < (const fexcept_t *fp, int mask) >
+True	fesetround: 1 <-> < (int r) >
+True	feupdateenv: 1 <-> < (const fenv_t *envp) >
+True	__floatscan: 3 <-> < (FILE *, int, int) >
+True	__intscan: 4 <-> < (FILE *f, unsigned base, int pok, unsigned long long lim) >
+True	__procfdname: 2 <-> < (char *, unsigned) >
+True	__shlim: 2 <-> < (FILE *f, off_t lim) >
+True	__shgetc: 1 <-> < (FILE *f) >
+True	__vdsosym: 2 <-> < (const char *, const char *) >
+True	ftok: 2 <-> < (const char *, int) >
+False	msgctl: 2 <-> < (int q, int cmd, struct msqid_ds *buf) >
+True	msgget: 2 <-> < (key_t k, int flag) >
+False	msgrcv: 4 <-> < (int q, void *m, size_t len, long type, int flag) >
+True	msgsnd: 4 <-> < (int q, const void *m, size_t len, int flag) >
+False	semctl: 6 <-> < (int id, int num, int cmd,...) >
+True	semget: 3 <-> < (key_t key, int n, int fl) >
+False	semop: 1 <-> < (int id, struct sembuf *buf, size_t n) >
+True	semtimedop: 4 <-> < (int id, struct sembuf *buf, size_t n, const struct timespec *ts) >
+True	shmat: 3 <-> < (int, const void *, int) >
+False	shmctl: 2 <-> < (int, int, struct shmid_ds *) >
+False	shmdt: 0 <-> < (const void *) >
+True	shmget: 3 <-> < (key_t, size_t, int) >
+True	dladdr: 2 <-> < (const void *addr, Dl_info *info) >
+False	dlinfo: 1 <-> < (void *dso, int req, void *res) >
+True	dlsym: 2 <-> < (void *restrict p, const char *restrict s) >
+True	__reset_tls: 0 <-> < () >
+True	__copy_tls: 1 <-> < (unsigned char *) >
+True	dlopen: 2 <-> < (const char *file, int mode) >
+True	__dladdr: 2 <-> < (const void *addr, Dl_info *info) >
+False	dl_iterate_phdr: 2 <-> < (int(*)(struct dl_phdr_info *, size_t, void *), void *) >
+False	__dlinfo: 1 <-> < (void *dso, int req, void *res) >
+True	dlerror: 0 <-> < () >
+True	dlclose: 1 <-> < (void *p) >
+True	__dl_thread_cleanup: 0 <-> < (void) >
+True	cuserid: 1 <-> < (char *) >
+True	daemon: 2 <-> < (int nochdir, int noclose) >
+True	vwarn: 2 <-> < (const char *, va_list) >
+True	vwarnx: 2 <-> < (const char *, va_list) >
+False	verr: 6 <-> < (int, const char *, va_list) >
+False	verrx: 6 <-> < (int, const char *, va_list) >
+False	warn: 6 <-> < (const char *,...) >
+False	warnx: 6 <-> < (const char *,...) >
+False	err: 6 <-> < (int, const char *,...) >
+False	errx: 6 <-> < (int, const char *,...) >
+True	euidaccess: 2 <-> < (const char *filename, int amode) >
+False	ftw: 3 <-> < (const char *path, int(*fn)(const char *, const struct stat *, int), int fd_limit) >
+True	futimes: 2 <-> < (int fd, const struct timeval tv[2]) >
+True	getdtablesize: 0 <-> < (void) >
+True	getloadavg: 2 <-> < (double *a, int n) >
+True	getpagesize: 0 <-> < (void) >
+True	getpass: 1 <-> < (const char *) >
+True	endusershell: 0 <-> < (void) >
+True	setusershell: 0 <-> < (void) >
+True	getusershell: 0 <-> < (void) >
+True	isastream: 1 <-> < (int) >
+True	lutimes: 2 <-> < (const char *filename, const struct timeval tv[2]) >
+False	ulimit: 6 <-> < (int,...) >
+True	endutxent: 0 <-> < (void) >
+True	setutxent: 0 <-> < (void) >
+True	getutxent: 0 <-> < (void) >
+False	getutxid: 0 <-> < (const struct utmpx *ut) >
+False	getutxline: 0 <-> < (const struct utmpx *ut) >
+False	pututxline: 0 <-> < (const struct utmpx *ut) >
+False	updwtmpx: 0 <-> < (const char *f, const struct utmpx *u) >
+True	valloc: 1 <-> < (size_t) >
+True	adjtime: 2 <-> < (const struct timeval *in, struct timeval *out) >
+False	adjtimex: 0 <-> < (struct timex *) >
+False	brk: 0 <-> < (void *) >
+False	capset: 0 <-> < (void *a, void *b) >
+False	capget: 0 <-> < (void *a, void *b) >
+False	chroot: 0 <-> < (const char *path) >
+False	clock_adjtime: 1 <-> < (clockid_t, struct timex *) >
+False	clone: 6 <-> < (int(*func)(void *), void *stack, int flags, void *arg,...) >
+False	epoll_create: 0 <-> < (int) >
+False	epoll_create1: 4 <-> < (int) >
+False	epoll_ctl: 5 <-> < (int, int, int, struct epoll_event *) >
+True	epoll_pwait: 5 <-> < (int, struct epoll_event *, int, int, const sigset_t *) >
+False	epoll_wait: 5 <-> < (int, struct epoll_event *, int, int) >
+True	eventfd: 2 <-> < (unsigned int, int) >
+True	eventfd_read: 2 <-> < (int, eventfd_t *) >
+True	eventfd_write: 2 <-> < (int, eventfd_t) >
+True	fallocate: 4 <-> < (int fd, int mode, off_t base, off_t len) >
+False	fanotify_init: 4 <-> < (unsigned, unsigned) >
+False	fanotify_mark: 4 <-> < (int, unsigned, unsigned long long, int, const char *) >
+True	flock: 2 <-> < (int, int) >
+True	inotify_init: 0 <-> < (void) >
+False	inotify_init1: 3 <-> < (int) >
+True	inotify_add_watch: 3 <-> < (int, const char *, uint32_t) >
+False	inotify_rm_watch: 3 <-> < (int, int) >
+True	ioperm: 3 <-> < (unsigned long, unsigned long, int) >
+True	iopl: 1 <-> < (int) >
+True	klogctl: 3 <-> < (int, char *, int) >
+False	init_module: 0 <-> < (void *a, unsigned long b, const char *c) >
+True	delete_module: 2 <-> < (const char *a, unsigned b) >
+False	mount: 4 <-> < (const char *, const char *, const char *, unsigned long, const void *) >
+False	umount: 0 <-> < (const char *) >
+True	umount2: 2 <-> < (const char *, int) >
+False	personality: 0 <-> < (unsigned long) >
+False	pivot_root: 0 <-> < (const char *new, const char *old) >
+True	ppoll: 4 <-> < (struct pollfd *fds, nfds_t n, const struct timespec *to, const sigset_t *mask) >
+False	prctl: 6 <-> < (int,...) >
+True	prlimit: 4 <-> < (pid_t pid, int resource, const struct rlimit *new_limit, struct rlimit *old_limit) >
+False	process_vm_writev: 4 <-> < (pid_t pid, const struct iovec *lvec, unsigned long liovcnt, const struct iovec *rvec, unsigned long riovcnt, unsigned long flags) >
+False	process_vm_readv: 4 <-> < (pid_t pid, const struct iovec *lvec, unsigned long liovcnt, const struct iovec *rvec, unsigned long riovcnt, unsigned long flags) >
+False	ptrace: 6 <-> < (int req,...) >
+True	quotactl: 4 <-> < (int, const char *, int, char *) >
+False	readahead: 1 <-> < (int fd, off_t pos, size_t len) >
+True	reboot: 1 <-> < (int type) >
+False	remap_file_pages: 4 <-> < (void *addr, size_t size, int prot, size_t pgoff, int flags) >
+True	sbrk: 1 <-> < (intptr_t) >
+True	sendfile: 4 <-> < (int out_fd, int in_fd, off_t *ofs, size_t count) >
+True	setfsgid: 1 <-> < (gid_t gid) >
+True	setfsuid: 1 <-> < (uid_t) >
+False	setgroups: 0 <-> < (size_t, const gid_t *) >
+False	sethostname: 0 <-> < (const char *, size_t) >
+True	setns: 2 <-> < (int fd, int nstype) >
+False	settimeofday: 0 <-> < (const struct timeval *tv, const struct timezone *tz) >
+True	signalfd: 3 <-> < (int fd, const sigset_t *sigs, int flags) >
+False	splice: 4 <-> < (int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len, unsigned flags) >
+True	stime: 1 <-> < (const time_t *) >
+True	swapon: 2 <-> < (const char *path, int flags) >
+False	swapoff: 0 <-> < (const char *path) >
+True	sync_file_range: 4 <-> < (int fd, off_t pos, off_t len, unsigned flags) >
+True	syncfs: 1 <-> < (int fd) >
+False	__lsysinfo: 0 <-> < (struct sysinfo *info) >
+True	tee: 4 <-> < (int src, int dest, size_t len, unsigned flags) >
+False	timerfd_create: 4 <-> < (int clockid, int flags) >
+True	timerfd_settime: 4 <-> < (int fd, int flags, const struct itimerspec *new, struct itimerspec *old) >
+False	timerfd_gettime: 1 <-> < (int fd, struct itimerspec *cur) >
+True	unshare: 1 <-> < (int flags) >
+True	utimes: 2 <-> < (const char *path, const struct timeval times[2]) >
+True	vhangup: 0 <-> < (void) >
+True	vmsplice: 4 <-> < (int fd, const struct iovec *iov, size_t cnt, unsigned flags) >
+True	wait3: 3 <-> < (int *status, int options, struct rusage *usage) >
+True	wait4: 4 <-> < (pid_t pid, int *status, int options, struct rusage *usage) >
+True	getxattr: 4 <-> < (const char *path, const char *name, void *value, size_t size) >
+True	lgetxattr: 4 <-> < (const char *path, const char *name, void *value, size_t size) >
+True	fgetxattr: 4 <-> < (int filedes, const char *name, void *value, size_t size) >
+False	listxattr: 0 <-> < (const char *path, char *list, size_t size) >
+False	llistxattr: 0 <-> < (const char *path, char *list, size_t size) >
+False	flistxattr: 4 <-> < (int filedes, char *list, size_t size) >
+False	setxattr: 4 <-> < (const char *path, const char *name, const void *value, size_t size, int flags) >
+False	lsetxattr: 4 <-> < (const char *path, const char *name, const void *value, size_t size, int flags) >
+False	fsetxattr: 4 <-> < (int filedes, const char *name, const void *value, size_t size, int flags) >
+False	removexattr: 0 <-> < (const char *path, const char *name) >
+False	lremovexattr: 0 <-> < (const char *path, const char *name) >
+False	fremovexattr: 1 <-> < (int fd, const char *name) >
+True	__lctrans: 2 <-> < (const char *msg, const struct __locale_map *lm) >
+True	__lctrans_cur: 1 <-> < (const char *msg) >
+True	__mo_lookup: 3 <-> < (const void *p, size_t size, const char *s) >
+True	__lctrans_impl: 2 <-> < (const char *msg, const struct __locale_map *lm) >
+True	__setlocalecat: 3 <-> < (locale_t, int, const char *) >
+True	bind_textdomain_codeset: 2 <-> < (const char *domainname, const char *codeset) >
+False	catclose: 0 <-> < (nl_catd) >
+True	catgets: 4 <-> < (nl_catd, int, int, const char *) >
+False	catopen: 0 <-> < (const char *name, int oflag) >
+True	bindtextdomain: 2 <-> < (const char *domainname, const char *dirname) >
+False	dcngettext: 4 <-> < (const char *domainname, const char *msgid1, const char *msgid2, unsigned long int n, int category) >
+True	dcgettext: 3 <-> < (const char *domainname, const char *msgid, int category) >
+True	dngettext: 4 <-> < (const char *domainname, const char *msgid1, const char *msgid2, unsigned long int n) >
+True	dgettext: 2 <-> < (const char *domainname, const char *msgid) >
+True	__duplocale: 1 <-> < (locale_t old) >
+True	freelocale: 1 <-> < (locale_t l) >
+True	iconv_open: 2 <-> < (const char *to, const char *from) >
+False	iconv_close: 0 <-> < (iconv_t cd) >
+False	iconv: 6 <-> < (iconv_t cd0, char **restrict in, size_t *restrict inb, char **restrict out, size_t *restrict outb) >
+False	__nl_langinfo_l: 5 <-> < (nl_item item, locale_t loc) >
+True	__nl_langinfo: 1 <-> < (nl_item item) >
+True	localeconv: 0 <-> < (void) >
+True	__newlocale: 3 <-> < (int mask, const char *name, locale_t loc) >
+True	__pleval: 2 <-> < (const char *s, unsigned long n) >
+True	setlocale: 2 <-> < (int cat, const char *name) >
+False	__strcoll_l: 2 <-> < (const char *l, const char *r, locale_t loc) >
+True	strcoll: 2 <-> < (const char *l, const char *r) >
+False	strfmon_l: 6 <-> < (char *restrict s, size_t n, locale_t loc, const char *restrict fmt,...) >
+False	strfmon: 6 <-> < (char *restrict s, size_t n, const char *restrict fmt,...) >
+False	__strxfrm_l: 3 <-> < (char *restrict dest, const char *restrict src, size_t n, locale_t loc) >
+True	strxfrm: 3 <-> < (char *restrict dest, const char *restrict src, size_t n) >
+True	__gettextdomain: 0 <-> < () >
+True	textdomain: 1 <-> < (const char *) >
+True	gettext: 1 <-> < (const char *) >
+True	ngettext: 3 <-> < (const char *, const char *, unsigned long) >
+True	__uselocale: 1 <-> < (locale_t new) >
+False	__wcscoll_l: 2 <-> < (const wchar_t *l, const wchar_t *r, locale_t locale) >
+True	wcscoll: 2 <-> < (const wchar_t *l, const wchar_t *r) >
+False	__wcsxfrm_l: 3 <-> < (wchar_t *restrict dest, const wchar_t *restrict src, size_t n, locale_t loc) >
+True	wcsxfrm: 3 <-> < (wchar_t *__restrict, const wchar_t *__restrict, size_t n) >
+False	__brk: 0 <-> < (uintptr_t newbrk) >
+True	aligned_alloc: 2 <-> < (size_t align, size_t len) >
+True	calloc: 2 <-> < (size_t, size_t) >
+True	__simple_malloc: 1 <-> < (size_t n) >
+True	malloc: 1 <-> < (size_t) >
+True	realloc: 2 <-> < (void *, size_t) >
+True	free: 1 <-> < (void *) >
+True	malloc_usable_size: 1 <-> < (void *) >
+True	__memalign: 2 <-> < (size_t, size_t) >
+True	posix_memalign: 3 <-> < (void **res, size_t align, size_t len) >
+True	__cos: 2 <-> < (double, double) >
+True	__cosdf: 1 <-> < (double) >
+False	__cosl: 0 <-> < (long double, long double) >
+True	__expo2: 1 <-> < (double) >
+True	__expo2f: 1 <-> < (float x) >
+True	__fpclassify: 1 <-> < (double) >
+True	__fpclassifyf: 1 <-> < (float x) >
+False	__fpclassifyl: 0 <-> < (long double) >
+False	__polevll: 2 <-> < (long double x, const long double *P, int n) >
+False	__p1evll: 2 <-> < (long double x, const long double *P, int n) >
+True	__rem_pio2: 2 <-> < (double, double *) >
+True	__rem_pio2_large: 5 <-> < (double *, double *, int, int, int) >
+True	__rem_pio2f: 2 <-> < (float x, double *y) >
+False	__rem_pio2l: 1 <-> < (long double, long double *) >
+True	__signbit: 1 <-> < (double) >
+True	__signbitf: 1 <-> < (float) >
+False	__signbitl: 0 <-> < (long double) >
+True	__sin: 3 <-> < (double, double, int) >
+True	__sindf: 1 <-> < (double) >
+False	__sinl: 1 <-> < (long double, long double, int) >
+False	__tan: 2 <-> < (double x, double y, int odd) >
+True	__tandf: 2 <-> < (double x, int odd) >
+False	__tanl: 1 <-> < (long double, long double, int) >
+True	acos: 1 <-> < (double) >
+True	acosf: 1 <-> < (float) >
+True	acosh: 1 <-> < (double) >
+True	acoshf: 1 <-> < (float) >
+False	acoshl: 0 <-> < (long double) >
+False	acosl: 0 <-> < (long double) >
+True	asin: 1 <-> < (double) >
+True	asinf: 1 <-> < (float) >
+True	asinh: 1 <-> < (double) >
+True	asinhf: 1 <-> < (float) >
+False	asinhl: 0 <-> < (long double) >
+False	asinl: 0 <-> < (long double) >
+True	atan: 1 <-> < (double) >
+False	atan2: 1 <-> < (double, double) >
+True	atan2f: 2 <-> < (float, float) >
+False	atan2l: 0 <-> < (long double, long double) >
+True	atanf: 1 <-> < (float) >
+True	atanh: 1 <-> < (double) >
+True	atanhf: 1 <-> < (float x) >
+False	atanhl: 0 <-> < (long double) >
+False	atanl: 0 <-> < (long double) >
+True	cbrt: 1 <-> < (double) >
+True	cbrtf: 1 <-> < (float x) >
+False	cbrtl: 0 <-> < (long double) >
+True	ceil: 1 <-> < (double x) >
+True	ceilf: 1 <-> < (float) >
+True	copysign: 2 <-> < (double, double) >
+True	copysignf: 2 <-> < (float, float) >
+False	copysignl: 0 <-> < (long double, long double) >
+True	cos: 1 <-> < (double) >
+True	cosf: 1 <-> < (float) >
+True	cosh: 1 <-> < (double) >
+True	coshf: 1 <-> < (float) >
+False	coshl: 0 <-> < (long double) >
+False	cosl: 0 <-> < (long double) >
+True	erf: 1 <-> < (double) >
+True	erfc: 1 <-> < (double) >
+True	erff: 1 <-> < (float) >
+True	erfcf: 1 <-> < (float) >
+False	erfl: 0 <-> < (long double) >
+False	erfcl: 0 <-> < (long double) >
+True	exp: 1 <-> < (double) >
+True	exp10: 1 <-> < (double x) >
+True	exp10f: 1 <-> < (float x) >
+True	exp2: 1 <-> < (double) >
+True	exp2f: 1 <-> < (float) >
+False	expm1l: 0 <-> < (long double) >
+False	exp2l: 0 <-> < (long double) >
+True	expf: 1 <-> < (float) >
+False	expl: 0 <-> < (long double) >
+True	expm1: 1 <-> < (double) >
+True	expm1f: 1 <-> < (float) >
+True	fabs: 1 <-> < (double x) >
+True	fabsf: 1 <-> < (float) >
+False	fabsl: 0 <-> < (long double) >
+True	fdim: 2 <-> < (double, double) >
+True	fdimf: 2 <-> < (float, float) >
+False	fdiml: 0 <-> < (long double, long double) >
+True	finite: 1 <-> < (double) >
+True	finitef: 1 <-> < (float) >
+True	floor: 1 <-> < (double) >
+True	floorf: 1 <-> < (float x) >
+False	floorl: 0 <-> < (long double) >
+False	ceill: 0 <-> < (long double) >
+False	truncl: 0 <-> < (long double) >
+True	fma: 3 <-> < (double, double, double) >
+True	fmaf: 3 <-> < (float, float, float) >
+False	fmal: 0 <-> < (long double, long double, long double) >
+False	fmax: 1 <-> < (double, double) >
+True	fmaxf: 2 <-> < (float, float) >
+False	fmaxl: 0 <-> < (long double x, long double y) >
+False	fmin: 1 <-> < (double, double) >
+True	fminf: 2 <-> < (float, float) >
+False	fminl: 0 <-> < (long double, long double) >
+True	fmod: 2 <-> < (double, double) >
+True	fmodf: 2 <-> < (float, float) >
+False	fmodl: 0 <-> < (long double, long double) >
+True	frexp: 2 <-> < (double, int *) >
+True	frexpf: 2 <-> < (float x, int *e) >
+False	frexpl: 1 <-> < (long double, int *) >
+True	hypot: 2 <-> < (double, double) >
+True	hypotf: 2 <-> < (float, float) >
+False	hypotl: 0 <-> < (long double, long double) >
+True	ilogb: 1 <-> < (double) >
+True	ilogbf: 1 <-> < (float x) >
+False	ilogbl: 0 <-> < (long double) >
+True	j0: 1 <-> < (double x) >
+True	y0: 1 <-> < (double x) >
+True	j0f: 1 <-> < (float) >
+True	y0f: 1 <-> < (float) >
+True	j1: 1 <-> < (double) >
+True	y1: 1 <-> < (double) >
+True	j1f: 1 <-> < (float) >
+True	y1f: 1 <-> < (float) >
+True	jn: 2 <-> < (int, double) >
+True	yn: 2 <-> < (int, double) >
+True	jnf: 2 <-> < (int, float) >
+True	ynf: 2 <-> < (int, float) >
+True	ldexp: 2 <-> < (double, int) >
+True	ldexpf: 2 <-> < (float, int) >
+False	ldexpl: 1 <-> < (long double, int) >
+False	lgamma: 0 <-> < (double) >
+True	__lgamma_r: 2 <-> < (double, int *) >
+False	lgammaf: 0 <-> < (float) >
+True	__lgammaf_r: 2 <-> < (float x, int *signgamp) >
+False	lgammal: 0 <-> < (long double) >
+True	llrint: 1 <-> < (double) >
+True	llrintf: 1 <-> < (float x) >
+False	llrintl: 0 <-> < (long double) >
+True	llround: 1 <-> < (double x) >
+True	llroundf: 1 <-> < (float) >
+False	llroundl: 0 <-> < (long double) >
+True	log: 1 <-> < (double) >
+True	log10: 1 <-> < (double) >
+True	log10f: 1 <-> < (float) >
+False	log10l: 0 <-> < (long double) >
+True	log1p: 1 <-> < (double) >
+True	log1pf: 1 <-> < (float) >
+False	log1pl: 0 <-> < (long double) >
+True	log2: 1 <-> < (double) >
+True	log2f: 1 <-> < (float x) >
+False	log2l: 0 <-> < (long double) >
+True	logb: 1 <-> < (double) >
+True	logbf: 1 <-> < (float) >
+False	logbl: 0 <-> < (long double) >
+True	logf: 1 <-> < (float) >
+False	logl: 0 <-> < (long double) >
+True	lrint: 1 <-> < (double) >
+True	lrintf: 1 <-> < (float) >
+False	lrintl: 0 <-> < (long double) >
+True	lround: 1 <-> < (double) >
+True	lroundf: 1 <-> < (float) >
+False	lroundl: 0 <-> < (long double x) >
+True	modf: 2 <-> < (double, double *) >
+True	modff: 2 <-> < (float, float *) >
+False	modfl: 1 <-> < (long double, long double *) >
+False	nan: 0 <-> < (const char *) >
+False	nanf: 0 <-> < (const char *) >
+False	nanl: 0 <-> < (const char *) >
+True	nearbyint: 1 <-> < (double) >
+True	nearbyintf: 1 <-> < (float) >
+False	nearbyintl: 0 <-> < (long double) >
+False	nextafter: 1 <-> < (double, double) >
+True	nextafterf: 2 <-> < (float x, float y) >
+False	nextafterl: 0 <-> < (long double, long double) >
+False	nexttoward: 1 <-> < (double, long double) >
+False	nexttowardf: 1 <-> < (float, long double) >
+False	nexttowardl: 0 <-> < (long double, long double) >
+True	pow: 2 <-> < (double, double) >
+True	powf: 2 <-> < (float x, float y) >
+False	powl: 0 <-> < (long double, long double) >
+False	remainder: 0 <-> < (double x, double y) >
+False	remainderf: 0 <-> < (float, float) >
+False	remainderl: 0 <-> < (long double, long double) >
+False	remquo: 2 <-> < (double, double, int *) >
+True	remquof: 3 <-> < (float, float, int *) >
+False	remquol: 1 <-> < (long double, long double, int *) >
+True	rint: 1 <-> < (double) >
+True	rintf: 1 <-> < (float x) >
+False	rintl: 0 <-> < (long double) >
+True	round: 1 <-> < (double) >
+True	roundf: 1 <-> < (float) >
+False	roundl: 0 <-> < (long double) >
+True	scalb: 2 <-> < (double, double) >
+True	scalbf: 2 <-> < (float, float) >
+True	scalbln: 2 <-> < (double, long) >
+True	scalblnf: 2 <-> < (float, long) >
+False	scalblnl: 1 <-> < (long double, long) >
+True	scalbn: 2 <-> < (double, int) >
+True	scalbnf: 2 <-> < (float x, int n) >
+False	scalbnl: 1 <-> < (long double, int) >
+True	significand: 1 <-> < (double) >
+True	significandf: 1 <-> < (float) >
+True	sin: 1 <-> < (double) >
+True	sincos: 3 <-> < (double x, double *sin, double *cos) >
+True	sincosf: 3 <-> < (float x, float *sin, float *cos) >
+True	sinf: 1 <-> < (float) >
+True	sinh: 1 <-> < (double) >
+True	sinhf: 1 <-> < (float) >
+False	sinhl: 0 <-> < (long double) >
+False	sinl: 0 <-> < (long double) >
+True	sqrt: 1 <-> < (double) >
+True	sqrtf: 1 <-> < (float) >
+False	sqrtl: 0 <-> < (long double) >
+True	tan: 1 <-> < (double x) >
+True	tanf: 1 <-> < (float) >
+True	tanh: 1 <-> < (double) >
+True	tanhf: 1 <-> < (float) >
+False	tanhl: 0 <-> < (long double) >
+False	tanl: 0 <-> < (long double) >
+True	tgamma: 1 <-> < (double) >
+True	tgammaf: 1 <-> < (float) >
+False	tgammal: 0 <-> < (long double) >
+True	trunc: 1 <-> < (double) >
+True	truncf: 1 <-> < (float) >
+True	a64l: 1 <-> < (const char *s) >
+True	l64a: 1 <-> < (long x0) >
+True	basename: 1 <-> < (char *) >
+True	dirname: 1 <-> < (char *) >
+True	ffs: 1 <-> < (int i) >
+True	ffsl: 1 <-> < (long i) >
+True	ffsll: 1 <-> < (long long i) >
+True	fmtmsg: 6 <-> < (long, const char *, int, const char *, const char *, const char *) >
+True	forkpty: 4 <-> < (int *, char *, const struct termios *, const struct winsize *) >
+True	get_current_dir_name: 0 <-> < (void) >
+True	getauxval: 1 <-> < (unsigned long item) >
+True	getdomainname: 2 <-> < (char *name, size_t len) >
+True	gethostid: 0 <-> < () >
+True	__getopt_msg: 4 <-> < (const char *a, const char *b, const char *c, size_t l) >
+True	getopt: 3 <-> < (int argc, char *const argv[], const char *optstring) >
+False	getopt_long: 4 <-> < (int argc, char *const *argv, const char *optstring, const struct option *longopts, int *idx) >
+False	getopt_long_only: 4 <-> < (int argc, char *const *argv, const char *optstring, const struct option *longopts, int *idx) >
+True	getpriority: 2 <-> < (int, id_t) >
+False	getresgid: 0 <-> < (gid_t *rgid, gid_t *egid, gid_t *sgid) >
+False	getresuid: 0 <-> < (uid_t *ruid, uid_t *euid, uid_t *suid) >
+True	getrlimit: 2 <-> < (int resource, struct rlimit *rlim) >
+False	getrusage: 1 <-> < (int, struct rusage *) >
+True	getsubopt: 3 <-> < (char **, char *const *, char **) >
+True	initgroups: 2 <-> < (const char *, gid_t) >
+False	ioctl: 6 <-> < (int fd, int req,...) >
+True	issetugid: 0 <-> < (void) >
+True	lockf: 3 <-> < (int fd, int op, off_t size) >
+True	login_tty: 1 <-> < (int) >
+True	setmntent: 2 <-> < (const char *, const char *) >
+True	endmntent: 1 <-> < (FILE *) >
+True	getmntent_r: 4 <-> < (FILE *, struct mntent *, char *, int) >
+True	getmntent: 1 <-> < (FILE *) >
+True	addmntent: 2 <-> < (FILE *, const struct mntent *) >
+True	hasmntopt: 2 <-> < (const struct mntent *, const char *) >
+False	nftw: 4 <-> < (const char *path, int(*fn)(const char *, const struct stat *, int, struct FTW *), int fd_limit, int flags) >
+False	openpty: 6 <-> < (int *, int *, char *, const struct termios *, const struct winsize *) >
+True	ptsname: 1 <-> < (int fd) >
+True	posix_openpt: 1 <-> < (int) >
+False	grantpt: 0 <-> < (int) >
+True	unlockpt: 1 <-> < (int) >
+True	__ptsname_r: 3 <-> < (int, char *, size_t) >
+True	realpath: 2 <-> < (const char *restrict filename, char *restrict resolved) >
+False	setdomainname: 0 <-> < (const char *, size_t) >
+True	setpriority: 3 <-> < (int which, id_t who, int prio) >
+True	__setrlimit: 2 <-> < (int resource, const struct rlimit *rlim) >
+True	setrlimit: 2 <-> < (int, const struct rlimit *) >
+False	syscall: 6 <-> < (long,...) >
+True	setlogmask: 1 <-> < (int) >
+True	closelog: 0 <-> < (void) >
+True	openlog: 3 <-> < (const char *, int, int) >
+True	__vsyslog: 3 <-> < (int priority, const char *message, va_list ap) >
+False	syslog: 6 <-> < (int, const char *,...) >
+False	uname: 0 <-> < (struct utsname *uts) >
+True	wordexp: 3 <-> < (const char *restrict s, wordexp_t *restrict we, int flags) >
+True	wordfree: 1 <-> < (wordexp_t *we) >
+True	__madvise: 3 <-> < (void *, size_t, int) >
+False	mincore: 0 <-> < (void *addr, size_t len, unsigned char *vec) >
+False	mlock: 0 <-> < (const void *, size_t) >
+True	mlockall: 1 <-> < (int) >
+True	__mmap: 6 <-> < (void *, size_t, int, int, int, off_t) >
+True	__mprotect: 3 <-> < (void *, size_t, int) >
+False	__mremap: 6 <-> < (void *old_addr, size_t old_len, size_t new_len, int flags,...) >
+True	msync: 3 <-> < (void *, size_t, int) >
+False	munlock: 0 <-> < (const void *addr, size_t len) >
+True	munlockall: 0 <-> < (void) >
+True	__munmap: 2 <-> < (void *, size_t) >
+True	posix_madvise: 3 <-> < (void *, size_t, int) >
+True	__shm_mapname: 2 <-> < (const char *name, char *buf) >
+True	shm_open: 3 <-> < (const char *, int, mode_t) >
+True	shm_unlink: 1 <-> < (const char *) >
+True	mq_close: 1 <-> < (mqd_t) >
+True	mq_getattr: 2 <-> < (mqd_t mqd, struct mq_attr *attr) >
+True	mq_notify: 2 <-> < (mqd_t, const struct sigevent *) >
+False	mq_open: 6 <-> < (const char *name, int flags,...) >
+False	mq_receive: 5 <-> < (mqd_t, char *, size_t, unsigned *) >
+False	mq_send: 5 <-> < (mqd_t, const char *, size_t, unsigned) >
+False	mq_setattr: 1 <-> < (mqd_t, const struct mq_attr *__restrict, struct mq_attr *__restrict) >
+True	mq_timedreceive: 5 <-> < (mqd_t, char *__restrict, size_t, unsigned *__restrict, const struct timespec *__restrict) >
+True	mq_timedsend: 5 <-> < (mqd_t, const char *, size_t, unsigned, const struct timespec *) >
+True	mq_unlink: 1 <-> < (const char *) >
+True	btowc: 1 <-> < (int) >
+True	c16rtomb: 3 <-> < (char *__restrict, char16_t, mbstate_t *__restrict) >
+False	c32rtomb: 2 <-> < (char *restrict s, char32_t c32, mbstate_t *restrict ps) >
+True	mblen: 2 <-> < (const char *s, size_t n) >
+True	mbrlen: 3 <-> < (const char *__restrict, size_t, mbstate_t *__restrict) >
+True	mbrtoc16: 4 <-> < (char16_t *restrict pc16, const char *restrict s, size_t n, mbstate_t *restrict ps) >
+True	mbrtoc32: 4 <-> < (char32_t *restrict pc32, const char *restrict s, size_t n, mbstate_t *restrict ps) >
+True	mbrtowc: 4 <-> < (wchar_t *__restrict, const char *__restrict, size_t, mbstate_t *__restrict) >
+True	mbsinit: 1 <-> < (const mbstate_t *) >
+True	mbsnrtowcs: 5 <-> < (wchar_t *__restrict, const char **__restrict, size_t, size_t, mbstate_t *__restrict) >
+True	mbsrtowcs: 4 <-> < (wchar_t *restrict ws, const char **restrict src, size_t wn, mbstate_t *restrict st) >
+True	mbstowcs: 3 <-> < (wchar_t *__restrict, const char *__restrict, size_t) >
+True	mbtowc: 3 <-> < (wchar_t *restrict wc, const char *restrict src, size_t n) >
+False	wcrtomb: 2 <-> < (char *__restrict, wchar_t, mbstate_t *__restrict) >
+False	wcsnrtombs: 4 <-> < (char *__restrict, const wchar_t **__restrict, size_t, size_t, mbstate_t *__restrict) >
+False	wcsrtombs: 3 <-> < (char *__restrict, const wchar_t **__restrict, size_t, mbstate_t *__restrict) >
+True	wcstombs: 3 <-> < (char *restrict s, const wchar_t *restrict ws, size_t n) >
+True	wctob: 1 <-> < (wint_t) >
+True	wctomb: 2 <-> < (char *s, wchar_t wc) >
+True	accept: 3 <-> < (int, struct sockaddr *__restrict, socklen_t *__restrict) >
+True	accept4: 4 <-> < (int, struct sockaddr *__restrict, socklen_t *__restrict, int) >
+True	bind: 3 <-> < (int fd, const struct sockaddr *addr, socklen_t len) >
+True	connect: 3 <-> < (int, const struct sockaddr *, socklen_t) >
+True	__dn_comp: 5 <-> < (const char *src, unsigned char *dst, int space, unsigned char **dnptrs, unsigned char **lastdnptr) >
+False	__dn_expand: 4 <-> < (const unsigned char *, const unsigned char *, const unsigned char *, char *, int) >
+True	dn_skipname: 2 <-> < (const unsigned char *, const unsigned char *) >
+False	__dns_parse: 6 <-> < (const unsigned char *, int, int(*)(void *, int, const void *, int, const void *), void *) >
+False	sethostent: 0 <-> < (int) >
+True	gethostent: 0 <-> < (void) >
+True	endhostent: 0 <-> < (void) >
+True	ether_aton_r: 2 <-> < (const char *, struct ether_addr *) >
+True	ether_aton: 1 <-> < (const char *) >
+True	ether_ntoa_r: 2 <-> < (const struct ether_addr *, char *) >
+True	ether_ntoa: 1 <-> < (const struct ether_addr *) >
+False	ether_line: 0 <-> < (const char *, struct ether_addr *, char *) >
+False	ether_ntohost: 0 <-> < (char *, const struct ether_addr *) >
+False	ether_hostton: 0 <-> < (const char *, struct ether_addr *) >
+True	freeaddrinfo: 1 <-> < (struct addrinfo *p) >
+True	gai_strerror: 1 <-> < (int) >
+True	getaddrinfo: 4 <-> < (const char *restrict host, const char *restrict serv, const struct addrinfo *restrict hint, struct addrinfo **restrict res) >
+True	gethostbyaddr: 3 <-> < (const void *, socklen_t, int) >
+False	gethostbyaddr_r: 6 <-> < (const void *, socklen_t, int, struct hostent *, char *, size_t, struct hostent **, int *) >
+True	gethostbyname: 1 <-> < (const char *) >
+True	gethostbyname2: 2 <-> < (const char *name, int af) >
+False	gethostbyname2_r: 6 <-> < (const char *, int, struct hostent *, char *, size_t, struct hostent **, int *) >
+True	gethostbyname_r: 6 <-> < (const char *, struct hostent *, char *, size_t, struct hostent **, int *) >
+True	freeifaddrs: 1 <-> < (struct ifaddrs *ifp) >
+True	getifaddrs: 1 <-> < (struct ifaddrs **ifap) >
+False	getnameinfo: 6 <-> < (const struct sockaddr *__restrict, socklen_t, char *__restrict, socklen_t, char *__restrict, socklen_t, int) >
+False	getpeername: 1 <-> < (int, struct sockaddr *__restrict, socklen_t *__restrict) >
+True	getservbyname: 2 <-> < (const char *name, const char *prots) >
+True	getservbyname_r: 6 <-> < (const char *name, const char *prots, struct servent *se, char *buf, size_t buflen, struct servent **res) >
+False	getservbyport: 5 <-> < (int port, const char *prots) >
+True	getservbyport_r: 6 <-> < (int, const char *, struct servent *, char *, size_t, struct servent **) >
+False	getsockname: 1 <-> < (int fd, struct sockaddr *restrict addr, socklen_t *restrict len) >
+False	getsockopt: 4 <-> < (int, int, int, void *__restrict, socklen_t *__restrict) >
+True	__h_errno_location: 0 <-> < (void) >
+True	herror: 1 <-> < (const char *) >
+True	hstrerror: 1 <-> < (int ecode) >
+True	htonl: 1 <-> < (uint32_t n) >
+True	htons: 1 <-> < (uint16_t n) >
+True	if_freenameindex: 1 <-> < (struct if_nameindex *) >
+True	if_indextoname: 2 <-> < (unsigned int, char *) >
+True	if_nameindex: 0 <-> < (void) >
+True	if_nametoindex: 1 <-> < (const char *name) >
+True	inet_addr: 1 <-> < (const char *) >
+True	__inet_aton: 2 <-> < (const char *, struct in_addr *) >
+True	inet_network: 1 <-> < (const char *p) >
+True	inet_makeaddr: 2 <-> < (in_addr_t n, in_addr_t h) >
+True	inet_lnaof: 1 <-> < (struct in_addr in) >
+True	inet_netof: 1 <-> < (struct in_addr in) >
+True	inet_ntoa: 1 <-> < (struct in_addr) >
+False	inet_ntop: 6 <-> < (int, const void *__restrict, char *__restrict, socklen_t) >
+True	inet_pton: 3 <-> < (int, const char *__restrict, void *__restrict) >
+True	listen: 2 <-> < (int, int) >
+True	__lookup_ipliteral: 3 <-> < (struct address buf[static 1], const char *name, int family) >
+False	__lookup_name: 4 <-> < (struct address buf[static MAXADDRS], char canon[static 256], const char *name, int family, int flags) >
+False	__lookup_serv: 4 <-> < (struct service buf[static MAXSERVS], const char *name, int proto, int socktype, int flags) >
+False	__rtnetlink_enumerate: 4 <-> < (int link_af, int addr_af, int(*cb)(void *ctx, struct nlmsghdr *h), void *ctx) >
+False	getnetbyaddr: 0 <-> < (uint32_t, int) >
+False	getnetbyname: 0 <-> < (const char *) >
+True	ns_get16: 1 <-> < (const unsigned char *) >
+True	ns_get32: 1 <-> < (const unsigned char *) >
+True	ns_put16: 2 <-> < (unsigned, unsigned char *) >
+True	ns_put32: 2 <-> < (unsigned long, unsigned char *) >
+True	ns_initparse: 3 <-> < (const unsigned char *, int, ns_msg *) >
+True	ns_skiprr: 4 <-> < (const unsigned char *, const unsigned char *, ns_sect, int) >
+True	ns_parserr: 4 <-> < (ns_msg *, ns_sect, int, ns_rr *) >
+False	ns_name_uncompress: 4 <-> < (const unsigned char *, const unsigned char *, const unsigned char *, char *, size_t) >
+True	ntohl: 1 <-> < (uint32_t) >
+True	ntohs: 1 <-> < (uint16_t) >
+True	endprotoent: 0 <-> < (void) >
+False	setprotoent: 0 <-> < (int stayopen) >
+True	getprotoent: 0 <-> < (void) >
+True	getprotobyname: 1 <-> < (const char *name) >
+True	getprotobynumber: 1 <-> < (int num) >
+False	recv: 6 <-> < (int, void *, size_t, int) >
+True	recvfrom: 6 <-> < (int, void *__restrict, size_t, int, struct sockaddr *__restrict, socklen_t *__restrict) >
+True	recvmmsg: 5 <-> < (int fd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int flags, struct timespec *timeout) >
+True	recvmsg: 3 <-> < (int, struct msghdr *, int) >
+True	res_init: 0 <-> < (void) >
+False	__res_mkquery: 4 <-> < (int, const char *, int, int, const unsigned char *, int, const unsigned char *, unsigned char *, int) >
+False	__res_msend: 5 <-> < (int nqueries, const unsigned char *const *queries, const int *qlens, unsigned char *const *answers, int *alens, int asize) >
+False	__res_query: 4 <-> < (const char *name, int class, int type, unsigned char *dest, int len) >
+False	res_querydomain: 5 <-> < (const char *, const char *, int, int, unsigned char *, int) >
+True	__res_send: 4 <-> < (const unsigned char *, int, unsigned char *, int) >
+True	__res_state: 0 <-> < (void) >
+False	send: 5 <-> < (int, const void *, size_t, int) >
+False	sendmmsg: 6 <-> < (int fd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int flags) >
+True	sendmsg: 3 <-> < (int, const struct msghdr *, int) >
+False	sendto: 5 <-> < (int, const void *, size_t, int, const struct sockaddr *, socklen_t) >
+True	endservent: 0 <-> < (void) >
+False	setservent: 0 <-> < (int stayopen) >
+True	getservent: 0 <-> < (void) >
+False	setsockopt: 4 <-> < (int fd, int level, int optname, const void *optval, socklen_t optlen) >
+True	shutdown: 2 <-> < (int, int) >
+True	sockatmark: 1 <-> < (int) >
+True	socket: 3 <-> < (int, int, int) >
+True	socketpair: 4 <-> < (int, int, int, int [2]) >
+True	fgetgrent: 1 <-> < (FILE *f) >
+True	fgetpwent: 1 <-> < (FILE *f) >
+True	fgetspent: 1 <-> < (FILE *f) >
+False	__getgr_a: 6 <-> < (const char *name, gid_t gid, struct group *gr, char **buf, size_t *size, char ***mem, size_t *nmem, struct group **res) >
+True	getgrnam_r: 5 <-> < (const char *name, struct group *gr, char *buf, size_t size, struct group **res) >
+True	getgrgid_r: 5 <-> < (gid_t gid, struct group *gr, char *buf, size_t size, struct group **res) >
+True	setgrent: 0 <-> < (void) >
+True	getgrent: 0 <-> < (void) >
+True	getgrgid: 1 <-> < (gid_t) >
+True	getgrnam: 1 <-> < (const char *) >
+False	__getgrent_a: 6 <-> < (FILE *f, struct group *gr, char **line, size_t *size, char ***mem, size_t *nmem, struct group **res) >
+True	getgrouplist: 4 <-> < (const char *, gid_t, gid_t *, int *) >
+True	__getpw_a: 6 <-> < (const char *name, uid_t uid, struct passwd *pw, char **buf, size_t *size, struct passwd **res) >
+True	getpwnam_r: 5 <-> < (const char *name, struct passwd *pw, char *buf, size_t size, struct passwd **res) >
+True	getpwuid_r: 5 <-> < (uid_t uid, struct passwd *pw, char *buf, size_t size, struct passwd **res) >
+True	setpwent: 0 <-> < () >
+True	getpwent: 0 <-> < () >
+True	getpwuid: 1 <-> < (uid_t uid) >
+True	getpwnam: 1 <-> < (const char *name) >
+True	__getpwent_a: 5 <-> < (FILE *f, struct passwd *pw, char **line, size_t *size, struct passwd **res) >
+True	setspent: 0 <-> < () >
+True	endspent: 0 <-> < () >
+True	getspent: 0 <-> < () >
+True	getspnam: 1 <-> < (const char *name) >
+True	__parsespent: 2 <-> < (char *s, struct spwd *sp) >
+True	getspnam_r: 5 <-> < (const char *name, struct spwd *sp, char *buf, size_t size, struct spwd **res) >
+True	lckpwdf: 0 <-> < () >
+True	ulckpwdf: 0 <-> < () >
+True	__nscd_query: 5 <-> < (int32_t req, const char *key, int32_t *buf, size_t len, int *swap) >
+True	putgrent: 2 <-> < (const struct group *gr, FILE *f) >
+True	putpwent: 2 <-> < (const struct passwd *pw, FILE *f) >
+True	putspent: 2 <-> < (const struct spwd *sp, FILE *f) >
+True	__rand48_step: 2 <-> < (unsigned short *xi, unsigned short *lc) >
+True	erand48: 1 <-> < (unsigned short s[3]) >
+True	drand48: 0 <-> < (void) >
+True	lcong48: 1 <-> < (unsigned short [7]) >
+True	nrand48: 1 <-> < (unsigned short s[3]) >
+True	lrand48: 0 <-> < (void) >
+True	jrand48: 1 <-> < (unsigned short [3]) >
+True	mrand48: 0 <-> < (void) >
+True	srand: 1 <-> < (unsigned s) >
+True	rand: 0 <-> < (void) >
+True	rand_r: 1 <-> < (unsigned *seed) >
+True	srandom: 1 <-> < (unsigned seed) >
+True	initstate: 3 <-> < (unsigned seed, char *state, size_t size) >
+True	setstate: 1 <-> < (char *state) >
+True	random: 0 <-> < (void) >
+True	seed48: 1 <-> < (unsigned short *s) >
+True	srand48: 1 <-> < (long seed) >
+False	execl: 6 <-> < (const char *, const char *,...) >
+False	execle: 6 <-> < (const char *path, const char *argv0,...) >
+False	execlp: 6 <-> < (const char *, const char *,...) >
+False	execv: 0 <-> < (const char *, char *const []) >
+False	execve: 0 <-> < (const char *, char *const [], char *const []) >
+True	__execvpe: 3 <-> < (const char *, char *const *, char *const *) >
+True	execvp: 2 <-> < (const char *, char *const []) >
+True	fexecve: 3 <-> < (int, char *const [], char *const []) >
+True	fork: 0 <-> < (void) >
+False	__posix_spawnx: 6 <-> < (pid_t *restrict, const char *restrict, int(*)(const char *, char *const *, char *const *), const posix_spawn_file_actions_t *, const posix_spawnattr_t *restrict, char *const *restrict, char *const *restrict) >
+True	posix_spawn: 6 <-> < (pid_t *__restrict, const char *__restrict, const posix_spawn_file_actions_t *, const posix_spawnattr_t *__restrict, char *const *__restrict, char *const *__restrict) >
+True	posix_spawn_file_actions_addclose: 2 <-> < (posix_spawn_file_actions_t *fa, int fd) >
+True	posix_spawn_file_actions_adddup2: 3 <-> < (posix_spawn_file_actions_t *fa, int srcfd, int fd) >
+False	posix_spawn_file_actions_addopen: 4 <-> < (posix_spawn_file_actions_t *restrict fa, int fd, const char *restrict path, int flags, mode_t mode) >
+True	posix_spawn_file_actions_destroy: 1 <-> < (posix_spawn_file_actions_t *fa) >
+True	posix_spawn_file_actions_init: 1 <-> < (posix_spawn_file_actions_t *) >
+False	posix_spawnattr_destroy: 0 <-> < (posix_spawnattr_t *attr) >
+True	posix_spawnattr_getflags: 2 <-> < (const posix_spawnattr_t *__restrict, short *__restrict) >
+True	posix_spawnattr_getpgroup: 2 <-> < (const posix_spawnattr_t *__restrict, pid_t *__restrict) >
+True	posix_spawnattr_getsigdefault: 2 <-> < (const posix_spawnattr_t *restrict attr, sigset_t *restrict def) >
+True	posix_spawnattr_getsigmask: 2 <-> < (const posix_spawnattr_t *restrict attr, sigset_t *restrict mask) >
+True	posix_spawnattr_init: 1 <-> < (posix_spawnattr_t *attr) >
+False	posix_spawnattr_getschedparam: 0 <-> < (const posix_spawnattr_t *__restrict, struct sched_param *__restrict) >
+False	posix_spawnattr_setschedparam: 0 <-> < (posix_spawnattr_t *__restrict, const struct sched_param *__restrict) >
+False	posix_spawnattr_getschedpolicy: 0 <-> < (const posix_spawnattr_t *__restrict, int *__restrict) >
+False	posix_spawnattr_setschedpolicy: 0 <-> < (posix_spawnattr_t *, int) >
+True	posix_spawnattr_setflags: 2 <-> < (posix_spawnattr_t *, short) >
+True	posix_spawnattr_setpgroup: 2 <-> < (posix_spawnattr_t *attr, pid_t pgrp) >
+True	posix_spawnattr_setsigdefault: 2 <-> < (posix_spawnattr_t *__restrict, const sigset_t *__restrict) >
+True	posix_spawnattr_setsigmask: 2 <-> < (posix_spawnattr_t *restrict attr, const sigset_t *restrict mask) >
+True	posix_spawnp: 6 <-> < (pid_t *restrict res, const char *restrict file, const posix_spawn_file_actions_t *fa, const posix_spawnattr_t *restrict attr, char *const argv[restrict], char *const envp[restrict]) >
+True	system: 1 <-> < (const char *cmd) >
+True	__vfork: 0 <-> < (void) >
+True	wait: 1 <-> < (int *) >
+True	waitid: 4 <-> < (idtype_t type, id_t id, siginfo_t *info, int options) >
+True	waitpid: 3 <-> < (pid_t pid, int *status, int options) >
+True	fnmatch: 3 <-> < (const char *, const char *, int) >
+False	glob: 4 <-> < (const char *restrict pat, int flags, int(*errfunc)(const char *path, int err), glob_t *restrict g) >
+True	globfree: 1 <-> < (glob_t *g) >
+True	regcomp: 3 <-> < (regex_t *__restrict, const char *__restrict, int) >
+True	regfree: 1 <-> < (regex_t *) >
+True	regerror: 4 <-> < (int e, const regex_t *restrict preg, char *restrict buf, size_t size) >
+False	regexec: 6 <-> < (const regex_t *__restrict, const char *__restrict, size_t, regmatch_t *__restrict, int) >
+False	sched_setaffinity: 1 <-> < (pid_t tid, size_t size, const cpu_set_t *set) >
+False	pthread_setaffinity_np: 1 <-> < (pthread_t td, size_t size, const cpu_set_t *set) >
+True	sched_getaffinity: 3 <-> < (pid_t tid, size_t size, cpu_set_t *set) >
+True	pthread_getaffinity_np: 3 <-> < (pthread_t td, size_t size, cpu_set_t *set) >
+False	__sched_cpucount: 5 <-> < (size_t size, const cpu_set_t *set) >
+True	sched_get_priority_max: 1 <-> < (int) >
+True	sched_get_priority_min: 1 <-> < (int) >
+False	sched_getparam: 0 <-> < (pid_t pid, struct sched_param *param) >
+False	sched_getscheduler: 0 <-> < (pid_t pid) >
+False	sched_rr_get_interval: 1 <-> < (pid_t pid, struct timespec *ts) >
+False	sched_setparam: 0 <-> < (pid_t pid, const struct sched_param *param) >
+False	sched_setscheduler: 0 <-> < (pid_t, int, const struct sched_param *) >
+True	sched_yield: 0 <-> < () >
+True	hcreate: 1 <-> < (size_t) >
+True	__hcreate_r: 2 <-> < (size_t, struct hsearch_data *) >
+True	hdestroy: 0 <-> < (void) >
+True	__hdestroy_r: 1 <-> < (struct hsearch_data *) >
+False	hsearch: 3 <-> < (ENTRY, ACTION) >
+False	__hsearch_r: 6 <-> < (ENTRY, ACTION, ENTRY **, struct hsearch_data *) >
+True	insque: 2 <-> < (void *, void *) >
+True	remque: 1 <-> < (void *) >
+False	lsearch: 5 <-> < (const void *, void *, size_t *, size_t, int(*)(const void *, const void *)) >
+False	lfind: 5 <-> < (const void *, const void *, size_t *, size_t, int(*)(const void *, const void *)) >
+True	tdestroy: 2 <-> < (void *root, void(*freekey)(void *)) >
+False	tdelete: 3 <-> < (const void *restrict key, void **restrict rootp, int(*compar)(const void *, const void *)) >
+False	tfind: 3 <-> < (const void *key, void *const *rootp, int(*compar)(const void *, const void *)) >
+False	tsearch: 3 <-> < (const void *key, void **rootp, int(*compar)(const void *, const void *)) >
+False	twalk: 2 <-> < (const void *root, void(*action)(const void *, VISIT, int)) >
+True	poll: 3 <-> < (struct pollfd *fds, nfds_t n, int timeout) >
+True	pselect: 6 <-> < (int, fd_set *__restrict, fd_set *__restrict, fd_set *__restrict, const struct timespec *__restrict, const sigset_t *__restrict) >
+True	select: 5 <-> < (int n, fd_set *restrict rfds, fd_set *restrict wfds, fd_set *restrict efds, struct timeval *restrict tv) >
+True	_longjmp: 2 <-> < (jmp_buf, int) >
+True	__block_all_sigs: 1 <-> < (void *set) >
+True	__block_app_sigs: 1 <-> < (void *set) >
+True	__restore_sigs: 1 <-> < (void *set) >
+False	getitimer: 1 <-> < (int which, struct itimerval *old) >
+True	kill: 2 <-> < (pid_t, int) >
+True	killpg: 2 <-> < (pid_t, int) >
+True	psiginfo: 2 <-> < (const siginfo_t *, const char *) >
+True	psignal: 2 <-> < (int sig, const char *msg) >
+True	raise: 1 <-> < (int) >
+True	__restore: 0 <-> < () >
+False	setitimer: 1 <-> < (int which, const struct itimerval *restrict new, struct itimerval *restrict old) >
+True	__get_handler_set: 1 <-> < (sigset_t *set) >
+True	__libc_sigaction: 3 <-> < (int, const struct sigaction *, struct sigaction *) >
+True	__sigaction: 3 <-> < (int, const struct sigaction *, struct sigaction *) >
+True	sigaddset: 2 <-> < (sigset_t *, int) >
+False	sigaltstack: 1 <-> < (const stack_t *restrict ss, stack_t *restrict old) >
+True	sigandset: 3 <-> < (sigset_t *dest, const sigset_t *left, const sigset_t *right) >
+True	sigdelset: 2 <-> < (sigset_t *set, int sig) >
+True	sigemptyset: 1 <-> < (sigset_t *set) >
+True	sigfillset: 1 <-> < (sigset_t *) >
+True	sighold: 1 <-> < (int) >
+True	sigignore: 1 <-> < (int sig) >
+True	siginterrupt: 2 <-> < (int, int) >
+True	sigisemptyset: 1 <-> < (const sigset_t *set) >
+True	sigismember: 2 <-> < (const sigset_t *, int) >
+True	siglongjmp: 2 <-> < (sigjmp_buf, int) >
+True	sigorset: 3 <-> < (sigset_t *dest, const sigset_t *left, const sigset_t *right) >
+True	sigpause: 1 <-> < (int sig) >
+False	sigpending: 0 <-> < (sigset_t *) >
+True	sigprocmask: 3 <-> < (int, const sigset_t *__restrict, sigset_t *__restrict) >
+True	sigqueue: 3 <-> < (pid_t, int, const union sigval) >
+True	sigrelse: 1 <-> < (int sig) >
+True	__libc_current_sigrtmax: 0 <-> < (void) >
+True	__libc_current_sigrtmin: 0 <-> < (void) >
+True	sigsuspend: 1 <-> < (const sigset_t *) >
+True	sigtimedwait: 3 <-> < (const sigset_t *__restrict, siginfo_t *__restrict, const struct timespec *__restrict) >
+True	sigwait: 2 <-> < (const sigset_t *__restrict, int *__restrict) >
+True	sigwaitinfo: 2 <-> < (const sigset_t *__restrict, siginfo_t *__restrict) >
+False	__fxstat: 2 <-> < (int ver, int fd, struct stat *buf) >
+False	__fxstatat: 2 <-> < (int ver, int fd, const char *path, struct stat *buf, int flag) >
+False	__lxstat: 2 <-> < (int ver, const char *path, struct stat *buf) >
+False	__xstat: 2 <-> < (int ver, const char *path, struct stat *buf) >
+True	__xmknod: 4 <-> < (int ver, const char *path, mode_t mode, dev_t *dev) >
+True	__xmknodat: 5 <-> < (int ver, int fd, const char *path, mode_t mode, dev_t *dev) >
+True	chmod: 2 <-> < (const char *, mode_t) >
+True	fchmod: 2 <-> < (int, mode_t) >
+True	fchmodat: 4 <-> < (int fd, const char *path, mode_t mode, int flag) >
+True	fstat: 2 <-> < (int fd, struct stat *st) >
+True	fstatat: 4 <-> < (int fd, const char *restrict path, struct stat *restrict buf, int flag) >
+True	futimens: 2 <-> < (int fd, const struct timespec times[2]) >
+False	__futimesat: 6 <-> < (int dirfd, const char *pathname, const struct timeval times[2]) >
+True	lchmod: 2 <-> < (const char *path, mode_t mode) >
+False	lstat: 0 <-> < (const char *restrict path, struct stat *restrict buf) >
+True	mkdir: 2 <-> < (const char *path, mode_t mode) >
+True	mkdirat: 3 <-> < (int fd, const char *path, mode_t mode) >
+True	mkfifo: 2 <-> < (const char *, mode_t) >
+True	mkfifoat: 3 <-> < (int fd, const char *path, mode_t mode) >
+False	mknod: 2 <-> < (const char *, mode_t, dev_t) >
+True	mknodat: 4 <-> < (int fd, const char *path, mode_t mode, dev_t dev) >
+False	stat: 0 <-> < (const char *__restrict, struct stat *__restrict) >
+True	__statfs: 2 <-> < (const char *path, struct statfs *buf) >
+True	__fstatfs: 2 <-> < (int fd, struct statfs *buf) >
+True	statvfs: 2 <-> < (const char *__restrict, struct statvfs *__restrict) >
+True	fstatvfs: 2 <-> < (int, struct statvfs *) >
+True	umask: 1 <-> < (mode_t mode) >
+True	utimensat: 4 <-> < (int fd, const char *path, const struct timespec times[2], int flags) >
+True	__fclose_ca: 1 <-> < (FILE *) >
+True	__fdopen: 2 <-> < (int, const char *) >
+True	__fmodeflags: 1 <-> < (const char *) >
+True	__fopen_rb_ca: 4 <-> < (const char *, FILE *, unsigned char *, size_t) >
+True	__overflow: 2 <-> < (FILE *f, int _c) >
+True	__stdio_close: 1 <-> < (FILE *) >
+True	__stdio_exit: 0 <-> < (void) >
+True	__stdio_read: 3 <-> < (FILE *, unsigned char *, size_t) >
+True	__stdio_seek: 3 <-> < (FILE *, off_t, int) >
+True	__stdio_write: 3 <-> < (FILE *, const unsigned char *, size_t) >
+True	__stdout_write: 3 <-> < (FILE *, const unsigned char *, size_t) >
+True	__string_read: 3 <-> < (FILE *, unsigned char *, size_t) >
+True	__toread: 1 <-> < (FILE *) >
+True	__toread_needs_stdio_exit: 0 <-> < () >
+True	__towrite: 1 <-> < (FILE *) >
+True	__towrite_needs_stdio_exit: 0 <-> < () >
+True	__uflow: 1 <-> < (FILE *) >
+False	asprintf: 6 <-> < (char **, const char *,...) >
+True	clearerr: 1 <-> < (FILE *) >
+False	dprintf: 6 <-> < (int, const char *__restrict,...) >
+True	_flushlbf: 0 <-> < (void) >
+False	__fsetlocking: 0 <-> < (FILE *f, int type) >
+True	__fwriting: 1 <-> < (FILE *f) >
+True	__freading: 1 <-> < (FILE *f) >
+True	__freadable: 1 <-> < (FILE *f) >
+True	__fwritable: 1 <-> < (FILE *f) >
+True	__flbf: 1 <-> < (FILE *f) >
+True	__fbufsize: 1 <-> < (FILE *f) >
+True	__fpending: 1 <-> < (FILE *f) >
+True	__fpurge: 1 <-> < (FILE *f) >
+True	__freadahead: 1 <-> < (FILE *) >
+True	__freadptr: 2 <-> < (FILE *, size_t *) >
+True	__freadptrinc: 2 <-> < (FILE *, size_t) >
+True	__fseterr: 1 <-> < (FILE *) >
+True	fclose: 1 <-> < (FILE *) >
+True	feof: 1 <-> < (FILE *) >
+True	ferror: 1 <-> < (FILE *) >
+True	fflush: 1 <-> < (FILE *) >
+True	fflush_unlocked: 1 <-> < (FILE *) >
+True	fgetc: 1 <-> < (FILE *) >
+True	fgetln: 2 <-> < (FILE *, size_t *) >
+True	fgetpos: 2 <-> < (FILE *__restrict, fpos_t *__restrict) >
+True	fgets: 3 <-> < (char *__restrict, int, FILE *__restrict) >
+True	__fgetwc_unlocked: 1 <-> < (FILE *f) >
+True	fgetwc: 1 <-> < (FILE *f) >
+True	fgetws: 3 <-> < (wchar_t *__restrict, int, FILE *__restrict) >
+True	fileno: 1 <-> < (FILE *) >
+True	flockfile: 1 <-> < (FILE *) >
+True	fmemopen: 3 <-> < (void *__restrict, size_t, const char *__restrict) >
+True	fopen: 2 <-> < (const char *__restrict, const char *__restrict) >
+False	fprintf: 6 <-> < (FILE *__restrict, const char *__restrict,...) >
+True	fputc: 2 <-> < (int, FILE *) >
+True	fputs: 2 <-> < (const char *__restrict, FILE *__restrict) >
+True	__fputwc_unlocked: 2 <-> < (wchar_t c, FILE *f) >
+True	fputwc: 2 <-> < (wchar_t c, FILE *f) >
+True	fputws: 2 <-> < (const wchar_t *restrict ws, FILE *restrict f) >
+True	fread: 4 <-> < (void *__restrict, size_t, size_t, FILE *__restrict) >
+True	freopen: 3 <-> < (const char *__restrict, const char *__restrict, FILE *__restrict) >
+False	fscanf: 6 <-> < (FILE *__restrict, const char *__restrict,...) >
+True	__fseeko_unlocked: 3 <-> < (FILE *, off_t, int) >
+True	__fseeko: 3 <-> < (FILE *, off_t, int) >
+True	fseek: 3 <-> < (FILE *, long, int) >
+True	fsetpos: 2 <-> < (FILE *, const fpos_t *) >
+True	__ftello_unlocked: 1 <-> < (FILE *f) >
+True	__ftello: 1 <-> < (FILE *f) >
+True	ftell: 1 <-> < (FILE *) >
+True	__do_orphaned_stdio_locks: 0 <-> < () >
+True	__unlist_locked_file: 1 <-> < (FILE *) >
+True	ftrylockfile: 1 <-> < (FILE *) >
+True	funlockfile: 1 <-> < (FILE *) >
+True	fwide: 2 <-> < (FILE *f, int mode) >
+False	fwprintf: 6 <-> < (FILE *restrict f, const wchar_t *restrict fmt,...) >
+True	__fwritex: 3 <-> < (const unsigned char *, size_t, FILE *) >
+True	fwrite: 4 <-> < (const void *__restrict, size_t, size_t, FILE *__restrict) >
+False	fwscanf: 6 <-> < (FILE *__restrict, const wchar_t *__restrict,...) >
+True	getc: 1 <-> < (FILE *) >
+True	getc_unlocked: 1 <-> < (FILE *) >
+True	getchar: 0 <-> < (void) >
+True	getchar_unlocked: 0 <-> < (void) >
+True	getdelim: 4 <-> < (char **__restrict, size_t *__restrict, int, FILE *__restrict) >
+True	getline: 3 <-> < (char **__restrict, size_t *__restrict, FILE *__restrict) >
+True	gets: 1 <-> < (char *) >
+True	getw: 1 <-> < (FILE *) >
+True	getwc: 1 <-> < (FILE *) >
+True	getwchar: 0 <-> < (void) >
+True	open_memstream: 2 <-> < (char **, size_t *) >
+True	open_wmemstream: 2 <-> < (wchar_t **, size_t *) >
+True	pclose: 1 <-> < (FILE *) >
+True	perror: 1 <-> < (const char *) >
+True	popen: 2 <-> < (const char *, const char *) >
+False	printf: 6 <-> < (const char *__restrict,...) >
+True	putc: 2 <-> < (int, FILE *) >
+True	putc_unlocked: 2 <-> < (int, FILE *) >
+True	putchar: 1 <-> < (int) >
+True	putchar_unlocked: 1 <-> < (int) >
+True	puts: 1 <-> < (const char *) >
+True	putw: 2 <-> < (int, FILE *) >
+True	putwc: 2 <-> < (wchar_t, FILE *) >
+True	putwchar: 1 <-> < (wchar_t c) >
+False	remove: 0 <-> < (const char *) >
+False	rename: 0 <-> < (const char *, const char *) >
+True	rewind: 1 <-> < (FILE *) >
+False	scanf: 6 <-> < (const char *__restrict,...) >
+True	setbuf: 2 <-> < (FILE *__restrict, char *__restrict) >
+True	setbuffer: 3 <-> < (FILE *, char *, size_t) >
+True	setlinebuf: 1 <-> < (FILE *) >
+False	setvbuf: 3 <-> < (FILE *__restrict, char *__restrict, int, size_t) >
+False	snprintf: 6 <-> < (char *__restrict, size_t, const char *__restrict,...) >
+False	sprintf: 6 <-> < (char *__restrict, const char *__restrict,...) >
+False	sscanf: 6 <-> < (const char *__restrict, const char *__restrict,...) >
+False	swprintf: 6 <-> < (wchar_t *__restrict, size_t, const wchar_t *__restrict,...) >
+False	swscanf: 6 <-> < (const wchar_t *__restrict, const wchar_t *__restrict,...) >
+True	tempnam: 2 <-> < (const char *, const char *) >
+True	tmpfile: 0 <-> < (void) >
+True	tmpnam: 1 <-> < (char *) >
+True	ungetc: 2 <-> < (int, FILE *) >
+True	ungetwc: 2 <-> < (wint_t c, FILE *f) >
+True	vasprintf: 3 <-> < (char **, const char *, __isoc_va_list) >
+True	vdprintf: 3 <-> < (int, const char *__restrict, __isoc_va_list) >
+True	vfprintf: 3 <-> < (FILE *__restrict, const char *__restrict, __isoc_va_list) >
+True	vfscanf: 3 <-> < (FILE *__restrict, const char *__restrict, __isoc_va_list) >
+True	vfwprintf: 3 <-> < (FILE *restrict f, const wchar_t *restrict fmt, va_list ap) >
+True	vfwscanf: 3 <-> < (FILE *restrict f, const wchar_t *restrict fmt, va_list ap) >
+True	vprintf: 2 <-> < (const char *__restrict, __isoc_va_list) >
+True	vscanf: 2 <-> < (const char *__restrict, __isoc_va_list) >
+True	vsnprintf: 4 <-> < (char *__restrict, size_t, const char *__restrict, __isoc_va_list) >
+True	vsprintf: 3 <-> < (char *__restrict, const char *__restrict, __isoc_va_list) >
+True	vsscanf: 3 <-> < (const char *__restrict, const char *__restrict, __isoc_va_list) >
+True	vswprintf: 4 <-> < (wchar_t *__restrict, size_t, const wchar_t *__restrict, __isoc_va_list) >
+True	vswscanf: 3 <-> < (const wchar_t *__restrict, const wchar_t *__restrict, __isoc_va_list) >
+True	vwprintf: 2 <-> < (const wchar_t *restrict fmt, va_list ap) >
+True	vwscanf: 2 <-> < (const wchar_t *restrict fmt, va_list ap) >
+False	wprintf: 6 <-> < (const wchar_t *__restrict,...) >
+False	wscanf: 6 <-> < (const wchar_t *__restrict,...) >
+True	abs: 1 <-> < (int a) >
+True	atof: 1 <-> < (const char *s) >
+True	atoi: 1 <-> < (const char *s) >
+True	atol: 1 <-> < (const char *s) >
+True	atoll: 1 <-> < (const char *s) >
+False	bsearch: 5 <-> < (const void *key, const void *base, size_t nel, size_t width, int(*cmp)(const void *, const void *)) >
+True	div: 2 <-> < (int, int) >
+False	ecvt: 6 <-> < (double x, int n, int *dp, int *sign) >
+False	fcvt: 6 <-> < (double x, int n, int *dp, int *sign) >
+False	gcvt: 2 <-> < (double x, int n, char *b) >
+True	imaxabs: 1 <-> < (intmax_t) >
+True	imaxdiv: 2 <-> < (intmax_t, intmax_t) >
+True	labs: 1 <-> < (long a) >
+True	ldiv: 2 <-> < (long num, long den) >
+True	llabs: 1 <-> < (long long a) >
+True	lldiv: 2 <-> < (long long, long long) >
+True	qsort: 4 <-> < (void *base, size_t nel, size_t width, cmpfun cmp) >
+True	strtof: 2 <-> < (const char *restrict s, char **restrict p) >
+True	strtod: 2 <-> < (const char *restrict s, char **restrict p) >
+True	strtold: 2 <-> < (const char *restrict s, char **restrict p) >
+True	strtoull: 3 <-> < (const char *restrict s, char **restrict p, int base) >
+True	strtoll: 3 <-> < (const char *restrict s, char **restrict p, int base) >
+True	strtoul: 3 <-> < (const char *restrict s, char **restrict p, int base) >
+True	strtol: 3 <-> < (const char *restrict s, char **restrict p, int base) >
+True	strtoimax: 3 <-> < (const char *__restrict, char **__restrict, int) >
+True	strtoumax: 3 <-> < (const char *__restrict, char **__restrict, int) >
+True	wcstof: 2 <-> < (const wchar_t *restrict s, wchar_t **restrict p) >
+True	wcstod: 2 <-> < (const wchar_t *restrict s, wchar_t **restrict p) >
+True	wcstold: 2 <-> < (const wchar_t *restrict s, wchar_t **restrict p) >
+True	wcstoull: 3 <-> < (const wchar_t *__restrict, wchar_t **__restrict, int) >
+True	wcstoll: 3 <-> < (const wchar_t *__restrict, wchar_t **__restrict, int) >
+True	wcstoul: 3 <-> < (const wchar_t *__restrict, wchar_t **__restrict, int) >
+True	wcstol: 3 <-> < (const wchar_t *__restrict, wchar_t **__restrict, int) >
+True	wcstoimax: 3 <-> < (const wchar_t *__restrict, wchar_t **__restrict, int) >
+True	wcstoumax: 3 <-> < (const wchar_t *__restrict, wchar_t **__restrict, int) >
+True	bcmp: 3 <-> < (const void *s1, const void *s2, size_t n) >
+True	bcopy: 3 <-> < (const void *s1, void *s2, size_t n) >
+True	bzero: 2 <-> < (void *s, size_t n) >
+True	index: 2 <-> < (const char *s, int c) >
+True	memccpy: 4 <-> < (void *restrict dest, const void *restrict src, int c, size_t n) >
+True	memchr: 3 <-> < (const void *src, int c, size_t n) >
+True	memcmp: 3 <-> < (const void *vl, const void *vr, size_t n) >
+True	memcpy: 3 <-> < (void *__restrict, const void *__restrict, size_t) >
+True	memmem: 4 <-> < (const void *h0, size_t k, const void *n0, size_t l) >
+True	memmove: 3 <-> < (void *, const void *, size_t) >
+True	mempcpy: 3 <-> < (void *dest, const void *src, size_t n) >
+True	__memrchr: 3 <-> < (const void *, int, size_t) >
+True	memset: 3 <-> < (void *, int, size_t) >
+True	rindex: 2 <-> < (const char *s, int c) >
+True	__stpcpy: 2 <-> < (char *, const char *) >
+True	__stpncpy: 3 <-> < (char *restrict d, const char *restrict s, size_t n) >
+True	strcasecmp: 2 <-> < (const char *_l, const char *_r) >
+False	__strcasecmp_l: 2 <-> < (const char *l, const char *r, locale_t loc) >
+True	strcasestr: 2 <-> < (const char *h, const char *n) >
+True	strcat: 2 <-> < (char *__restrict, const char *__restrict) >
+True	strchr: 2 <-> < (const char *s, int c) >
+True	__strchrnul: 2 <-> < (const char *, int) >
+True	strcmp: 2 <-> < (const char *, const char *) >
+True	strcpy: 2 <-> < (char *__restrict, const char *__restrict) >
+True	strcspn: 2 <-> < (const char *s, const char *c) >
+True	__strdup: 1 <-> < (const char *s) >
+True	strerror_r: 3 <-> < (int, char *, size_t) >
+True	strlcat: 3 <-> < (char *, const char *, size_t) >
+True	strlcpy: 3 <-> < (char *, const char *, size_t) >
+True	strlen: 1 <-> < (const char *s) >
+True	strncasecmp: 3 <-> < (const char *_l, const char *_r, size_t n) >
+False	__strncasecmp_l: 3 <-> < (const char *l, const char *r, size_t n, locale_t loc) >
+True	strncat: 3 <-> < (char *restrict d, const char *restrict s, size_t n) >
+True	strncmp: 3 <-> < (const char *, const char *, size_t) >
+True	strncpy: 3 <-> < (char *__restrict, const char *__restrict, size_t) >
+True	strndup: 2 <-> < (const char *s, size_t n) >
+True	strnlen: 2 <-> < (const char *, size_t) >
+True	strpbrk: 2 <-> < (const char *, const char *) >
+True	strrchr: 2 <-> < (const char *, int) >
+True	strsep: 2 <-> < (char **str, const char *sep) >
+True	strsignal: 1 <-> < (int signum) >
+True	strspn: 2 <-> < (const char *s, const char *c) >
+True	strstr: 2 <-> < (const char *h, const char *n) >
+True	strtok: 2 <-> < (char *__restrict, const char *__restrict) >
+True	strtok_r: 3 <-> < (char *restrict s, const char *restrict sep, char **restrict p) >
+True	strverscmp: 2 <-> < (const char *l, const char *r) >
+True	swab: 3 <-> < (const void *restrict _src, void *restrict _dest, ssize_t n) >
+True	wcpcpy: 2 <-> < (wchar_t *__restrict, const wchar_t *__restrict) >
+True	wcpncpy: 3 <-> < (wchar_t *restrict d, const wchar_t *restrict s, size_t n) >
+True	wcscasecmp: 2 <-> < (const wchar_t *l, const wchar_t *r) >
+False	wcscasecmp_l: 2 <-> < (const wchar_t *l, const wchar_t *r, locale_t locale) >
+True	wcscat: 2 <-> < (wchar_t *__restrict, const wchar_t *__restrict) >
+True	wcschr: 2 <-> < (const wchar_t *, wchar_t) >
+True	wcscmp: 2 <-> < (const wchar_t *, const wchar_t *) >
+True	wcscpy: 2 <-> < (wchar_t *restrict d, const wchar_t *restrict s) >
+True	wcscspn: 2 <-> < (const wchar_t *, const wchar_t *) >
+True	wcsdup: 1 <-> < (const wchar_t *s) >
+True	wcslen: 1 <-> < (const wchar_t *) >
+True	wcsncasecmp: 3 <-> < (const wchar_t *, const wchar_t *, size_t) >
+False	wcsncasecmp_l: 3 <-> < (const wchar_t *, const wchar_t *, size_t, locale_t) >
+True	wcsncat: 3 <-> < (wchar_t *__restrict, const wchar_t *__restrict, size_t) >
+True	wcsncmp: 3 <-> < (const wchar_t *l, const wchar_t *r, size_t n) >
+True	wcsncpy: 3 <-> < (wchar_t *__restrict, const wchar_t *__restrict, size_t) >
+True	wcsnlen: 2 <-> < (const wchar_t *, size_t) >
+True	wcspbrk: 2 <-> < (const wchar_t *, const wchar_t *) >
+True	wcsrchr: 2 <-> < (const wchar_t *, wchar_t) >
+True	wcsspn: 2 <-> < (const wchar_t *s, const wchar_t *c) >
+True	wcsstr: 2 <-> < (const wchar_t *restrict h, const wchar_t *restrict n) >
+True	wcstok: 3 <-> < (wchar_t *__restrict, const wchar_t *__restrict, wchar_t **__restrict) >
+True	wcswcs: 2 <-> < (const wchar_t *haystack, const wchar_t *needle) >
+True	wmemchr: 3 <-> < (const wchar_t *s, wchar_t c, size_t n) >
+True	wmemcmp: 3 <-> < (const wchar_t *l, const wchar_t *r, size_t n) >
+True	wmemcpy: 3 <-> < (wchar_t *restrict d, const wchar_t *restrict s, size_t n) >
+True	wmemmove: 3 <-> < (wchar_t *d, const wchar_t *s, size_t n) >
+True	wmemset: 3 <-> < (wchar_t *, wchar_t, size_t) >
+True	__randname: 1 <-> < (char *template) >
+True	mkdtemp: 1 <-> < (char *template) >
+True	mkostemp: 2 <-> < (char *template, int flags) >
+True	__mkostemps: 3 <-> < (char *, int, int) >
+True	mkstemp: 1 <-> < (char *template) >
+True	mkstemps: 2 <-> < (char *, int) >
+True	mktemp: 1 <-> < (char *) >
+True	cfgetospeed: 1 <-> < (const struct termios *tio) >
+True	cfgetispeed: 1 <-> < (const struct termios *tio) >
+True	cfmakeraw: 1 <-> < (struct termios *) >
+True	cfsetospeed: 2 <-> < (struct termios *tio, speed_t speed) >
+True	cfsetispeed: 2 <-> < (struct termios *tio, speed_t speed) >
+True	tcdrain: 1 <-> < (int) >
+True	tcflow: 2 <-> < (int fd, int action) >
+True	tcflush: 2 <-> < (int fd, int queue) >
+True	tcgetattr: 2 <-> < (int, struct termios *) >
+True	tcgetsid: 1 <-> < (int fd) >
+False	tcsendbreak: 1 <-> < (int fd, int dur) >
+True	tcsetattr: 3 <-> < (int, int, const struct termios *) >
+True	__futex: 4 <-> < (volatile int *, int, int, void *) >
+True	__set_thread_area: 1 <-> < (void *) >
+True	__timedwait_cp: 5 <-> < (volatile int *addr, int val, clockid_t clk, const struct timespec *at, int priv) >
+True	__timedwait: 5 <-> < (volatile int *addr, int val, clockid_t clk, const struct timespec *at, int priv) >
+True	__tls_get_addr: 1 <-> < (size_t *v) >
+False	__unmapself: 0 <-> < (void *, size_t) >
+True	__wait: 4 <-> < (volatile int *, volatile int *, int, int) >
+True	call_once: 2 <-> < (once_flag *flag, void(*func)(void)) >
+False	__clone: 6 <-> < (int(*)(void *), void *, int, void *,...) >
+True	cnd_broadcast: 1 <-> < (cnd_t *c) >
+False	cnd_destroy: 0 <-> < (cnd_t *) >
+True	cnd_init: 1 <-> < (cnd_t *c) >
+True	cnd_signal: 1 <-> < (cnd_t *c) >
+True	cnd_timedwait: 3 <-> < (cnd_t *restrict c, mtx_t *restrict m, const struct timespec *restrict ts) >
+True	cnd_wait: 2 <-> < (cnd_t *, mtx_t *) >
+True	__inhibit_ptc: 0 <-> < (void) >
+True	__acquire_ptc: 0 <-> < (void) >
+True	__release_ptc: 0 <-> < (void) >
+False	mtx_destroy: 0 <-> < (mtx_t *mtx) >
+True	mtx_init: 2 <-> < (mtx_t *, int) >
+True	mtx_lock: 1 <-> < (mtx_t *) >
+True	mtx_timedlock: 2 <-> < (mtx_t *restrict m, const struct timespec *restrict ts) >
+True	mtx_trylock: 1 <-> < (mtx_t *m) >
+True	mtx_unlock: 1 <-> < (mtx_t *mtx) >
+True	__fork_handler: 1 <-> < (int who) >
+True	pthread_atfork: 3 <-> < (void(*prepare)(void), void(*parent)(void), void(*child)(void)) >
+False	pthread_attr_destroy: 0 <-> < (pthread_attr_t *a) >
+True	pthread_attr_getdetachstate: 2 <-> < (const pthread_attr_t *, int *) >
+True	pthread_attr_getguardsize: 2 <-> < (const pthread_attr_t *__restrict, size_t *__restrict) >
+True	pthread_attr_getinheritsched: 2 <-> < (const pthread_attr_t *__restrict, int *__restrict) >
+True	pthread_attr_getschedparam: 2 <-> < (const pthread_attr_t *__restrict, struct sched_param *__restrict) >
+True	pthread_attr_getschedpolicy: 2 <-> < (const pthread_attr_t *__restrict, int *__restrict) >
+True	pthread_attr_getscope: 2 <-> < (const pthread_attr_t *__restrict, int *__restrict) >
+True	pthread_attr_getstack: 3 <-> < (const pthread_attr_t *__restrict, void **__restrict, size_t *__restrict) >
+True	pthread_attr_getstacksize: 2 <-> < (const pthread_attr_t *__restrict, size_t *__restrict) >
+True	pthread_barrierattr_getpshared: 2 <-> < (const pthread_barrierattr_t *__restrict, int *__restrict) >
+True	pthread_condattr_getclock: 2 <-> < (const pthread_condattr_t *__restrict, clockid_t *__restrict) >
+True	pthread_condattr_getpshared: 2 <-> < (const pthread_condattr_t *__restrict, int *__restrict) >
+True	pthread_mutexattr_getprotocol: 2 <-> < (const pthread_mutexattr_t *__restrict, int *__restrict) >
+True	pthread_mutexattr_getpshared: 2 <-> < (const pthread_mutexattr_t *__restrict, int *__restrict) >
+True	pthread_mutexattr_getrobust: 2 <-> < (const pthread_mutexattr_t *__restrict, int *__restrict) >
+True	pthread_mutexattr_gettype: 2 <-> < (const pthread_mutexattr_t *__restrict, int *__restrict) >
+True	pthread_rwlockattr_getpshared: 2 <-> < (const pthread_rwlockattr_t *__restrict, int *__restrict) >
+True	pthread_attr_init: 1 <-> < (pthread_attr_t *) >
+True	pthread_attr_setdetachstate: 2 <-> < (pthread_attr_t *, int) >
+True	pthread_attr_setguardsize: 2 <-> < (pthread_attr_t *, size_t) >
+True	pthread_attr_setinheritsched: 2 <-> < (pthread_attr_t *, int) >
+True	pthread_attr_setschedparam: 2 <-> < (pthread_attr_t *__restrict, const struct sched_param *__restrict) >
+True	pthread_attr_setschedpolicy: 2 <-> < (pthread_attr_t *, int) >
+True	pthread_attr_setscope: 2 <-> < (pthread_attr_t *a, int scope) >
+True	pthread_attr_setstack: 3 <-> < (pthread_attr_t *a, void *addr, size_t size) >
+True	pthread_attr_setstacksize: 2 <-> < (pthread_attr_t *a, size_t size) >
+True	pthread_barrier_destroy: 1 <-> < (pthread_barrier_t *b) >
+True	pthread_barrier_init: 3 <-> < (pthread_barrier_t *restrict b, const pthread_barrierattr_t *restrict a, unsigned count) >
+True	pthread_barrier_wait: 1 <-> < (pthread_barrier_t *) >
+False	pthread_barrierattr_destroy: 0 <-> < (pthread_barrierattr_t *a) >
+True	pthread_barrierattr_init: 1 <-> < (pthread_barrierattr_t *) >
+True	pthread_barrierattr_setpshared: 2 <-> < (pthread_barrierattr_t *, int) >
+True	__testcancel: 0 <-> < () >
+True	pthread_cancel: 1 <-> < (pthread_t) >
+True	_pthread_cleanup_push: 3 <-> < (struct __ptcb *cb, void(*f)(void *), void *x) >
+True	_pthread_cleanup_pop: 2 <-> < (struct __ptcb *cb, int run) >
+True	pthread_cond_broadcast: 1 <-> < (pthread_cond_t *c) >
+True	pthread_cond_destroy: 1 <-> < (pthread_cond_t *c) >
+True	pthread_cond_init: 2 <-> < (pthread_cond_t *__restrict, const pthread_condattr_t *__restrict) >
+True	pthread_cond_signal: 1 <-> < (pthread_cond_t *) >
+True	__pthread_cond_timedwait: 3 <-> < (pthread_cond_t *restrict c, pthread_mutex_t *restrict m, const struct timespec *restrict ts) >
+True	__private_cond_signal: 2 <-> < (pthread_cond_t *c, int n) >
+True	pthread_cond_wait: 2 <-> < (pthread_cond_t *restrict c, pthread_mutex_t *restrict m) >
+False	pthread_condattr_destroy: 0 <-> < (pthread_condattr_t *) >
+True	pthread_condattr_init: 1 <-> < (pthread_condattr_t *a) >
+True	pthread_condattr_setclock: 2 <-> < (pthread_condattr_t *, clockid_t) >
+True	pthread_condattr_setpshared: 2 <-> < (pthread_condattr_t *a, int pshared) >
+True	__pthread_exit: 1 <-> < (void *result) >
+True	__do_cleanup_push: 1 <-> < (struct __ptcb *cb) >
+True	__do_cleanup_pop: 1 <-> < (struct __ptcb *cb) >
+False	__pthread_create: 5 <-> < (pthread_t *restrict res, const pthread_attr_t *restrict attrp, void *(*entry)(void *), void *restrict arg) >
+True	pthread_detach: 1 <-> < (pthread_t) >
+True	pthread_equal: 2 <-> < (pthread_t, pthread_t) >
+True	pthread_getattr_np: 2 <-> < (pthread_t t, pthread_attr_t *a) >
+True	pthread_getconcurrency: 0 <-> < (void) >
+True	pthread_getcpuclockid: 2 <-> < (pthread_t t, clockid_t *clockid) >
+True	pthread_getschedparam: 3 <-> < (pthread_t, int *__restrict, struct sched_param *__restrict) >
+True	pthread_getspecific: 1 <-> < (pthread_key_t) >
+True	__pthread_join: 2 <-> < (pthread_t t, void **res) >
+True	__pthread_key_create: 2 <-> < (pthread_key_t *k, void(*dtor)(void *)) >
+True	__pthread_key_delete: 1 <-> < (pthread_key_t k) >
+True	__pthread_tsd_run_dtors: 0 <-> < () >
+True	pthread_kill: 2 <-> < (pthread_t, int) >
+True	pthread_mutex_consistent: 1 <-> < (pthread_mutex_t *m) >
+False	pthread_mutex_destroy: 0 <-> < (pthread_mutex_t *) >
+False	pthread_mutex_getprioceiling: 0 <-> < (const pthread_mutex_t *restrict m, int *restrict ceiling) >
+True	pthread_mutex_init: 2 <-> < (pthread_mutex_t *__restrict, const pthread_mutexattr_t *__restrict) >
+True	__pthread_mutex_lock: 1 <-> < (pthread_mutex_t *m) >
+False	pthread_mutex_setprioceiling: 0 <-> < (pthread_mutex_t *restrict m, int ceiling, int *restrict old) >
+True	__pthread_mutex_timedlock: 2 <-> < (pthread_mutex_t *restrict, const struct timespec *restrict) >
+True	__pthread_mutex_trylock_owner: 1 <-> < (pthread_mutex_t *m) >
+True	__pthread_mutex_trylock: 1 <-> < (mtx_t *) >
+True	__pthread_mutex_unlock: 1 <-> < (pthread_mutex_t *) >
+False	pthread_mutexattr_destroy: 0 <-> < (pthread_mutexattr_t *) >
+True	pthread_mutexattr_init: 1 <-> < (pthread_mutexattr_t *a) >
+True	pthread_mutexattr_setprotocol: 2 <-> < (pthread_mutexattr_t *, int) >
+True	pthread_mutexattr_setpshared: 2 <-> < (pthread_mutexattr_t *, int) >
+True	pthread_mutexattr_setrobust: 2 <-> < (pthread_mutexattr_t *, int) >
+True	pthread_mutexattr_settype: 2 <-> < (pthread_mutexattr_t *, int) >
+True	__pthread_once_full: 2 <-> < (pthread_once_t *control, void(*init)(void)) >
+True	__pthread_once: 2 <-> < (pthread_once_t *control, void(*init)(void)) >
+False	pthread_rwlock_destroy: 0 <-> < (pthread_rwlock_t *rw) >
+True	pthread_rwlock_init: 2 <-> < (pthread_rwlock_t *__restrict, const pthread_rwlockattr_t *__restrict) >
+True	pthread_rwlock_rdlock: 1 <-> < (pthread_rwlock_t *rw) >
+True	pthread_rwlock_timedrdlock: 2 <-> < (pthread_rwlock_t *__restrict, const struct timespec *__restrict) >
+True	pthread_rwlock_timedwrlock: 2 <-> < (pthread_rwlock_t *restrict rw, const struct timespec *restrict at) >
+True	pthread_rwlock_tryrdlock: 1 <-> < (pthread_rwlock_t *rw) >
+True	pthread_rwlock_trywrlock: 1 <-> < (pthread_rwlock_t *) >
+True	pthread_rwlock_unlock: 1 <-> < (pthread_rwlock_t *) >
+True	pthread_rwlock_wrlock: 1 <-> < (pthread_rwlock_t *rw) >
+False	pthread_rwlockattr_destroy: 0 <-> < (pthread_rwlockattr_t *) >
+True	pthread_rwlockattr_init: 1 <-> < (pthread_rwlockattr_t *) >
+True	pthread_rwlockattr_setpshared: 2 <-> < (pthread_rwlockattr_t *, int) >
+True	pthread_self: 0 <-> < (void) >
+True	__pthread_setcancelstate: 2 <-> < (int, int *) >
+True	pthread_setcanceltype: 2 <-> < (int new, int *old) >
+True	pthread_setconcurrency: 1 <-> < (int val) >
+True	pthread_setschedparam: 3 <-> < (pthread_t, int, const struct sched_param *) >
+True	pthread_setschedprio: 2 <-> < (pthread_t, int) >
+True	pthread_setspecific: 2 <-> < (pthread_key_t, const void *) >
+True	pthread_sigmask: 3 <-> < (int, const sigset_t *__restrict, sigset_t *__restrict) >
+False	pthread_spin_destroy: 0 <-> < (pthread_spinlock_t *s) >
+False	pthread_spin_init: 1 <-> < (pthread_spinlock_t *s, int shared) >
+True	pthread_spin_lock: 1 <-> < (pthread_spinlock_t *) >
+True	pthread_spin_trylock: 1 <-> < (pthread_spinlock_t *) >
+True	pthread_spin_unlock: 1 <-> < (pthread_spinlock_t *s) >
+True	__pthread_testcancel: 0 <-> < (void) >
+False	sem_destroy: 0 <-> < (sem_t *sem) >
+True	sem_getvalue: 2 <-> < (sem_t *__restrict, int *__restrict) >
+True	sem_init: 3 <-> < (sem_t *sem, int pshared, unsigned value) >
+False	sem_open: 6 <-> < (const char *, int,...) >
+True	sem_close: 1 <-> < (sem_t *) >
+True	sem_post: 1 <-> < (sem_t *sem) >
+True	sem_timedwait: 2 <-> < (sem_t *restrict sem, const struct timespec *restrict at) >
+True	sem_trywait: 1 <-> < (sem_t *) >
+True	sem_unlink: 1 <-> < (const char *) >
+True	sem_wait: 1 <-> < (sem_t *) >
+True	__synccall: 2 <-> < (void(*func)(void *), void *ctx) >
+True	thrd_create: 3 <-> < (thrd_t *, thrd_start_t, void *) >
+True	thrd_exit: 1 <-> < (int) >
+True	thrd_join: 2 <-> < (thrd_t t, int *res) >
+False	thrd_sleep: 0 <-> < (const struct timespec *, struct timespec *) >
+True	thrd_yield: 0 <-> < (void) >
+True	tss_create: 2 <-> < (tss_t *tss, tss_dtor_t dtor) >
+True	tss_delete: 1 <-> < (tss_t key) >
+True	tss_set: 2 <-> < (tss_t, void *) >
+True	__vm_wait: 0 <-> < (void) >
+True	__vm_lock: 0 <-> < (void) >
+True	__vm_unlock: 0 <-> < (void) >
+False	__asctime: 5 <-> < (const struct tm *restrict, char *restrict) >
+True	__map_file: 2 <-> < (const char *pathname, size_t *size) >
+True	__month_to_secs: 2 <-> < (int, int) >
+True	__secs_to_tm: 2 <-> < (long long, struct tm *) >
+True	__tm_to_secs: 1 <-> < (const struct tm *tm) >
+True	__secs_to_zone: 6 <-> < (long long, int, int *, long *, long *, const char **) >
+True	__tzset: 0 <-> < () >
+True	__tm_to_tzname: 1 <-> < (const struct tm *tm) >
+True	__year_to_secs: 2 <-> < (long long year, int *is_leap) >
+True	asctime: 1 <-> < (const struct tm *) >
+False	asctime_r: 5 <-> < (const struct tm *__restrict, char *__restrict) >
+True	clock: 0 <-> < (void) >
+True	clock_getcpuclockid: 2 <-> < (pid_t, clockid_t *) >
+False	clock_getres: 1 <-> < (clockid_t clk, struct timespec *ts) >
+True	__clock_gettime: 2 <-> < (clockid_t, struct timespec *) >
+True	clock_nanosleep: 4 <-> < (clockid_t clk, int flags, const struct timespec *req, struct timespec *rem) >
+False	clock_settime: 1 <-> < (clockid_t, const struct timespec *) >
+True	ctime: 1 <-> < (const time_t *t) >
+True	ctime_r: 2 <-> < (const time_t *t, char *buf) >
+True	difftime: 2 <-> < (time_t t1, time_t t0) >
+True	ftime: 1 <-> < (struct timeb *) >
+True	getdate: 1 <-> < (const char *) >
+False	gettimeofday: 1 <-> < (struct timeval *restrict tv, void *restrict tz) >
+True	gmtime: 1 <-> < (const time_t *t) >
+True	__gmtime_r: 2 <-> < (const time_t *restrict, struct tm *restrict) >
+True	localtime: 1 <-> < (const time_t *) >
+True	__localtime_r: 2 <-> < (const time_t *restrict t, struct tm *restrict tm) >
+True	mktime: 1 <-> < (struct tm *tm) >
+True	nanosleep: 2 <-> < (const struct timespec *, struct timespec *) >
+False	__strftime_fmt_1: 6 <-> < (char(*s)[100], size_t *l, int f, const struct tm *tm, locale_t loc) >
+False	__strftime_l: 6 <-> < (char *restrict s, size_t n, const char *restrict f, const struct tm *restrict tm, locale_t loc) >
+True	strftime: 4 <-> < (char *__restrict, size_t, const char *__restrict, const struct tm *__restrict) >
+True	strptime: 3 <-> < (const char *restrict s, const char *restrict f, struct tm *restrict tm) >
+True	time: 1 <-> < (time_t *) >
+True	timegm: 1 <-> < (struct tm *tm) >
+True	timer_create: 3 <-> < (clockid_t, struct sigevent *__restrict, timer_t *__restrict) >
+True	timer_delete: 1 <-> < (timer_t t) >
+True	timer_getoverrun: 1 <-> < (timer_t t) >
+False	timer_gettime: 1 <-> < (timer_t, struct itimerspec *) >
+True	timer_settime: 4 <-> < (timer_t, int, const struct itimerspec *__restrict, struct itimerspec *__restrict) >
+False	times: 0 <-> < (struct tms *) >
+True	timespec_get: 2 <-> < (struct timespec *, int) >
+True	utime: 2 <-> < (const char *path, const struct utimbuf *times) >
+False	__wcsftime_l: 6 <-> < (wchar_t *restrict s, size_t n, const wchar_t *restrict f, const struct tm *restrict tm, locale_t loc) >
+True	wcsftime: 4 <-> < (wchar_t *restrict wcs, size_t n, const wchar_t *restrict f, const struct tm *restrict tm) >
+True	_exit: 1 <-> < (int) >
+True	access: 2 <-> < (const char *, int) >
+False	acct: 0 <-> < (const char *filename) >
+True	alarm: 1 <-> < (unsigned seconds) >
+False	chdir: 0 <-> < (const char *) >
+True	chown: 3 <-> < (const char *, uid_t, gid_t) >
+True	close: 1 <-> < (int fd) >
+True	ctermid: 1 <-> < (char *) >
+True	dup: 1 <-> < (int fd) >
+True	dup2: 2 <-> < (int old, int new) >
+True	__dup3: 3 <-> < (int, int, int) >
+False	faccessat: 6 <-> < (int fd, const char *filename, int amode, int flag) >
+True	fchdir: 1 <-> < (int) >
+True	fchown: 3 <-> < (int, uid_t, gid_t) >
+False	fchownat: 4 <-> < (int fd, const char *path, uid_t uid, gid_t gid, int flag) >
+True	fdatasync: 1 <-> < (int) >
+True	fsync: 1 <-> < (int fd) >
+False	ftruncate: 1 <-> < (int, off_t) >
+True	getcwd: 2 <-> < (char *buf, size_t size) >
+True	getegid: 0 <-> < (void) >
+True	geteuid: 0 <-> < (void) >
+True	getgid: 0 <-> < (void) >
+False	getgroups: 1 <-> < (int count, gid_t list[]) >
+True	gethostname: 2 <-> < (char *, size_t) >
+True	getlogin: 0 <-> < (void) >
+True	getlogin_r: 2 <-> < (char *name, size_t size) >
+True	getpgid: 1 <-> < (pid_t) >
+True	getpgrp: 0 <-> < (void) >
+True	getpid: 0 <-> < (void) >
+True	getppid: 0 <-> < (void) >
+True	getsid: 1 <-> < (pid_t pid) >
+True	getuid: 0 <-> < (void) >
+True	isatty: 1 <-> < (int fd) >
+True	lchown: 3 <-> < (const char *path, uid_t uid, gid_t gid) >
+False	link: 0 <-> < (const char *existing, const char *new) >
+False	linkat: 4 <-> < (int fd1, const char *existing, int fd2, const char *new, int flag) >
+True	lseek: 3 <-> < (int fd, off_t offset, int whence) >
+True	nice: 1 <-> < (int) >
+True	pause: 0 <-> < (void) >
+False	pipe: 0 <-> < (int [2]) >
+True	pipe2: 2 <-> < (int fd[2], int flag) >
+False	posix_close: 1 <-> < (int fd, int flags) >
+True	pread: 4 <-> < (int, void *, size_t, off_t) >
+True	preadv: 4 <-> < (int fd, const struct iovec *iov, int count, off_t ofs) >
+True	pwrite: 4 <-> < (int fd, const void *buf, size_t size, off_t ofs) >
+True	pwritev: 4 <-> < (int fd, const struct iovec *iov, int count, off_t ofs) >
+True	read: 3 <-> < (int fd, void *buf, size_t count) >
+False	readlink: 0 <-> < (const char *restrict path, char *restrict buf, size_t bufsize) >
+True	readlinkat: 4 <-> < (int, const char *__restrict, char *__restrict, size_t) >
+True	readv: 3 <-> < (int fd, const struct iovec *iov, int count) >
+True	renameat: 4 <-> < (int, const char *, int, const char *) >
+False	rmdir: 0 <-> < (const char *path) >
+True	setegid: 1 <-> < (gid_t) >
+True	seteuid: 1 <-> < (uid_t) >
+True	setgid: 1 <-> < (gid_t) >
+True	setpgid: 2 <-> < (pid_t, pid_t) >
+True	setpgrp: 0 <-> < (void) >
+True	setregid: 2 <-> < (gid_t rgid, gid_t egid) >
+True	setresgid: 3 <-> < (gid_t rgid, gid_t egid, gid_t sgid) >
+True	setresuid: 3 <-> < (uid_t ruid, uid_t euid, uid_t suid) >
+True	setreuid: 2 <-> < (uid_t ruid, uid_t euid) >
+True	setsid: 0 <-> < (void) >
+True	setuid: 1 <-> < (uid_t uid) >
+True	__setxid: 4 <-> < (int nr, int id, int eid, int sid) >
+True	sleep: 1 <-> < (unsigned seconds) >
+False	symlink: 0 <-> < (const char *existing, const char *new) >
+False	symlinkat: 2 <-> < (const char *existing, int fd, const char *new) >
+True	sync: 0 <-> < (void) >
+True	tcgetpgrp: 1 <-> < (int) >
+True	tcsetpgrp: 2 <-> < (int fd, pid_t pgrp) >
+False	truncate: 0 <-> < (const char *path, off_t length) >
+True	ttyname: 1 <-> < (int) >
+True	ttyname_r: 3 <-> < (int, char *, size_t) >
+True	ualarm: 2 <-> < (unsigned, unsigned) >
+False	unlink: 0 <-> < (const char *) >
+True	unlinkat: 3 <-> < (int fd, const char *path, int flag) >
+True	usleep: 1 <-> < (unsigned) >
+True	write: 3 <-> < (int, const void *, size_t) >
+True	writev: 3 <-> < (int fd, const struct iovec *iov, int count) >

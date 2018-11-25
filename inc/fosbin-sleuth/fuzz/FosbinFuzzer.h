@@ -166,7 +166,7 @@ namespace fbf {
     template<typename R, typename... Args>
     class FosbinFuzzer : public ITestCase {
     public:
-        FosbinFuzzer(BinaryDescriptor &binDesc, std::tuple<Args...> args, uint32_t fuzz_count = 60);
+        FosbinFuzzer(BinaryDescriptor &binDesc, std::tuple<Args...> args, uint32_t seed = 0, uint32_t fuzz_count = 60);
 
         virtual const std::string get_test_name();
 
@@ -179,18 +179,20 @@ namespace fbf {
         std::tuple<Args...> curr_args_;
         BinaryDescriptor &bin_desc_;
 
-        void mutate_args();
+        void mutate_args(int seed);
         uint32_t fuzz_count_;
+        uint32_t seed_;
     };
 
     /* ************************************************************************************************
      * ************************************** Class Definition ****************************************
      * ************************************************************************************************/
     template<typename R, typename... Args>
-    FosbinFuzzer<R, Args...>::FosbinFuzzer(BinaryDescriptor &binDesc, std::tuple<Args...> args, uint32_t fuzz_count) :
+    FosbinFuzzer<R, Args...>::FosbinFuzzer(BinaryDescriptor &binDesc, std::tuple<Args...> args, uint32_t seed, uint32_t fuzz_count) :
             ITestCase(),
             fuzz_count_(fuzz_count),
-            bin_desc_(binDesc) {
+            bin_desc_(binDesc),
+            seed_(seed){
         original_ = args;
         curr_args_ = original_;
         set_location(0);
@@ -216,7 +218,7 @@ namespace fbf {
             file_name << "io_vecs_" << symbol.name << ".json";
             file.open(file_name.str().c_str(), std::ios::out | std::ios::app);
             for (int i = 0; i < fuzz_count_; i++) {
-                mutate_args();
+                mutate_args(i + seed_);
 
                 LOG_DEBUG << "Fuzzing 0x" << std::hex << location_ << std::dec
                           << " with arguments " << print_args(curr_args_);
@@ -261,9 +263,9 @@ namespace fbf {
     }
 
     template<typename R, typename... Args>
-    void FosbinFuzzer<R, Args...>::mutate_args() {
+    void FosbinFuzzer<R, Args...>::mutate_args(int seed) {
         /* TODO: Remove hardcoded pointer size value */
-        fuzz_arguments(ITestCase::POINTER_SIZE, this->rand(), curr_args_);
+        fuzz_arguments(ITestCase::POINTER_SIZE, seed, curr_args_);
     }
 
     template<typename R, typename... Args>

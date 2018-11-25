@@ -23,6 +23,7 @@ namespace fbf {
         std::map<arity_t, std::vector<std::shared_ptr<ITestCase>>> fuzzers;
         void* create_buffer(size_t size);
         std::vector<void*> buffers;
+        uint32_t seed_;
 
         template<typename R, typename... Args>
         std::shared_ptr<fbf::FosbinFuzzer<R, Args...>> make_fuzzer(Args... args);

@@ -1,0 +1,10 @@
+memmem=4
+memcpy=3
+memcmp=3
+cos=1
+sincos=3
+cosl=1
+asin=1
+sin=1
+asinhl=1
+sinl=1
