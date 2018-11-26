@@ -12,7 +12,7 @@ supported_types = {
 }
 
 # Number of args we support
-max_args = 6
+max_args = 5
 
 sigs = []
 
