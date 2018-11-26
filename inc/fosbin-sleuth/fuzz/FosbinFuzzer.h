@@ -30,7 +30,7 @@ namespace fbf {
     static Arg generate_arg(Arg arg, size_t size, int seed) {
         std::default_random_engine generator;
         generator.seed(seed);
-        std::uniform_int_distribution<Arg> distribution;
+        std::uniform_int_distribution<Arg> distribution(0, size);
         Arg retVal = distribution(generator);
         LOG_DEBUG << "Returning integer " << retVal;
         return retVal;
@@ -40,7 +40,7 @@ namespace fbf {
     static Arg generate_arg(Arg arg, size_t size, int seed) {
         std::default_random_engine generator;
         generator.seed(seed);
-        std::uniform_real_distribution<Arg> distribution;
+        std::uniform_real_distribution<Arg> distribution(0, size);
         Arg retVal = distribution(generator);
         LOG_DEBUG << "Returning float " << retVal;
         return retVal;
