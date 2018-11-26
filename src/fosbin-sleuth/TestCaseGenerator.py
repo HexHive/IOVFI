@@ -12,7 +12,7 @@ supported_types = {
 }
 
 # Number of args we support
-max_args = 5
+max_args = 6
 
 sigs = []
 
@@ -38,7 +38,7 @@ def main():
                     sigs[index][arg_num][i] = newsig
                     i += 1
 
-    max_arity = 4
+    max_arity = max_args - 1
 
     for type in range(0, len(supported_types)):
         for arity in range(0, max_arity):
