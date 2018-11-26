@@ -148,6 +148,7 @@ def output_identifier(io_vec, node_id, is_confirmation = False):
 
     global pointer_count
     idx = 0
+
     while idx < len(io_vec):
         if io_vec[idx] is None:
             idx += 1
@@ -160,7 +161,7 @@ def output_identifier(io_vec, node_id, is_confirmation = False):
 
         type_name = find_type_name(io_vec[idx])
         # The first two arguments are return value and arity
-        if idx - 2 <= arg_count:
+        if idx - 2 < arg_count:
             template_sig.append(type_name)
 
         if type_name.find("*") >= 0:
@@ -198,7 +199,6 @@ def output_identifier(io_vec, node_id, is_confirmation = False):
     identifier_node_names[node_id] = name
     template_str = ", ".join(template_sig)
     if label[0] != "void":
-
         arg_str = "{}, {}, std::vector<size_t>({{{}}}), std::make_tuple({}), std::make_tuple({})".format(args[0],
                                                                                                        sizes[0],
                                                                                                  ",".join(sizes[1:]),

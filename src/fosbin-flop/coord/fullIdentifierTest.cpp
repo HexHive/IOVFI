@@ -30,7 +30,7 @@ fbf::FullIdentifierTest::~FullIdentifierTest() {
 };
 
 void fbf::FullIdentifierTest::create_testcases() {
-#include "Identifiers.inc"
+#include "Identifiers2.inc"
     for(uintptr_t location : binDesc_.getOffsets()) {
         const LofSymbol& sym = binDesc_.getSym(location);
         std::shared_ptr<fbf::IdentifierNodeTestCase> test = std::make_shared<fbf::IdentifierNodeTestCase>(root,

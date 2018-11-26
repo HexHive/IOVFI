@@ -203,6 +203,10 @@ namespace fbf {
         return bin_desc_.getSym(get_location()).name;
     }
 
+    static void alarm_handler(int sig) {
+        exit(ITestCase::NON_CRASHING);
+    }
+
     template<typename R, typename... Args>
     int FosbinFuzzer<R, Args...>::run_test() {
         if (location_ == 0) {
@@ -213,6 +217,7 @@ namespace fbf {
         const LofSymbol &symbol = bin_desc_.getSym(location_);
         pid_t pid = test_fork();
         if (pid == 0) {
+            signal(SIGALRM, alarm_handler);
             std::ofstream file;
             std::stringstream file_name;
             file_name << "io_vecs_" << symbol.name << ".json";
@@ -227,6 +232,7 @@ namespace fbf {
                 s << "{ \"function\": { \"name\": \"" << symbol.name << "\", "
                   << "\"return\": ";
 
+                alarm(1);
                 if constexpr (std::is_void_v<R>) {
                     std::apply(func, curr_args_);
                     s << output_arg_json<void>();
@@ -236,6 +242,7 @@ namespace fbf {
                     LOG_DEBUG << "Function returned " << retVal;
                     s << output_arg_json(ITestCase::POINTER_SIZE, retVal, retVal);
                 }
+                alarm(0);
 
                 s << ", \"args\": ["
                   << output_args(ITestCase::POINTER_SIZE, original_, curr_args_)

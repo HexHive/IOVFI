@@ -13,7 +13,7 @@ added_lines = set()
 pointer_types = {15}
 long_double_types = {4}
 float_types = {2}
-MAX_INPUT_LEN = 4096
+MAX_INPUT_LEN = 2*4096
 
 post_states = dict()
 first_funcs = dict()
@@ -35,8 +35,12 @@ def output_value(value, output_post = False):
     else:
         val = str(value['value'])
         if value['type'] in long_double_types:
+            if val.find(".") < 0:
+                val += ".0"
             val += 'l'
         elif value['type'] in float_types:
+            if val.find(".") < 0:
+                val += ".0"
             val += 'f'
         return "{}".format(val)
 
@@ -91,12 +95,6 @@ def main(included_funcs_path, json_paths):
             for line in f.readlines():
                 line_num += 1
                 line = line.strip()
-                # start_idx = re.match("")
-                # if start_idx >= 0:
-                #     line = line[start_idx:]
-                #     end_idx = line.find("] }")
-                #     line = line[:end_idx + len("] }")]
-                #     line += "}"
 
                 try:
                     if line not in added_lines:

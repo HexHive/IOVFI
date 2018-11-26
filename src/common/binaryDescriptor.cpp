@@ -61,7 +61,7 @@ void fbf::BinaryDescriptor::parse_aritys(fs::path aritys) {
             std::shared_ptr<LofSymbol> sym = syms_[loc];
             sym->arity = std::stoi(arity);
         } else {
-            LOG_DEBUG << "Could not find symbol " << name;
+            LOG_DEBUG << "Could not arity find symbol " << name;
         }
     }
 
@@ -275,7 +275,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path desc_path) :
             }
             LOG_DEBUG << std::hex << offset << std::dec << "=" << p.first;
 
-            syms_[(uintptr_t) offset] = std::make_shared<fbf::LofSymbol>(p.first, p.second, 0, false);
+            syms_[(uintptr_t) offset] = std::make_shared<fbf::LofSymbol>(p.first, p.second, (size_t)-1, false);
             if(tests.find(p.first) != tests.end()) {
                 offsets_.insert((uintptr_t)offset);
             } else if(tests.empty()) {
@@ -437,13 +437,13 @@ const fbf::LofSymbol& fbf::BinaryDescriptor::getSym(uintptr_t location) {
         return *syms_[addrs[i - 1]];
     } else {
         /* This is a function with hidden visibility, but presumably it is there */
-        return {"", addrs[i] - location, 0, true};
+        return {"", addrs[i] - location, (size_t)-1, true};
     }
 }
 
 const fbf::LofSymbol& fbf::BinaryDescriptor::getFunc(uintptr_t location) {
     if(syms_.find(location) == syms_.end()) {
-        return {"", 0, 0, false};
+        return {"", 0, (size_t)-1, false};
     }
 
     return *syms_[location];
