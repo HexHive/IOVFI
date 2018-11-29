@@ -18,7 +18,7 @@
 
 namespace fbf {
     static void sig_handler(int sig) {
-        exit(ITestCase::FAIL);
+        kill(getpid(), SIGKILL);
     }
 
     template<typename R, typename... Args>
@@ -85,6 +85,7 @@ namespace fbf {
             std::function<R(Args...)> func = reinterpret_cast<R(*)(
                     Args...)>(location);
             //LOG_DEBUG << "Calling function with " << print_args(preargs_) << " Expecting " << retVal_;
+            set_signals();
             R retVal = std::apply(func, preargs_);
             if(retVal) {
               //  LOG_DEBUG << "Function returned " << retVal;
@@ -207,6 +208,7 @@ namespace fbf {
             std::function<void(Args...)> func = reinterpret_cast<void (*)(
                     Args...)>(location);
             //LOG_DEBUG << "Calling void function with " << print_args(preargs_);
+            set_signals();
             std::apply(func, preargs_);
             //LOG_DEBUG << "Function returned";
 

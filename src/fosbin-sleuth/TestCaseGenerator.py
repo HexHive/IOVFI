@@ -52,7 +52,9 @@ def main():
                     else:
                         func_input.append(supported_types[ctype])
 
-                print("make_fuzzer<void, {}>({});".format(", ".join(template), ", ".join(func_input)))
+                if "void*" in template:
+                    # Make sure that there is a pointer in the arguments if we are fuzzing a void function
+                    print("make_fuzzer<void, {}>({});".format(", ".join(template), ", ".join(func_input)))
 
     for type in range(0, len(supported_types)):
         for arity in range(0, max_arity):

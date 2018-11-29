@@ -5,8 +5,10 @@ import sys
 import argparse
 import re
 from decimal import Decimal
+import random
+import os
 
-functions = []
+functions = list()
 
 added_lines = set()
 
@@ -14,6 +16,8 @@ pointer_types = {15}
 long_double_types = {4}
 float_types = {2}
 MAX_INPUT_LEN = 2*4096
+MAX_INPUT_LINES = 1200
+MAX_FILE_SIZE=10**9
 
 post_states = dict()
 first_funcs = dict()
@@ -63,8 +67,8 @@ def check_post_state(func):
 
     post_states[func['name']].add(post_state)
     # We skipped over the first input, so make sure that we add that in
-    if len(post_states[func['name']]) == 2:
-        functions.append(first_funcs[func['name']])
+    # if len(post_states[func['name']]) == 2:
+    #     functions.add(first_funcs[func['name']])
 
     return len(post_states[func['name']]) > 1
 
@@ -89,8 +93,15 @@ def main(included_funcs_path, json_paths):
 
     uniq_funcs = set()
     for i in range(len(json_paths)):
+        # Skip very large files, because it is slooooooow
+        if os.path.getsize(json_paths[i]) > MAX_FILE_SIZE:
+            print("Skipping {}: File too big".format(json_paths[i]), file=sys.stderr)
+            continue
+
         with open(json_paths[i], "r", errors='ignore') as f:
             line_num = 0
+            lines_added = 0
+
             print("Reading {} (file {} of {})".format(json_paths[i], i + 1, len(json_paths)), file=sys.stderr)
             for line in f.readlines():
                 line_num += 1
@@ -110,8 +121,12 @@ def main(included_funcs_path, json_paths):
                             max_args = len(func['args'])
 
                         if check_post_state(func):
+                            lines_added += 1
+                            if lines_added > MAX_INPUT_LINES:
+                                break
+
                             functions.append(func)
-                            added_lines.add(line)
+                            # added_lines.add(line)
                             uniq_funcs.add(func['name'])
                 except json.JSONDecodeError as e:
                     print("Invalid json in {}:{}: {}".format(json_paths[i], line_num, e.msg), file=sys.stderr)
@@ -169,13 +184,16 @@ def main(included_funcs_path, json_paths):
             print("ERROR ({}): {}".format(e, str(func)), file=sys.stderr)
             continue
 
+    sys.stdout.flush()
     print("Total unique functions: {}".format(len(uniq_funcs)), file=sys.stderr)
-    print("\n".join(uniq_funcs), file=sys.stderr)
-
+    # print("\n".join(uniq_funcs), file=sys.stderr)
+    for uniq_func in uniq_funcs:
+        print("test={}".format(uniq_func), file=sys.stderr)
 
 if __name__ == "__main__":
     argp = argparse.ArgumentParser(description="Generate CSV for learning")
     argp.add_argument('--funcs', help="Functions to include in output")
     argp.add_argument('jsons', metavar='/path/to/json', type=str, nargs='+')
     args = argp.parse_args()
+    random.seed()
     main(args.funcs, args.jsons)
