@@ -83,12 +83,12 @@ namespace fbf {
             bool is_equiv = true;
             std::function<R(Args...)> func = reinterpret_cast<R(*)(
                     Args...)>(location);
-            LOG_DEBUG << "Calling function with " << print_args(preargs_) << " Expecting " << retVal_;
+            //LOG_DEBUG << "Calling function with " << print_args(preargs_) << " Expecting " << retVal_;
             R retVal = std::apply(func, preargs_);
             if(retVal) {
-                LOG_DEBUG << "Function returned " << retVal;
+              //  LOG_DEBUG << "Function returned " << retVal;
             } else {
-                LOG_DEBUG << "Function returned nullptr";
+                //LOG_DEBUG << "Function returned nullptr";
             }
 
             if constexpr (std::is_pointer_v<R>) {
@@ -102,7 +102,7 @@ namespace fbf {
                         test = 1;
                     }
                 }
-                LOG_DEBUG << "Comparing " << retSize_ << " bytes resulted in " << test;
+                //LOG_DEBUG << "Comparing " << retSize_ << " bytes resulted in " << test;
                 is_equiv = (test == 0);
             } else {
                 R diff = retVal - retVal_;
@@ -112,7 +112,7 @@ namespace fbf {
                 is_equiv = (diff <= 0.0000000001l);
             }
 
-            LOG_DEBUG << "return values are " << (is_equiv ? "" : "NOT ") << "the same";
+            //LOG_DEBUG << "return values are " << (is_equiv ? "" : "NOT ") << "the same";
 
             if constexpr(sizeof...(Args) > 0) {
                 if(is_equiv) {
@@ -120,7 +120,7 @@ namespace fbf {
                 }
             }
 
-            LOG_DEBUG << std::hex << location << std::dec << " is returning " << (is_equiv ? "PASS" : "FAIL");
+            //LOG_DEBUG << std::hex << location << std::dec << " is returning " << (is_equiv ? "PASS" : "FAIL");
 
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
         } else if(pid > 0) {
@@ -204,16 +204,16 @@ namespace fbf {
             bool is_equiv = false;
             std::function<void(Args...)> func = reinterpret_cast<void (*)(
                     Args...)>(location);
-            LOG_DEBUG << "Calling void function with " << print_args(preargs_);
+            //LOG_DEBUG << "Calling void function with " << print_args(preargs_);
             std::apply(func, preargs_);
-            LOG_DEBUG << "Function returned";
+            //LOG_DEBUG << "Function returned";
 
             if constexpr(sizeof...(Args) > 0) {
                 is_equiv = check_tuple_args(preargs_, postargs_, arg_sizes_);
             }
 
-            LOG_DEBUG << std::hex << location << std::dec 
-                    << " is returning " << (is_equiv ? "PASS" : "FAIL");
+            //LOG_DEBUG << std::hex << location << std::dec
+            //        << " is returning " << (is_equiv ? "PASS" : "FAIL");
 
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
         } else if(pid > 0){
