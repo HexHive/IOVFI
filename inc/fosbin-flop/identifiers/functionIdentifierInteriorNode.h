@@ -79,6 +79,7 @@ namespace fbf {
     template<typename R, typename... Args>
     bool FunctionIdentifierInternalNode<R, Args...>::test(uintptr_t location) {
         pid_t pid = test_fork();
+        LOG_DEBUG << "Calling function with " << print_args(preargs_) << " Expecting " << retVal_;
         if (pid == 0) {
             bool is_equiv = true;
             std::function<R(Args...)> func = reinterpret_cast<R(*)(
@@ -200,6 +201,7 @@ namespace fbf {
     template<typename... Args>
     bool FunctionIdentifierInternalNode<void, Args...>::test(uintptr_t location) {
         pid_t pid = test_fork();
+        LOG_DEBUG << "Calling void function with " << print_args(preargs_);
         if (pid == 0) {
             bool is_equiv = false;
             std::function<void(Args...)> func = reinterpret_cast<void (*)(
