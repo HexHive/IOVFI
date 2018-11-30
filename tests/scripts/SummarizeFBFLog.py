@@ -49,6 +49,7 @@ def main():
             total_mislabeled_functions += 1
             continue
         else:
+            print("Function {} correctly labeled".format(functions[addr]))
             total_correct_functions += 1
 
     for addr in unconfirmed_funcs:

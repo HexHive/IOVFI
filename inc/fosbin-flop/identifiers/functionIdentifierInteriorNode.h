@@ -72,8 +72,8 @@ namespace fbf {
 
     template<typename R, typename... Args>
     void FunctionIdentifierInternalNode<R, Args...>::set_signals() {
-        signal(SIGALRM, sig_handler);
-        ualarm(TIMEOUT_INTERNAL, 0);
+        //signal(SIGALRM, sig_handler);
+        //ualarm(TIMEOUT_INTERNAL, 0);
     }
 
     template<typename R, typename... Args>
@@ -248,8 +248,8 @@ namespace fbf {
 
     template<typename... Args>
     void FunctionIdentifierInternalNode<void, Args...>::set_signals() {
-        signal(SIGALRM, sig_handler);
-        ualarm(TIMEOUT_INTERNAL, 0);
+        //signal(SIGALRM, sig_handler);
+        //ualarm(TIMEOUT_INTERNAL, 0);
     }
 }
 
