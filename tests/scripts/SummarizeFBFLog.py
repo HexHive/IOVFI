@@ -20,7 +20,7 @@ def main():
 
     function_regex = re.compile(".*(0x[0-9A-Fa-f]+)=([a-zA-Z0-9_]+)")
     found_regex = re.compile(".*FOUND (0x[0-9A-Fa-f]+) to be ([a-zA-Z0-9_]+)")
-    unconfirmed_regex = re.compile(".*Leaf at (0x[0-9A-Fa-f]+) unconfirmed")
+    unconfirmed_regex = re.compile(".*Leaf at ([0-9A-Fa-f]+) unconfirmed")
 
     with open(sys.argv[1], "r", errors='ignore') as lines:
         for line in lines.readlines():
@@ -36,7 +36,7 @@ def main():
 
             unconfirmed_match = unconfirmed_regex.match(line)
             if unconfirmed_match:
-                unconfirmed_funcs.add(unconfirmed_match.group(1))
+                unconfirmed_funcs.add("0x" + unconfirmed_match.group(1))
                 continue
 
     total_tested_functions = len(found_funcs) + len(unconfirmed_funcs)
