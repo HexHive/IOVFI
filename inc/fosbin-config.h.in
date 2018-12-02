@@ -11,19 +11,9 @@
 #include <vector>
 #include <cstddef>
 #include <experimental/filesystem>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
+#include <FOSBinLogger.h>
 
 namespace fs = std::experimental::filesystem;
-namespace logging = boost::log;
-
-#define LOG_TRACE   BOOST_LOG_TRIVIAL(trace) << std::dec
-#define LOG_DEBUG   BOOST_LOG_TRIVIAL(debug) << std::dec
-#define LOG_INFO    BOOST_LOG_TRIVIAL(info) << std::dec
-#define LOG_WARN    BOOST_LOG_TRIVIAL(warning) << std::dec
-#define LOG_ERR     BOOST_LOG_TRIVIAL(error) << std::dec
-#define LOG_FATAL   BOOST_LOG_TRIVIAL(fatal) << std::dec
 
 typedef size_t arity_t;
 
