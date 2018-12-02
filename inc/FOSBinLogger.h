@@ -20,7 +20,14 @@ namespace fbf {
     public:
         FOSBinLogger();
         FOSBinLogger& set_level(logging::trivial::severity_level level);
-        void operator<<(std::ostream& o);
+        FOSBinLogger& operator<<(const std::ostream& o);
+        FOSBinLogger& operator<<(const char* str);
+        FOSBinLogger& operator<<(const std::string& str);
+
+        template<typename Number,
+                typename = std::enable_if_t<std::is_floating_point<Number>::value ||
+                        std::is_integral<Number>::value> >
+        FOSBinLogger& operator<<(Number i);
 
     protected:
         ip::named_mutex mutex_;
@@ -30,12 +37,12 @@ namespace fbf {
 
 fbf::FOSBinLogger logger;
 
-#define LOG_TRACE   logger.set_level(trace) << std::dec
-#define LOG_DEBUG   logger.set_level(debug) << std::dec
-#define LOG_INFO    logger.set_level(info) << std::dec
-#define LOG_WARN    logger.set_level(warning) << std::dec
-#define LOG_ERR     logger.set_level(error) << std::dec
-#define LOG_FATAL   logger.set_level(fatal) << std::dec
+#define LOG_TRACE   logger.set_level(logging::trivial::severity_level::trace)
+#define LOG_DEBUG   logger.set_level(logging::trivial::severity_level::debug)
+#define LOG_INFO    logger.set_level(logging::trivial::severity_level::info)
+#define LOG_WARN    logger.set_level(logging::trivial::severity_level::warning)
+#define LOG_ERR     logger.set_level(logging::trivial::severity_level::error)
+#define LOG_FATAL   logger.set_level(logging::trivial::severity_level::fatal)
 
 
 #endif //FOSBIN_FOSBINLOGGER_H

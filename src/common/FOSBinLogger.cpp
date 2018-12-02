@@ -3,8 +3,7 @@
 //
 
 #include <FOSBinLogger.h>
-
-#include "FOSBinLogger.h"
+#include <iomanip>
 
 fbf::FOSBinLogger::FOSBinLogger() :
     level_(logging::trivial::severity_level::trace),
@@ -18,7 +17,7 @@ fbf::FOSBinLogger &fbf::FOSBinLogger::set_level(logging::trivial::severity_level
     return *this;
 }
 
-void fbf::FOSBinLogger::operator<<(std::ostream &o) {
+fbf::FOSBinLogger& fbf::FOSBinLogger::operator<<(const std::ostream &o) {
     ip::scoped_lock<ip::named_mutex> log_lock(mutex_);
     switch(level_){
         case logging::trivial::severity_level::trace:
@@ -41,4 +40,31 @@ void fbf::FOSBinLogger::operator<<(std::ostream &o) {
             break;
     }
     log_lock.unlock();
+    return *this;
+}
+
+fbf::FOSBinLogger& fbf::FOSBinLogger::operator<<(const char *str) {
+    std::stringstream ss;
+    ss << str;
+    *this << ss;
+    return *this;
+}
+
+fbf::FOSBinLogger& fbf::FOSBinLogger::operator<<(const std::string &str) {
+    std::stringstream ss;
+    ss << str;
+    *this << ss;
+    return *this;
+}
+
+template<typename Number, typename>
+fbf::FOSBinLogger &fbf::FOSBinLogger::operator<<(Number i) {
+    std::stringstream ss;
+    if(std::is_floating_point_v<Number>) {
+        ss << std::setprecision(std::numeric_limits<Number>::digits10 + 1);
+    }
+
+    ss << i;
+    *this << ss;
+    return *this;
 }
