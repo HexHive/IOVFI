@@ -14,6 +14,8 @@ static void log_range_check(const int log_level) {
     }
 }
 
+extern fbf::FOSBinLogger logger;
+
 fbf::CommandLineParser::CommandLineParser(int argc, char **argv, const char *name) :
         argc_(argc),
         argv_(argv),
@@ -83,6 +85,7 @@ void fbf::CommandLineParser::parse() {
     }
 
     log_level_ = static_cast<boost::log::trivial::severity_level>(log_level_i_);
+
     init_logging();
 }
 
@@ -124,6 +127,7 @@ void fbf::CommandLineParser::add_option(const char *name, const boost::program_o
 }
 
 void fbf::CommandLineParser::init_logging() {
+    logger.set_system_level(log_level_);
     logging::core::get()->set_filter(
             logging::trivial::severity >= log_level_
     );

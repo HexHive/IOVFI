@@ -79,7 +79,7 @@ void fbf::FullTest::run() {
                   << (*it)->get_test_name()
                   << " " << binDesc_.getSym((*it)->get_offset()).name
                   << ")"
-                  << " as pid " << getpid() << std::endl;
+                  << " as pid " << getpid();
 
         std::shared_ptr<fbf::TestRun> sp = *it;
         if(thread_count_ > 1) {

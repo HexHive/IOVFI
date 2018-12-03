@@ -24,10 +24,10 @@ int fbf::IdentifierNodeTestCase::run_test() {
         prev = curr;
         prev_result = curr->test_arity(location_, arity_);
         if (!prev_result) {
-            LOG_DEBUG << std::hex << location_ << std::dec << " failed";
+            LOG_DEBUG << location_ << " failed";
             curr = curr->get_failing_node();
         } else {
-            LOG_DEBUG << std::hex << location_ << std::dec << " succeeded";
+            LOG_DEBUG << location_ << " succeeded";
             curr = curr->get_passing_node();
         }
     }
@@ -39,10 +39,10 @@ int fbf::IdentifierNodeTestCase::run_test() {
     LOG_DEBUG << std::hex << location_ << std::dec << " is at leaf " << prev->get_name();
     if(prev_result) {
         leaf_ = prev;
-        LOG_INFO << "FOUND 0x" << std::hex << location_ << std::dec << " to be " << leaf_->get_name() << std::endl;
+        LOG_INFO << "FOUND " << location_ << " to be " << leaf_->get_name() << std::endl;
         return fbf::ITestCase::PASS;
     } else {
-        LOG_DEBUG << "Leaf at " << std::hex << location_ << " unconfirmed";
+        LOG_DEBUG << "Leaf at " << location_ << " unconfirmed";
         return fbf::ITestCase::FAIL;
     }
 }

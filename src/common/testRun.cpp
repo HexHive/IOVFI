@@ -44,9 +44,7 @@ void fbf::TestRun::run_test() {
 
     LOG_INFO << "Running test "
         << get_test_name() 
-        << " on offset 0x"
-        << std::hex << offset_ << std::dec
-        << std::endl;
+        << " on offset " << offset_;
     test_->set_location(offset_);
     if(fork_) {
         open_pipe();

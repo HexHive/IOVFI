@@ -15,6 +15,7 @@
 #include <identifierNodeTestCase.h>
 #include <fosbin-flop/fullIdentifierTest.h>
 #include <fosbin-flop/identifiers/FunctionIdentifierNode.h>
+#include <fosbin-flop/identifiers/functionIdentifierInteriorNode.h>
 
 namespace fs = std::experimental::filesystem;
 

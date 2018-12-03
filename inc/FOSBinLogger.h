@@ -19,10 +19,12 @@ namespace fbf {
     class FOSBinLogger {
     public:
         FOSBinLogger();
+        void set_system_level(logging::trivial::severity_level level);
         FOSBinLogger& set_level(logging::trivial::severity_level level);
-        FOSBinLogger& operator<<(const std::ostream& o);
+
         FOSBinLogger& operator<<(const char* str);
         FOSBinLogger& operator<<(const std::string& str);
+        FOSBinLogger& operator<<(const void* p);
 
         template<typename Number,
                 typename = std::enable_if_t<std::is_floating_point<Number>::value ||
@@ -32,6 +34,25 @@ namespace fbf {
     protected:
         ip::named_mutex mutex_;
         logging::trivial::severity_level level_;
+        logging::trivial::severity_level system_level_;
+
+#define write_logger(s)  switch(level_){ \
+        case logging::trivial::severity_level::trace: \
+            BOOST_LOG_TRIVIAL(trace) << s; \
+            break; \
+        case logging::trivial::severity_level::debug: \
+            BOOST_LOG_TRIVIAL(debug) <<  s; \
+            break; \
+        case logging::trivial::severity_level::error: \
+            BOOST_LOG_TRIVIAL(error) <<  s; \
+            break; \
+        case logging::trivial::severity_level::fatal: \
+            BOOST_LOG_TRIVIAL(fatal) <<  s; \
+            break; \
+        case logging::trivial::severity_level::warning: \
+            BOOST_LOG_TRIVIAL(warning) << s; \
+            break; \
+        default: /* This shouldn't happen */ break; }
     };
 }
 

@@ -270,10 +270,10 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path desc_path) :
         for (std::pair<std::string, size_t> p : syms) {
             offset = dlsym((void *) text_.location_, p.first.c_str());
             if (!offset) {
-                LOG_ERR << "Could not find symbol " << p.first << std::endl;
+                LOG_ERR << "Could not find symbol " << p.first;
                 continue;
             }
-            LOG_DEBUG << std::hex << offset << std::dec << "=" << p.first;
+            LOG_DEBUG << offset << "=" << p.first;
 
             syms_[(uintptr_t) offset] = std::make_shared<fbf::LofSymbol>(p.first, p.second, (size_t)-1, false);
             if(tests.find(p.first) != tests.end()) {
@@ -285,7 +285,7 @@ fbf::BinaryDescriptor::BinaryDescriptor(fs::path desc_path) :
 
         offset = dlsym((void*)text_.location_, "__errno_location");
         if(offset) {
-            LOG_DEBUG << "Found __errno_location at " << std::hex << offset;
+            LOG_DEBUG << "Found __errno_location at " << offset;
             errno_location_ = (uintptr_t)offset;
         }
 

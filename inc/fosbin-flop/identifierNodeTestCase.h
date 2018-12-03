@@ -7,6 +7,7 @@
 
 #include <identifiers/functionIdentifierInteriorNode.h>
 #include <iTestCase.h>
+#include <fosbin-flop/identifiers/functionIdentifierNodeI.h>
 
 namespace fbf {
     class IdentifierNodeTestCase : public ITestCase {
