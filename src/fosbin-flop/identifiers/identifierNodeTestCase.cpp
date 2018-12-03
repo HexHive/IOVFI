@@ -36,10 +36,10 @@ int fbf::IdentifierNodeTestCase::run_test() {
      * true, in which case, we can identify the function, or
      * false and the function is unknown
      */
-    LOG_DEBUG << std::hex << location_ << std::dec << " is at leaf " << prev->get_name();
+    LOG_DEBUG << location_ << " is at leaf " << prev->get_name();
     if(prev_result) {
         leaf_ = prev;
-        LOG_INFO << "FOUND " << location_ << " to be " << leaf_->get_name() << std::endl;
+        LOG_INFO << "FOUND " << location_ << " to be " << leaf_->get_name();
         return fbf::ITestCase::PASS;
     } else {
         LOG_DEBUG << "Leaf at " << location_ << " unconfirmed";

@@ -3,83 +3,129 @@
 //
 
 #include <FOSBinLogger.h>
-#include <iomanip>
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+
+const char *fbf::FOSBinLogger::LOGGER_NAME = "fosbin-logger";
+const char *fbf::FOSBinLogger::MUTEX_NAME = "fosbin-logger-mutex";
+
+static fbf::FOSBinLogger* instance;
+static ip::shared_memory_object shm;
+static ip::mapped_region region;
+
+fbf::FOSBinLogger &fbf::FOSBinLogger::Instance() {
+    if(instance == nullptr) {
+        ip::shared_memory_object::remove(LOGGER_NAME);
+        ip::named_mutex::remove(MUTEX_NAME);
+
+        shm = ip::shared_memory_object(ip::create_only, LOGGER_NAME, ip::read_write);
+        shm.truncate(sizeof(fbf::FOSBinLogger));
+        region = ip::mapped_region(shm, ip::read_write);
+        void* addr = region.get_address();
+        instance = new (addr) fbf::FOSBinLogger();
+    }
+
+    return *instance;
+}
+
+void fbf::FOSBinLogger::Initialize() {
+    shm = ip::shared_memory_object(ip::open_or_create, LOGGER_NAME, ip::read_write);
+    region = ip::mapped_region(shm, ip::read_write);
+    void* addr = region.get_address();
+    instance = static_cast<fbf::FOSBinLogger*>(addr);
+}
 
 fbf::FOSBinLogger::FOSBinLogger() :
-    level_(logging::trivial::severity_level::trace),
-    system_level_(level_),
-    mutex_(ip::open_or_create, "fosbin-logger")
-{
+        mutex_(ip::create_only, MUTEX_NAME)
+{ }
 
+fbf::FOSBinLogger::~FOSBinLogger() {
+//    ip::shared_memory_object::remove(LOGGER_NAME);
+    //ip::named_mutex::remove(MUTEX_NAME);
 }
 
-fbf::FOSBinLogger &fbf::FOSBinLogger::set_level(logging::trivial::severity_level level) {
-    level_ = level;
-    return *this;
-}
+void fbf::FOSBinLogger::write_message(fbf::log_message &msg) {
+    if (msg.get_message().empty()) {
+        return;
+    }
 
-<<<<<<< HEAD
-fbf::FOSBinLogger& fbf::FOSBinLogger::operator<<(const std::ostream &o) {
-    ip::scoped_lock<ip::named_mutex> log_lock(mutex_);
-    switch(level_){
+//    std::cout << "CURRENT OWNER: " << curr_pid << std::endl;
+    boost::posix_time::ptime abs_time = ip::microsec_clock::universal_time() + boost::posix_time::milliseconds(150);
+    ip::scoped_lock<ip::named_mutex> lock(mutex_, abs_time);
+    while(!lock.owns()) {
+//        lock.unlock();
+        std::cout << getpid() << " failed to get lock. " << curr_pid << " currently owns lock." << std::endl;
+        abs_time = ip::microsec_clock::universal_time() + boost::posix_time::milliseconds(150);
+        lock.timed_lock(abs_time);
+    }
+
+    curr_pid = getpid();
+    switch (msg.get_severity()) {
         case logging::trivial::severity_level::trace:
-            BOOST_LOG_TRIVIAL(trace) << o;
+            BOOST_LOG_TRIVIAL(trace) << msg.get_message();
             break;
         case logging::trivial::severity_level::debug:
-            BOOST_LOG_TRIVIAL(debug) << o;
+            BOOST_LOG_TRIVIAL(debug) << msg.get_message();
             break;
         case logging::trivial::severity_level::error:
-            BOOST_LOG_TRIVIAL(error) << o;
+            BOOST_LOG_TRIVIAL(error) << msg.get_message();
             break;
         case logging::trivial::severity_level::fatal:
-            BOOST_LOG_TRIVIAL(fatal) << o;
+            BOOST_LOG_TRIVIAL(fatal) << msg.get_message();
             break;
         case logging::trivial::severity_level::warning:
-            BOOST_LOG_TRIVIAL(warning) << o;
+            BOOST_LOG_TRIVIAL(warning) << msg.get_message();
             break;
         default:
             /* This shouldn't happen */
             break;
     }
-    log_lock.unlock();
+}
+
+void fbf::FOSBinLogger::flush() {
+//    BOOST_LOG_TRIVIAL(trace) << std::flush;
+//    BOOST_LOG_TRIVIAL(debug) << std::flush;
+//    BOOST_LOG_TRIVIAL(error) << std::flush;
+//    BOOST_LOG_TRIVIAL(fatal) << std::flush;
+//    BOOST_LOG_TRIVIAL(warning) << std::flush;
+}
+
+fbf::log_message &fbf::log_message::operator<<(const char *str) {
+    buffer_ << str;
     return *this;
 }
 
-void fbf::FOSBinLogger::set_system_level(logging::trivial::severity_level level) {
-    system_level_ = level;
-}
-
-fbf::FOSBinLogger& fbf::FOSBinLogger::operator<<(const char *str) {
-    std::stringstream ss;
-    ss << str;
-    write_logger(ss.str());
+fbf::log_message &fbf::log_message::operator<<(const std::string &str) {
+    buffer_ << str;
     return *this;
 }
 
-fbf::FOSBinLogger& fbf::FOSBinLogger::operator<<(const std::string &str) {
-    std::stringstream ss;
-    ss << str;
-    write_logger(ss.str());
+fbf::log_message &fbf::log_message::operator<<(const void *p) {
+    buffer_ << "0x" << std::hex << p << std::dec;
     return *this;
 }
 
-template<typename Number, typename>
-fbf::FOSBinLogger &fbf::FOSBinLogger::operator<<(Number i) {
-    std::stringstream ss;
-    if(std::is_floating_point_v<Number>) {
-        ss << std::setprecision(std::numeric_limits<Number>::digits10 + 1);
-    } else if (typeid(uintptr_t) == typeid(Number)) {
-        ss << "0x" << std::hex;
+fbf::log_message &fbf::log_message::operator<<(uintptr_t p) {
+    buffer_ << "0x" << std::hex << p << std::dec;
+    return *this;
+}
+
+fbf::log_message::log_message(logging::trivial::severity_level level) :
+        level_(level)
+{ buffer_ << "(pid " << getpid() << ") "; }
+
+fbf::log_message::~log_message() {
+    try {
+        fbf::FOSBinLogger::Instance().write_message(*this);
+    } catch(boost::interprocess::lock_exception& e) {
+        std::cerr << "ERROR writing " << get_message() << ": " << e.what() << std::endl;
     }
-
-    ss << i;
-    write_logger(ss.str());
-    return *this;
 }
 
-fbf::FOSBinLogger &fbf::FOSBinLogger::operator<<(const void *p) {
-    std::stringstream ss;
-    ss << "0x" << std::hex << p;
-    write_logger(ss.str());
-    return *this;
+std::string fbf::log_message::get_message() {
+    return buffer_.str();
+}
+
+logging::trivial::severity_level fbf::log_message::get_severity() {
+    return level_;
 }

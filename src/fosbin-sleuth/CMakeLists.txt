@@ -16,6 +16,7 @@ target_include_directories( ${FUNC_CLASSIFIER} PRIVATE
 target_link_libraries( ${FUNC_CLASSIFIER}
         stdc++fs
         pthread
+        rt
         ${Boost_LIBRARIES}
         dl
         )

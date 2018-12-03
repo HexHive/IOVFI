@@ -11,59 +11,68 @@
 #include <boost/log/expressions.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/named_mutex.hpp>
+#include <iomanip>
 
 namespace logging = boost::log;
 namespace ip = boost::interprocess;
 
 namespace fbf {
-    class FOSBinLogger {
+    class log_message {
     public:
-        FOSBinLogger();
-        void set_system_level(logging::trivial::severity_level level);
-        FOSBinLogger& set_level(logging::trivial::severity_level level);
-
-        FOSBinLogger& operator<<(const char* str);
-        FOSBinLogger& operator<<(const std::string& str);
-        FOSBinLogger& operator<<(const void* p);
+        log_message(logging::trivial::severity_level level);
+        ~log_message();
+        log_message& operator<<(const char* str);
+        log_message& operator<<(const std::string& str);
+        log_message& operator<<(const void* p);
+        log_message& operator<<(uintptr_t p);
 
         template<typename Number,
                 typename = std::enable_if_t<std::is_floating_point<Number>::value ||
-                        std::is_integral<Number>::value> >
-        FOSBinLogger& operator<<(Number i);
+                                            std::is_integral<Number>::value> >
+        log_message& operator<<(Number i);
+
+        std::string get_message();
+        logging::trivial::severity_level get_severity();
+
+    protected:
+        std::stringstream buffer_;
+        logging::trivial::severity_level level_;
+    };
+
+    class FOSBinLogger {
+    public:
+        FOSBinLogger();
+        ~FOSBinLogger();
+
+        const static char *LOGGER_NAME, *MUTEX_NAME;
+
+        static FOSBinLogger& Instance();
+        static void Initialize();
+        void write_message(log_message &msg);
+        void flush();
 
     protected:
         ip::named_mutex mutex_;
-        logging::trivial::severity_level level_;
-        logging::trivial::severity_level system_level_;
-
-#define write_logger(s)  switch(level_){ \
-        case logging::trivial::severity_level::trace: \
-            BOOST_LOG_TRIVIAL(trace) << s; \
-            break; \
-        case logging::trivial::severity_level::debug: \
-            BOOST_LOG_TRIVIAL(debug) <<  s; \
-            break; \
-        case logging::trivial::severity_level::error: \
-            BOOST_LOG_TRIVIAL(error) <<  s; \
-            break; \
-        case logging::trivial::severity_level::fatal: \
-            BOOST_LOG_TRIVIAL(fatal) <<  s; \
-            break; \
-        case logging::trivial::severity_level::warning: \
-            BOOST_LOG_TRIVIAL(warning) << s; \
-            break; \
-        default: /* This shouldn't happen */ break; }
+        pid_t curr_pid;
     };
+
+    template<typename Number, typename>
+    fbf::log_message &fbf::log_message::operator<<(Number i) {
+        if constexpr (std::is_floating_point_v<Number>) {
+            buffer_ << std::setprecision(std::numeric_limits<Number>::digits10 + 1);
+        }
+
+        buffer_ << i << std::dec;
+        return *this;
+    }
 }
 
-fbf::FOSBinLogger logger;
-
-#define LOG_TRACE   logger.set_level(logging::trivial::severity_level::trace)
-#define LOG_DEBUG   logger.set_level(logging::trivial::severity_level::debug)
-#define LOG_INFO    logger.set_level(logging::trivial::severity_level::info)
-#define LOG_WARN    logger.set_level(logging::trivial::severity_level::warning)
-#define LOG_ERR     logger.set_level(logging::trivial::severity_level::error)
-#define LOG_FATAL   logger.set_level(logging::trivial::severity_level::fatal)
+#define LOG_TRACE   fbf::log_message(logging::trivial::severity_level::trace)
+#define LOG_DEBUG   fbf::log_message(logging::trivial::severity_level::debug)
+#define LOG_INFO    fbf::log_message(logging::trivial::severity_level::info)
+#define LOG_WARN    fbf::log_message(logging::trivial::severity_level::warning)
+#define LOG_ERR     fbf::log_message(logging::trivial::severity_level::error)
+#define LOG_FATAL   fbf::log_message(logging::trivial::severity_level::fatal)
 
 
 #endif //FOSBIN_FOSBINLOGGER_H

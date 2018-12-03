@@ -127,7 +127,6 @@ void fbf::CommandLineParser::add_option(const char *name, const boost::program_o
 }
 
 void fbf::CommandLineParser::init_logging() {
-    logger.set_system_level(log_level_);
     logging::core::get()->set_filter(
             logging::trivial::severity >= log_level_
     );

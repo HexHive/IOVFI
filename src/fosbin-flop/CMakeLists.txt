@@ -8,6 +8,7 @@ target_link_libraries( ${IDENTIFIER_NAME}
         stdc++fs
         pthread
         dl
+        rt
         ${Boost_LIBRARIES}
         )
 

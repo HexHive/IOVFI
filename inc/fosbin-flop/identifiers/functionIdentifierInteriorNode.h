@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <TupleHelpers.h>
 #include <identifiers/functionIdentifierNodeI.h>
+#include <FOSBinUtils.h>
 
 #define TIMEOUT_INTERNAL    100
 
@@ -78,13 +79,12 @@ namespace fbf {
 
     template<typename R, typename... Args>
     bool FunctionIdentifierInternalNode<R, Args...>::test(uintptr_t location) {
-        LOG_DEBUG << "Calling function with " << print_args(preargs_) << " Expecting " << retVal_;
-        pid_t pid = test_fork();
+        pid_t pid = fosbin_fork();
         if (pid == 0) {
             bool is_equiv = true;
             std::function<R(Args...)> func = reinterpret_cast<R(*)(
                     Args...)>(location);
-            LOG_DEBUG << "Calling function with " << print_args(preargs_) << " Expecting " << retVal_;
+            LOG_DEBUG << getpid() << " calling function with " << print_args(preargs_) << " Expecting " << retVal_;
             set_signals();
             R retVal = std::apply(func, preargs_);
             if(retVal) {
@@ -201,13 +201,12 @@ namespace fbf {
 
     template<typename... Args>
     bool FunctionIdentifierInternalNode<void, Args...>::test(uintptr_t location) {
-        LOG_DEBUG << "Calling void function with " << print_args(preargs_);
-        pid_t pid = test_fork();
+        pid_t pid = fosbin_fork();
         if (pid == 0) {
             bool is_equiv = false;
             std::function<void(Args...)> func = reinterpret_cast<void (*)(
                     Args...)>(location);
-            LOG_DEBUG << "Calling void function with " << print_args(preargs_);
+            LOG_DEBUG << getpid() << " calling void function with " << print_args(preargs_);
             set_signals();
             std::apply(func, preargs_);
             LOG_DEBUG << "Function returned";
@@ -216,8 +215,7 @@ namespace fbf {
                 is_equiv = check_tuple_args(preargs_, postargs_, arg_sizes_);
             }
 
-            LOG_DEBUG << std::hex << location << std::dec
-                    << " is returning " << (is_equiv ? "PASS" : "FAIL");
+            LOG_DEBUG << location << " is returning " << (is_equiv ? "PASS" : "FAIL");
 
             exit(is_equiv == true ? ITestCase::PASS : ITestCase::FAIL);
         } else if(pid > 0){
