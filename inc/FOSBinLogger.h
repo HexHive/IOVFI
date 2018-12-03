@@ -50,9 +50,11 @@ namespace fbf {
         static void Initialize();
         void write_message(log_message &msg);
         void flush();
+        void set_log_level(logging::trivial::severity_level level);
 
     protected:
         ip::named_mutex mutex_;
+        logging::trivial::severity_level system_level_;
         pid_t curr_pid;
     };
 

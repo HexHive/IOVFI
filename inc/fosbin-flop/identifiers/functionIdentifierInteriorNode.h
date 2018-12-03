@@ -15,11 +15,12 @@
 #include <identifiers/functionIdentifierNodeI.h>
 #include <FOSBinUtils.h>
 
-#define TIMEOUT_INTERNAL    100
+#define TIMEOUT_INTERNAL    5
 
 namespace fbf {
     static void sig_handler(int sig) {
         kill(getpid(), SIGKILL);
+
     }
 
     template<typename R, typename... Args>
@@ -73,8 +74,8 @@ namespace fbf {
 
     template<typename R, typename... Args>
     void FunctionIdentifierInternalNode<R, Args...>::set_signals() {
-        //signal(SIGALRM, sig_handler);
-        //ualarm(TIMEOUT_INTERNAL, 0);
+        signal(SIGALRM, sig_handler);
+        alarm(TIMEOUT_INTERNAL);
     }
 
     template<typename R, typename... Args>
@@ -246,8 +247,8 @@ namespace fbf {
 
     template<typename... Args>
     void FunctionIdentifierInternalNode<void, Args...>::set_signals() {
-        //signal(SIGALRM, sig_handler);
-        //ualarm(TIMEOUT_INTERNAL, 0);
+        signal(SIGALRM, sig_handler);
+        alarm(TIMEOUT_INTERNAL);
     }
 }
 

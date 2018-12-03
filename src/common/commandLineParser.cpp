@@ -127,10 +127,11 @@ void fbf::CommandLineParser::add_option(const char *name, const boost::program_o
 }
 
 void fbf::CommandLineParser::init_logging() {
-    logging::core::get()->set_filter(
-            logging::trivial::severity >= log_level_
-    );
-    if (!log_path_.empty()) {
-        logging::add_file_log(log_path_.c_str());
-    }
+FOSBinLogger::Instance().set_log_level(log_level_);
+    //    logging::core::get()->set_filter(
+//            logging::trivial::severity >= log_level_
+//    );
+//    if (!log_path_.empty()) {
+//        logging::add_file_log(log_path_.c_str());
+//    }
 }

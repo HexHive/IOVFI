@@ -5,6 +5,7 @@
 #include <FOSBinLogger.h>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+#include <signal.h>
 
 const char *fbf::FOSBinLogger::LOGGER_NAME = "fosbin-logger";
 const char *fbf::FOSBinLogger::MUTEX_NAME = "fosbin-logger-mutex";
@@ -44,17 +45,20 @@ fbf::FOSBinLogger::~FOSBinLogger() {
     //ip::named_mutex::remove(MUTEX_NAME);
 }
 
+void fbf::FOSBinLogger::set_log_level(logging::trivial::severity_level level) {
+    system_level_ = level;
+}
+
 void fbf::FOSBinLogger::write_message(fbf::log_message &msg) {
-    if (msg.get_message().empty()) {
+    if (msg.get_message().empty() || system_level_ > msg.get_severity()) {
         return;
     }
 
-//    std::cout << "CURRENT OWNER: " << curr_pid << std::endl;
     boost::posix_time::ptime abs_time = ip::microsec_clock::universal_time() + boost::posix_time::milliseconds(150);
     ip::scoped_lock<ip::named_mutex> lock(mutex_, abs_time);
     while(!lock.owns()) {
-//        lock.unlock();
-        std::cout << getpid() << " failed to get lock. " << curr_pid << " currently owns lock." << std::endl;
+        ip::named_mutex::remove(MUTEX_NAME);
+        kill(curr_pid, SIGKILL);
         abs_time = ip::microsec_clock::universal_time() + boost::posix_time::milliseconds(150);
         lock.timed_lock(abs_time);
     }
@@ -62,19 +66,19 @@ void fbf::FOSBinLogger::write_message(fbf::log_message &msg) {
     curr_pid = getpid();
     switch (msg.get_severity()) {
         case logging::trivial::severity_level::trace:
-            BOOST_LOG_TRIVIAL(trace) << msg.get_message();
+            std::cout << "[trace]: " << msg.get_message() << std::endl;
             break;
         case logging::trivial::severity_level::debug:
-            BOOST_LOG_TRIVIAL(debug) << msg.get_message();
+            std::cout << "[debug]: " << msg.get_message() << std::endl;
             break;
         case logging::trivial::severity_level::error:
-            BOOST_LOG_TRIVIAL(error) << msg.get_message();
+            std::cout << "[error]: " << msg.get_message() << std::endl;
             break;
         case logging::trivial::severity_level::fatal:
-            BOOST_LOG_TRIVIAL(fatal) << msg.get_message();
+            std::cout << "[fatal]: " << msg.get_message() << std::endl;
             break;
         case logging::trivial::severity_level::warning:
-            BOOST_LOG_TRIVIAL(warning) << msg.get_message();
+            std::cout << "[warning]: " << msg.get_message() << std::endl;
             break;
         default:
             /* This shouldn't happen */
