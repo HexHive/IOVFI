@@ -1,3 +1,6 @@
+src/pin/
+.clion.source.upload.marker
+
 TestCases.inc
 
 outputs/

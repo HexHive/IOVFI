@@ -225,7 +225,7 @@ namespace fbf {
             for (int i = 0; i < fuzz_count_; i++) {
                 mutate_args(i + seed_);
 
-                LOG_DEBUG << "Fuzzing 0x" << std::hex << location_ << std::dec
+                LOG_DEBUG << "Fuzzing " << location_
                           << " with arguments " << print_args(curr_args_);
 
                 std::stringstream s;
@@ -251,7 +251,7 @@ namespace fbf {
                 file << s.str();
             }
 
-            LOG_DEBUG << "Done fuzzing 0x" << std::hex << location_;
+            LOG_DEBUG << "Done fuzzing " << location_;
             exit(ITestCase::PASS);
         } else if (pid > 0) {
             int status;

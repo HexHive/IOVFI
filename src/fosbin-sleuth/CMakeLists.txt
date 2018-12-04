@@ -31,3 +31,5 @@ target_sources( ${FUNC_CLASSIFIER}
         argumentCountTestCase.cpp
         fuzz/FullFuzzTest.cpp
         )
+
+add_subdirectory(pintool)

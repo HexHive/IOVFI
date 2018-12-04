@@ -68,7 +68,7 @@ int fbf::ArgumentCountTestCase::run_test() {
         std::map<register_t, bool> &reg_written = register_states.back().second.reg_written;
         std::map<register_t, bool> &reg_read = register_states.back().second.reg_read;
 
-        LOG_DEBUG << "curr_loc = " << std::hex << curr_loc;
+        LOG_DEBUG << "curr_loc = " << curr_loc;
 
         const LofSymbol& curr_func = binDesc_.getSym(curr_loc);
         LOG_DEBUG << "curr_func: " << curr_func.name << " size: " << curr_func.size;

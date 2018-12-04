@@ -6,6 +6,8 @@ set( PROJ_NAME fosbin )
 set( LIBRARY_NAME ${PROJ_NAME}-scribe )
 set( IDENTIFIER_NAME ${PROJ_NAME}-flop )
 set( FUNC_CLASSIFIER ${PROJ_NAME}-sleuth )
+set( PIN_VERSION 3.7 )
+set( PINTOOL_NAME ${PROJ_NAME}-zergling )
 
 cmake_minimum_required( VERSION 3.10.2 )
 
@@ -55,6 +57,6 @@ configure_file( "inc/${IDENTIFIER_NAME}-config.h.in"
 configure_file( "inc/${FUNC_CLASSIFIER}-config.h.in"
     "inc/${FUNC_CLASSIFIER}-config.h")
 
-include_directories( inc ${CMAKE_CURRENT_BINARY_DIR}/inc )
+include_directories( inc ${CMAKE_CURRENT_BINARY_DIR}/inc src/pin/pin-${PIN_VERSION}/source/include )
 
 add_subdirectory( src )
