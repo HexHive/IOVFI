@@ -1,3 +1,5 @@
+add_subdirectory(pintool)
+
 add_executable( ${FUNC_CLASSIFIER}
         main.cpp
         )
@@ -31,5 +33,3 @@ target_sources( ${FUNC_CLASSIFIER}
         argumentCountTestCase.cpp
         fuzz/FullFuzzTest.cpp
         )
-
-add_subdirectory(pintool)
