@@ -4,7 +4,11 @@
 #include "pin.H"
 #include <iostream>
 
+
+
 int main(int argc, char** argv) {
+
+
     if(PIN_Init(argc, argv)) {
         std::cout << "PIN_Init failed" << std::endl;
     } else {
