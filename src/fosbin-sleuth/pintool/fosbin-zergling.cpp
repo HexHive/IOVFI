@@ -3,17 +3,26 @@
 //
 #include "pin.H"
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <csignal>
 #include <cstdlib>
+#include "FuzzResults.h"
 
 CONTEXT snapshot;
 
+CONTEXT preexecution;
+CONTEXT postexecution;
+
 KNOB<ADDRINT> KnobStart(KNOB_MODE_WRITEONCE, "pintool", "start", "0", "The start address of the fuzzing target");
 KNOB<uint32_t> FuzzCount(KNOB_MODE_WRITEONCE, "pintool", "fuzz-count", "4", "The number of times to fuzz a target");
+KNOB<std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.bin", "The name of the file to write "
+                                                                                     "fuzz output");
 
 RTN target;
 uint32_t fuzz_count;
+
+std::ofstream outfile;
 
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
@@ -51,13 +60,33 @@ VOID fuzz_registers(CONTEXT* ctx) {
 VOID start_fuzz_round(CONTEXT* ctx) {
     reset_context(ctx);
     fuzz_registers(ctx);
+    PIN_SaveContext(ctx, &preexecution);
     PIN_ExecuteAt(ctx);
+}
+
+VOID record_context(CONTEXT* ctx, struct X86FuzzingContext *dest) {
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RDI, (UINT8*)&dest->rdi);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RSI, (UINT8*)&dest->rsi);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RDX, (UINT8*)&dest->rdx);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RCX,(UINT8*) &dest->rcx);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_R8, (UINT8*)&dest->r8);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_R9, (UINT8*)&dest->r9);
+}
+
+VOID record_fuzz_round() {
+    struct FuzzingResult result;
+    result.executable_offset = KnobStart.Value();
+    record_context(&preexecution, &result.preexecution);
+    record_context(&postexecution, &result.postexecution);
+
+    outfile.write((const char*)&result, sizeof(struct FuzzingResult));
 }
 
 VOID end_fuzzing_round(CONTEXT *ctx) {
     // TODO: Check if new path was traversed
-    // TODO: Save post-execution state
     std::cout << "Fuzzing ended" << std::endl;
+    PIN_SaveContext(ctx, &postexecution);
+    record_fuzz_round();
     start_fuzz_round(ctx);
 }
 
@@ -98,6 +127,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
     reset_context(ctx);
     fuzz_registers(ctx);
+    PIN_SaveContext(ctx, &preexecution);
     return false;
 }
 
@@ -138,6 +168,11 @@ VOID ImageLoad(IMG img, VOID *v)
     return;
 }
 
+void initialize_system() {
+    srand(time(NULL));
+    outfile.open(KnobOutName.Value().c_str(), std::ios::out | std::ios::binary);
+}
+
 int main(int argc, char** argv) {
     PIN_InitSymbols();
     if(PIN_Init(argc, argv)) {
@@ -147,7 +182,7 @@ int main(int argc, char** argv) {
     if(!KnobStart.Value()) {
         return usage();
     }
-    srand(time(NULL));
+    initialize_system();
 
     std::cout << "Fuzzing 0x" << std::hex << KnobStart.Value() << std::dec << " " << FuzzCount.Value() << " times."
     << std::endl;
