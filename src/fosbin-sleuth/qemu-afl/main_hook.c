@@ -107,7 +107,9 @@ int __libc_start_main(
     /* Find the real __libc_start_main()... */
     typeof(&__libc_start_main) orig = dlsym(RTLD_NEXT, "__libc_start_main");
 
-    if(strstr(argv[0], "afl-fuzz") == NULL) {
+    /* afl-fuzz sets argv[0] to be qemu, so ignore that too */
+    if(strstr(argv[0], "afl-fuzz") == NULL &&
+        strstr(argv[0], "qemu") == NULL) {
         /* ... and call it with our custom main function */
         return orig(main_hook, argc, argv, init, fini, rtld_fini, stack_end);
     } else {

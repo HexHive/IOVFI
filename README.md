@@ -15,6 +15,7 @@ except through Intel's website
 
 ## Building
 1. `git submodule update --init --recursive`
-2. `./src/fosbin-sleuth/TestCaseGenerator.py > src/fosbin-sleuth/TestCases.inc`
-3. `mkdir cmake-build-debug && cd cmake-build-debug`
-4. `cmake -G Ninja ..`
+1. `cd src/fosbin-sleuth/qemu-afl/afl && make && cd qemu-mode &&
+   ./build_qemu_support.sh && cd ../../../..`
+1. `mkdir cmake-build-debug && cd cmake-build-debug`
+1. `cmake -G Ninja ..`
