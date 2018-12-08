@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <csignal>
 #include <cstdlib>
+#include <vector>
 #include "FuzzResults.h"
 
 CONTEXT snapshot;
@@ -18,11 +19,11 @@ KNOB<ADDRINT> KnobStart(KNOB_MODE_WRITEONCE, "pintool", "start", "0", "The start
 KNOB<uint32_t> FuzzCount(KNOB_MODE_WRITEONCE, "pintool", "fuzz-count", "4", "The number of times to fuzz a target");
 KNOB<std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.bin", "The name of the file to write "
                                                                                      "fuzz output");
-
 RTN target;
 uint32_t fuzz_count;
 
 std::ofstream outfile;
+std::vector<BOOL> path_bitmap;
 
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
@@ -80,6 +81,12 @@ VOID record_fuzz_round() {
     record_context(&postexecution, &result.postexecution);
 
     outfile.write((const char*)&result, sizeof(struct FuzzingResult));
+}
+
+VOID trace_execution(TRACE trace, VOID *v) {
+    if(TRACE_Rtn(trace) == target) {
+        std::cout << "Trace" << std::endl;
+    }
 }
 
 VOID end_fuzzing_round(CONTEXT *ctx) {
@@ -189,6 +196,7 @@ int main(int argc, char** argv) {
 
     IMG_AddInstrumentFunction(ImageLoad, 0);
     PIN_InterceptSignal(SIGSEGV, catchSignal, 0);
+    TRACE_AddInstrumentFunction(trace_execution, NULL);
     PIN_StartProgram();
 
     return 0;

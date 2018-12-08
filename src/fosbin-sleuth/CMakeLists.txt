@@ -1,4 +1,5 @@
 add_subdirectory(pintool)
+add_subdirectory(qemu-afl)
 
 add_executable( ${FUNC_CLASSIFIER}
         main.cpp
