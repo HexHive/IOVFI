@@ -17,17 +17,35 @@
 #include <string.h>
 #include <unistd.h>
 #include <FuzzResults.h>
-
-/* Just assume every target takes 6 full register arguments */
-static uint64_t (*fuzz_target)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+#include <setjmp.h>
+#include <signal.h>
+#include <errno.h>
 
 void usage() {
     printf("Usage: <offset from main> /file/path/to/binary/register/values \n");
 }
 
+/* Just assume every target takes 6 full register arguments */
+static uint64_t (*fuzz_target)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 struct FuzzingResult fuzzResult;
-
 void* orig_main;
+jmp_buf jb;
+
+void segfault_handler(int signal, siginfo_t *info, void *ucontext) {
+
+}
+
+void register_segfault_handler() {
+    struct sigaction act;
+    bzero(&act, sizeof(act));
+    act.sa_flags = SA_SIGINFO;
+    act.sa_sigaction = segfault_handler;
+    errno = 0;
+    if(sigaction(SIGSEGV, &act, NULL)) {
+        fprintf(stderr, "Could not install SIGSEGV handler: %s\n", strerror(errno));
+        exit(1);
+    }
+}
 
 /* Our fake main() that gets called by __libc_start_main() */
 int main_hook(int argc, char **argv, char **envp)
@@ -37,17 +55,14 @@ int main_hook(int argc, char **argv, char **envp)
         exit(1);
     }
 
-    printf("Finding %s...", argv[1]);
-    fflush(stdout);
     void* target = orig_main + strtol(argv[1], NULL, 0);
     if(!target) {
         fprintf(stderr, "\nCould not find %s!\n", argv[1]);
         exit(1);
     }
-    printf("Done!\n");
-    printf("main: %p\ntarget: %p\n", orig_main, target);
 
     fuzz_target = (uint64_t(*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t))target;
+    register_segfault_handler();
 
     FILE* f = fopen(argv[2], "rb");
     fread(&fuzzResult.preexecution.rdi, sizeof(fuzzResult.preexecution.rdi), 1, f);
@@ -64,6 +79,7 @@ int main_hook(int argc, char **argv, char **envp)
 //        usleep(100000);
 //    }
 
+    setjmp(jb);
     fuzzResult.postexecution.rax =
             fuzz_target(fuzzResult.preexecution.rdi, fuzzResult.preexecution.rsi,
                 fuzzResult.preexecution.rdx, fuzzResult.preexecution.rcx,
