@@ -11,18 +11,28 @@
 #include <stdint.h>
 #endif
 
+#define NREGS           6
+#define MAX_TRIES       NREGS
+
+struct FuzzingBuffer {
+    uintptr_t location;
+    size_t length;
+};
+
+struct FuzzingRegister {
+    uint8_t is_pointer;
+    union {
+        uint64_t value;
+        struct FuzzingBuffer buffer;
+    };
+};
+
 struct X86FuzzingContext {
-    uint64_t rdi;
-    uint64_t rsi;
-    uint64_t rdx;
-    uint64_t rcx;
-    uint64_t r8;
-    uint64_t r9;
-    uint64_t rax;
+    struct FuzzingRegister regs[NREGS];
+    struct FuzzingRegister ret;
 };
 
 struct FuzzingResult {
-    uintptr_t executable_offset;
     struct X86FuzzingContext preexecution;
     struct X86FuzzingContext postexecution;
 };

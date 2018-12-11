@@ -11,3 +11,6 @@
 [submodule "src/fosbin-sleuth/qemu-afl/afl"]
 	path = src/fosbin-sleuth/qemu-afl/afl
 	url = git@github.com:deadly-platypus/afl.git
+[submodule "src/fosbin-sleuth/qemu-afl/proc_maps_parser"]
+	path = src/fosbin-sleuth/qemu-afl/proc_maps_parser
+	url = git@github.com:ouadev/proc_maps_parser.git
