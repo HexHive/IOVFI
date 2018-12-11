@@ -57,12 +57,13 @@ def main():
 
     print("=============== Summary ==================")
     print("Total Tested Functions: {}".format(total_tested_functions))
-    print("Total Correct Functions: {} ({}%)".format(total_correct_functions, total_correct_functions /
-                                                     total_tested_functions * 100))
-    print("Total Mislabeled Functions: {} ({}%)".format(total_mislabeled_functions, total_mislabeled_functions /
-                                                        total_tested_functions * 100))
-    print("Total Unconfirmed Functions: {} ({}%)".format(total_unconfirmed_functions, total_unconfirmed_functions /
+    if total_tested_functions > 0:
+        print("Total Correct Functions: {} ({}%)".format(total_correct_functions, total_correct_functions /
                                                          total_tested_functions * 100))
+        print("Total Mislabeled Functions: {} ({}%)".format(total_mislabeled_functions, total_mislabeled_functions /
+                                                            total_tested_functions * 100))
+        print("Total Unconfirmed Functions: {} ({}%)".format(total_unconfirmed_functions, total_unconfirmed_functions /
+                                                             total_tested_functions * 100))
 
 if __name__ == "__main__":
     main()

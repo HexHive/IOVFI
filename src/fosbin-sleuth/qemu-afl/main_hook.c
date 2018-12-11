@@ -34,7 +34,7 @@ static uint64_t (*fuzz_target)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
 struct FuzzingResult fuzzResult;
 void *orig_main;
 jmp_buf jb;
-long offset;
+long target;
 int segfault_count;
 
 void reset_buffer(struct FuzzingBuffer *fuzzbuf) {
@@ -114,8 +114,7 @@ int main_hook(int argc, char **argv, char **envp) {
         exit(1);
     }
 
-    offset = strtol(argv[1], NULL, 0);
-    void *target = orig_main + offset;
+    target = strtol(argv[1], NULL, 0);
     if (!target) {
         fprintf(stderr, "\nCould not find %s!\n", argv[1]);
         exit(1);
@@ -127,30 +126,30 @@ int main_hook(int argc, char **argv, char **envp) {
      * struct FuzzingRegister rdi
      */
     for(int i = 0; i < NREGS; i++) {
-        fread(&fuzzResult.preexecution.regs[i], sizeof(fuzzResult.preexecution.regs[i]), 1, f);
+        fread(&fuzzResult.preexecution.regs[i].value, sizeof(fuzzResult.preexecution.regs[i].value), 1, f);
     }
-    for(int i = 0; i < NREGS; i++) {
-        if(fuzzResult.preexecution.regs[i].is_pointer) {
-            if(fuzzResult.preexecution.regs[i].buffer.length > 0) {
-                void *buf = malloc(fuzzResult.preexecution.regs[i].buffer.length);
-                size_t bytes_read = fread(buf, fuzzResult.preexecution.regs[i].buffer.length, 1, f);
-                if(bytes_read != fuzzResult.preexecution.regs[i].buffer.length) {
-                    free(buf);
-                    create_input_pointer(&fuzzResult.preexecution.regs[i]);
-                } else {
-                    fuzzResult.preexecution.regs[i].buffer.location = (uintptr_t)buf;
-                }
-            } else {
-                create_input_pointer(&fuzzResult.preexecution.regs[i]);
-            }
-        }
-    }
+//    for(int i = 0; i < NREGS; i++) {
+//        if(fuzzResult.preexecution.regs[i].is_pointer) {
+//            if(fuzzResult.preexecution.regs[i].buffer.length > 0) {
+//                void *buf = malloc(fuzzResult.preexecution.regs[i].buffer.length);
+//                size_t bytes_read = fread(buf, fuzzResult.preexecution.regs[i].buffer.length, 1, f);
+//                if(bytes_read != fuzzResult.preexecution.regs[i].buffer.length) {
+//                    free(buf);
+//                    create_input_pointer(&fuzzResult.preexecution.regs[i]);
+//                } else {
+//                    fuzzResult.preexecution.regs[i].buffer.location = (uintptr_t)buf;
+//                }
+//            } else {
+//                create_input_pointer(&fuzzResult.preexecution.regs[i]);
+//            }
+//        }
+//    }
     fclose(f);
 
     if (setjmp(jb) > MAX_TRIES) {
         goto exit;
     }
-    register_segfault_handler();
+//    register_segfault_handler();
 
     fuzzResult.postexecution.ret.value =
             fuzz_target(fuzzResult.preexecution.regs[0].value, fuzzResult.preexecution.regs[1].value,
@@ -171,38 +170,38 @@ int main_hook(int argc, char **argv, char **envp) {
     fuzzResult.postexecution.regs[4].value = r8;
     fuzzResult.postexecution.regs[5].value = r9;
 
-    for(int i = 0; i < NREGS; i++) {
-        if(is_valid_pointer(fuzzResult.postexecution.regs[i].value,
-                &fuzzResult.postexecution.regs[i].buffer) > 0) {
-            fuzzResult.postexecution.regs[i].is_pointer = 1;
-        }
-    }
-    if(is_valid_pointer(fuzzResult.postexecution.ret.value,
-            &fuzzResult.postexecution.ret.buffer) > 0) {
-        fuzzResult.postexecution.ret.is_pointer = 1;
-    }
+//    for(int i = 0; i < NREGS; i++) {
+//        if(is_valid_pointer(fuzzResult.postexecution.regs[i].value,
+//                &fuzzResult.postexecution.regs[i].buffer) > 0) {
+//            fuzzResult.postexecution.regs[i].is_pointer = 1;
+//        }
+//    }
+//    if(is_valid_pointer(fuzzResult.postexecution.ret.value,
+//            &fuzzResult.postexecution.ret.buffer) > 0) {
+//        fuzzResult.postexecution.ret.is_pointer = 1;
+//    }
 
     FILE *out = fopen("fuzz-results.bin", "wab");
     fwrite(&fuzzResult, sizeof(fuzzResult), 1, out);
-    for(int i = 0; i < NREGS; i++) {
-        if(fuzzResult.preexecution.regs[i].is_pointer) {
-            fwrite(fuzzResult.preexecution.regs[i].buffer.location,
-                   fuzzResult.preexecution.regs[i].buffer.length,
-                   1, out);
-        }
-    }
-    for(int i = 0; i < NREGS; i++) {
-        if(fuzzResult.postexecution.regs[i].is_pointer) {
-            fwrite(fuzzResult.postexecution.regs[i].buffer.location,
-                    fuzzResult.postexecution.regs[i].buffer.length,
-                    1, out);
-        }
-    }
-    if(fuzzResult.postexecution.ret.is_pointer) {
-        fwrite(fuzzResult.postexecution.ret.buffer.location,
-                fuzzResult.postexecution.ret.buffer.length,
-                1, out);
-    }
+//    for(int i = 0; i < NREGS; i++) {
+//        if(fuzzResult.preexecution.regs[i].is_pointer) {
+//            fwrite(fuzzResult.preexecution.regs[i].buffer.location,
+//                   fuzzResult.preexecution.regs[i].buffer.length,
+//                   1, out);
+//        }
+//    }
+//    for(int i = 0; i < NREGS; i++) {
+//        if(fuzzResult.postexecution.regs[i].is_pointer) {
+//            fwrite(fuzzResult.postexecution.regs[i].buffer.location,
+//                    fuzzResult.postexecution.regs[i].buffer.length,
+//                    1, out);
+//        }
+//    }
+//    if(fuzzResult.postexecution.ret.is_pointer) {
+//        fwrite(fuzzResult.postexecution.ret.buffer.location,
+//                fuzzResult.postexecution.ret.buffer.length,
+//                1, out);
+//    }
     fclose(out);
 
     exit:
