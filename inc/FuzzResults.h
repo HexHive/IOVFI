@@ -33,6 +33,7 @@ struct X86FuzzingContext {
 };
 
 struct FuzzingResult {
+    uintptr_t target_addr;
     struct X86FuzzingContext preexecution;
     struct X86FuzzingContext postexecution;
 };

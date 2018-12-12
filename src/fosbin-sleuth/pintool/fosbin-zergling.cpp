@@ -22,7 +22,7 @@ KNOB<std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuz
 RTN target;
 uint32_t fuzz_count;
 
-std::ofstream outfile;
+std::ofstream outfile, infofile;
 std::vector<BOOL> path_bitmap;
 
 INT32 usage() {
@@ -66,19 +66,21 @@ VOID start_fuzz_round(CONTEXT* ctx) {
 }
 
 VOID record_context(CONTEXT* ctx, struct X86FuzzingContext *dest) {
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RDI, (UINT8*)&dest->rdi);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RSI, (UINT8*)&dest->rsi);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RDX, (UINT8*)&dest->rdx);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RCX,(UINT8*) &dest->rcx);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_R8, (UINT8*)&dest->r8);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_R9, (UINT8*)&dest->r9);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RDI, (UINT8*)&dest->regs[0].value);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RSI, (UINT8*)&dest->regs[1].value);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RDX, (UINT8*)&dest->regs[2].value);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RCX,(UINT8*) &dest->regs[3].value);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_R8, (UINT8*)&dest->regs[4].value);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_R9, (UINT8*)&dest->regs[5].value);
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RAX, (UINT8*)&dest->ret.value);
 }
 
 VOID record_fuzz_round() {
     struct FuzzingResult result;
-    result.executable_offset = KnobStart.Value();
+    result.target_addr = KnobStart.Value();
     record_context(&preexecution, &result.preexecution);
     record_context(&postexecution, &result.postexecution);
+    infofile << std::hex << KnobStart.Value() << " finished fuzzing round" << std::endl;
 
     outfile.write((const char*)&result, sizeof(struct FuzzingResult));
 }
@@ -90,7 +92,6 @@ VOID trace_execution(TRACE trace, VOID *v) {
 }
 
 VOID end_fuzzing_round(CONTEXT *ctx) {
-    // TODO: Check if new path was traversed
     std::cout << "Fuzzing ended" << std::endl;
     PIN_SaveContext(ctx, &postexecution);
     record_fuzz_round();
@@ -177,7 +178,9 @@ VOID ImageLoad(IMG img, VOID *v)
 
 void initialize_system() {
     srand(time(NULL));
+    std::string infoFileName = KnobOutName.Value() + ".info";
     outfile.open(KnobOutName.Value().c_str(), std::ios::out | std::ios::binary);
+    infofile.open(infoFileName.c_str(), std::ios::out);
 }
 
 int main(int argc, char** argv) {

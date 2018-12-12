@@ -114,6 +114,12 @@ int main_hook(int argc, char **argv, char **envp) {
         exit(1);
     }
 
+//    volatile int i = 0;
+//    printf("Waiting for debugger to attach to %d\n", getpid());
+//    while(!i) {
+//        usleep(10000);
+//    }
+
     target = strtol(argv[1], NULL, 0);
     if (!target) {
         fprintf(stderr, "\nCould not find %s!\n", argv[1]);
@@ -224,6 +230,12 @@ int __libc_start_main(
 
     /* Find the real __libc_start_main()... */
     typeof(&__libc_start_main) orig = dlsym(RTLD_NEXT, "__libc_start_main");
+
+    volatile int i = 0;
+    printf("Waiting for debugger to attach to %d\n", getpid());
+    while(!i) {
+        usleep(10000);
+    }
 
     /* afl-fuzz sets argv[0] to be qemu, so ignore that too */
     if (strstr(argv[0], "afl-fuzz") == NULL &&

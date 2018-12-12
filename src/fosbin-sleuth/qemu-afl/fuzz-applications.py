@@ -50,7 +50,7 @@ def main():
                 print("Finished {}".format(func['name']))
                 if os.path.exists("fuzz-results.bin"):
                     os.rename("fuzz-results.bin", "{}_{}.bin".format(app, func['name']))
-                    
+
         print("{} has {} functions".format(app, func_count))
         r2.quit()
 
