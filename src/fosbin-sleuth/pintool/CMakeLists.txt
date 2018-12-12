@@ -4,8 +4,12 @@ set(PINTOOL_SOURCES
         makefile.in
         )
 
-add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/${PINTOOL_NAME}.so
-        COMMAND make -f makefile TARGET=intel64 PIN_ROOT=${CMAKE_SOURCE_DIR}/src/pin/pin-${PIN_VERSION} OBJDIR=${PROJECT_BINARY_DIR}/
+add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/pintools
+        COMMAND mkdir -p ${PROJECT_BINARY_DIR}/pintools/intel64
+        )
+
+add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/pintools/intel64/${PINTOOL_NAME}.so
+        COMMAND make -f makefile TARGET=intel64 PIN_ROOT=${CMAKE_SOURCE_DIR}/src/pin/pin-${PIN_VERSION} OBJDIR=${PROJECT_BINARY_DIR}/pintools/intel64/
         DEPENDS ${PINTOOL_SOURCES}
         )
 
@@ -13,5 +17,7 @@ configure_file(makefile.rules.in makefile.rules)
 configure_file(makefile.in makefile)
 
 add_custom_target(${PINTOOL_NAME}
-        DEPENDS ${PROJECT_BINARY_DIR}/${PINTOOL_NAME}.so ${PINTOOL_SOURCES}
+        DEPENDS ${PROJECT_BINARY_DIR}/pintools
+            ${PROJECT_BINARY_DIR}/pintools/intel64/${PINTOOL_NAME}.so
+            ${PINTOOL_SOURCES}
         )
