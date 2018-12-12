@@ -36,7 +36,7 @@ def main():
                 func_count += 1
                 try:
                     # pin -t fosbin-zergling.so -target 0xCAFEBABE -out app_foo.bin -- app
-                    cmd = [sys.argv[1], "-t", sys.argv[2], "-target", hex(func['offset']),
+                    cmd = [os.path.join(sys.argv[1], "pin"), "-t", sys.argv[2], "-target", hex(func['offset']),
                            "-out", "{}_{}.bin".format(app, func['name']),
                            "--", app]
                     print("Running {}".format(" ".join(cmd)))
