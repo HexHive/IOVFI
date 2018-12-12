@@ -24,32 +24,25 @@ def main():
         r2 = r2pipe.open(app)
         r2.cmd('aaa')
         func_count = 0
-        text_section = None
-        for s in r2.cmdj("iSj"):
-            if s['name'] == ".text":
-                text_section = s
-                break
 
         for func in r2.cmdj("aflj"):
-            if func['offset'] >= text_section['vaddr'] and func['offset'] <= \
-                    text_section['vaddr'] + text_section['size']:
-                func_count += 1
-                try:
-                    # pin -t fosbin-zergling.so -target 0xCAFEBABE -out app_foo.bin -- app
-                    cmd = [os.path.join(sys.argv[1], "pin"), "-t", sys.argv[2], "-target", hex(func['offset']),
-                           "-out", "{}_{}.bin".format(os.path.basename(app)[0:5], func['name']),
-                           "--", app]
-                    print("Running {}".format(" ".join(cmd)))
-                    subprocess.run(cmd, env=env_vars, timeout=10)
-                except subprocess.TimeoutExpired:
-                    pass
-                except Exception as e:
-                    print("Error for {}:{} : {}".format(app, func['name'], e), file=sys.stderr)
-                    continue
+            func_count += 1
+            try:
+                # pin -t fosbin-zergling.so -target 0xCAFEBABE -out app_foo.bin -- app
+                cmd = [os.path.join(sys.argv[1], "pin"), "-t", sys.argv[2], "-target", hex(func['offset']),
+                       "-out", "{}_{}.bin".format(os.path.basename(app)[0:5], func['name']),
+                       "--", app]
+                print("Running {}".format(" ".join(cmd)))
+                subprocess.run(cmd, env=env_vars, timeout=10)
+            except subprocess.TimeoutExpired:
+                pass
+            except Exception as e:
+                print("Error for {}:{} : {}".format(app, func['name'], e), file=sys.stderr)
+                continue
 
-                print("Finished {}".format(func['name']))
-                if os.path.exists("fuzz-results.bin"):
-                    os.rename("fuzz-results.bin", "{}_{}.bin".format(app, func['name']))
+            print("Finished {}".format(func['name']))
+            if os.path.exists("fuzz-results.bin"):
+                os.rename("fuzz-results.bin", "{}_{}.bin".format(app, func['name']))
 
         print("{} has {} functions".format(app, func_count))
         r2.quit()
