@@ -80,7 +80,9 @@ VOID record_fuzz_round() {
     result.target_addr = KnobStart.Value();
     record_context(&preexecution, &result.preexecution);
     record_context(&postexecution, &result.postexecution);
-    infofile << std::hex << KnobStart.Value() << " finished fuzzing round" << std::endl;
+
+    infofile << "0x" << std::hex << KnobStart.Value()
+        << "(" << RTN_Name(target) << ") finished fuzzing round" << std::endl;
 
     outfile.write((const char*)&result, sizeof(struct FuzzingResult));
 }
@@ -133,6 +135,9 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
     }
     std::cout << "Function: " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << std::endl;
 
+    infofile << "0x" << std::hex << KnobStart.Value()
+             << "(" << RTN_Name(target) << ") issued SIGSEGV" << std::endl;
+
     reset_context(ctx);
     fuzz_registers(ctx);
     PIN_SaveContext(ctx, &preexecution);
@@ -180,7 +185,7 @@ void initialize_system() {
     srand(time(NULL));
     std::string infoFileName = KnobOutName.Value() + ".info";
     outfile.open(KnobOutName.Value().c_str(), std::ios::out | std::ios::binary);
-    infofile.open(infoFileName.c_str(), std::ios::out);
+    infofile.open(infoFileName.c_str(), std::ios::out | std::ios::app);
 }
 
 int main(int argc, char** argv) {

@@ -7,7 +7,7 @@ import subprocess
 
 
 def usage():
-    print("{} /path/to/main-hook.so /path/afl-fuzz /path/to/application [/path/to/application...]".format(
+    print("{} /path/to/pin /path/to/fosbin-zergling.so /path/to/application [/path/to/application...]".format(
         "fuzz-applications.py"))
     sys.exit(1)
 
@@ -20,7 +20,6 @@ def main():
         os.rename("fuzz-results.bin", "fuzz-results.bin.orig")
 
     env_vars = dict()
-    env_vars['LD_PRELOAD'] = sys.argv[1]
     for app in sys.argv[3:]:
         r2 = r2pipe.open(app)
         r2.cmd('aaa')
@@ -36,9 +35,8 @@ def main():
                     text_section['vaddr'] + text_section['size']:
                 func_count += 1
                 try:
-                    # LD_PRELOAD afl-fuzz -Q -i seeds -o outputs -- prog_name 0xCAFEBABE @@
-                    cmd = [sys.argv[2], "-Q", "-i", "seeds", "-o", "outputs", "--",
-                            app, hex(func['offset']), "@@"]
+                    # pin -t fosbin-zergling.so -target 0xCAFEBABE -- app
+                    cmd = [sys.argv[1], "-t", sys.argv[2], "-target", hex(func['offset']), "--", app]
                     print("Running {}".format(" ".join(cmd)))
                     subprocess.run(cmd, env=env_vars, timeout=10)
                 except subprocess.TimeoutExpired:
