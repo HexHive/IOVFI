@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
 
     IMG_AddInstrumentFunction(ImageLoad, 0);
     PIN_InterceptSignal(SIGSEGV, catchSignal, 0);
-    TRACE_AddInstrumentFunction(trace_execution, NULL);
+//    TRACE_AddInstrumentFunction(trace_execution, NULL);
     PIN_StartProgram();
 
     return 0;
