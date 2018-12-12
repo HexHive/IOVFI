@@ -37,7 +37,7 @@ def main():
                 try:
                     # pin -t fosbin-zergling.so -target 0xCAFEBABE -out app_foo.bin -- app
                     cmd = [os.path.join(sys.argv[1], "pin"), "-t", sys.argv[2], "-target", hex(func['offset']),
-                           "-out", "{}_{}.bin".format(app, func['name']),
+                           "-out", "{}_{}.bin".format(os.path.basename(app)[0:5], func['name']),
                            "--", app]
                     print("Running {}".format(" ".join(cmd)))
                     subprocess.run(cmd, env=env_vars, timeout=10)
