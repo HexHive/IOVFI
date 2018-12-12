@@ -5,7 +5,7 @@ set(PINTOOL_SOURCES
         )
 
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/${PINTOOL_NAME}.so
-        COMMAND make -f makefile PIN_ROOT=${CMAKE_SOURCE_DIR}/src/pin/pin-${PIN_VERSION} OBJDIR=${PROJECT_BINARY_DIR}/
+        COMMAND make -f makefile TARGET=intel64 PIN_ROOT=${CMAKE_SOURCE_DIR}/src/pin/pin-${PIN_VERSION} OBJDIR=${PROJECT_BINARY_DIR}/
         DEPENDS ${PINTOOL_SOURCES}
         )
 
