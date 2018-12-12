@@ -35,8 +35,10 @@ def main():
                     text_section['vaddr'] + text_section['size']:
                 func_count += 1
                 try:
-                    # pin -t fosbin-zergling.so -target 0xCAFEBABE -- app
-                    cmd = [sys.argv[1], "-t", sys.argv[2], "-target", hex(func['offset']), "--", app]
+                    # pin -t fosbin-zergling.so -target 0xCAFEBABE -out app_foo.bin -- app
+                    cmd = [sys.argv[1], "-t", sys.argv[2], "-target", hex(func['offset']),
+                           "-out", "{}_{}.bin".format(app, func['name']),
+                           "--", app]
                     print("Running {}".format(" ".join(cmd)))
                     subprocess.run(cmd, env=env_vars, timeout=10)
                 except subprocess.TimeoutExpired:
