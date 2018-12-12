@@ -28,8 +28,8 @@ def main():
         for func in r2.cmdj("aflj"):
             func_count += 1
             try:
-                # pin -t fosbin-zergling.so -target 0xCAFEBABE -out app_foo.bin -- app
-                cmd = [os.path.join(sys.argv[1], "pin"), "-t", sys.argv[2], "-target", hex(func['offset']),
+                # pin -t fosbin-zergling.so -start 0xCAFEBABE -out app_foo.bin -- app
+                cmd = [os.path.join(sys.argv[1], "pin"), "-t", sys.argv[2], "-start", hex(func['offset']),
                        "-out", "{}_{}.bin".format(os.path.basename(app)[0:5], func['name']),
                        "--", app]
                 print("Running {}".format(" ".join(cmd)))
