@@ -37,7 +37,7 @@ VOID reset_context(CONTEXT* ctx) {
         std::cout << "Stopping fuzzing" << std::endl;
         exit(0);
     }
-    PIN_SaveContext(ctx, &snapshot);
+    PIN_SaveContext(&snapshot, ctx);
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
 }
 
@@ -101,7 +101,7 @@ VOID end_fuzzing_round(CONTEXT *ctx) {
 }
 
 VOID begin_fuzzing(CONTEXT *ctx) {
-    PIN_SaveContext(&snapshot, ctx);
+    PIN_SaveContext(ctx, &snapshot);
     start_fuzz_round(ctx);
 }
 
