@@ -33,7 +33,7 @@ INT32 usage() {
 
 VOID reset_context(CONTEXT* ctx) {
     fuzz_count++;
-    if(fuzz_count >= FuzzCount.Value()) {
+    if(fuzz_count > FuzzCount.Value()) {
         std::cout << "Stopping fuzzing" << std::endl;
         exit(0);
     }
