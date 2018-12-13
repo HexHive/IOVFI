@@ -169,7 +169,8 @@ VOID ImageLoad(IMG img, VOID *v)
     RTN_Close(target);
     std::cout << "done." << std::endl;
 
-    RTN main = RTN_FindByName(img, "main");
+    ADDRINT main_addr = IMG_Entry(img);
+    RTN main = RTN_FindByAddress(main_addr);
     if(RTN_Valid(main)) {
         RTN_Open(main);
         INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR)begin_fuzzing, IARG_CONTEXT, IARG_END);
