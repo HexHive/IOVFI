@@ -13,7 +13,7 @@
 
 #define NREGS           6
 #define MAX_TRIES       NREGS
-#define BUF_PAGE_SZ     128
+#define BUF_PAGE_SZ     1
 
 struct FuzzingBuffer {
     uintptr_t location;

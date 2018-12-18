@@ -15,7 +15,7 @@ CONTEXT snapshot;
 CONTEXT preexecution;
 CONTEXT postexecution;
 
-KNOB <ADDRINT> KnobStart(KNOB_MODE_WRITEONCE, "pintool", "start", "0", "The start address of the fuzzing target");
+KNOB <ADDRINT> KnobStart(KNOB_MODE_WRITEONCE, "pintool", "target", "0", "The target address of the fuzzing target");
 KNOB <uint32_t> FuzzCount(KNOB_MODE_WRITEONCE, "pintool", "fuzz-count", "4", "The number of times to fuzz a target");
 KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.bin",
                                "The name of the file to write "
@@ -23,6 +23,7 @@ KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fu
 RTN target;
 uint32_t fuzz_count;
 BUFFER_ID insBuffer;
+VOID *insBufferLoc;
 
 std::ofstream outfile, infofile;
 
@@ -31,6 +32,8 @@ struct X86Context {
     ADDRINT rbx;
     ADDRINT rcx;
     ADDRINT rdx;
+    ADDRINT rdi;
+    ADDRINT rsi;
     ADDRINT r8;
     ADDRINT r9;
     ADDRINT r10;
@@ -52,14 +55,20 @@ INT32 usage() {
 
 VOID reset_context(CONTEXT *ctx) {
     fuzz_count++;
+    struct X86Context tmp;
+    memcpy(&tmp, insBufferLoc, sizeof(struct X86Context));
+    std::cout << "RIP = 0x" << std::hex << tmp.rip << std::endl;
+    PIN_DeallocateBuffer(insBuffer, insBufferLoc);
+
     if (fuzz_count > FuzzCount.Value()) {
         std::cout << "Stopping fuzzing" << std::endl;
         exit(0);
     }
+    insBufferLoc = PIN_AllocateBuffer(insBuffer);
+    std::cout << "insBufferLoc = " << std::hex << insBufferLoc << std::endl;
 
     PIN_SaveContext(&snapshot, ctx);
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
-    displayCurrentContext(ctx, 0);
 }
 
 ADDRINT gen_random() {
@@ -109,38 +118,45 @@ VOID record_fuzz_round() {
 }
 
 VOID trace_execution(TRACE trace, VOID *v) {
-    for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
-        for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
-            if (INS_IsOriginal(ins)) {
-                INS_InsertFillBuffer(ins, IPOINT_BEFORE, insBuffer,
-                                     IARG_REG_VALUE, LEVEL_BASE::REG_RAX, offsetof(
-                struct X86Context, rax),
-                IARG_REG_VALUE, LEVEL_BASE::REG_RBX, offsetof(
-                struct X86Context, rbx),
-                IARG_REG_VALUE, LEVEL_BASE::REG_RCX, offsetof(
-                struct X86Context, rcx),
-                IARG_REG_VALUE, LEVEL_BASE::REG_RDX, offsetof(
-                struct X86Context, rdx),
-                IARG_REG_VALUE, LEVEL_BASE::REG_RBX, offsetof(
-                struct X86Context, rbx),
-                IARG_REG_VALUE, LEVEL_BASE::REG_R8, offsetof(
-                struct X86Context, r8),
-                IARG_REG_VALUE, LEVEL_BASE::REG_R9, offsetof(
-                struct X86Context, r9),
-                IARG_REG_VALUE, LEVEL_BASE::REG_R10, offsetof(
-                struct X86Context, r10),
-                IARG_REG_VALUE, LEVEL_BASE::REG_R11, offsetof(
-                struct X86Context, r11),
-                IARG_REG_VALUE, LEVEL_BASE::REG_R12, offsetof(
-                struct X86Context, r12),
-                IARG_REG_VALUE, LEVEL_BASE::REG_R13, offsetof(
-                struct X86Context, r13),
-                IARG_REG_VALUE, LEVEL_BASE::REG_R14, offsetof(
-                struct X86Context, r14),
-                IARG_REG_VALUE, LEVEL_BASE::REG_R15, offsetof(
-                struct X86Context, r15),
-                IARG_INST_PTR, offsetof(
-                struct X86Context, rip));
+    if (TRACE_Rtn(trace) == target) {
+        for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
+            for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
+                if (INS_IsOriginal(ins)) {
+                    INS_InsertFillBuffer(ins, IPOINT_BEFORE, insBuffer,
+                                         IARG_REG_VALUE, LEVEL_BASE::REG_RAX, offsetof(
+                    struct X86Context, rax),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_RBX, offsetof(
+                    struct X86Context, rbx),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_RCX, offsetof(
+                    struct X86Context, rcx),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_RDX, offsetof(
+                    struct X86Context, rdx),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_RBX, offsetof(
+                    struct X86Context, rbx),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_R8, offsetof(
+                    struct X86Context, r8),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_R9, offsetof(
+                    struct X86Context, r9),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_R10, offsetof(
+                    struct X86Context, r10),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_R11, offsetof(
+                    struct X86Context, r11),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_R12, offsetof(
+                    struct X86Context, r12),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_R13, offsetof(
+                    struct X86Context, r13),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_R14, offsetof(
+                    struct X86Context, r14),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_R15, offsetof(
+                    struct X86Context, r15),
+                    IARG_INST_PTR, offsetof(
+                    struct X86Context, rip),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_RDI, offsetof(
+                    struct X86Context, rdi),
+                    IARG_REG_VALUE, LEVEL_BASE::REG_RSI, offsetof(
+                    struct X86Context, rsi),
+                    IARG_END);
+                }
             }
         }
     }
@@ -154,7 +170,6 @@ VOID end_fuzzing_round(CONTEXT *ctx) {
 }
 
 VOID begin_fuzzing(CONTEXT *ctx) {
-    TRACE_AddInstrumentFunction(trace_execution, nullptr);
     PIN_SaveContext(ctx, &snapshot);
     start_fuzz_round(ctx);
 }
@@ -234,7 +249,8 @@ VOID ImageLoad(IMG img, VOID *v) {
 }
 
 VOID *buffer_write(BUFFER_ID id, THREADID tid, const CONTEXT *ctx, VOID *buf, UINT64 numElements, VOID *v) {
-    std::cout << "buffer_write called" << std::endl;
+    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!buffer_write called with " << numElements << " elements in the buffer"
+              << std::endl;
     return buf;
 }
 
@@ -249,7 +265,11 @@ void initialize_system() {
         outfile.close();
         infofile.close();
         std::cerr << "Could not allocate buffer" << std::endl;
+        exit(1);
     }
+    insBufferLoc = PIN_AllocateBuffer(insBuffer);
+
+    std::cout << "Allocated buffer " << insBuffer << std::endl;
 }
 
 int main(int argc, char **argv) {
@@ -267,6 +287,7 @@ int main(int argc, char **argv) {
               << std::endl;
 
     IMG_AddInstrumentFunction(ImageLoad, nullptr);
+    TRACE_AddInstrumentFunction(trace_execution, nullptr);
     PIN_InterceptSignal(SIGSEGV, catchSignal, nullptr);
     PIN_StartProgram();
 
