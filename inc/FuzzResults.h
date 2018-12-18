@@ -13,6 +13,7 @@
 
 #define NREGS           6
 #define MAX_TRIES       NREGS
+#define BUF_PAGE_SZ     128
 
 struct FuzzingBuffer {
     uintptr_t location;
@@ -36,6 +37,11 @@ struct FuzzingResult {
     uintptr_t target_addr;
     struct X86FuzzingContext preexecution;
     struct X86FuzzingContext postexecution;
+};
+
+struct BasicBlock {
+    uintptr_t addr;
+    size_t size;
 };
 
 #endif //FOSBIN_FUZZRESULTS_H

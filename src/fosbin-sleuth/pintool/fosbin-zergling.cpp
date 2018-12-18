@@ -21,9 +21,11 @@ KNOB<std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuz
                                                                                      "fuzz output");
 RTN target;
 uint32_t fuzz_count;
+BUFFER_ID insBuffer;
 
 std::ofstream outfile, infofile;
-std::vector<BOOL> path_bitmap;
+
+VOID displayCurrentContext(CONTEXT *ctx, UINT32 sig);
 
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
@@ -37,8 +39,11 @@ VOID reset_context(CONTEXT* ctx) {
         std::cout << "Stopping fuzzing" << std::endl;
         exit(0);
     }
+    bblsVisited.clear();
+
     PIN_SaveContext(&snapshot, ctx);
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
+    displayCurrentContext(ctx, 0);
 }
 
 ADDRINT gen_random() {
@@ -87,9 +92,16 @@ VOID record_fuzz_round() {
     outfile.write((const char*)&result, sizeof(struct FuzzingResult));
 }
 
+VOID register_basic_block(ADDRINT bbl, UINT64 size) {
+    std::cout << std::hex << bbl << std::dec << " " << size << std::endl;
+    bblsVisited.push_back({bbl, size});
+}
+
 VOID trace_execution(TRACE trace, VOID *v) {
-    if(TRACE_Rtn(trace) == target) {
-        std::cout << "Trace" << std::endl;
+    for(BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
+        for(INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
+            INS_InsertFillBuffer(ins, IPOINT_BEFORE, insBuffer, IARG_CONST_CONTEXT)
+        }
     }
 }
 
@@ -101,13 +113,14 @@ VOID end_fuzzing_round(CONTEXT *ctx) {
 }
 
 VOID begin_fuzzing(CONTEXT *ctx) {
+    TRACE_AddInstrumentFunction(trace_execution, nullptr);
     PIN_SaveContext(ctx, &snapshot);
     start_fuzz_round(ctx);
 }
 
 VOID displayCurrentContext(CONTEXT *ctx, UINT32 sig)
 {
-    std::cout << "[" << (sig != SIGSEGV ? "CONTEXT" : "SIGSGV")
+    std::cout << "[" << (sig != SIGSEGV ? "CONTEXT" : "SIGSEGV")
               << "]=----------------------------------------------------------" << std::endl;
     std::cout << std::hex << std::internal << std::setfill('0')
               << "RAX = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX) << " "
@@ -124,7 +137,6 @@ VOID displayCurrentContext(CONTEXT *ctx, UINT32 sig)
 
 BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v)
 {
-    std::cout << std::endl << std::endl << "/!\\ SIGSEGV received /!\\" << std::endl;
     displayCurrentContext(ctx, sig);
     std::cout << "Image Name: ";
     IMG img = IMG_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP));
@@ -140,6 +152,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
     reset_context(ctx);
     fuzz_registers(ctx);
+
     PIN_SaveContext(ctx, &preexecution);
     return false;
 }
@@ -182,11 +195,23 @@ VOID ImageLoad(IMG img, VOID *v)
     return;
 }
 
+VOID* buffer_write(BUFFER_ID id, THREADID tid, const CONTEXT *ctx, VOID *buf, UINT64 numElements, VOID *v) {
+    std::cout << "buffer_write called" << std::endl;
+    return buf;
+}
+
 void initialize_system() {
     srand(time(NULL));
     std::string infoFileName = KnobOutName.Value() + ".info";
     outfile.open(KnobOutName.Value().c_str(), std::ios::out | std::ios::binary);
     infofile.open(infoFileName.c_str(), std::ios::out | std::ios::app);
+
+    insBuffer = PIN_DefineTraceBuffer(sizeof(CONTEXT), BUF_PAGE_SZ, buffer_write, nullptr);
+    if(insBuffer == BUFFER_ID_INVALID) {
+        outfile.close();
+        infofile.close();
+        std::cerr << "Could not allocate buffer" << std::endl;
+    }
 }
 
 int main(int argc, char** argv) {
@@ -203,9 +228,8 @@ int main(int argc, char** argv) {
     std::cout << "Fuzzing 0x" << std::hex << KnobStart.Value() << std::dec << " " << FuzzCount.Value() << " times."
     << std::endl;
 
-    IMG_AddInstrumentFunction(ImageLoad, 0);
-    PIN_InterceptSignal(SIGSEGV, catchSignal, 0);
-//    TRACE_AddInstrumentFunction(trace_execution, NULL);
+    IMG_AddInstrumentFunction(ImageLoad, nullptr);
+    PIN_InterceptSignal(SIGSEGV, catchSignal, nullptr);
     PIN_StartProgram();
 
     return 0;
