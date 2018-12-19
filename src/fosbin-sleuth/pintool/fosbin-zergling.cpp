@@ -42,14 +42,79 @@ struct X86Context {
     ADDRINT r14;
     ADDRINT r15;
     ADDRINT rip;
+    ADDRINT rbp;
 
     friend std::ostream &operator<<(std::ostream &out, const struct X86Context &ctx);
+
+    ADDRINT get_reg_value(REG reg);
 };
+
+struct TaintedObject {
+    BOOL isRegister;
+    union {
+        REG reg;
+        ADDRINT addr;
+    };
+};
+
+ADDRINT X86Context::get_reg_value(REG reg) {
+    std::string regname = REG_StringShort(reg);
+    if (regname == "rax") {
+        return rax;
+    }
+    if (regname == "rbx") {
+        return rbx;
+    }
+    if (regname == "rcx") {
+        return rcx;
+    }
+    if (regname == "rdx") {
+        return rdx;
+    }
+    if (regname == "rdi") {
+        return rdi;
+    }
+    if (regname == "rsi") {
+        return rsi;
+    }
+    if (regname == "r8") {
+        return r8;
+    }
+    if (regname == "r9") {
+        return r9;
+    }
+    if (regname == "r10") {
+        return r10;
+    }
+    if (regname == "r11") {
+        return r11;
+    }
+    if (regname == "r12") {
+        return r12;
+    }
+    if (regname == "r13") {
+        return r13;
+    }
+    if (regname == "r14") {
+        return r14;
+    }
+    if (regname == "r15") {
+        return r15;
+    }
+    if (regname == "rip") {
+        return rip;
+    }
+    if (regname == "rbp") {
+        return rbp;
+    } else {
+        return 0;
+    }
+}
 
 std::ostream &operator<<(std::ostream &out, const struct X86Context &ctx) {
     out << ctx.rax << ctx.rbx << ctx.rcx << ctx.rdx << ctx.rsi
         << ctx.r8 << ctx.r9 << ctx.r10 << ctx.r11 << ctx.r12
-        << ctx.r13 << ctx.r14 << ctx.r15 << ctx.rip;
+        << ctx.r13 << ctx.r14 << ctx.r15 << ctx.rip << ctx.rbp;
 
     return out;
 }
@@ -95,6 +160,25 @@ INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
     std::cerr << KNOB_BASE::StringKnobSummary() << std::endl;
     return -1;
+}
+
+INS INS_FindByAddress(ADDRINT addr) {
+    RTN rtn = RTN_FindByAddress(addr);
+    if (!RTN_Valid(rtn)) {
+        return INS_Invalid();
+    }
+
+    INS ret = INS_Invalid();
+    RTN_Open(rtn);
+    for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins)) {
+        if (INS_Address(ins) == addr) {
+            ret = ins;
+            break;
+        }
+    }
+
+    RTN_Close(rtn);
+    return ret;
 }
 
 VOID reset_context(CONTEXT *ctx, THREADID tid) {
@@ -145,9 +229,9 @@ VOID start_fuzz_round(CONTEXT *ctx, THREADID tid) {
 VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
                             ADDRINT r8, ADDRINT r9, ADDRINT r10, ADDRINT r11,
                             ADDRINT r12, ADDRINT r13, ADDRINT r14, ADDRINT r15,
-                            ADDRINT rdi, ADDRINT rsi, ADDRINT rip, THREADID tid
+                            ADDRINT rdi, ADDRINT rsi, ADDRINT rip, ADDRINT rbp
                             ) {
-    struct X86Context tmp = { rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip };
+    struct X86Context tmp = {rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip, rbp};
     fuzzing_run.push_back(tmp);
 }
 
@@ -171,7 +255,8 @@ VOID trace_execution(TRACE trace, VOID *v) {
                                    IARG_REG_VALUE, LEVEL_BASE::REG_R15,
                                    IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
                                    IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
-                                   IARG_INST_PTR, IARG_THREAD_ID,
+                                   IARG_INST_PTR,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
                                    IARG_END);
                 }
             }
@@ -205,12 +290,67 @@ VOID displayCurrentContext(const CONTEXT *ctx, UINT32 sig) {
     std::cout << "+-------------------------------------------------------------------" << std::endl;
 }
 
+ADDRINT compute_read_address(INS ins, struct X86Context &ctx) {
+    if (!INS_IsMemoryRead(ins)) {
+        return 0;
+    }
+
+    REG base = INS_MemoryBaseReg(ins);
+    REG idx = INS_MemoryIndexReg(ins);
+    UINT32 scale = INS_MemoryScale(ins);
+    ADDRDELTA displacement = INS_MemoryDisplacement(ins);
+
+    ADDRINT ret = displacement + ctx.get_reg_value(base) + ctx.get_reg_value(idx) * scale;
+    return ret;
+}
+
 BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
+    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
+    std::vector<struct TaintedObject> taintedObjs;
+    for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin(); it != fuzzing_run.rend(); ++it) {
+        struct X86Context &c = *it;
+        INS ins = INS_FindByAddress(c.rip);
+        if (!INS_Valid(ins)) {
+            std::cerr << "Could not find failing instructions" << std::endl;
+            continue;
+        }
+
+        if (INS_IsMemoryWrite(ins) || INS_IsMemoryRead(ins)) {
+            if (it == fuzzing_run.rbegin()) {
+                struct TaintedObject to = {true, INS_MemoryBaseReg(ins)};
+                taintedObjs.push_back(to);
+                continue;
+            }
+//            std::cout << INS_Disassemble(ins) << std::endl;
+//            REG base = INS_MemoryBaseReg(ins);
+//            REG idx = INS_MemoryIndexReg(ins);
+//            UINT32 scale = INS_MemoryScale(ins);
+//            ADDRDELTA displacement = INS_MemoryDisplacement(ins);
+//            if(REG_valid(base)) {
+//                std::cout << "\t" << REG_StringShort(base) << " is the base" << std::endl;
+//            }
+//            if(REG_valid(idx)) {
+//                std::cout << "\t" << REG_StringShort(idx) << " is the index" << std::endl;
+//            }
+//            std::cout << "\t" << "Scale 0x" << std::hex << scale << std::endl;
+//            std::cout << "\t" << "Displacement 0x" << std::hex << displacement << std::endl;
+//            for(UINT32 i = 0; i <= INS_MemoryOperandCount(ins); i++) {
+//                REG wreg = INS_RegW(ins, i);
+//                REG rreg = INS_RegR(ins, i);
+//
+//                if(REG_valid(wreg)) {
+//                    std::cout << "\t" << REG_StringShort(wreg) << " was written (" << i << ")" << std::endl;
+//                }
+//                if(REG_valid(rreg)) {
+//                    std::cout << "\t" << REG_StringShort(rreg) << " was read (" << i << ")" << std::endl;
+//                }
+//            }
+        }
+    }
+
     reset_context(ctx, tid);
     fuzz_registers(ctx);
-
-    PIN_SaveContext(ctx, &preexecution);
-    return false;
+    return true;
 }
 
 VOID ImageLoad(IMG img, VOID *v) {
