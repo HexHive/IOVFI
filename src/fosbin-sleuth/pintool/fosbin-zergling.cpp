@@ -55,9 +55,6 @@ INT32 usage() {
 
 VOID reset_context(CONTEXT *ctx) {
     fuzz_count++;
-    struct X86Context tmp;
-    memcpy(&tmp, insBufferLoc, sizeof(struct X86Context));
-    std::cout << "RIP = 0x" << std::hex << tmp.rip << std::endl;
     PIN_DeallocateBuffer(insBuffer, insBufferLoc);
 
     if (fuzz_count > FuzzCount.Value()) {
@@ -65,7 +62,6 @@ VOID reset_context(CONTEXT *ctx) {
         exit(0);
     }
     insBufferLoc = PIN_AllocateBuffer(insBuffer);
-    std::cout << "insBufferLoc = " << std::hex << insBufferLoc << std::endl;
 
     PIN_SaveContext(&snapshot, ctx);
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
