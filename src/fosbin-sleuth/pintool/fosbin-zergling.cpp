@@ -22,10 +22,9 @@ KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fu
                                "fuzz output");
 RTN target;
 uint32_t fuzz_count;
-BUFFER_ID insBuffer;
-VOID *insBufferLoc;
+TLS_KEY log_key;
 
-std::ofstream outfile, infofile;
+std::ofstream infofile;
 
 struct X86Context {
     ADDRINT rax;
@@ -43,7 +42,52 @@ struct X86Context {
     ADDRINT r14;
     ADDRINT r15;
     ADDRINT rip;
+
+    friend std::ostream &operator<<(std::ostream &out, const struct X86Context &ctx);
 };
+
+std::ostream &operator<<(std::ostream &out, const struct X86Context &ctx) {
+    out << ctx.rax << ctx.rbx << ctx.rcx << ctx.rdx << ctx.rsi
+        << ctx.r8 << ctx.r9 << ctx.r10 << ctx.r11 << ctx.r12
+        << ctx.r13 << ctx.r14 << ctx.r15 << ctx.rip;
+
+    return out;
+}
+
+std::vector<struct X86Context> fuzzing_run;
+
+class PinLogger {
+public:
+    PinLogger(THREADID tid);
+
+    ~PinLogger();
+
+    VOID DumpBufferToFile(struct X86Context *contexts, UINT64 numElements, THREADID tid);
+
+private:
+    std::ofstream _ofile;
+};
+
+PinLogger::PinLogger(THREADID tid) {
+    std::string fname = RTN_Name(target) + "." + decstr(tid) + ".ctx";
+    _ofile.open(fname.c_str(), ios::binary);
+    if (!_ofile) {
+        std::cerr << "Could not open logger output" << std::endl;
+        exit(1);
+    }
+}
+
+PinLogger::~PinLogger() {
+    if (_ofile) {
+        _ofile.close();
+    }
+}
+
+VOID PinLogger::DumpBufferToFile(struct X86Context *contexts, UINT64 numElements, THREADID tid) {
+    for (UINT64 i = 0; i < numElements; i++, contexts++) {
+        _ofile << *contexts;
+    }
+}
 
 VOID displayCurrentContext(CONTEXT *ctx, UINT32 sig);
 
@@ -53,15 +97,22 @@ INT32 usage() {
     return -1;
 }
 
-VOID reset_context(CONTEXT *ctx) {
+VOID reset_context(CONTEXT *ctx, THREADID tid) {
     fuzz_count++;
-    PIN_DeallocateBuffer(insBuffer, insBufferLoc);
+
+    if(!fuzzing_run.empty()) {
+        PinLogger *logger = static_cast<PinLogger *>(PIN_GetThreadData(log_key, tid));
+        for(size_t i = 0; i < fuzzing_run.size(); i++) {
+            struct X86Context tmp = fuzzing_run[i];
+            logger->DumpBufferToFile(&tmp, 1, tid);
+        }
+        fuzzing_run.clear();
+    }
 
     if (fuzz_count > FuzzCount.Value()) {
         std::cout << "Stopping fuzzing" << std::endl;
-        exit(0);
+        PIN_ExitApplication(0);
     }
-    insBufferLoc = PIN_AllocateBuffer(insBuffer);
 
     PIN_SaveContext(&snapshot, ctx);
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
@@ -84,33 +135,20 @@ VOID fuzz_registers(CONTEXT *ctx) {
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_R9, gen_random());
 }
 
-VOID start_fuzz_round(CONTEXT *ctx) {
-    reset_context(ctx);
+VOID start_fuzz_round(CONTEXT *ctx, THREADID tid) {
+    reset_context(ctx, tid);
     fuzz_registers(ctx);
     PIN_SaveContext(ctx, &preexecution);
     PIN_ExecuteAt(ctx);
 }
 
-VOID record_context(CONTEXT *ctx, struct X86FuzzingContext *dest) {
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RDI, (UINT8 * ) & dest->regs[0].value);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RSI, (UINT8 * ) & dest->regs[1].value);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RDX, (UINT8 * ) & dest->regs[2].value);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RCX, (UINT8 * ) & dest->regs[3].value);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_R8, (UINT8 * ) & dest->regs[4].value);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_R9, (UINT8 * ) & dest->regs[5].value);
-    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_RAX, (UINT8 * ) & dest->ret.value);
-}
-
-VOID record_fuzz_round() {
-    struct FuzzingResult result;
-    result.target_addr = KnobStart.Value();
-    record_context(&preexecution, &result.preexecution);
-    record_context(&postexecution, &result.postexecution);
-
-    infofile << "0x" << std::hex << KnobStart.Value()
-             << "(" << RTN_Name(target) << ") finished fuzzing round" << std::endl;
-
-    outfile.write((const char *) &result, sizeof(struct FuzzingResult));
+VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
+                            ADDRINT r8, ADDRINT r9, ADDRINT r10, ADDRINT r11,
+                            ADDRINT r12, ADDRINT r13, ADDRINT r14, ADDRINT r15,
+                            ADDRINT rdi, ADDRINT rsi, ADDRINT rip, THREADID tid
+                            ) {
+    struct X86Context tmp = { rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip };
+    fuzzing_run.push_back(tmp);
 }
 
 VOID trace_execution(TRACE trace, VOID *v) {
@@ -118,59 +156,40 @@ VOID trace_execution(TRACE trace, VOID *v) {
         for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
             for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
                 if (INS_IsOriginal(ins)) {
-                    INS_InsertFillBuffer(ins, IPOINT_BEFORE, insBuffer,
-                                         IARG_REG_VALUE, LEVEL_BASE::REG_RAX, offsetof(
-                    struct X86Context, rax),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_RBX, offsetof(
-                    struct X86Context, rbx),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_RCX, offsetof(
-                    struct X86Context, rcx),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_RDX, offsetof(
-                    struct X86Context, rdx),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_RBX, offsetof(
-                    struct X86Context, rbx),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_R8, offsetof(
-                    struct X86Context, r8),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_R9, offsetof(
-                    struct X86Context, r9),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_R10, offsetof(
-                    struct X86Context, r10),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_R11, offsetof(
-                    struct X86Context, r11),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_R12, offsetof(
-                    struct X86Context, r12),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_R13, offsetof(
-                    struct X86Context, r13),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_R14, offsetof(
-                    struct X86Context, r14),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_R15, offsetof(
-                    struct X86Context, r15),
-                    IARG_INST_PTR, offsetof(
-                    struct X86Context, rip),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_RDI, offsetof(
-                    struct X86Context, rdi),
-                    IARG_REG_VALUE, LEVEL_BASE::REG_RSI, offsetof(
-                    struct X86Context, rsi),
-                    IARG_END);
+                    INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)record_current_context,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R8,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R9,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R10,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R11,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R12,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R13,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R14,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R15,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
+                                   IARG_INST_PTR, IARG_THREAD_ID,
+                                   IARG_END);
                 }
             }
         }
     }
 }
 
-VOID end_fuzzing_round(CONTEXT *ctx) {
-    std::cout << "Fuzzing ended" << std::endl;
+VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
     PIN_SaveContext(ctx, &postexecution);
-    record_fuzz_round();
-    start_fuzz_round(ctx);
+    start_fuzz_round(ctx, tid);
 }
 
-VOID begin_fuzzing(CONTEXT *ctx) {
+VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
     PIN_SaveContext(ctx, &snapshot);
-    start_fuzz_round(ctx);
+    start_fuzz_round(ctx, tid);
 }
 
-VOID displayCurrentContext(CONTEXT *ctx, UINT32 sig) {
+VOID displayCurrentContext(const CONTEXT *ctx, UINT32 sig) {
     std::cout << "[" << (sig != SIGSEGV ? "CONTEXT" : "SIGSEGV")
               << "]=----------------------------------------------------------" << std::endl;
     std::cout << std::hex << std::internal << std::setfill('0')
@@ -187,20 +206,7 @@ VOID displayCurrentContext(CONTEXT *ctx, UINT32 sig) {
 }
 
 BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
-    displayCurrentContext(ctx, sig);
-    std::cout << "Image Name: ";
-    IMG img = IMG_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP));
-    if (IMG_Valid(img)) {
-        std::cout << IMG_Name(img) << std::endl;
-    } else {
-        std::cout << "UNKNOWN" << std::endl;
-    }
-    std::cout << "Function: " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << std::endl;
-
-    infofile << "0x" << std::hex << KnobStart.Value()
-             << "(" << RTN_Name(target) << ") issued SIGSEGV" << std::endl;
-
-    reset_context(ctx);
+    reset_context(ctx, tid);
     fuzz_registers(ctx);
 
     PIN_SaveContext(ctx, &preexecution);
@@ -220,12 +226,12 @@ VOID ImageLoad(IMG img, VOID *v) {
                   KnobStart.Value() << ")" << std::endl;
         return;
     }
-    std::cout << "Found target: " << RTN_Name(target) << " at 0x" << std::hex << target_addr << std::endl;
+    std::cout << "Found target: " << RTN_Name(target) << " at 0x" << std::hex << RTN_Address(target) << std::endl;
     std::cout << "Instrumenting returns..." << std::flush;
     RTN_Open(target);
     for (INS ins = RTN_InsHead(target); INS_Valid(ins); ins = INS_Next(ins)) {
         if (INS_IsRet(ins)) {
-            INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) end_fuzzing_round, IARG_CONTEXT, IARG_END);
+            INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) end_fuzzing_round, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
         }
     }
     RTN_Close(target);
@@ -235,7 +241,8 @@ VOID ImageLoad(IMG img, VOID *v) {
     RTN main = RTN_FindByAddress(main_addr);
     if (RTN_Valid(main)) {
         RTN_Open(main);
-        INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_END);
+        INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID,
+                       IARG_END);
         RTN_Close(main);
     } else {
         std::cerr << "Could not find main!" << std::endl;
@@ -244,28 +251,42 @@ VOID ImageLoad(IMG img, VOID *v) {
     return;
 }
 
-VOID *buffer_write(BUFFER_ID id, THREADID tid, const CONTEXT *ctx, VOID *buf, UINT64 numElements, VOID *v) {
-    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!buffer_write called with " << numElements << " elements in the buffer"
-              << std::endl;
+VOID *BufferFull(BUFFER_ID id, THREADID tid, const CONTEXT *ctx, VOID *buf, UINT64 numElements, VOID *v) {
+    std::cout << "DUMPING BUFFER WITH " << std::dec << numElements << " ELEMENTS!" << std::endl;
+    struct X86Context *contexts = (struct X86Context *) buf;
+    PinLogger *logger = static_cast<PinLogger *>(PIN_GetThreadData(log_key, tid));
+    logger->DumpBufferToFile(contexts, numElements, tid);
     return buf;
+}
+
+VOID ThreadStart(THREADID tid, CONTEXT *ctx, INT32 flags, VOID *v) {
+    PinLogger *logger = new PinLogger(tid);
+    PIN_SetThreadData(log_key, logger, tid);
+}
+
+VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
+    PinLogger *logger = static_cast<PinLogger *>(PIN_GetThreadData(log_key, tid));
+    delete logger;
+    PIN_SetThreadData(log_key, nullptr, tid);
 }
 
 void initialize_system() {
     srand(time(NULL));
     std::string infoFileName = KnobOutName.Value() + ".info";
-    outfile.open(KnobOutName.Value().c_str(), std::ios::out | std::ios::binary);
     infofile.open(infoFileName.c_str(), std::ios::out | std::ios::app);
 
-    insBuffer = PIN_DefineTraceBuffer(sizeof(struct X86Context), BUF_PAGE_SZ, buffer_write, nullptr);
-    if (insBuffer == BUFFER_ID_INVALID) {
-        outfile.close();
-        infofile.close();
-        std::cerr << "Could not allocate buffer" << std::endl;
-        exit(1);
-    }
-    insBufferLoc = PIN_AllocateBuffer(insBuffer);
+//    insBuffer = PIN_DefineTraceBuffer(sizeof(struct X86Context), NUM_BUF_PAGES, BufferFull, 0);
+//    if (insBuffer == BUFFER_ID_INVALID) {
+//        outfile.close();
+//        infofile.close();
+//        std::cerr << "Could not allocate buffer" << std::endl;
+//        exit(1);
+//    }
+//    std::cout << "Allocated buffer " << insBuffer << std::endl;
 
-    std::cout << "Allocated buffer " << insBuffer << std::endl;
+    log_key = PIN_CreateThreadDataKey(0);
+    PIN_AddThreadStartFunction(ThreadStart, 0);
+    PIN_AddThreadFiniFunction(ThreadFini, 0);
 }
 
 int main(int argc, char **argv) {
