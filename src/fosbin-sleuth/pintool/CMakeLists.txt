@@ -1,5 +1,9 @@
 set(PINTOOL_SOURCES
         ${PINTOOL_NAME}.cpp
+        ${PINTOOL_NAME}.h
+        PinLogger.cpp
+        X86Context.cpp
+        AllocatedArea.cpp
         makefile.rules.in
         makefile.in
         )
