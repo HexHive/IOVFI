@@ -60,6 +60,13 @@ public:
 
     ADDRINT getAddr();
 
+    size_t size();
+
+    /* Used to indicate if a memory area is another AllocatedArea */
+    static ADDRINT MAGIC_VALUE;
+
+    friend std::ostream &operator<<(std::ostream &out, class AllocatedArea *ctx);
+
 protected:
     ADDRINT addr;
     std::vector<bool> mem_map;

@@ -12,8 +12,6 @@
 #include "fosbin-zergling.h"
 
 CONTEXT snapshot;
-CONTEXT preexecution;
-CONTEXT postexecution;
 
 KNOB <ADDRINT> KnobStart(KNOB_MODE_WRITEONCE, "pintool", "target", "0", "The target address of the fuzzing target");
 KNOB <uint32_t> FuzzCount(KNOB_MODE_WRITEONCE, "pintool", "fuzz-count", "4", "The number of times to fuzz a target");
@@ -24,7 +22,7 @@ RTN target;
 uint32_t fuzz_count;
 TLS_KEY log_key;
 
-std::ofstream infofile;
+std::ofstream infofile, binfile;
 std::vector<struct X86Context> fuzzing_run;
 std::map<REG, AllocatedArea *> pointer_registers;
 
@@ -101,7 +99,7 @@ VOID fuzz_registers(CONTEXT *ctx) {
 VOID start_fuzz_round(CONTEXT *ctx, THREADID tid) {
     reset_context(ctx, tid);
     fuzz_registers(ctx);
-    PIN_SaveContext(ctx, &preexecution);
+
     PIN_ExecuteAt(ctx);
 }
 
@@ -144,7 +142,6 @@ VOID trace_execution(TRACE trace, VOID *v) {
 }
 
 VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
-    PIN_SaveContext(ctx, &postexecution);
     start_fuzz_round(ctx, tid);
 }
 
@@ -428,6 +425,9 @@ void initialize_system() {
     srand(time(NULL));
     std::string infoFileName = KnobOutName.Value() + ".info";
     infofile.open(infoFileName.c_str(), std::ios::out | std::ios::app);
+
+    std::string binFileName = KnobOutName.Value() + ".bin";
+    binfile.open(binFileName.c_str(), std::ios::out || std::ios::binary);
 
     log_key = PIN_CreateThreadDataKey(0);
     PIN_AddThreadStartFunction(ThreadStart, 0);
