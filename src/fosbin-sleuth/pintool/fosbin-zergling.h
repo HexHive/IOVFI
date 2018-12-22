@@ -50,6 +50,8 @@ public:
 
     size_t size();
 
+    void fuzz();
+
     /* Used to indicate if a memory area is another AllocatedArea */
     static ADDRINT MAGIC_VALUE;
 
@@ -59,6 +61,8 @@ protected:
     ADDRINT addr;
     std::vector<bool> mem_map;
     std::vector<AllocatedArea *> subareas;
+
+    void setup_for_round(bool fuzz);
 };
 
 class PinLogger {

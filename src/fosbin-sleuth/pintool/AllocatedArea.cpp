@@ -49,8 +49,12 @@ std::ostream &operator<<(std::ostream &out, class AllocatedArea *ctx) {
 }
 
 void AllocatedArea::reset() {
+    setup_for_round(false);
+}
+
+void AllocatedArea::setup_for_round(bool fuzz) {
     for (AllocatedArea *subarea : subareas) {
-        subarea->reset();
+        subarea->setup_for_round(fuzz);
     }
 
     int pointer_count = 0;
@@ -61,8 +65,12 @@ void AllocatedArea::reset() {
             *ptr = subareas[pointer_count++]->addr;
             curr += sizeof(ADDRINT);
         } else {
-            *curr = 0;
+            *curr = (fuzz ? rand() : 0);
             curr++;
         }
     }
+}
+
+void AllocatedArea::fuzz() {
+    setup_for_round(true);
 }

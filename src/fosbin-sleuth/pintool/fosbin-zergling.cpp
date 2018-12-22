@@ -50,12 +50,23 @@ INS INS_FindByAddress(ADDRINT addr) {
             break;
         }
     }
-
     RTN_Close(rtn);
+//    if(ret == INS_Invalid()) {
+//        IMG img = IMG_FindByAddress(addr);
+//        if(IMG_Valid(img)) {
+//            std::cout << "Addr 0x" << std::hex << addr << " is in " << IMG_Name(img)
+//                    << " in function " << RTN_Name(rtn)
+//                    << " in Section " << SEC_Name(RTN_Sec(rtn)) << std::endl;
+//
+//            std::cout << std::hex << *((char*)addr) << std::endl;
+//        } else {
+//            std::cout << "Unknown image" << std::endl;
+//        }
+//    }
     return ret;
 }
 
-VOID reset_context(CONTEXT *ctx, THREADID tid) {
+VOID reset_to_context(CONTEXT *ctx_to_use, CONTEXT *ctx) {
     fuzz_count++;
 
     if (fuzz_count > FuzzCount.Value()) {
@@ -63,13 +74,21 @@ VOID reset_context(CONTEXT *ctx, THREADID tid) {
         PIN_ExitApplication(0);
     }
 
-    PIN_SaveContext(&snapshot, ctx);
+    PIN_SaveContext(ctx_to_use, ctx);
     for (std::map<REG, AllocatedArea *>::iterator it = pointer_registers.begin(); it != pointer_registers.end(); ++it) {
         it->second->reset();
         PIN_SetContextReg(ctx, it->first, it->second->getAddr());
     }
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
     fuzzing_run.clear();
+}
+
+VOID reset_context(CONTEXT *ctx) {
+    reset_to_context(&snapshot, ctx);
+}
+
+VOID reset_to_preexecution(CONTEXT *ctx) {
+    reset_to_context(&preexecution, ctx);
 }
 
 ADDRINT gen_random() {
@@ -82,8 +101,11 @@ ADDRINT gen_random() {
 
 VOID fuzz_registers(CONTEXT *ctx) {
     for (REG reg : argument_regs) {
-        if (pointer_registers.find(reg) == pointer_registers.end()) {
+        std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(reg);
+        if (it == pointer_registers.end()) {
             PIN_SetContextReg(ctx, reg, gen_random());
+        } else {
+            it->second->fuzz();
         }
     }
 }
@@ -112,7 +134,7 @@ void output_context(CONTEXT *ctx) {
 }
 
 VOID start_fuzz_round(CONTEXT *ctx, THREADID tid) {
-    reset_context(ctx, tid);
+    reset_context(ctx);
     fuzz_registers(ctx);
     PIN_SaveContext(ctx, &preexecution);
     std::cout << "Starting round " << std::dec << fuzz_count << std::endl;
@@ -129,10 +151,14 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 }
 
 VOID trace_execution(TRACE trace, VOID *v) {
-    if (TRACE_Rtn(trace) == target) {
+//    if (TRACE_Rtn(trace) == target) {
         for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
             for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
-                if (INS_IsOriginal(ins)) {
+                if (RTN_Valid(INS_Rtn(ins)) && SEC_Name(RTN_Sec(INS_Rtn(ins))) == ".text") {
+                    if (!INS_Valid(INS_FindByAddress(INS_Address(ins)))) {
+                        std::cout << "Invalid instruction at 0x" << INS_Address(ins) << ": " << INS_Disassemble(ins)
+                                  << std::endl;
+                    }
                     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
                                    IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
                                    IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
@@ -154,7 +180,7 @@ VOID trace_execution(TRACE trace, VOID *v) {
                 }
             }
         }
-    }
+//    }
 }
 
 VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
@@ -214,7 +240,7 @@ BOOL isTainted(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) {
 }
 
 VOID remove_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
-//    std::cout << "\tRemoving taint from " << REG_StringShort(reg) << std::endl;
+    std::cout << "\tRemoving taint from " << REG_StringShort(reg) << std::endl;
     for (std::vector<struct TaintedObject>::iterator it = taintedObjs.begin(); it != taintedObjs.end(); ++it) {
         struct TaintedObject &to = *it;
         if (to.isRegister && REG_StringShort(to.reg) == REG_StringShort(reg)) {
@@ -222,11 +248,10 @@ VOID remove_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
             return;
         }
     }
-//    std::cout << "\tCould not find expected taint!!!" << std::endl;
 }
 
 VOID add_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
-//    std::cout << "\tAdding taint to " << REG_StringShort(reg) << std::endl;
+    std::cout << "\tAdding taint to " << REG_StringShort(reg) << std::endl;
     struct TaintedObject to;
     to.isRegister = true;
     to.reg = reg;
@@ -234,7 +259,7 @@ VOID add_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
 }
 
 VOID remove_taint(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) {
-//    std::cout << "\tRemoving taint from 0x" << std::hex << addr << std::endl;
+    std::cout << "\tRemoving taint from 0x" << std::hex << addr << std::endl;
     for (std::vector<struct TaintedObject>::iterator it = taintedObjs.begin(); it != taintedObjs.end(); ++it) {
         struct TaintedObject &to = *it;
         if (!to.isRegister && addr == to.addr) {
@@ -245,7 +270,7 @@ VOID remove_taint(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) 
 }
 
 VOID add_taint(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) {
-//    std::cout << "\tAdding taint to 0x" << std::hex << addr << std::endl;
+    std::cout << "\tAdding taint to 0x" << std::hex << addr << std::endl;
     struct TaintedObject to;
     to.isRegister = false;
     to.addr = addr;
@@ -270,20 +295,21 @@ VOID create_allocated_area(struct TaintedObject &to) {
 }
 
 BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
-//    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
+    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
     std::vector<struct TaintedObject> taintedObjs;
     for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin(); it != fuzzing_run.rend(); ++it) {
         struct X86Context &c = *it;
         INS ins = INS_FindByAddress(c.rip);
         if (!INS_Valid(ins)) {
-            std::cerr << "Could not find failing instructions" << std::endl;
+            std::cerr << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
             continue;
         }
 
-//        std::cout << INS_Disassemble(ins) << std::endl;
-//        std::cout << "\tINS_IsMemoryRead: " << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
-//        std::cout << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
-//        std::cout << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
+        std::cout << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
+                  << "(0x" << std::hex << INS_Address(ins) << "): " << INS_Disassemble(ins) << std::endl;
+        std::cout << "\tINS_IsMemoryRead: " << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
+        std::cout << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
+        std::cout << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
 
         if (it == fuzzing_run.rbegin()) {
             add_taint(INS_MemoryBaseReg(ins), taintedObjs);
@@ -298,11 +324,18 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
             ADDRINT waddr = 0;
             ADDRINT raddr = 0;
 
+            if (!REG_valid(base) && INS_SegPrefixIsMemoryRead(ins)) {
+                /* We're reading a segment register */
+                remove_taint(wreg, taintedObjs);
+                continue;
+            }
+
             if (!REG_valid(base) || !REG_valid(wreg)) {
                 std::cerr << "Memory Read invalid base (" << REG_StringShort(base)
                           << ") or invalid wreg (" << REG_StringShort(wreg)
                           << ")" << std::endl;
-                PIN_ExitApplication(1);
+//                PIN_ExitApplication(1);
+                continue;
             }
 
             if (is_rbp(base)) {
@@ -335,6 +368,8 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
         } else if (INS_IsMemoryWrite(ins) && !INS_OperandIsImmediate(ins, 1)) {
             REG base = INS_MemoryBaseReg(ins);
             REG rreg = INS_RegR(ins, 1);
+            std::cout << "\tbase: " << REG_StringShort(base)
+                      << " rreg: " << REG_StringShort(rreg) << std::endl;
 
             BOOL read_tainted;
             BOOL write_tainted;
@@ -344,7 +379,8 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
                 std::cerr << "Memory Write invalid base (" << REG_StringShort(base)
                           << ") or invalid rreg (" << REG_StringShort(rreg)
                           << ")" << std::endl;
-                PIN_ExitApplication(1);
+//                PIN_ExitApplication(1);
+                continue;
             }
 
             if (is_rbp(base)) {
@@ -387,8 +423,8 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
     create_allocated_area(taintedObject);
 
     fuzz_count--;
-    reset_context(ctx, tid);
-    fuzz_registers(ctx);
+    reset_to_preexecution(ctx);
+//    fuzz_registers(ctx);
     PIN_SaveContext(ctx, &preexecution);
     return false;
 }

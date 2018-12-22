@@ -1,5 +1,6 @@
 src/pin/
 .clion.source.upload.marker
+tests/taint-analysis/submembers
 
 TestCases.inc
 
