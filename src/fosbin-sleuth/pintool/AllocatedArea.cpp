@@ -6,6 +6,7 @@ ADDRINT AllocatedArea::MAGIC_VALUE = 0xA110CA3D;
 
 AllocatedArea::AllocatedArea() {
     addr = (ADDRINT) malloc(DEFAULT_ALLOCATION_SIZE);
+    std::memset((void *) addr, 0, DEFAULT_ALLOCATION_SIZE);
     mem_map.resize(DEFAULT_ALLOCATION_SIZE);
 }
 
@@ -25,19 +26,18 @@ size_t AllocatedArea::size() {
 }
 
 std::ostream &operator<<(std::ostream &out, class AllocatedArea *ctx) {
-    out << ctx->size();
+    size_t size = ctx->size();
+    out.write((const char *) &size, sizeof(size_t));
 
-    for (size_t i = 0; i < ctx->mem_map.size(); i++) {
-        out << ctx->mem_map[i];
-    }
+    std::copy(ctx->mem_map.begin(), ctx->mem_map.end(), std::ostreambuf_iterator<char>(out));
 
     char *c = (char *) ctx->addr;
     for (size_t i = 0; i < ctx->mem_map.size(); i++) {
         if (ctx->mem_map[i]) {
-            out << AllocatedArea::MAGIC_VALUE;
+            out.write((const char *) &AllocatedArea::MAGIC_VALUE, sizeof(AllocatedArea::MAGIC_VALUE));
             i += sizeof(AllocatedArea::MAGIC_VALUE);
         } else {
-            out << c[i];
+            out.write(&c[i], sizeof(char));
         }
     }
 

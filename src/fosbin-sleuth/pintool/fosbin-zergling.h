@@ -38,18 +38,6 @@ struct TaintedObject {
     };
 };
 
-class PinLogger {
-public:
-    PinLogger(THREADID tid, std::string fname);
-
-    ~PinLogger();
-
-    VOID DumpBufferToFile(struct X86Context *contexts, UINT64 numElements, THREADID tid);
-
-private:
-    std::ofstream _ofile;
-};
-
 class AllocatedArea {
 public:
     AllocatedArea();
@@ -73,7 +61,23 @@ protected:
     std::vector<AllocatedArea *> subareas;
 };
 
-VOID displayCurrentContext(CONTEXT *ctx, UINT32 sig);
+class PinLogger {
+public:
+    PinLogger(THREADID tid, std::string fname);
+
+    ~PinLogger();
+
+    VOID DumpBufferToFile(struct X86Context *contexts, UINT64 numElements, THREADID tid);
+
+    std::ostream &operator<<(const AllocatedArea *aa);
+
+    std::ostream &operator<<(ADDRINT addr);
+
+private:
+    std::ofstream _ofile;
+};
+
+VOID displayCurrentContext(const CONTEXT *ctx, UINT32 sig = 0);
 
 #include "PinLogger.cpp"
 #include "X86Context.cpp"

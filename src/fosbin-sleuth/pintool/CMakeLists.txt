@@ -13,7 +13,7 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/pintools
         )
 
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/pintools/intel64/${PINTOOL_NAME}.so
-        COMMAND make -f makefile TARGET=intel64 PIN_ROOT=${CMAKE_SOURCE_DIR}/src/pin/pin-${PIN_VERSION} OBJDIR=${PROJECT_BINARY_DIR}/pintools/intel64/
+        COMMAND make -B -f makefile TARGET=intel64 PIN_ROOT=${CMAKE_SOURCE_DIR}/src/pin/pin-${PIN_VERSION} OBJDIR=${PROJECT_BINARY_DIR}/pintools/intel64/
         DEPENDS ${PINTOOL_SOURCES}
         )
 
