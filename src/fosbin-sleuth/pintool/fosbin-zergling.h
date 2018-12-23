@@ -5,6 +5,8 @@
 #ifndef FOSBIN_FOSBIN_ZERGLING_H
 #define FOSBIN_FOSBIN_ZERGLING_H
 
+#include <cstdlib>
+
 #define DEFAULT_ALLOCATION_SIZE 512
 
 struct X86Context {
@@ -51,6 +53,8 @@ public:
     size_t size();
 
     void fuzz();
+
+    bool fix_pointer(ADDRINT faulting_addr);
 
     /* Used to indicate if a memory area is another AllocatedArea */
     static ADDRINT MAGIC_VALUE;

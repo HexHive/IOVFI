@@ -269,15 +269,24 @@ BOOL inline is_rbp(REG reg) {
     return LEVEL_BASE::REG_RBP == reg;
 }
 
-VOID create_allocated_area(struct TaintedObject &to) {
-    if (to.isRegister && pointer_registers.find(to.reg) == pointer_registers.end()) {
-        AllocatedArea *aa = new AllocatedArea();
-        std::cout << "Creating allocated area for "
-                  << REG_StringShort(to.reg) << " at 0x"
-                  << std::hex << aa->getAddr() << std::endl;
-        pointer_registers[to.reg] = aa;
+VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
+    if (to.isRegister) {
+        std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(to.reg);
+        if (it == pointer_registers.end()) {
+            AllocatedArea *aa = new AllocatedArea();
+            std::cout << "Creating allocated area for "
+                      << REG_StringShort(to.reg) << " at 0x"
+                      << std::hex << aa->getAddr() << std::endl;
+            pointer_registers[to.reg] = aa;
+        } else {
+            AllocatedArea *aa = it->second;
+            if (!aa->fix_pointer(faulting_address)) {
+                std::cerr << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
+                PIN_ExitApplication(1);
+            }
+        }
     } else {
-        std::cerr << "Unable to create subobject yet!" << std::endl;
+        std::cerr << "Cannot taint non-registers" << std::endl;
         PIN_ExitApplication(1);
     }
 }
@@ -410,7 +419,10 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
             std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
         }
 
-        create_allocated_area(taintedObject);
+        struct X86Context &ctx = fuzzing_run.back();
+        INS ins = INS_FindByAddress(ctx.rip);
+        ADDRINT faulting_address = compute_effective_address(ins, ctx);
+        create_allocated_area(taintedObject, faulting_address);
     } else {
         std::cerr << "Taint analysis failed for the following context: " << std::endl;
         displayCurrentContext(ctx);

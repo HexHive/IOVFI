@@ -74,3 +74,34 @@ void AllocatedArea::setup_for_round(bool fuzz) {
 void AllocatedArea::fuzz() {
     setup_for_round(true);
 }
+
+bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
+    int64_t diff = faulting_addr - addr;
+    if (diff > (int64_t) size()) {
+        std::cout << "Diff (" << std::dec << diff << ") is outsize range (" << size() << ")" << std::endl;
+        for (AllocatedArea *subarea : subareas) {
+            if (subarea->fix_pointer(faulting_addr)) {
+                return true;
+            }
+        }
+        /* The expected size of this area is larger than expected
+         * so time to resize
+         */
+        /* TODO: Implement resizing algorithm */
+        return false;
+    } else if (diff >= 0) {
+        /* Some memory address inside this area is a pointer, so add a
+         * new AllocatedArea to this one's subareas
+         */
+        AllocatedArea *aa = new AllocatedArea();
+        for (size_t i = 0; i < sizeof(ADDRINT); i++) {
+            mem_map[diff + i] = true;
+        }
+        subareas.push_back(aa);
+        return true;
+    } else {
+        std::cout << "Something weird happened. faulting_addr = 0x" << std::hex << faulting_addr << " and addr = 0x"
+                  << addr << std::endl;
+        return false;
+    }
+}
