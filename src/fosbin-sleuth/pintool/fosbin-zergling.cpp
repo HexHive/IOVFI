@@ -51,18 +51,6 @@ INS INS_FindByAddress(ADDRINT addr) {
         }
     }
     RTN_Close(rtn);
-//    if(ret == INS_Invalid()) {
-//        IMG img = IMG_FindByAddress(addr);
-//        if(IMG_Valid(img)) {
-//            std::cout << "Addr 0x" << std::hex << addr << " is in " << IMG_Name(img)
-//                    << " in function " << RTN_Name(rtn)
-//                    << " in Section " << SEC_Name(RTN_Sec(rtn)) << std::endl;
-//
-//            std::cout << std::hex << *((char*)addr) << std::endl;
-//        } else {
-//            std::cout << "Unknown image" << std::endl;
-//        }
-//    }
     return ret;
 }
 
@@ -155,10 +143,10 @@ VOID trace_execution(TRACE trace, VOID *v) {
         for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
             for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
                 if (RTN_Valid(INS_Rtn(ins)) && SEC_Name(RTN_Sec(INS_Rtn(ins))) == ".text") {
-                    if (!INS_Valid(INS_FindByAddress(INS_Address(ins)))) {
-                        std::cout << "Invalid instruction at 0x" << INS_Address(ins) << ": " << INS_Disassemble(ins)
-                                  << std::endl;
-                    }
+//                    if (!INS_Valid(INS_FindByAddress(INS_Address(ins)))) {
+//                        std::cout << "Invalid instruction at 0x" << INS_Address(ins) << ": " << INS_Disassemble(ins)
+//                                  << std::endl;
+//                    }
                     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
                                    IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
                                    IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
@@ -295,6 +283,7 @@ VOID create_allocated_area(struct TaintedObject &to) {
 }
 
 BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
+//    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
     std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
     std::vector<struct TaintedObject> taintedObjs;
     for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin(); it != fuzzing_run.rend(); ++it) {
@@ -413,14 +402,19 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
         }
     }
 
-    struct TaintedObject taintedObject = taintedObjs.back();
-    if (taintedObject.isRegister) {
-        std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
-    } else {
-        std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
-    }
+    if (taintedObjs.size() > 0) {
+        struct TaintedObject taintedObject = taintedObjs.back();
+        if (taintedObject.isRegister) {
+            std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
+        } else {
+            std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
+        }
 
-    create_allocated_area(taintedObject);
+        create_allocated_area(taintedObject);
+    } else {
+        std::cerr << "Taint analysis failed for the following context: " << std::endl;
+        displayCurrentContext(ctx);
+    }
 
     fuzz_count--;
     reset_to_preexecution(ctx);

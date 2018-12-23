@@ -23,13 +23,14 @@ struct C {
 
 void printA(struct A *a) {
     if (a->i > 0) {
-        printf("i > 0");
+        a->i++;
     } else {
-        printf("i <= 0");
+        a->i--;
     }
 
-    printf("%s", a->s);
-    a->i++;
+    if (a->s[0] == '\0') {
+        a->s++;
+    }
 }
 
 int main(int argc, char **argv) {
