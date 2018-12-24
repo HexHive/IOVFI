@@ -204,8 +204,16 @@ ADDRINT compute_effective_address(INS ins, struct X86Context &ctx) {
     REG idx = INS_MemoryIndexReg(ins);
     UINT32 scale = INS_MemoryScale(ins);
     ADDRDELTA displacement = INS_MemoryDisplacement(ins);
+//    std::cout << INS_Disassemble(ins) << std::endl;
+//    std::cout << "Base: " << REG_StringShort(base)
+//        << " Idx: " << REG_StringShort(idx)
+//        << " Scale: 0x" << std::hex << scale
+//        << " Disp: 0x" << displacement << std::endl;
+
+//    ctx.prettyPrint(std::cout);
 
     ADDRINT ret = displacement + ctx.get_reg_value(base) + ctx.get_reg_value(idx) * scale;
+//    std::cout << "ret: " << ret << std::endl;
     return ret;
 }
 
@@ -419,10 +427,25 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
             std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
         }
 
-        struct X86Context &ctx = fuzzing_run.back();
-        INS ins = INS_FindByAddress(ctx.rip);
-        ADDRINT faulting_address = compute_effective_address(ins, ctx);
-        create_allocated_area(taintedObject, faulting_address);
+        /* Find the last write to the base register to find the address of the bad pointer */
+        INS ins = INS_FindByAddress(fuzzing_run.back().rip);
+        REG faulting_reg = INS_MemoryBaseReg(ins);
+        std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
+        ADDRINT faulting_addr = 0;
+        for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
+             it != fuzzing_run.rend(); it++) {
+            if (it == fuzzing_run.rbegin()) {
+                continue;
+            }
+            ins = INS_FindByAddress(it->rip);
+            if (INS_RegWContain(ins, faulting_reg)) {
+                faulting_addr = compute_effective_address(ins, *it);
+                std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
+                break;
+            }
+        }
+
+        create_allocated_area(taintedObject, faulting_addr);
     } else {
         std::cerr << "Taint analysis failed for the following context: " << std::endl;
         displayCurrentContext(ctx);
@@ -432,6 +455,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
     reset_to_preexecution(ctx);
 //    fuzz_registers(ctx);
     PIN_SaveContext(ctx, &preexecution);
+    displayCurrentContext(ctx);
     return false;
 }
 

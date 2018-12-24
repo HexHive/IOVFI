@@ -47,3 +47,22 @@ std::ostream &operator<<(std::ostream &out, const struct X86Context &ctx) {
     return out;
 }
 
+void X86Context::prettyPrint(std::ostream &out) {
+    out << "RAX: " << rax << std::endl;
+    out << "RBX: " << rbx << std::endl;
+    out << "RCX: " << rcx << std::endl;
+    out << "RDX: " << rdx << std::endl;
+    out << "RDI: " << rdi << std::endl;
+    out << "RSI: " << rsi << std::endl;
+    out << "R8: " << r8 << std::endl;
+    out << "R9: " << r9 << std::endl;
+    out << "R10: " << r10 << std::endl;
+    out << "R11: " << r11 << std::endl;
+    out << "R12: " << r12 << std::endl;
+    out << "R13: " << r13 << std::endl;
+    out << "R14: " << r14 << std::endl;
+    out << "R15: " << r15 << std::endl;
+    out << "RIP: " << rip << std::endl;
+    out << "RBP: " << rbp << std::endl;
+}
+

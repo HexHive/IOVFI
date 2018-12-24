@@ -29,6 +29,8 @@ struct X86Context {
 
     friend std::ostream &operator<<(std::ostream &out, const struct X86Context &ctx);
 
+    void prettyPrint(std::ostream &out);
+
     ADDRINT get_reg_value(REG reg);
 };
 
