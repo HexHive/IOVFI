@@ -28,12 +28,9 @@ uint32_t fuzz_count;
 time_t fuzz_end_time;
 TLS_KEY log_key;
 
-REG argument_regs[] = {LEVEL_BASE::REG_RDI, LEVEL_BASE::REG_RSI, LEVEL_BASE::REG_RDX,
-                       LEVEL_BASE::REG_RCX, LEVEL_BASE::REG_R8, LEVEL_BASE::REG_R9};
-
 std::ofstream infofile;
 std::vector<struct X86Context> fuzzing_run;
-std::map<REG, AllocatedArea *> pointer_registers;
+
 
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
@@ -105,7 +102,7 @@ ADDRINT gen_random() {
 }
 
 VOID fuzz_registers(CONTEXT *ctx) {
-    for (REG reg : argument_regs) {
+    for (REG reg : FBZergContext::argument_regs) {
         std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(reg);
         if (it == pointer_registers.end()) {
             PIN_SetContextReg(ctx, reg, gen_random());
@@ -119,7 +116,7 @@ void output_context(CONTEXT *ctx) {
     std::vector < AllocatedArea * > allocs;
     PinLogger &logger = *(static_cast<PinLogger *>(PIN_GetThreadData(log_key, PIN_ThreadId())));
 
-    for (REG reg : argument_regs) {
+    for (REG reg : FBZergContext::argument_regs) {
         std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(reg);
         if (it != pointer_registers.end()) {
             allocs.push_back(it->second);

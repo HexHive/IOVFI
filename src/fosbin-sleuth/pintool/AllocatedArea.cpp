@@ -48,6 +48,39 @@ std::ostream &operator<<(std::ostream &out, class AllocatedArea *ctx) {
     return out;
 }
 
+std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
+    for (AllocatedArea *subarea : ctx->subareas) {
+        delete subarea;
+    }
+
+    size_t size;
+    in.read((char *) &size, sizeof(size));
+    ctx->mem_map.resize(size);
+    std::copy(ctx->mem_map.begin(), ctx->mem_map.end(), std::istreambuf_iterator<char>(in));
+
+    char *c = (char *) ctx->addr;
+    for (size_t i = 0; i < size; i++) {
+        if (ctx->mem_map[i]) {
+            ADDRINT magic;
+            in.read((char *) &magic, sizeof(magic));
+            if (magic != AllocatedArea::MAGIC_VALUE) {
+                throw std::runtime_exception("Invalid AllocatedArea input!");
+            }
+            AllocatedArea *aa = new AllocatedArea();
+            ctx->subareas.push_back(aa);
+            i += sizeof(AllocatedArea::MAGIC_VALUE);
+        } else {
+            in.read(&c[i], sizeof(char));
+        }
+    }
+
+    for (AllocatedArea *subarea : ctx->subareas) {
+        in >> subarea;
+    }
+
+    return in;
+}
+
 void AllocatedArea::reset() {
     setup_for_round(false);
 }

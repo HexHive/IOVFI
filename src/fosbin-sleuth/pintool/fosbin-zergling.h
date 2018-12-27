@@ -34,14 +34,6 @@ struct X86Context {
     ADDRINT get_reg_value(REG reg);
 };
 
-struct TaintedObject {
-    BOOL isRegister;
-    union {
-        REG reg;
-        ADDRINT addr;
-    };
-};
-
 class AllocatedArea {
 public:
     AllocatedArea();
@@ -63,12 +55,41 @@ public:
 
     friend std::ostream &operator<<(std::ostream &out, class AllocatedArea *ctx);
 
+    friend std::istream &operator>>(std::istream &in, class AllocatedArea *ctx);
+
 protected:
     ADDRINT addr;
     std::vector<bool> mem_map;
     std::vector<AllocatedArea *> subareas;
 
     void setup_for_round(bool fuzz);
+};
+
+class FBZergContext {
+public:
+    FBZergContext();
+
+    ~FBZergContext();
+
+    std::ostream &operator<<(std::ostream &out);
+
+    std::istream &operator>>(std::istream &in, FBZergContext &ctx);
+
+    CONTEXT *operator>>(CONTEXT *ctx);
+
+    const static REG argument_regs[] = {LEVEL_BASE::REG_RDI, LEVEL_BASE::REG_RSI, LEVEL_BASE::REG_RDX,
+                                        LEVEL_BASE::REG_RCX, LEVEL_BASE::REG_R8, LEVEL_BASE::REG_R9};
+protected:
+    std::map <REG, ADDRINT> values;
+    std::map<REG, AllocatedArea *> pointer_registers;
+};
+
+struct TaintedObject {
+    BOOL isRegister;
+    union {
+        REG reg;
+        ADDRINT addr;
+    };
 };
 
 class PinLogger {
