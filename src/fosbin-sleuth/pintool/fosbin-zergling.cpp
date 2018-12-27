@@ -292,6 +292,7 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
                 std::cerr << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
                 PIN_ExitApplication(1);
             }
+            std::cout << "Fixed pointer" << std::endl;
         }
     } else {
         std::cerr << "Cannot taint non-registers" << std::endl;

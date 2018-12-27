@@ -53,6 +53,7 @@ void AllocatedArea::reset() {
 }
 
 void AllocatedArea::setup_for_round(bool fuzz) {
+    std::cout << "Resetting 0x" << std::hex << addr << " to " << (fuzz ? "random" : "zero") << std::endl;
     for (AllocatedArea *subarea : subareas) {
         subarea->setup_for_round(fuzz);
     }
@@ -61,14 +62,18 @@ void AllocatedArea::setup_for_round(bool fuzz) {
     char *curr = (char *) addr;
     for (size_t i = 0; i < mem_map.size(); i++) {
         if (mem_map[i]) {
+            AllocatedArea *aa = subareas[pointer_count];
+            std::cout << "Setting 0x" << (ADDRINT) curr << " to value 0x" << aa->getAddr() << std::endl;
             ADDRINT *ptr = (ADDRINT *) curr;
-            *ptr = subareas[pointer_count++]->addr;
+            *ptr = aa->getAddr();
             curr += sizeof(ADDRINT);
+            i += sizeof(ADDRINT);
         } else {
             *curr = (fuzz ? rand() : 0);
             curr++;
         }
     }
+    std::cout << "Done" << std::endl;
 }
 
 void AllocatedArea::fuzz() {
@@ -77,6 +82,7 @@ void AllocatedArea::fuzz() {
 
 bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
     int64_t diff = faulting_addr - addr;
+    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << " diff = 0x" << diff << std::endl;
     if (diff > (int64_t) size()) {
         std::cout << "Diff (" << std::dec << diff << ") is outsize range (" << size() << ")" << std::endl;
         for (AllocatedArea *subarea : subareas) {
@@ -90,11 +96,13 @@ bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
         /* TODO: Implement resizing algorithm */
         return false;
     } else if (diff >= 0) {
+        std::cout << "Current submember" << std::endl;
         /* Some memory address inside this area is a pointer, so add a
          * new AllocatedArea to this one's subareas
          */
         AllocatedArea *aa = new AllocatedArea();
         for (size_t i = 0; i < sizeof(ADDRINT); i++) {
+            std::cout << "Byte " << diff + i << " is marked a pointer" << std::endl;
             mem_map[diff + i] = true;
         }
         subareas.push_back(aa);
