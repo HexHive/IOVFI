@@ -236,7 +236,7 @@ BOOL isTainted(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) {
 }
 
 VOID remove_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
-    std::cout << "\tRemoving taint from " << REG_StringShort(reg) << std::endl;
+//    std::cout << "\tRemoving taint from " << REG_StringShort(reg) << std::endl;
     for (std::vector<struct TaintedObject>::iterator it = taintedObjs.begin(); it != taintedObjs.end(); ++it) {
         struct TaintedObject &to = *it;
         if (to.isRegister && REG_StringShort(to.reg) == REG_StringShort(reg)) {
@@ -247,7 +247,7 @@ VOID remove_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
 }
 
 VOID add_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
-    std::cout << "\tAdding taint to " << REG_StringShort(reg) << std::endl;
+//    std::cout << "\tAdding taint to " << REG_StringShort(reg) << std::endl;
     struct TaintedObject to;
     to.isRegister = true;
     to.reg = reg;
@@ -255,7 +255,7 @@ VOID add_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
 }
 
 VOID remove_taint(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) {
-    std::cout << "\tRemoving taint from 0x" << std::hex << addr << std::endl;
+//    std::cout << "\tRemoving taint from 0x" << std::hex << addr << std::endl;
     for (std::vector<struct TaintedObject>::iterator it = taintedObjs.begin(); it != taintedObjs.end(); ++it) {
         struct TaintedObject &to = *it;
         if (!to.isRegister && addr == to.addr) {
@@ -266,7 +266,7 @@ VOID remove_taint(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) 
 }
 
 VOID add_taint(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) {
-    std::cout << "\tAdding taint to 0x" << std::hex << addr << std::endl;
+//    std::cout << "\tAdding taint to 0x" << std::hex << addr << std::endl;
     struct TaintedObject to;
     to.isRegister = false;
     to.addr = addr;
@@ -282,9 +282,9 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
         std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(to.reg);
         if (it == pointer_registers.end()) {
             AllocatedArea *aa = new AllocatedArea();
-            std::cout << "Creating allocated area for "
-                      << REG_StringShort(to.reg) << " at 0x"
-                      << std::hex << aa->getAddr() << std::endl;
+//            std::cout << "Creating allocated area for "
+//                      << REG_StringShort(to.reg) << " at 0x"
+//                      << std::hex << aa->getAddr() << std::endl;
             pointer_registers[to.reg] = aa;
         } else {
             AllocatedArea *aa = it->second;
@@ -292,7 +292,7 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
                 std::cerr << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
                 PIN_ExitApplication(1);
             }
-            std::cout << "Fixed pointer" << std::endl;
+//            std::cout << "Fixed pointer" << std::endl;
         }
     } else {
         std::cerr << "Cannot taint non-registers" << std::endl;
@@ -302,7 +302,7 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 
 BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
 //    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
-    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
+//    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
     std::vector<struct TaintedObject> taintedObjs;
     for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin(); it != fuzzing_run.rend(); ++it) {
         struct X86Context &c = *it;
@@ -312,11 +312,11 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
             continue;
         }
 
-        std::cout << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
-                  << "(0x" << std::hex << INS_Address(ins) << "): " << INS_Disassemble(ins) << std::endl;
-        std::cout << "\tINS_IsMemoryRead: " << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
-        std::cout << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
-        std::cout << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
+//        std::cout << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
+//                  << "(0x" << std::hex << INS_Address(ins) << "): " << INS_Disassemble(ins) << std::endl;
+//        std::cout << "\tINS_IsMemoryRead: " << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
+//        std::cout << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
+//        std::cout << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
 
         if (it == fuzzing_run.rbegin()) {
             add_taint(INS_MemoryBaseReg(ins), taintedObjs);
@@ -375,8 +375,8 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
         } else if (INS_IsMemoryWrite(ins) && !INS_OperandIsImmediate(ins, 1)) {
             REG base = INS_MemoryBaseReg(ins);
             REG rreg = INS_RegR(ins, 1);
-            std::cout << "\tbase: " << REG_StringShort(base)
-                      << " rreg: " << REG_StringShort(rreg) << std::endl;
+//            std::cout << "\tbase: " << REG_StringShort(base)
+//                      << " rreg: " << REG_StringShort(rreg) << std::endl;
 
             BOOL read_tainted;
             BOOL write_tainted;
@@ -422,16 +422,16 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
     if (taintedObjs.size() > 0) {
         struct TaintedObject taintedObject = taintedObjs.back();
-        if (taintedObject.isRegister) {
-            std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
-        } else {
-            std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
-        }
+//        if (taintedObject.isRegister) {
+//            std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
+//        } else {
+//            std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
+//        }
 
         /* Find the last write to the base register to find the address of the bad pointer */
         INS ins = INS_FindByAddress(fuzzing_run.back().rip);
         REG faulting_reg = INS_MemoryBaseReg(ins);
-        std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
+//        std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
         ADDRINT faulting_addr = 0;
         for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
              it != fuzzing_run.rend(); it++) {
@@ -441,7 +441,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
             ins = INS_FindByAddress(it->rip);
             if (INS_RegWContain(ins, faulting_reg)) {
                 faulting_addr = compute_effective_address(ins, *it);
-                std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
+//                std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
                 break;
             }
         }
@@ -456,7 +456,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
     reset_to_preexecution(ctx);
 //    fuzz_registers(ctx);
     PIN_SaveContext(ctx, &preexecution);
-    displayCurrentContext(ctx);
+//    displayCurrentContext(ctx);
     return false;
 }
 
