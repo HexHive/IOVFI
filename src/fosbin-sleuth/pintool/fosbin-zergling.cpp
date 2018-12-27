@@ -16,11 +16,16 @@ CONTEXT preexecution;
 
 KNOB <ADDRINT> KnobStart(KNOB_MODE_WRITEONCE, "pintool", "target", "0", "The target address of the fuzzing target");
 KNOB <uint32_t> FuzzCount(KNOB_MODE_WRITEONCE, "pintool", "fuzz-count", "4", "The number of times to fuzz a target");
+KNOB <uint32_t> FuzzTime(KNOB_MODE_WRITEONCE, "pintool", "fuzz-time", "0",
+                         "The number of minutes to fuzz. Ignores fuzz-count if greater than 0.");
+KNOB <uint64_t> MaxInstructions(KNOB_MODE_WRITEONCE, "pintool", "ins", "1000000",
+                                "The max number of instructions to run per fuzzing round");
 KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.bin",
                                "The name of the file to write "
                                "fuzz output");
 RTN target;
 uint32_t fuzz_count;
+time_t fuzz_end_time;
 TLS_KEY log_key;
 
 REG argument_regs[] = {LEVEL_BASE::REG_RDI, LEVEL_BASE::REG_RSI, LEVEL_BASE::REG_RDX,
@@ -35,6 +40,8 @@ INT32 usage() {
     std::cerr << KNOB_BASE::StringKnobSummary() << std::endl;
     return -1;
 }
+
+inline BOOL timed_fuzz() { return FuzzTime.Value() > 0; }
 
 INS INS_FindByAddress(ADDRINT addr) {
     RTN rtn = RTN_FindByAddress(addr);
@@ -57,9 +64,19 @@ INS INS_FindByAddress(ADDRINT addr) {
 VOID reset_to_context(CONTEXT *ctx_to_use, CONTEXT *ctx) {
     fuzz_count++;
 
-    if (fuzz_count > FuzzCount.Value()) {
-        std::cout << "Stopping fuzzing at " << std::dec << fuzz_count - 1 << " of " << FuzzCount.Value() << std::endl;
-        PIN_ExitApplication(0);
+    if (!timed_fuzz()) {
+        if (fuzz_count > FuzzCount.Value()) {
+            std::cout << "Stopping fuzzing at " << std::dec << fuzz_count - 1 << " of " << FuzzCount.Value()
+                      << std::endl;
+            PIN_ExitApplication(0);
+        }
+    } else {
+        if (time(NULL) >= fuzz_end_time) {
+            std::cout << "Stopping fuzzing after " << std::dec << FuzzTime.Value() << " minute"
+                      << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
+            std::cout << "Total fuzzing iterations: " << std::dec << fuzz_count << std::endl;
+            PIN_ExitApplication(0);
+        }
     }
 
     PIN_SaveContext(ctx_to_use, ctx);
@@ -121,11 +138,11 @@ void output_context(CONTEXT *ctx) {
     }
 }
 
-VOID start_fuzz_round(CONTEXT *ctx, THREADID tid) {
+VOID start_fuzz_round(CONTEXT *ctx) {
     reset_context(ctx);
     fuzz_registers(ctx);
     PIN_SaveContext(ctx, &preexecution);
-    std::cout << "Starting round " << std::dec << fuzz_count << std::endl;
+//    std::cout << "Starting round " << std::dec << fuzz_count << std::endl;
     PIN_ExecuteAt(ctx);
 }
 
@@ -134,40 +151,44 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
                             ADDRINT r12, ADDRINT r13, ADDRINT r14, ADDRINT r15,
                             ADDRINT rdi, ADDRINT rsi, ADDRINT rip, ADDRINT rbp
 ) {
+    if (fuzzing_run.size() > MaxInstructions.Value()) {
+        std::cerr << "Too many instructions! Starting Over..." << std::endl;
+        start_fuzz_round(&snapshot);
+    }
     struct X86Context tmp = {rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip, rbp};
     fuzzing_run.push_back(tmp);
 }
 
 VOID trace_execution(TRACE trace, VOID *v) {
 //    if (TRACE_Rtn(trace) == target) {
-        for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
-            for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
-                if (RTN_Valid(INS_Rtn(ins)) && SEC_Name(RTN_Sec(INS_Rtn(ins))) == ".text") {
+    for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
+        for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
+            if (RTN_Valid(INS_Rtn(ins)) && SEC_Name(RTN_Sec(INS_Rtn(ins))) == ".text") {
 //                    if (!INS_Valid(INS_FindByAddress(INS_Address(ins)))) {
 //                        std::cout << "Invalid instruction at 0x" << INS_Address(ins) << ": " << INS_Disassemble(ins)
 //                                  << std::endl;
 //                    }
-                    INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R8,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R9,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R10,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R11,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R12,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R13,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R14,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R15,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
-                                   IARG_INST_PTR,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
-                                   IARG_END);
-                }
+                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R8,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R9,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R10,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R11,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R12,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R13,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R14,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R15,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
+                               IARG_INST_PTR,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
+                               IARG_END);
             }
         }
+    }
 //    }
 }
 
@@ -175,12 +196,12 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
 //    std::cout << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() <<  " instructions" << std::endl;
     output_context(&preexecution);
     output_context(ctx);
-    start_fuzz_round(ctx, tid);
+    start_fuzz_round(ctx);
 }
 
 VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
     PIN_SaveContext(ctx, &snapshot);
-    start_fuzz_round(ctx, tid);
+    start_fuzz_round(ctx);
 }
 
 VOID displayCurrentContext(const CONTEXT *ctx, UINT32 sig) {
@@ -282,9 +303,9 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
         std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(to.reg);
         if (it == pointer_registers.end()) {
             AllocatedArea *aa = new AllocatedArea();
-//            std::cout << "Creating allocated area for "
-//                      << REG_StringShort(to.reg) << " at 0x"
-//                      << std::hex << aa->getAddr() << std::endl;
+            std::cout << "Creating allocated area for "
+                      << REG_StringShort(to.reg) << " at 0x"
+                      << std::hex << aa->getAddr() << std::endl;
             pointer_registers[to.reg] = aa;
         } else {
             AllocatedArea *aa = it->second;
@@ -422,16 +443,16 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
     if (taintedObjs.size() > 0) {
         struct TaintedObject taintedObject = taintedObjs.back();
-//        if (taintedObject.isRegister) {
-//            std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
-//        } else {
-//            std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
-//        }
+        if (taintedObject.isRegister) {
+            std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
+        } else {
+            std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
+        }
 
         /* Find the last write to the base register to find the address of the bad pointer */
         INS ins = INS_FindByAddress(fuzzing_run.back().rip);
         REG faulting_reg = INS_MemoryBaseReg(ins);
-//        std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
+        std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
         ADDRINT faulting_addr = 0;
         for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
              it != fuzzing_run.rend(); it++) {
@@ -441,7 +462,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
             ins = INS_FindByAddress(it->rip);
             if (INS_RegWContain(ins, faulting_reg)) {
                 faulting_addr = compute_effective_address(ins, *it);
-//                std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
+                std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
                 break;
             }
         }
@@ -518,6 +539,7 @@ void initialize_system() {
     log_key = PIN_CreateThreadDataKey(0);
     PIN_AddThreadStartFunction(ThreadStart, 0);
     PIN_AddThreadFiniFunction(ThreadFini, 0);
+    fuzz_end_time = time(NULL) + 60 * FuzzTime.Value();
 }
 
 int main(int argc, char **argv) {
@@ -531,8 +553,13 @@ int main(int argc, char **argv) {
     }
     initialize_system();
 
-    std::cout << "Fuzzing 0x" << std::hex << KnobStart.Value() << std::dec << " " << FuzzCount.Value() << " times."
-              << std::endl;
+    if (!timed_fuzz()) {
+        std::cout << "Fuzzing 0x" << std::hex << KnobStart.Value() << std::dec << " " << FuzzCount.Value() << " times."
+                  << std::endl;
+    } else {
+        std::cout << "Fuzzing 0x" << std::hex << KnobStart.Value() << " for " << std::dec << FuzzTime.Value()
+                  << " minute" << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
+    }
 
     IMG_AddInstrumentFunction(ImageLoad, nullptr);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
