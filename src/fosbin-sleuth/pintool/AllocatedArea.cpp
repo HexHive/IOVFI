@@ -136,9 +136,9 @@ void AllocatedArea::fuzz() {
 
 bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
     int64_t diff = faulting_addr - addr;
-    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << " diff = 0x" << diff << std::endl;
+//    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << " diff = 0x" << diff << std::endl;
     if (diff > (int64_t) size()) {
-        std::cout << "Diff (" << std::dec << diff << ") is outsize range (" << size() << ")" << std::endl;
+//        std::cout << "Diff (" << std::dec << diff << ") is outsize range (" << size() << ")" << std::endl;
         for (AllocatedArea *subarea : subareas) {
             if (subarea->fix_pointer(faulting_addr)) {
                 return true;
@@ -150,13 +150,13 @@ bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
         /* TODO: Implement resizing algorithm */
         return false;
     } else if (diff >= 0) {
-        std::cout << "Current submember" << std::endl;
+//        std::cout << "Current submember" << std::endl;
         /* Some memory address inside this area is a pointer, so add a
          * new AllocatedArea to this one's subareas
          */
         AllocatedArea *aa = new AllocatedArea();
         for (size_t i = 0; i < sizeof(ADDRINT); i++) {
-            std::cout << "Byte " << diff + i << " is marked a pointer" << std::endl;
+//            std::cout << "Byte " << std::dec << diff + i << " is marked a pointer" << std::endl;
             mem_map[diff + i] = true;
         }
         subareas.push_back(aa);

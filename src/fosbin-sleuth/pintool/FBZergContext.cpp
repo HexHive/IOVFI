@@ -9,6 +9,8 @@ const REG FBZergContext::argument_regs[] = {LEVEL_BASE::REG_RDI, LEVEL_BASE::REG
 
 const REG FBZergContext::return_reg = LEVEL_BASE::REG_RAX;
 
+FBZergContext::FBZergContext() {}
+
 std::istream &FBZergContext::operator>>(std::istream &in) {
     ADDRINT tmp;
     std::vector < AllocatedArea * > allocs;
@@ -142,8 +144,14 @@ void FBZergContext::reset_context(CONTEXT *ctx, const FBZergContext &orig) {
 }
 
 void FBZergContext::add(REG reg, AllocatedArea *aa) {
-    pointer_registers[reg] = aa;
-    values[reg] = (ADDRINT) aa;
+//    std::cout << "Adding AllocatedArea to register " << REG_StringShort(reg) << std::endl;
+    if (pointer_registers.find(reg) == pointer_registers.end()) {
+        pointer_registers[reg] = aa;
+        values[reg] = (ADDRINT) aa;
+    } else {
+//        std::cout << "Resetting AllocatedArea" << std::endl;
+        *pointer_registers[reg] = *aa;
+    }
 }
 
 void FBZergContext::add(REG reg, ADDRINT value) {
