@@ -56,7 +56,11 @@ std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
     size_t size;
     in.read((char *) &size, sizeof(size));
     ctx->mem_map.resize(size);
-    std::copy(ctx->mem_map.begin(), ctx->mem_map.end(), std::istreambuf_iterator<char>(in));
+    for (size_t i = 0; i < size; i++) {
+        char tmp;
+        in.read((char *) &tmp, sizeof(tmp));
+        ctx->mem_map[i] = (tmp != 0);
+    }
 
     char *c = (char *) ctx->addr;
     for (size_t i = 0; i < size; i++) {
@@ -64,7 +68,8 @@ std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
             ADDRINT magic;
             in.read((char *) &magic, sizeof(magic));
             if (magic != AllocatedArea::MAGIC_VALUE) {
-                throw std::runtime_exception("Invalid AllocatedArea input!");
+                std::cerr << "Invalid AllocatedArea input!" << std::endl;
+                exit(1);
             }
             AllocatedArea *aa = new AllocatedArea();
             ctx->subareas.push_back(aa);
@@ -79,6 +84,22 @@ std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
     }
 
     return in;
+}
+
+AllocatedArea &AllocatedArea::operator=(const AllocatedArea &orig) {
+    for (AllocatedArea *subarea : subareas) {
+        delete subarea;
+    }
+    subareas.clear();
+
+    mem_map = orig.mem_map;
+    for (AllocatedArea *subarea : orig.subareas) {
+        AllocatedArea *aa = new AllocatedArea();
+        *aa = *subarea;
+        subareas.push_back(aa);
+    }
+
+    return *this;
 }
 
 void AllocatedArea::reset() {

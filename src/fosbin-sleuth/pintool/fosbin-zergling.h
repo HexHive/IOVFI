@@ -6,6 +6,7 @@
 #define FOSBIN_FOSBIN_ZERGLING_H
 
 #include <cstdlib>
+#include "pin.H"
 
 #define DEFAULT_ALLOCATION_SIZE 512
 
@@ -57,6 +58,8 @@ public:
 
     friend std::istream &operator>>(std::istream &in, class AllocatedArea *ctx);
 
+    AllocatedArea &operator=(const AllocatedArea &orig);
+
 protected:
     ADDRINT addr;
     std::vector<bool> mem_map;
@@ -71,14 +74,27 @@ public:
 
     ~FBZergContext();
 
-    std::ostream &operator<<(std::ostream &out);
+    friend std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx);
 
-    std::istream &operator>>(std::istream &in, FBZergContext &ctx);
+    std::istream &operator>>(std::istream &in);
 
-    CONTEXT *operator>>(CONTEXT *ctx);
+    FBZergContext &operator=(const FBZergContext &orig);
 
-    const static REG argument_regs[] = {LEVEL_BASE::REG_RDI, LEVEL_BASE::REG_RSI, LEVEL_BASE::REG_RDX,
-                                        LEVEL_BASE::REG_RCX, LEVEL_BASE::REG_R8, LEVEL_BASE::REG_R9};
+    FBZergContext &operator<<(CONTEXT *ctx);
+
+    void add(REG reg, AllocatedArea *aa);
+
+    void add(REG reg, ADDRINT value);
+
+    AllocatedArea *find_allocated_area(REG reg) const;
+
+    void reset_context(CONTEXT *ctx, const FBZergContext &orig);
+
+    const static REG argument_regs[];
+
+    const static REG return_reg;
+
+    ADDRINT get_value(REG reg) const;
 protected:
     std::map <REG, ADDRINT> values;
     std::map<REG, AllocatedArea *> pointer_registers;
@@ -104,6 +120,8 @@ public:
 
     std::ostream &operator<<(ADDRINT addr);
 
+    std::ostream &operator<<(const FBZergContext &ctx);
+
 private:
     std::ofstream _ofile;
 };
@@ -113,5 +131,6 @@ VOID displayCurrentContext(const CONTEXT *ctx, UINT32 sig = 0);
 #include "PinLogger.cpp"
 #include "X86Context.cpp"
 #include "AllocatedArea.cpp"
+#include "FBZergContext.cpp"
 
 #endif //FOSBIN_FOSBIN_ZERGLING_H

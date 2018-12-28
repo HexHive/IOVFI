@@ -26,6 +26,11 @@ std::ostream &PinLogger::operator<<(ADDRINT addr) {
     return _ofile;
 }
 
+std::ostream &PinLogger::operator<<(const FBZergContext &ctx) {
+    _ofile << ctx;
+    return _ofile;
+}
+
 VOID PinLogger::DumpBufferToFile(struct X86Context *contexts, UINT64 numElements, THREADID tid) {
     for (UINT64 i = 0; i < numElements; i++, contexts++) {
         _ofile << *contexts;

@@ -12,7 +12,7 @@
 #include "fosbin-zergling.h"
 
 CONTEXT snapshot;
-CONTEXT preexecution;
+//CONTEXT preexecution;
 
 KNOB <ADDRINT> KnobStart(KNOB_MODE_WRITEONCE, "pintool", "target", "0", "The target address of the fuzzing target");
 KNOB <uint32_t> FuzzCount(KNOB_MODE_WRITEONCE, "pintool", "fuzz-count", "4", "The number of times to fuzz a target");
@@ -27,6 +27,8 @@ RTN target;
 uint32_t fuzz_count;
 time_t fuzz_end_time;
 TLS_KEY log_key;
+FBZergContext preContext;
+FBZergContext postContext;
 
 std::ofstream infofile;
 std::vector<struct X86Context> fuzzing_run;
@@ -58,7 +60,7 @@ INS INS_FindByAddress(ADDRINT addr) {
     return ret;
 }
 
-VOID reset_to_context(CONTEXT *ctx_to_use, CONTEXT *ctx) {
+VOID reset_to_context(CONTEXT *ctx) {
     fuzz_count++;
 
     if (!timed_fuzz()) {
@@ -71,26 +73,23 @@ VOID reset_to_context(CONTEXT *ctx_to_use, CONTEXT *ctx) {
         if (time(NULL) >= fuzz_end_time) {
             std::cout << "Stopping fuzzing after " << std::dec << FuzzTime.Value() << " minute"
                       << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
-            std::cout << "Total fuzzing iterations: " << std::dec << fuzz_count << std::endl;
+            std::cout << "Total fuzzing iterations: " << std::dec << fuzz_count - 1 << std::endl;
             PIN_ExitApplication(0);
         }
     }
 
-    PIN_SaveContext(ctx_to_use, ctx);
-    for (std::map<REG, AllocatedArea *>::iterator it = pointer_registers.begin(); it != pointer_registers.end(); ++it) {
-        it->second->reset();
-        PIN_SetContextReg(ctx, it->first, it->second->getAddr());
-    }
+    postContext.reset_context(ctx, preContext);
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
     fuzzing_run.clear();
 }
 
 VOID reset_context(CONTEXT *ctx) {
-    reset_to_context(&snapshot, ctx);
+    reset_to_context(ctx);
 }
 
 VOID reset_to_preexecution(CONTEXT *ctx) {
-    reset_to_context(&preexecution, ctx);
+    postContext = preContext;
+    reset_to_context(ctx);
 }
 
 ADDRINT gen_random() {
@@ -103,42 +102,43 @@ ADDRINT gen_random() {
 
 VOID fuzz_registers(CONTEXT *ctx) {
     for (REG reg : FBZergContext::argument_regs) {
-        std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(reg);
-        if (it == pointer_registers.end()) {
+        AllocatedArea *aa = postContext.find_allocated_area(reg);
+        if (aa == nullptr) {
             PIN_SetContextReg(ctx, reg, gen_random());
         } else {
-            it->second->fuzz();
+            aa->fuzz();
         }
     }
 }
 
-void output_context(CONTEXT *ctx) {
+void output_context(const FBZergContext &ctx) {
     std::vector < AllocatedArea * > allocs;
     PinLogger &logger = *(static_cast<PinLogger *>(PIN_GetThreadData(log_key, PIN_ThreadId())));
+    logger << ctx;
 
-    for (REG reg : FBZergContext::argument_regs) {
-        std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(reg);
-        if (it != pointer_registers.end()) {
-            allocs.push_back(it->second);
-            logger << AllocatedArea::MAGIC_VALUE;
-        } else {
-            ADDRINT val = PIN_GetContextReg(ctx, reg);
-            logger << val;
-        }
-    }
-
-    ADDRINT rax = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX);
-    logger << rax;
-
-    for (AllocatedArea *aa : allocs) {
-        logger << aa;
-    }
+//    for (REG reg : FBZergContext::argument_regs) {
+//        std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(reg);
+//        if (it != pointer_registers.end()) {
+//            allocs.push_back(it->second);
+//            logger << AllocatedArea::MAGIC_VALUE;
+//        } else {
+//            ADDRINT val = PIN_GetContextReg(ctx, reg);
+//            logger << val;
+//        }
+//    }
+//
+//    ADDRINT rax = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX);
+//    logger << rax;
+//
+//    for (AllocatedArea *aa : allocs) {
+//        logger << aa;
+//    }
 }
 
 VOID start_fuzz_round(CONTEXT *ctx) {
     reset_context(ctx);
     fuzz_registers(ctx);
-    PIN_SaveContext(ctx, &preexecution);
+//    PIN_SaveContext(ctx, &preexecution);
 //    std::cout << "Starting round " << std::dec << fuzz_count << std::endl;
     PIN_ExecuteAt(ctx);
 }
@@ -191,8 +191,9 @@ VOID trace_execution(TRACE trace, VOID *v) {
 
 VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
 //    std::cout << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() <<  " instructions" << std::endl;
-    output_context(&preexecution);
-    output_context(ctx);
+    output_context(preContext);
+    postContext << ctx;
+    output_context(postContext);
     start_fuzz_round(ctx);
 }
 
@@ -297,15 +298,14 @@ BOOL inline is_rbp(REG reg) {
 
 VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
     if (to.isRegister) {
-        std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(to.reg);
-        if (it == pointer_registers.end()) {
-            AllocatedArea *aa = new AllocatedArea();
+        AllocatedArea *aa = preContext.find_allocated_area(to.reg);
+        if (aa == nullptr) {
+            aa = new AllocatedArea();
             std::cout << "Creating allocated area for "
                       << REG_StringShort(to.reg) << " at 0x"
                       << std::hex << aa->getAddr() << std::endl;
-            pointer_registers[to.reg] = aa;
+            preContext.add(to.reg, aa);
         } else {
-            AllocatedArea *aa = it->second;
             if (!aa->fix_pointer(faulting_address)) {
                 std::cerr << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
                 PIN_ExitApplication(1);
@@ -473,7 +473,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
     fuzz_count--;
     reset_to_preexecution(ctx);
 //    fuzz_registers(ctx);
-    PIN_SaveContext(ctx, &preexecution);
+//    PIN_SaveContext(ctx, &preexecution);
 //    displayCurrentContext(ctx);
     return false;
 }
