@@ -60,6 +60,10 @@ public:
 
     AllocatedArea &operator=(const AllocatedArea &orig);
 
+    bool operator==(const AllocatedArea &other) const;
+
+    bool operator!=(const AllocatedArea &other) const;
+
 protected:
     ADDRINT addr;
     std::vector<bool> mem_map;
@@ -81,6 +85,10 @@ public:
     FBZergContext &operator=(const FBZergContext &orig);
 
     FBZergContext &operator<<(CONTEXT *ctx);
+
+    bool operator==(const FBZergContext &ctx) const;
+
+    bool operator!=(const FBZergContext &ctx) const;
 
     void add(REG reg, AllocatedArea *aa);
 

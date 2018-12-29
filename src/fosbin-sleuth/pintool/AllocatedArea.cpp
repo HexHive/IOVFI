@@ -102,6 +102,32 @@ AllocatedArea &AllocatedArea::operator=(const AllocatedArea &orig) {
     return *this;
 }
 
+bool AllocatedArea::operator!=(const AllocatedArea &other) const {
+    return !(*this == other);
+}
+
+bool AllocatedArea::operator==(const AllocatedArea &other) const {
+    if (mem_map != other.mem_map) {
+        return false;
+    }
+
+    const char *this_addr = (const char *) addr;
+    const char *that_addr = (const char *) other.addr;
+    for (size_t i = 0; i < mem_map.size(); i++) {
+        if (!mem_map[i]) {
+            if (this_addr[i] != that_addr[i]) {
+                return false;
+            }
+        }
+    }
+
+    if (subareas != other.subareas) {
+        return false;
+    }
+
+    return true;
+}
+
 void AllocatedArea::reset() {
     setup_for_round(false);
 }

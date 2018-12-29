@@ -23,16 +23,17 @@ KNOB <uint64_t> MaxInstructions(KNOB_MODE_WRITEONCE, "pintool", "ins", "1000000"
 KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.bin",
                                "The name of the file to write "
                                "fuzz output");
+
 RTN target;
 uint32_t fuzz_count;
 time_t fuzz_end_time;
 TLS_KEY log_key;
 FBZergContext preContext;
-FBZergContext postContext;
+FBZergContext currentContext;
+FBZergContext expectedContext;
 
 std::ofstream infofile;
 std::vector<struct X86Context> fuzzing_run;
-
 
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
@@ -78,7 +79,7 @@ VOID reset_to_context(CONTEXT *ctx) {
         }
     }
 
-    postContext.reset_context(ctx, preContext);
+    currentContext.reset_context(ctx, preContext);
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
     fuzzing_run.clear();
 }
@@ -88,7 +89,7 @@ VOID reset_context(CONTEXT *ctx) {
 }
 
 VOID reset_to_preexecution(CONTEXT *ctx) {
-    postContext = preContext;
+    currentContext = preContext;
     reset_to_context(ctx);
 }
 
@@ -102,7 +103,7 @@ ADDRINT gen_random() {
 
 VOID fuzz_registers(CONTEXT *ctx) {
     for (REG reg : FBZergContext::argument_regs) {
-        AllocatedArea *aa = postContext.find_allocated_area(reg);
+        AllocatedArea *aa = currentContext.find_allocated_area(reg);
         if (aa == nullptr) {
             PIN_SetContextReg(ctx, reg, gen_random());
         } else {
@@ -192,8 +193,8 @@ VOID trace_execution(TRACE trace, VOID *v) {
 VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
 //    std::cout << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() <<  " instructions" << std::endl;
     output_context(preContext);
-    postContext << ctx;
-    output_context(postContext);
+    currentContext << ctx;
+    output_context(currentContext);
     start_fuzz_round(ctx);
 }
 
@@ -298,8 +299,8 @@ BOOL inline is_rbp(REG reg) {
 
 VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
     if (to.isRegister) {
-        /* Fuzzing is done with postContext */
-        AllocatedArea *aa = postContext.find_allocated_area(to.reg);
+        /* Fuzzing is done with currentContext */
+        AllocatedArea *aa = currentContext.find_allocated_area(to.reg);
         if (aa == nullptr) {
             aa = new AllocatedArea();
 //            std::cout << "Creating allocated area for "

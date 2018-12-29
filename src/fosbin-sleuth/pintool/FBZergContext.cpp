@@ -81,6 +81,29 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
     return out;
 }
 
+bool FBZergContext::operator==(const FBZergContext &ctx) const {
+    if (get_value(FBZergContext::return_reg) != ctx.get_value(FBZergContext::return_reg)) {
+        return false;
+    }
+
+    for (auto it : pointer_registers) {
+        AllocatedArea *aa = ctx.find_allocated_area(it.first);
+        if (aa == nullptr) {
+            return false;
+        }
+
+        if (*aa != *it.second) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool FBZergContext::operator!=(const FBZergContext &ctx) const {
+    return !(*this == ctx);
+}
+
 FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
     for (auto it : pointer_registers) {
         delete it.second;
