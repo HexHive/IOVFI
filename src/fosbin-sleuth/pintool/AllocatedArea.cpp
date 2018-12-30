@@ -53,13 +53,26 @@ std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
         delete subarea;
     }
 
+    uint64_t non_ptr_start = 0;
+    uint64_t non_ptr_end = 0;
     size_t size;
     in.read((char *) &size, sizeof(size));
+    std::cout << "Allocated Area size = " << std::dec << size << " bytes" << std::endl;
     ctx->mem_map.resize(size);
     for (size_t i = 0; i < size; i++) {
         char tmp;
         in.read((char *) &tmp, sizeof(tmp));
         ctx->mem_map[i] = (tmp != 0);
+        if (tmp == 0) {
+            non_ptr_end++;
+        } else {
+            if (non_ptr_start != non_ptr_end) {
+                std::cout << "Bytes " << std::dec << non_ptr_start << "-" << non_ptr_end - 1 << " are not pointers"
+                          << std::endl;
+            }
+            non_ptr_start = i;
+            non_ptr_end = non_ptr_start;
+        }
     }
 
     char *c = (char *) ctx->addr;

@@ -16,6 +16,7 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
     std::vector < AllocatedArea * > allocs;
     for (REG reg : FBZergContext::argument_regs) {
         in.read((char *) &tmp, sizeof(tmp));
+        std::cout << "Read in " << REG_StringShort(reg) << " = " << std::hex << tmp << std::endl;
         if (tmp == AllocatedArea::MAGIC_VALUE) {
             AllocatedArea *aa = new AllocatedArea();
             ctx.values[reg] = (ADDRINT) aa;
@@ -27,6 +28,7 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
     }
 
     in.read((char *) &tmp, sizeof(tmp));
+    std::cout << "Read in " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << tmp << std::endl;
     if (tmp == AllocatedArea::MAGIC_VALUE) {
         AllocatedArea *aa = new AllocatedArea();
         ctx.values[FBZergContext::return_reg] = (ADDRINT) aa;
@@ -39,6 +41,7 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
     for (auto aa : allocs) {
         in >> aa;
     }
+    std::cout << "Done reading in context\n" << std::endl;
 
     return in;
 }
@@ -57,10 +60,12 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
     for (REG reg : FBZergContext::argument_regs) {
         AllocatedArea *aa = ctx.find_allocated_area(reg);
         if (aa != nullptr) {
+//            std::cout << "Writing " << REG_StringShort(reg) << " value " << std::hex << AllocatedArea::MAGIC_VALUE << std::endl;
             allocs.push_back(aa);
             out.write((const char *) &AllocatedArea::MAGIC_VALUE, sizeof(AllocatedArea::MAGIC_VALUE));
         } else {
             ADDRINT val = ctx.get_value(reg);
+//            std::cout << "Writing " << REG_StringShort(reg) << " value " << std::hex << val << std::endl;
             out.write((const char *) &val, sizeof(val));
         }
     }
@@ -68,9 +73,11 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
     auto it = ctx.pointer_registers.find(FBZergContext::return_reg);
     if (it != ctx.pointer_registers.end()) {
         allocs.push_back(it->second);
+//        std::cout << "Writing " << REG_StringShort(FBZergContext::return_reg) << " value " << std::hex << AllocatedArea::MAGIC_VALUE << std::endl;
         out.write((const char *) &AllocatedArea::MAGIC_VALUE, sizeof(AllocatedArea::MAGIC_VALUE));
     } else {
         ADDRINT val = ctx.get_value(FBZergContext::return_reg);
+//        std::cout << "Writing " << REG_StringShort(FBZergContext::return_reg) << " value " << std::hex << val << std::endl;
         out.write((const char *) &val, sizeof(val));
     }
 
@@ -125,6 +132,14 @@ FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
     }
 
     return *this;
+}
+
+CONTEXT *FBZergContext::operator>>(CONTEXT *ctx) const {
+    for (REG reg : FBZergContext::argument_regs) {
+        PIN_SetContextReg(ctx, reg, get_value(reg));
+    }
+
+    return ctx;
 }
 
 FBZergContext &FBZergContext::operator<<(CONTEXT *ctx) {

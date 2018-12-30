@@ -82,6 +82,8 @@ public:
 
     friend std::istream &operator>>(std::istream &in, FBZergContext &ctx);
 
+    CONTEXT *operator>>(CONTEXT *ctx) const;
+
     FBZergContext &operator=(const FBZergContext &orig);
 
     FBZergContext &operator<<(CONTEXT *ctx);

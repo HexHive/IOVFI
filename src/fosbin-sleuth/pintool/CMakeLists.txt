@@ -4,6 +4,7 @@ set(PINTOOL_SOURCES
         PinLogger.cpp
         X86Context.cpp
         AllocatedArea.cpp
+        FBZergContext.cpp
         makefile.rules.in
         makefile.in
         )

@@ -23,10 +23,13 @@ KNOB <uint64_t> MaxInstructions(KNOB_MODE_WRITEONCE, "pintool", "ins", "1000000"
 KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.bin",
                                "The name of the file to write "
                                "fuzz output");
-KNOB <std::string> ContextsToUse(KNOB_MODE_APPEND, "pintool", "contexts", nullptr, "Contexts to use for fuzzing");
+KNOB <std::string> ContextsToUse(KNOB_MODE_APPEND, "pintool", "contexts", "", "Contexts to use for fuzzing");
+
+KNOB <uint32_t> HardFuzzCount(KNOB_MODE_WRITEONCE, "pintool", "hard-limit", "0",
+                              "The most fuzzing rounds regardless of time or segfaults");
 
 RTN target;
-uint32_t fuzz_count, orig_fuzz_count, curr_context_file_num;
+uint32_t fuzz_count, orig_fuzz_count, curr_context_file_num, hard_count;
 time_t fuzz_end_time;
 TLS_KEY log_key;
 FBZergContext preContext;
@@ -71,19 +74,33 @@ VOID read_new_context() {
         return;
     }
 
+    if (contextFile && contextFile.eof()) {
+        contextFile.close();
+        curr_context_file_num++;
+
+    }
+
+    std::cout << "Reading new context" << std::endl;
     if (!contextFile || !contextFile.is_open()) {
+        std::cout << "Opening " << ContextsToUse.Value(curr_context_file_num) << std::endl;
         contextFile.open(ContextsToUse.Value(curr_context_file_num).c_str());
     }
 
     contextFile >> preContext;
     contextFile >> expectedContext;
+    currentContext = preContext;
 }
 
 VOID reset_to_context(CONTEXT *ctx) {
     fuzz_count++;
 
+    if (HardFuzzCount.Value() > 0 && hard_count++ >= HardFuzzCount.Value()) {
+        std::cout << "Hit hard limit of " << std::dec << hard_count - 1 << std::endl;
+        PIN_ExitApplication(0);
+    }
+
     if (!timed_fuzz()) {
-        if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count++ > FuzzCount.Value()) {
+        if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count++ >= FuzzCount.Value()) {
             std::cout << "Stopping fuzzing at " << std::dec << orig_fuzz_count - 1 << " of " << FuzzCount.Value()
                       << std::endl;
             PIN_ExitApplication(0);
@@ -100,6 +117,7 @@ VOID reset_to_context(CONTEXT *ctx) {
 
     if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
         read_new_context();
+        currentContext >> ctx;
     } else {
         currentContext.reset_context(ctx, preContext);
     }
@@ -214,7 +232,8 @@ VOID trace_execution(TRACE trace, VOID *v) {
 }
 
 VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
-//    std::cout << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() <<  " instructions" << std::endl;
+    std::cout << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() << " instructions"
+              << std::endl;
     output_context(preContext);
     currentContext << ctx;
     output_context(currentContext);
@@ -224,10 +243,6 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
             inputContextPassed++;
         } else {
             inputContextFailed++;
-        }
-        if (contextFile.eof()) {
-            contextFile.close();
-            curr_context_file_num++;
         }
     }
 
@@ -361,7 +376,7 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
 //    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
 //    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
-//    displayCurrentContext(ctx);
+    displayCurrentContext(ctx);
     if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
         inputContextFailed++;
         reset_context(ctx);
@@ -584,11 +599,14 @@ VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
     delete logger;
     PIN_SetThreadData(log_key, nullptr, tid);
 
-    std::cout << "Input Contexts Passed: " << std::dec << inputContextPassed << std::endl;
-    std::cout << "Input Contexts Failed: " << std::dec << inputContextFailed << std::endl;
+    if (ContextsToUse.NumberOfValues() > 0) {
+        std::cout << "Input Contexts Passed: " << std::dec << inputContextPassed << std::endl;
+        std::cout << "Input Contexts Failed: " << std::dec << inputContextFailed << std::endl;
+    }
 }
 
 void initialize_system() {
+    std::cout << "Initializing system...";
     srand(time(NULL));
     std::string infoFileName = KnobOutName.Value() + ".info";
     infofile.open(infoFileName.c_str(), std::ios::out | std::ios::app);
@@ -597,9 +615,12 @@ void initialize_system() {
     PIN_AddThreadStartFunction(ThreadStart, 0);
     PIN_AddThreadFiniFunction(ThreadFini, 0);
     fuzz_end_time = time(NULL) + 60 * FuzzTime.Value();
+
+    std::cout << "done!" << std::endl;
 }
 
 int main(int argc, char **argv) {
+    std::cout << "Starting Zergling..." << std::endl;
     PIN_InitSymbols();
     if (PIN_Init(argc, argv)) {
         return usage();
@@ -621,6 +642,7 @@ int main(int argc, char **argv) {
     IMG_AddInstrumentFunction(ImageLoad, nullptr);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
     PIN_InterceptSignal(SIGSEGV, catchSignal, nullptr);
+    std::cout << "Starting Program" << std::endl;
     PIN_StartProgram();
 
     return 0;
