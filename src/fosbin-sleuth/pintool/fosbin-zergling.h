@@ -80,7 +80,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx);
 
-    std::istream &operator>>(std::istream &in);
+    friend std::istream &operator>>(std::istream &in, FBZergContext &ctx);
 
     FBZergContext &operator=(const FBZergContext &orig);
 

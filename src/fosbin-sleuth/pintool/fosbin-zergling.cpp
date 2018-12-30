@@ -23,9 +23,10 @@ KNOB <uint64_t> MaxInstructions(KNOB_MODE_WRITEONCE, "pintool", "ins", "1000000"
 KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.bin",
                                "The name of the file to write "
                                "fuzz output");
+KNOB <std::string> ContextsToUse(KNOB_MODE_APPEND, "pintool", "contexts", nullptr, "Contexts to use for fuzzing");
 
 RTN target;
-uint32_t fuzz_count;
+uint32_t fuzz_count, orig_fuzz_count, curr_context_file_num;
 time_t fuzz_end_time;
 TLS_KEY log_key;
 FBZergContext preContext;
@@ -33,7 +34,11 @@ FBZergContext currentContext;
 FBZergContext expectedContext;
 
 std::ofstream infofile;
+std::ifstream contextFile;
 std::vector<struct X86Context> fuzzing_run;
+
+uint64_t inputContextPassed;
+uint64_t inputContextFailed;
 
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
@@ -61,12 +66,25 @@ INS INS_FindByAddress(ADDRINT addr) {
     return ret;
 }
 
+VOID read_new_context() {
+    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
+        return;
+    }
+
+    if (!contextFile || !contextFile.is_open()) {
+        contextFile.open(ContextsToUse.Value(curr_context_file_num).c_str());
+    }
+
+    contextFile >> preContext;
+    contextFile >> expectedContext;
+}
+
 VOID reset_to_context(CONTEXT *ctx) {
     fuzz_count++;
 
     if (!timed_fuzz()) {
-        if (fuzz_count > FuzzCount.Value()) {
-            std::cout << "Stopping fuzzing at " << std::dec << fuzz_count - 1 << " of " << FuzzCount.Value()
+        if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count++ > FuzzCount.Value()) {
+            std::cout << "Stopping fuzzing at " << std::dec << orig_fuzz_count - 1 << " of " << FuzzCount.Value()
                       << std::endl;
             PIN_ExitApplication(0);
         }
@@ -79,7 +97,12 @@ VOID reset_to_context(CONTEXT *ctx) {
         }
     }
 
-    currentContext.reset_context(ctx, preContext);
+
+    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
+        read_new_context();
+    } else {
+        currentContext.reset_context(ctx, preContext);
+    }
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
     fuzzing_run.clear();
 }
@@ -195,6 +218,19 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
     output_context(preContext);
     currentContext << ctx;
     output_context(currentContext);
+
+    if (contextFile && contextFile.is_open()) {
+        if (currentContext == expectedContext) {
+            inputContextPassed++;
+        } else {
+            inputContextFailed++;
+        }
+        if (contextFile.eof()) {
+            contextFile.close();
+            curr_context_file_num++;
+        }
+    }
+
     start_fuzz_round(ctx);
 }
 
@@ -326,14 +362,22 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
 //    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
 //    displayCurrentContext(ctx);
-    std::vector<struct TaintedObject> taintedObjs;
-    for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin(); it != fuzzing_run.rend(); ++it) {
-        struct X86Context &c = *it;
-        INS ins = INS_FindByAddress(c.rip);
-        if (!INS_Valid(ins)) {
-            std::cerr << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
-            continue;
-        }
+    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
+        inputContextFailed++;
+        reset_context(ctx);
+        goto finish;
+    }
+
+    {
+        std::vector<struct TaintedObject> taintedObjs;
+        for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
+             it != fuzzing_run.rend(); ++it) {
+            struct X86Context &c = *it;
+            INS ins = INS_FindByAddress(c.rip);
+            if (!INS_Valid(ins)) {
+                std::cerr << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
+                continue;
+            }
 
 //        std::cout << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
 //                  << "(0x" << std::hex << INS_Address(ins) << "): " << INS_Disassemble(ins) << std::endl;
@@ -341,144 +385,150 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //        std::cout << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
 //        std::cout << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
 
-        if (it == fuzzing_run.rbegin()) {
-            add_taint(INS_MemoryBaseReg(ins), taintedObjs);
-            continue;
-        }
-
-        if (INS_IsMemoryRead(ins) || INS_HasMemoryRead2(ins)) {
-            REG base = INS_MemoryBaseReg(ins);
-            REG wreg = INS_RegW(ins, 0);
-            BOOL read_tainted;
-            BOOL write_tainted;
-            ADDRINT waddr = 0;
-            ADDRINT raddr = 0;
-
-            if (!REG_valid(base) && INS_SegPrefixIsMemoryRead(ins)) {
-                /* We're reading a segment register */
-                remove_taint(wreg, taintedObjs);
+            if (it == fuzzing_run.rbegin()) {
+                add_taint(INS_MemoryBaseReg(ins), taintedObjs);
                 continue;
             }
 
-            if (!REG_valid(base) || !REG_valid(wreg)) {
-                std::cerr << "Memory Read invalid base (" << REG_StringShort(base)
-                          << ") or invalid wreg (" << REG_StringShort(wreg)
-                          << ")" << std::endl;
-//                PIN_ExitApplication(1);
-                continue;
-            }
+            if (INS_IsMemoryRead(ins) || INS_HasMemoryRead2(ins)) {
+                REG base = INS_MemoryBaseReg(ins);
+                REG wreg = INS_RegW(ins, 0);
+                BOOL read_tainted;
+                BOOL write_tainted;
+                ADDRINT waddr = 0;
+                ADDRINT raddr = 0;
 
-            if (is_rbp(base)) {
-                raddr = compute_effective_address(ins, c);
-                read_tainted = isTainted(raddr, taintedObjs);
-            } else {
-                read_tainted = isTainted(base, taintedObjs);
-            }
-
-            if (is_rbp(wreg)) {
-                waddr = compute_effective_address(ins, c);
-                write_tainted = isTainted(waddr, taintedObjs);
-            } else {
-                write_tainted = isTainted(wreg, taintedObjs);
-            }
-
-            if (write_tainted && !read_tainted) {
-                if (waddr) {
-                    remove_taint(waddr, taintedObjs);
-                } else {
+                if (!REG_valid(base) && INS_SegPrefixIsMemoryRead(ins)) {
+                    /* We're reading a segment register */
                     remove_taint(wreg, taintedObjs);
+                    continue;
                 }
 
-                if (raddr) {
-                    add_taint(raddr, taintedObjs);
-                } else {
-                    add_taint(base, taintedObjs);
+                if (!REG_valid(base) || !REG_valid(wreg)) {
+                    std::cerr << "Memory Read invalid base (" << REG_StringShort(base)
+                              << ") or invalid wreg (" << REG_StringShort(wreg)
+                              << ")" << std::endl;
+//                PIN_ExitApplication(1);
+                    continue;
                 }
-            }
-        } else if (INS_IsMemoryWrite(ins) && !INS_OperandIsImmediate(ins, 1)) {
-            REG base = INS_MemoryBaseReg(ins);
-            REG rreg = INS_RegR(ins, 1);
+
+                if (is_rbp(base)) {
+                    raddr = compute_effective_address(ins, c);
+                    read_tainted = isTainted(raddr, taintedObjs);
+                } else {
+                    read_tainted = isTainted(base, taintedObjs);
+                }
+
+                if (is_rbp(wreg)) {
+                    waddr = compute_effective_address(ins, c);
+                    write_tainted = isTainted(waddr, taintedObjs);
+                } else {
+                    write_tainted = isTainted(wreg, taintedObjs);
+                }
+
+                if (write_tainted && !read_tainted) {
+                    if (waddr) {
+                        remove_taint(waddr, taintedObjs);
+                    } else {
+                        remove_taint(wreg, taintedObjs);
+                    }
+
+                    if (raddr) {
+                        add_taint(raddr, taintedObjs);
+                    } else {
+                        add_taint(base, taintedObjs);
+                    }
+                }
+            } else if (INS_IsMemoryWrite(ins) && !INS_OperandIsImmediate(ins, 1)) {
+                REG base = INS_MemoryBaseReg(ins);
+                REG rreg = INS_RegR(ins, 1);
 //            std::cout << "\tbase: " << REG_StringShort(base)
 //                      << " rreg: " << REG_StringShort(rreg) << std::endl;
 
-            BOOL read_tainted;
-            BOOL write_tainted;
-            ADDRINT waddr = 0;
-            ADDRINT raddr = 0;
-            if (!REG_valid(base) || !REG_valid(rreg)) {
-                std::cerr << "Memory Write invalid base (" << REG_StringShort(base)
-                          << ") or invalid rreg (" << REG_StringShort(rreg)
-                          << ")" << std::endl;
+                BOOL read_tainted;
+                BOOL write_tainted;
+                ADDRINT waddr = 0;
+                ADDRINT raddr = 0;
+                if (!REG_valid(base) || !REG_valid(rreg)) {
+                    std::cerr << "Memory Write invalid base (" << REG_StringShort(base)
+                              << ") or invalid rreg (" << REG_StringShort(rreg)
+                              << ")" << std::endl;
 //                PIN_ExitApplication(1);
-                continue;
-            }
-
-            if (is_rbp(base)) {
-                waddr = compute_effective_address(ins, c);
-                write_tainted = isTainted(waddr, taintedObjs);
-            } else {
-                write_tainted = isTainted(base, taintedObjs);
-            }
-
-            if (is_rbp(rreg)) {
-                raddr = compute_effective_address(ins, c);
-                read_tainted = isTainted(raddr, taintedObjs);
-            } else {
-                read_tainted = isTainted(rreg, taintedObjs);
-            }
-
-            if (write_tainted && !read_tainted) {
-                if (waddr) {
-                    remove_taint(waddr, taintedObjs);
-                } else {
-                    remove_taint(base, taintedObjs);
+                    continue;
                 }
 
-                if (raddr) {
-                    add_taint(raddr, taintedObjs);
+                if (is_rbp(base)) {
+                    waddr = compute_effective_address(ins, c);
+                    write_tainted = isTainted(waddr, taintedObjs);
                 } else {
-                    add_taint(rreg, taintedObjs);
+                    write_tainted = isTainted(base, taintedObjs);
+                }
+
+                if (is_rbp(rreg)) {
+                    raddr = compute_effective_address(ins, c);
+                    read_tainted = isTainted(raddr, taintedObjs);
+                } else {
+                    read_tainted = isTainted(rreg, taintedObjs);
+                }
+
+                if (write_tainted && !read_tainted) {
+                    if (waddr) {
+                        remove_taint(waddr, taintedObjs);
+                    } else {
+                        remove_taint(base, taintedObjs);
+                    }
+
+                    if (raddr) {
+                        add_taint(raddr, taintedObjs);
+                    } else {
+                        add_taint(rreg, taintedObjs);
+                    }
                 }
             }
         }
-    }
 
-    if (taintedObjs.size() > 0) {
-        struct TaintedObject taintedObject = taintedObjs.back();
+        if (taintedObjs.size() > 0) {
+            struct TaintedObject taintedObject = taintedObjs.back();
 //        if (taintedObject.isRegister) {
 //            std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
 //        } else {
 //            std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
 //        }
 
-        /* Find the last write to the base register to find the address of the bad pointer */
-        INS ins = INS_FindByAddress(fuzzing_run.back().rip);
-        REG faulting_reg = INS_MemoryBaseReg(ins);
+            /* Find the last write to the base register to find the address of the bad pointer */
+            INS ins = INS_FindByAddress(fuzzing_run.back().rip);
+            REG faulting_reg = INS_MemoryBaseReg(ins);
 //        std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
-        ADDRINT faulting_addr = 0;
-        for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
-             it != fuzzing_run.rend(); it++) {
-            if (it == fuzzing_run.rbegin()) {
-                continue;
-            }
-            ins = INS_FindByAddress(it->rip);
+            ADDRINT faulting_addr = 0;
+            for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
+                 it != fuzzing_run.rend(); it++) {
+                if (it == fuzzing_run.rbegin()) {
+                    continue;
+                }
+                ins = INS_FindByAddress(it->rip);
 //            std::cout << INS_Disassemble(ins) << std::endl;
-            if (INS_RegWContain(ins, faulting_reg)) {
+                if (INS_RegWContain(ins, faulting_reg)) {
 //                it->prettyPrint(std::cout);
-                faulting_addr = compute_effective_address(ins, *it);
+                    faulting_addr = compute_effective_address(ins, *it);
 //                std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
-                break;
+                    break;
+                }
             }
+
+            create_allocated_area(taintedObject, faulting_addr);
+        } else {
+            std::cerr << "Taint analysis failed for the following context: " << std::endl;
+            displayCurrentContext(ctx);
         }
 
-        create_allocated_area(taintedObject, faulting_addr);
-    } else {
-        std::cerr << "Taint analysis failed for the following context: " << std::endl;
-        displayCurrentContext(ctx);
+        reset_to_preexecution(ctx);
     }
+    finish:
 
     fuzz_count--;
-    reset_to_preexecution(ctx);
+    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
+        orig_fuzz_count--;
+    }
 //    fuzz_registers(ctx);
 //    PIN_SaveContext(ctx, &preexecution);
 //    displayCurrentContext(ctx);
@@ -533,6 +583,9 @@ VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
     PinLogger *logger = static_cast<PinLogger *>(PIN_GetThreadData(log_key, tid));
     delete logger;
     PIN_SetThreadData(log_key, nullptr, tid);
+
+    std::cout << "Input Contexts Passed: " << std::dec << inputContextPassed << std::endl;
+    std::cout << "Input Contexts Failed: " << std::dec << inputContextFailed << std::endl;
 }
 
 void initialize_system() {

@@ -11,29 +11,29 @@ const REG FBZergContext::return_reg = LEVEL_BASE::REG_RAX;
 
 FBZergContext::FBZergContext() {}
 
-std::istream &FBZergContext::operator>>(std::istream &in) {
+std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
     ADDRINT tmp;
     std::vector < AllocatedArea * > allocs;
     for (REG reg : FBZergContext::argument_regs) {
         in.read((char *) &tmp, sizeof(tmp));
         if (tmp == AllocatedArea::MAGIC_VALUE) {
             AllocatedArea *aa = new AllocatedArea();
-            values[reg] = (ADDRINT) aa;
-            pointer_registers[reg] = aa;
+            ctx.values[reg] = (ADDRINT) aa;
+            ctx.pointer_registers[reg] = aa;
             allocs.push_back(aa);
         } else {
-            values[reg] = tmp;
+            ctx.values[reg] = tmp;
         }
     }
 
     in.read((char *) &tmp, sizeof(tmp));
     if (tmp == AllocatedArea::MAGIC_VALUE) {
         AllocatedArea *aa = new AllocatedArea();
-        values[return_reg] = (ADDRINT) aa;
-        pointer_registers[return_reg] = aa;
+        ctx.values[FBZergContext::return_reg] = (ADDRINT) aa;
+        ctx.pointer_registers[FBZergContext::return_reg] = aa;
         allocs.push_back(aa);
     } else {
-        values[return_reg] = tmp;
+        ctx.values[FBZergContext::return_reg] = tmp;
     }
 
     for (auto aa : allocs) {
