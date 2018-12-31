@@ -9,6 +9,7 @@
 #include "pin.H"
 
 #define DEFAULT_ALLOCATION_SIZE 256
+#define SHARED_LIBRARY_LOADER   "fb-load"
 
 struct X86Context {
     ADDRINT rax;

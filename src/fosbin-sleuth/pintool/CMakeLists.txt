@@ -1,3 +1,5 @@
+add_subdirectory("shared-library-support")
+
 set(PINTOOL_SOURCES
         ${PINTOOL_NAME}.cpp
         ${PINTOOL_NAME}.h
@@ -23,6 +25,6 @@ configure_file(makefile.in makefile)
 
 add_custom_target(${PINTOOL_NAME}
         DEPENDS ${PROJECT_BINARY_DIR}/pintools
-            ${PROJECT_BINARY_DIR}/pintools/intel64/${PINTOOL_NAME}.so
-            ${PINTOOL_SOURCES}
+        ${PROJECT_BINARY_DIR}/pintools/intel64/${PINTOOL_NAME}.so
+        ${PINTOOL_SOURCES}
         )

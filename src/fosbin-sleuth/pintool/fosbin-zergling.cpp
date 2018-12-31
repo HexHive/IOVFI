@@ -26,7 +26,12 @@ KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fu
 KNOB <std::string> ContextsToUse(KNOB_MODE_APPEND, "pintool", "contexts", "", "Contexts to use for fuzzing");
 
 KNOB <uint32_t> HardFuzzCount(KNOB_MODE_WRITEONCE, "pintool", "hard-limit", "0",
-                              "The most fuzzing rounds regardless of time or segfaults");
+                              "The most fuzzing rounds regardless of time or segfaults. For debug purposes.");
+
+KNOB<bool> UsingSharedLibrary(KNOB_MODE_WRITEONCE, "pintool", "shared", "false",
+                              "Shared library to load. Must specify function name to fuzz.");
+KNOB <std::string> SharedLibraryFunc(KNOB_MODE_WRITEONCE, "pintool", "shared-func", "",
+                                     "Shared library function to fuzz.");
 
 RTN target;
 uint32_t fuzz_count, orig_fuzz_count, curr_context_file_num, hard_count;
@@ -35,6 +40,8 @@ TLS_KEY log_key;
 FBZergContext preContext;
 FBZergContext currentContext;
 FBZergContext expectedContext;
+
+std::string shared_library_name;
 
 std::ofstream infofile;
 std::ifstream contextFile;
@@ -598,17 +605,79 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 }
 
 VOID ImageLoad(IMG img, VOID *v) {
-    if (!IMG_Valid(img) || !IMG_IsMainExecutable(img)) {
+    if (!IMG_Valid(img)) {
         return;
     }
 
-    ADDRINT offset = IMG_LoadOffset(img);
-    ADDRINT target_addr = KnobStart.Value() + offset;
-    target = RTN_FindByAddress(target_addr);
-    if (!RTN_Valid(target)) {
-        std::cerr << "Could not find target at 0x" << std::hex << target_addr << " (0x" << offset << " + 0x" <<
-                  KnobStart.Value() << ")" << std::endl;
-        return;
+    std::cout << "Image " << IMG_Name(img) << " loaded" << std::endl;
+
+    if (SharedLibraryFunc.Value() == "") {
+        if (!IMG_IsMainExecutable(img)) {
+            return;
+        }
+        ADDRINT offset = IMG_LoadOffset(img);
+        ADDRINT target_addr = KnobStart.Value() + offset;
+        target = RTN_FindByAddress(target_addr);
+        if (!RTN_Valid(target)) {
+            std::cerr << "Could not find target at 0x" << std::hex << target_addr << " (0x" << offset << " + 0x" <<
+                      KnobStart.Value() << ")" << std::endl;
+            PIN_ExitApplication(1);
+        }
+
+        ADDRINT main_addr = IMG_Entry(img);
+        RTN main = RTN_FindByAddress(main_addr);
+        if (RTN_Valid(main)) {
+            RTN_Open(main);
+            INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID,
+                           IARG_END);
+            RTN_Close(main);
+        } else {
+            std::cerr << "Could not find main!" << std::endl;
+            exit(1);
+        }
+
+    } else {
+        if (IMG_Name(img) == shared_library_name) {
+//            std::cout << shared_library_name << " has been loaded" << std::endl;
+            bool found = false;
+            for (SEC s = IMG_SecHead(img); SEC_Valid(s) && !found; s = SEC_Next(s)) {
+                for (RTN f = SEC_RtnHead(s); RTN_Valid(f); f = RTN_Next(f)) {
+//                    std::cout << "Found " << RTN_Name(f) << std::endl;
+                    if (RTN_Name(f) == SharedLibraryFunc.Value()) {
+                        target = f;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
+//            std::cerr << "Could not find target " << SharedLibraryFunc.Value() << " in shared library " << SharedLibraryName.Value() << std::endl;
+                exit(1);
+            } else {
+//                std::cout << "Found " << SharedLibraryFunc.Value() << std::endl;
+            }
+        } else if (!IMG_IsMainExecutable(img)) {
+//            std::cout << "Irrelevant image" << std::endl;
+            return;
+        } else {
+            /* The loader program calls dlopen on the shared library, and then immediately returns,
+             * so add a call at the return statement to start fuzzing the shared library function
+             */
+            ADDRINT main_addr = IMG_Entry(img);
+            RTN main = RTN_FindByAddress(main_addr);
+            if (!RTN_Valid(main)) {
+                std::cerr << "Invalid main" << std::endl;
+                exit(1);
+            }
+            RTN_Open(main);
+            for (INS ins = RTN_InsHead(main); INS_Valid(ins); ins = INS_Next(ins)) {
+                if (INS_IsRet(ins)) {
+                    INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
+                }
+            }
+            RTN_Close(main);
+            return;
+        }
     }
     std::cout << "Found target: " << RTN_Name(target) << " at 0x" << std::hex << RTN_Address(target) << std::endl;
     std::cout << "Instrumenting returns..." << std::flush;
@@ -620,23 +689,15 @@ VOID ImageLoad(IMG img, VOID *v) {
     }
     RTN_Close(target);
     std::cout << "done." << std::endl;
-
-    ADDRINT main_addr = IMG_Entry(img);
-    RTN main = RTN_FindByAddress(main_addr);
-    if (RTN_Valid(main)) {
-        RTN_Open(main);
-        INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID,
-                       IARG_END);
-        RTN_Close(main);
-    } else {
-        std::cerr << "Could not find main!" << std::endl;
-        exit(1);
-    }
-    return;
 }
 
 VOID ThreadStart(THREADID tid, CONTEXT *ctx, INT32 flags, VOID *v) {
-    std::string fname = RTN_Name(target) + "." + decstr(tid) + ".ctx";
+    std::string fname;
+    if (SharedLibraryFunc.Value() != "") {
+        fname = SharedLibraryFunc.Value() + "." + decstr(tid) + ".ctx";
+    } else {
+        fname = RTN_Name(target) + "." + decstr(tid) + ".ctx";
+    }
     PinLogger *logger = new PinLogger(tid, fname);
     PIN_SetThreadData(log_key, logger, tid);
 }
@@ -652,7 +713,7 @@ VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
     }
 }
 
-void initialize_system() {
+void initialize_system(int argc, char **argv) {
     std::cout << "Initializing system...";
     srand(time(NULL));
     std::string infoFileName = KnobOutName.Value() + ".info";
@@ -662,6 +723,36 @@ void initialize_system() {
     PIN_AddThreadStartFunction(ThreadStart, 0);
     PIN_AddThreadFiniFunction(ThreadFini, 0);
     fuzz_end_time = time(NULL) + 60 * FuzzTime.Value();
+
+    if (SharedLibraryFunc.Value() != "") {
+        if (strstr(argv[argc - 2], SHARED_LIBRARY_LOADER) == NULL) {
+            std::cerr << "fb-load must be the program run when fuzzing shared libraries" << std::endl;
+            exit(1);
+        }
+        shared_library_name = argv[argc - 1];
+        IMG img = IMG_Open(shared_library_name);
+        if (!IMG_Valid(img)) {
+            std::cerr << "Could not open " << shared_library_name << std::endl;
+            exit(1);
+        }
+        bool found = false;
+        for (SEC s = IMG_SecHead(img); SEC_Valid(s) && !found; s = SEC_Next(s)) {
+            for (RTN f = SEC_RtnHead(s); RTN_Valid(f); f = RTN_Next(f)) {
+                if (RTN_Name(f) == SharedLibraryFunc.Value()) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found) {
+            std::cerr << "Could not find " << SharedLibraryFunc.Value() << " in library " << shared_library_name
+                      << std::endl;
+            IMG_Close(img);
+            exit(1);
+        }
+
+        IMG_Close(img);
+    }
 
     std::cout << "done!" << std::endl;
 }
@@ -673,10 +764,10 @@ int main(int argc, char **argv) {
         return usage();
     }
 
-    if (!KnobStart.Value()) {
+    if (!KnobStart.Value() && SharedLibraryFunc.Value() == "") {
         return usage();
     }
-    initialize_system();
+    initialize_system(argc, argv);
 
     if (!timed_fuzz()) {
         std::cout << "Fuzzing 0x" << std::hex << KnobStart.Value() << std::dec << " " << FuzzCount.Value() << " times."
