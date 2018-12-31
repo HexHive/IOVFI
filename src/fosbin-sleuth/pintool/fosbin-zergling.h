@@ -39,7 +39,7 @@ class AllocatedArea {
 public:
     AllocatedArea();
 
-    AllocatedArea(void *base);
+    AllocatedArea(const AllocatedArea &aa);
 
     ~AllocatedArea();
 
@@ -75,6 +75,10 @@ protected:
     ADDRINT malloc_addr;
     std::vector<bool> mem_map;
     std::vector<AllocatedArea *> subareas;
+
+    void copy_allocated_area(const AllocatedArea &orig);
+
+    void allocate_area(size_t size);
 
     void setup_for_round(bool fuzz);
 };

@@ -19,7 +19,7 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
 //        std::cout << "Read in " << REG_StringShort(reg) << " = " << std::hex << tmp << std::endl;
         if (tmp == AllocatedArea::MAGIC_VALUE) {
             AllocatedArea *aa = new AllocatedArea();
-            ctx.values[reg] = (ADDRINT) aa;
+            ctx.values[reg] = (ADDRINT) aa->getAddr();
             ctx.pointer_registers[reg] = aa;
             allocs.push_back(aa);
         } else {
@@ -122,22 +122,23 @@ FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
     for (auto it : pointer_registers) {
         delete it.second;
     }
-
     pointer_registers.clear();
     values.clear();
 
     for (auto it : orig.values) {
         AllocatedArea *aa = orig.find_allocated_area(it.first);
         if (aa == nullptr) {
+//            std::cout << "Writing " << std::hex << it.second << " to register " << REG_StringShort(it.first) << std::endl;
             values[it.first] = it.second;
         } else {
-            AllocatedArea *new_aa = new AllocatedArea();
-            *new_aa = *aa;
-            values[it.first] = (ADDRINT) new_aa;
+//            std::cout << "Creating new allocated area for register " << REG_StringShort(it.first) << std::endl;
+            AllocatedArea *new_aa = new AllocatedArea(*aa);
+            values[it.first] = new_aa->getAddr();
             pointer_registers[it.first] = new_aa;
         }
     }
 
+//    std::cout << "Done assigning new context" << std::endl;
     return *this;
 }
 
@@ -218,10 +219,11 @@ void FBZergContext::add(REG reg, AllocatedArea *aa) {
 //    std::cout << "Adding AllocatedArea to register " << REG_StringShort(reg) << std::endl;
     if (pointer_registers.find(reg) == pointer_registers.end()) {
         pointer_registers[reg] = aa;
-        values[reg] = (ADDRINT) aa;
+        values[reg] = aa->getAddr();
     } else {
 //        std::cout << "Resetting AllocatedArea" << std::endl;
         *pointer_registers[reg] = *aa;
+        values[reg] = aa->getAddr();
     }
 }
 

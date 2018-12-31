@@ -94,11 +94,10 @@ VOID read_new_context() {
 //    std::cout << "expectedContext:" << std::endl;
 //    expectedContext.prettyPrint();
 //    std::cout << "Read expectedcontext" << std::endl;
-    currentContext = preContext;
 //    std::cout << "Done reading context" << std::endl;
 }
 
-VOID reset_to_context(CONTEXT *ctx) {
+VOID reset_to_context(CONTEXT *ctx, bool readNewContext) {
 //    fuzz_count++;
 //    std::cout << "fuzz_count = " << std::dec << fuzz_count << " orig_fuzz_count = " << orig_fuzz_count << std::endl;
 
@@ -122,24 +121,20 @@ VOID reset_to_context(CONTEXT *ctx) {
         }
     }
 
-
-    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
+    if (curr_context_file_num < ContextsToUse.NumberOfValues() && readNewContext) {
         read_new_context();
-        currentContext >> ctx;
-    } else {
-        currentContext.reset_context(ctx, preContext);
     }
+
     PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
     fuzzing_run.clear();
 }
 
 VOID reset_context(CONTEXT *ctx) {
-    reset_to_context(ctx);
+    reset_to_context(ctx, true);
 }
 
 VOID reset_to_preexecution(CONTEXT *ctx) {
-    currentContext = preContext;
-    reset_to_context(ctx);
+    reset_to_context(ctx, false);
 }
 
 ADDRINT gen_random() {
@@ -151,11 +146,13 @@ ADDRINT gen_random() {
 }
 
 VOID fuzz_registers(CONTEXT *ctx) {
+//    std::cout << "Fuzzing registers" << std::endl;
     for (REG reg : FBZergContext::argument_regs) {
-        AllocatedArea *aa = currentContext.find_allocated_area(reg);
+        AllocatedArea *aa = preContext.find_allocated_area(reg);
         if (aa == nullptr) {
-            PIN_SetContextReg(ctx, reg, gen_random());
+            preContext.add(reg, gen_random());
         } else {
+//            std::cout << "Fuzzing allocated area" << std::endl;
             aa->fuzz();
         }
     }
@@ -190,10 +187,10 @@ VOID start_fuzz_round(CONTEXT *ctx) {
     if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
         fuzz_registers(ctx);
     }
-//    PIN_SaveContext(ctx, &preexecution);
+    currentContext = preContext;
+    currentContext >> ctx;
+//    currentContext.prettyPrint();
     std::cout << "Starting round " << std::dec << (fuzz_count + 1) << std::endl;
-//    std::cout << "Pre Execution Current Context addr = 0x" << std::hex << currentContext.find_allocated_area(FBZergContext::argument_regs[0])->getAddr() << std::endl;
-//    fuzz_count++;
     PIN_ExecuteAt(ctx);
 }
 
@@ -387,7 +384,10 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
                 std::cerr << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
                 PIN_ExitApplication(1);
             }
-            preContext.add(to.reg, aa);
+
+            AllocatedArea *tmp = preContext.find_allocated_area(to.reg);
+            *tmp = *aa;
+//            preContext.add(to.reg, aa);
 //            std::cout << "Fixed pointer" << std::endl;
         }
     } else {
@@ -566,6 +566,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
         reset_to_preexecution(ctx);
     }
+
 //    fuzz_count--;
 //    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
 //        orig_fuzz_count--;
@@ -573,6 +574,10 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
     finish:
 
+    currentContext = preContext;
+//    preContext.prettyPrint();
+//    currentContext.prettyPrint();
+    currentContext >> ctx;
 //    fuzz_registers(ctx);
 //    PIN_SaveContext(ctx, &preexecution);
 //    displayCurrentContext(ctx);
