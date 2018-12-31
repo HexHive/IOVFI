@@ -75,15 +75,15 @@ VOID read_new_context() {
     }
 
     if (contextFile && contextFile.is_open() && contextFile.peek() == EOF) {
-        std::cout << "Closing contextFile" << std::endl;
+//        std::cout << "Closing contextFile" << std::endl;
         contextFile.close();
-        std::cout << "contextFile closed" << std::endl;
+//        std::cout << "contextFile closed" << std::endl;
         curr_context_file_num++;
     }
 
 //    std::cout << "Reading new context" << std::endl;
     if ((!contextFile || !contextFile.is_open()) && curr_context_file_num < ContextsToUse.NumberOfValues()) {
-        std::cout << "Opening " << ContextsToUse.Value(curr_context_file_num) << std::endl;
+//        std::cout << "Opening " << ContextsToUse.Value(curr_context_file_num) << std::endl;
         contextFile.open(ContextsToUse.Value(curr_context_file_num).c_str());
         inputContextFailed = 0;
         inputContextPassed = 0;
@@ -395,7 +395,7 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
             }
             AllocatedArea *tmp = preContext.find_allocated_area(to.reg);
             aa->reset_non_ptrs(*tmp);
-            currentContext.prettyPrint();
+//            currentContext.prettyPrint();
             *tmp = *aa;
 //            preContext.prettyPrint();
 //            std::cout << "Fixed pointer" << std::endl;
@@ -411,7 +411,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
 //    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
 //    displayCurrentContext(ctx);
-    currentContext.prettyPrint();
+//    currentContext.prettyPrint();
     if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
         inputContextFailed++;
         totalInputContextsFailed++;
@@ -421,6 +421,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //        }
         reset_context(ctx);
         currentContext = preContext;
+        std::cout << "Input context failed...trying a new one" << std::endl;
         goto finish;
     }
 
@@ -545,11 +546,11 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
         if (taintedObjs.size() > 0) {
             struct TaintedObject taintedObject = taintedObjs.back();
-            if (taintedObject.isRegister) {
-                std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
-            } else {
-                std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
-            }
+//            if (taintedObject.isRegister) {
+//                std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
+//            } else {
+//                std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
+//            }
 
             /* Find the last write to the base register to find the address of the bad pointer */
             INS ins = INS_FindByAddress(fuzzing_run.back().rip);
@@ -566,7 +567,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
                 if (INS_RegWContain(ins, faulting_reg)) {
 //                it->prettyPrint(std::cout);
                     faulting_addr = compute_effective_address(ins, *it);
-                    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
+//                    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
                     break;
                 }
             }

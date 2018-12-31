@@ -297,7 +297,7 @@ bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
         /* TODO: Implement resizing algorithm */
         return false;
     } else if (diff >= 0) {
-        std::cout << "Current submember" << std::endl;
+//        std::cout << "Current submember" << std::endl;
         /* Some memory address inside this area is a pointer, so add a
          * new AllocatedArea to this one's subareas
          */
