@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include "pin.H"
 
-#define DEFAULT_ALLOCATION_SIZE 512
+#define DEFAULT_ALLOCATION_SIZE 16
 
 struct X86Context {
     ADDRINT rax;
@@ -39,13 +39,15 @@ class AllocatedArea {
 public:
     AllocatedArea();
 
+    AllocatedArea(void *base);
+
     ~AllocatedArea();
 
     void reset();
 
-    ADDRINT getAddr();
+    ADDRINT getAddr() const;
 
-    size_t size();
+    size_t size() const;
 
     void fuzz();
 
@@ -64,8 +66,13 @@ public:
 
     bool operator!=(const AllocatedArea &other) const;
 
+    AllocatedArea *get_subarea(size_t i) const;
+
+    void prettyPrint(size_t depth) const;
+
 protected:
     ADDRINT addr;
+    ADDRINT malloc_addr;
     std::vector<bool> mem_map;
     std::vector<AllocatedArea *> subareas;
 
@@ -105,6 +112,8 @@ public:
     const static REG return_reg;
 
     ADDRINT get_value(REG reg) const;
+
+    void prettyPrint() const;
 protected:
     std::map <REG, ADDRINT> values;
     std::map<REG, AllocatedArea *> pointer_registers;

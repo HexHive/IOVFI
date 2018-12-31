@@ -16,7 +16,7 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
     std::vector < AllocatedArea * > allocs;
     for (REG reg : FBZergContext::argument_regs) {
         in.read((char *) &tmp, sizeof(tmp));
-        std::cout << "Read in " << REG_StringShort(reg) << " = " << std::hex << tmp << std::endl;
+//        std::cout << "Read in " << REG_StringShort(reg) << " = " << std::hex << tmp << std::endl;
         if (tmp == AllocatedArea::MAGIC_VALUE) {
             AllocatedArea *aa = new AllocatedArea();
             ctx.values[reg] = (ADDRINT) aa;
@@ -28,20 +28,20 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
     }
 
     in.read((char *) &tmp, sizeof(tmp));
-    std::cout << "Read in " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << tmp << std::endl;
-    if (tmp == AllocatedArea::MAGIC_VALUE) {
-        AllocatedArea *aa = new AllocatedArea();
-        ctx.values[FBZergContext::return_reg] = (ADDRINT) aa;
-        ctx.pointer_registers[FBZergContext::return_reg] = aa;
-        allocs.push_back(aa);
-    } else {
+//    std::cout << "Read in " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << tmp << std::endl;
+//    if (tmp == AllocatedArea::MAGIC_VALUE) {
+//        AllocatedArea *aa = new AllocatedArea();
+//        ctx.values[FBZergContext::return_reg] = (ADDRINT) aa;
+//        ctx.pointer_registers[FBZergContext::return_reg] = aa;
+//        allocs.push_back(aa);
+//    } else {
         ctx.values[FBZergContext::return_reg] = tmp;
-    }
+//    }
 
     for (auto aa : allocs) {
         in >> aa;
     }
-    std::cout << "Done reading in context\n" << std::endl;
+//    std::cout << "Done reading in context\n" << std::endl;
 
     return in;
 }
@@ -90,16 +90,22 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
 
 bool FBZergContext::operator==(const FBZergContext &ctx) const {
     if (get_value(FBZergContext::return_reg) != ctx.get_value(FBZergContext::return_reg)) {
+//        std::cout << "Contexts return values mismatch:" << std::endl;
+//        std::cout << "This " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << get_value(FBZergContext::return_reg) << std::endl;
+//        std::cout << "That " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << ctx.get_value(FBZergContext::return_reg) << std::endl;
+
         return false;
     }
 
     for (auto it : pointer_registers) {
         AllocatedArea *aa = ctx.find_allocated_area(it.first);
         if (aa == nullptr) {
+//            std::cout << "Expected AllocatedArea is missing" << std::endl;
             return false;
         }
 
         if (*aa != *it.second) {
+//            std::cout << "AllocatedAreas are not the same" << std::endl;
             return false;
         }
     }
@@ -112,6 +118,7 @@ bool FBZergContext::operator!=(const FBZergContext &ctx) const {
 }
 
 FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
+//    std::cout << "Deleting allocated areas" << std::endl;
     for (auto it : pointer_registers) {
         delete it.second;
     }
@@ -134,11 +141,26 @@ FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
     return *this;
 }
 
+void FBZergContext::prettyPrint() const {
+    for (REG reg : argument_regs) {
+        std::cout << REG_StringShort(reg) << "\t= " << std::hex << get_value(reg) << std::endl;
+    }
+
+    std::cout << REG_StringShort(FBZergContext::return_reg) << "\t= " << std::hex
+              << get_value(FBZergContext::return_reg) << std::endl;
+
+    for (auto it : pointer_registers) {
+        it.second->prettyPrint(1);
+    }
+}
+
 CONTEXT *FBZergContext::operator>>(CONTEXT *ctx) const {
+//    std::cout << "Setting context" << std::endl;
     for (REG reg : FBZergContext::argument_regs) {
         PIN_SetContextReg(ctx, reg, get_value(reg));
     }
 
+//    displayCurrentContext(ctx);
     return ctx;
 }
 
@@ -152,7 +174,18 @@ FBZergContext &FBZergContext::operator<<(CONTEXT *ctx) {
 
     void *ret_val = (void *) PIN_GetContextReg(ctx, FBZergContext::return_reg);
     if (PIN_CheckReadAccess(ret_val)) {
-
+//        std::cout << "ret_val (" << std::hex << ret_val << ") is readable" << std::endl;
+//        AllocatedArea *aa = find_allocated_area(FBZergContext::return_reg);
+//        if(aa != nullptr) {
+//            delete aa;
+//        }
+//        aa = new AllocatedArea(ret_val);
+//
+//        values[FBZergContext::return_reg] = (ADDRINT)aa;
+//        pointer_registers[FBZergContext::return_reg] = aa;
+        values[FBZergContext::return_reg] = AllocatedArea::MAGIC_VALUE;
+    } else {
+        values[FBZergContext::return_reg] = (ADDRINT) ret_val;
     }
 
     return *this;

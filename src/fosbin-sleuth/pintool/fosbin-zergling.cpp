@@ -74,25 +74,33 @@ VOID read_new_context() {
         return;
     }
 
-    if (contextFile && contextFile.eof()) {
+    if (contextFile && contextFile.is_open() && contextFile.peek() == EOF) {
+        std::cout << "Closing contextFile" << std::endl;
         contextFile.close();
         curr_context_file_num++;
-
     }
 
-    std::cout << "Reading new context" << std::endl;
+//    std::cout << "Reading new context" << std::endl;
     if (!contextFile || !contextFile.is_open()) {
-        std::cout << "Opening " << ContextsToUse.Value(curr_context_file_num) << std::endl;
+//        std::cout << "Opening " << ContextsToUse.Value(curr_context_file_num) << std::endl;
         contextFile.open(ContextsToUse.Value(curr_context_file_num).c_str());
     }
 
     contextFile >> preContext;
+//    std::cout << "preContext:" << std::endl;
+//    preContext.prettyPrint();
+//    std::cout << "Read precontext" << std::endl;
     contextFile >> expectedContext;
+//    std::cout << "expectedContext:" << std::endl;
+//    expectedContext.prettyPrint();
+//    std::cout << "Read expectedcontext" << std::endl;
     currentContext = preContext;
+//    std::cout << "Done reading context" << std::endl;
 }
 
 VOID reset_to_context(CONTEXT *ctx) {
-    fuzz_count++;
+//    fuzz_count++;
+//    std::cout << "fuzz_count = " << std::dec << fuzz_count << " orig_fuzz_count = " << orig_fuzz_count << std::endl;
 
     if (HardFuzzCount.Value() > 0 && hard_count++ >= HardFuzzCount.Value()) {
         std::cout << "Hit hard limit of " << std::dec << hard_count - 1 << std::endl;
@@ -100,8 +108,8 @@ VOID reset_to_context(CONTEXT *ctx) {
     }
 
     if (!timed_fuzz()) {
-        if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count++ >= FuzzCount.Value()) {
-            std::cout << "Stopping fuzzing at " << std::dec << orig_fuzz_count - 1 << " of " << FuzzCount.Value()
+        if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count >= FuzzCount.Value()) {
+            std::cout << "Stopping fuzzing at " << std::dec << orig_fuzz_count << " of " << FuzzCount.Value()
                       << std::endl;
             PIN_ExitApplication(0);
         }
@@ -179,9 +187,13 @@ void output_context(const FBZergContext &ctx) {
 
 VOID start_fuzz_round(CONTEXT *ctx) {
     reset_context(ctx);
-    fuzz_registers(ctx);
+    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
+        fuzz_registers(ctx);
+    }
 //    PIN_SaveContext(ctx, &preexecution);
-//    std::cout << "Starting round " << std::dec << fuzz_count << std::endl;
+    std::cout << "Starting round " << std::dec << (fuzz_count + 1) << std::endl;
+//    std::cout << "Pre Execution Current Context addr = 0x" << std::hex << currentContext.find_allocated_area(FBZergContext::argument_regs[0])->getAddr() << std::endl;
+//    fuzz_count++;
     PIN_ExecuteAt(ctx);
 }
 
@@ -234,8 +246,15 @@ VOID trace_execution(TRACE trace, VOID *v) {
 VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
     std::cout << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() << " instructions"
               << std::endl;
+//    std::cout << "Post Execution Current Context addr = 0x" << std::hex << currentContext.find_allocated_area(FBZergContext::argument_regs[0])->getAddr() << std::endl;
+
+//    std::cout << "Outputting precontext" << std::endl;
     output_context(preContext);
+//    std::cout << "currentContext:" << std::endl;
+//    displayCurrentContext(ctx);
     currentContext << ctx;
+//    currentContext.prettyPrint();
+//    std::cout << "Outputting currentContext" << std::endl;
     output_context(currentContext);
 
     if (contextFile && contextFile.is_open()) {
@@ -246,10 +265,15 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
         }
     }
 
+    fuzz_count++;
+    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
+        orig_fuzz_count++;
+    }
     start_fuzz_round(ctx);
 }
 
 VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
+    std::cout << "Beginning to fuzz" << std::endl;
     PIN_SaveContext(ctx, &snapshot);
     start_fuzz_round(ctx);
 }
@@ -376,9 +400,13 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
 //    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
 //    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
-    displayCurrentContext(ctx);
+//    displayCurrentContext(ctx);
     if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
         inputContextFailed++;
+//        fuzz_count--;
+//        if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
+//            orig_fuzz_count--;
+//        }
         reset_context(ctx);
         goto finish;
     }
@@ -538,12 +566,13 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
         reset_to_preexecution(ctx);
     }
+//    fuzz_count--;
+//    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
+//        orig_fuzz_count--;
+//    }
+
     finish:
 
-    fuzz_count--;
-    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
-        orig_fuzz_count--;
-    }
 //    fuzz_registers(ctx);
 //    PIN_SaveContext(ctx, &preexecution);
 //    displayCurrentContext(ctx);
