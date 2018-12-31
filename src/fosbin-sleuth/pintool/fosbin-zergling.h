@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include "pin.H"
 
-#define DEFAULT_ALLOCATION_SIZE 16
+#define DEFAULT_ALLOCATION_SIZE 256
 
 struct X86Context {
     ADDRINT rax;
@@ -43,11 +43,11 @@ public:
 
     ~AllocatedArea();
 
-    void reset();
-
     ADDRINT getAddr() const;
 
     size_t size() const;
+
+    void reset_non_ptrs(const AllocatedArea &aa);
 
     void fuzz();
 
@@ -109,8 +109,6 @@ public:
 
     AllocatedArea *find_allocated_area(REG reg) const;
 
-    void reset_context(CONTEXT *ctx, const FBZergContext &orig);
-
     const static REG argument_regs[];
 
     const static REG return_reg;
@@ -118,6 +116,8 @@ public:
     ADDRINT get_value(REG reg) const;
 
     void prettyPrint() const;
+
+    void reset_non_ptrs(const FBZergContext &ctx);
 protected:
     std::map <REG, ADDRINT> values;
     std::map<REG, AllocatedArea *> pointer_registers;

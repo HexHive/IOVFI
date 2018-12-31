@@ -48,7 +48,7 @@ std::ostream &operator<<(std::ostream &out, class AllocatedArea *ctx) {
         if (ctx->mem_map[i]) {
 //            std::cout << std::hex << AllocatedArea::MAGIC_VALUE << " ";
             out.write((const char *) &AllocatedArea::MAGIC_VALUE, sizeof(AllocatedArea::MAGIC_VALUE));
-            i += sizeof(AllocatedArea::MAGIC_VALUE);
+            i += sizeof(AllocatedArea::MAGIC_VALUE) - 1;
         } else {
 //            std::cout << std::setw(2) << ((int)c[i] & 0xff) << " ";
             out.write(&c[i], sizeof(char));
@@ -110,7 +110,7 @@ std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
             ADDRINT *tmp = (ADDRINT * ) & c[i];
 //            std::cout << "Writing " << std::hex << (void*)aa->getAddr() << " to " << (void*)&c[i] << std::endl;
             *tmp = (ADDRINT) aa->getAddr();
-            i += sizeof(AllocatedArea::MAGIC_VALUE);
+            i += sizeof(AllocatedArea::MAGIC_VALUE) - 1;
         } else {
             in.read(&c[i], sizeof(char));
 //            std::cout << std::hex << ((int)c[i] & 0xff) << " ";
@@ -134,13 +134,14 @@ AllocatedArea *AllocatedArea::get_subarea(size_t i) const {
 }
 
 void AllocatedArea::prettyPrint(size_t depth) const {
+    std::cout << std::hex << malloc_addr << ":" << std::endl;
     for (size_t i = 0; i < mem_map.size(); i++) {
         if ((i % 16) == 0) {
             if (i > 0) { std::cout << "\n"; }
             for (size_t j = 0; j < depth; j++) { std::cout << "\t"; }
         }
 
-        std::cout << std::hex << ((int) *((char *) malloc_addr + i) & 0xff) << " ";
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << ((int) *((char *) malloc_addr + i) & 0xff) << " ";
     }
 
     std::cout << std::endl;
@@ -160,8 +161,9 @@ void AllocatedArea::copy_allocated_area(const AllocatedArea &orig) {
             AllocatedArea *aa = new AllocatedArea(*orig.get_subarea(aa_num++));
             subareas.push_back(aa);
             ADDRINT *tmp = (ADDRINT * ) & this_ptr[i];
+//            std::cout << "copy_allocated_area setting " << std::hex << tmp << " to " << (void*)aa->getAddr() << std::endl;
             *tmp = (ADDRINT) aa->getAddr();
-            i += sizeof(void *);
+            i += sizeof(ADDRINT) - 1;
         } else {
 //            std::cout << "Byte " << std::dec << i << " is getting set to " << std::hex << ((int)that_ptr[i] & 0xff) << std::endl;
             this_ptr[i] = that_ptr[i];
@@ -235,8 +237,16 @@ bool AllocatedArea::operator==(const AllocatedArea &other) const {
     return true;
 }
 
-void AllocatedArea::reset() {
-    setup_for_round(false);
+void AllocatedArea::reset_non_ptrs(const AllocatedArea &aa) {
+    for (size_t i = 0; i < aa.size() && i < size(); i++) {
+        if (!mem_map[i]) {
+            ((char *) malloc_addr)[i] = ((char *) aa.getAddr())[i];
+        }
+    }
+
+    for (size_t i = 0; i < subareas.size() && i < aa.subareas.size(); i++) {
+        subareas[i]->reset_non_ptrs(*aa.subareas[i]);
+    }
 }
 
 void AllocatedArea::setup_for_round(bool fuzz) {
@@ -254,7 +264,7 @@ void AllocatedArea::setup_for_round(bool fuzz) {
             ADDRINT *ptr = (ADDRINT *) curr;
             *ptr = aa->getAddr();
             curr += sizeof(ADDRINT);
-            i += sizeof(ADDRINT);
+            i += sizeof(ADDRINT) - 1;
         } else {
             *curr = (fuzz ? rand() : 0);
 //            std::cout << "Byte " << std::hex << (ADDRINT)curr << " set to " << ((int)*curr & 0xff) << std::endl;
@@ -272,11 +282,14 @@ bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
     int64_t diff = faulting_addr - addr;
 //    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << " diff = 0x" << diff << std::endl;
     if (diff > (int64_t) size()) {
-//        std::cout << "Diff (" << std::dec << diff << ") is outsize range (" << size() << ")" << std::endl;
+        std::cout << "Diff (" << std::dec << diff << ") is outsize range (" << size() << ")" << std::endl;
+        size_t subarea_idx = 0;
         for (AllocatedArea *subarea : subareas) {
             if (subarea->fix_pointer(faulting_addr)) {
+                std::cout << "Subarea " << std::dec << subarea_idx << " fixed" << std::endl;
                 return true;
             }
+            subarea_idx++;
         }
         /* The expected size of this area is larger than expected
          * so time to resize
@@ -284,7 +297,7 @@ bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
         /* TODO: Implement resizing algorithm */
         return false;
     } else if (diff >= 0) {
-//        std::cout << "Current submember" << std::endl;
+        std::cout << "Current submember" << std::endl;
         /* Some memory address inside this area is a pointer, so add a
          * new AllocatedArea to this one's subareas
          */
@@ -293,6 +306,8 @@ bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
 //            std::cout << "Byte " << std::dec << diff + i << " is marked a pointer" << std::endl;
             mem_map[diff + i] = true;
         }
+        ADDRINT *addr_to_update = (ADDRINT * )((char *) malloc_addr + diff);
+        *addr_to_update = aa->getAddr();
         subareas.push_back(aa);
 //        std::cout << "Fixed pointer" << std::endl;
         return true;

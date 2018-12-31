@@ -191,6 +191,9 @@ VOID start_fuzz_round(CONTEXT *ctx) {
         fuzz_registers(ctx);
     }
     currentContext = preContext;
+//    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+//    currentContext.prettyPrint();
+//    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
     currentContext >> ctx;
 //    currentContext.prettyPrint();
     std::cout << "Starting round " << std::dec << (fuzz_count + 1) << std::endl;
@@ -384,15 +387,17 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 //                      << REG_StringShort(to.reg) << " at 0x"
 //                      << std::hex << aa->getAddr() << std::endl;
             preContext.add(to.reg, aa);
+            currentContext = preContext;
         } else {
             if (!aa->fix_pointer(faulting_address)) {
                 std::cerr << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
                 PIN_ExitApplication(1);
             }
-
             AllocatedArea *tmp = preContext.find_allocated_area(to.reg);
+            aa->reset_non_ptrs(*tmp);
+            currentContext.prettyPrint();
             *tmp = *aa;
-//            preContext.add(to.reg, aa);
+//            preContext.prettyPrint();
 //            std::cout << "Fixed pointer" << std::endl;
         }
     } else {
@@ -406,6 +411,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
 //    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
 //    displayCurrentContext(ctx);
+    currentContext.prettyPrint();
     if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
         inputContextFailed++;
         totalInputContextsFailed++;
@@ -414,6 +420,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //            orig_fuzz_count--;
 //        }
         reset_context(ctx);
+        currentContext = preContext;
         goto finish;
     }
 
@@ -538,11 +545,11 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
         if (taintedObjs.size() > 0) {
             struct TaintedObject taintedObject = taintedObjs.back();
-//        if (taintedObject.isRegister) {
-//            std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
-//        } else {
-//            std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
-//        }
+            if (taintedObject.isRegister) {
+                std::cout << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
+            } else {
+                std::cout << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
+            }
 
             /* Find the last write to the base register to find the address of the bad pointer */
             INS ins = INS_FindByAddress(fuzzing_run.back().rip);
@@ -559,7 +566,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
                 if (INS_RegWContain(ins, faulting_reg)) {
 //                it->prettyPrint(std::cout);
                     faulting_addr = compute_effective_address(ins, *it);
-//                std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
+                    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
                     break;
                 }
             }
@@ -580,7 +587,6 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
     finish:
 
-    currentContext = preContext;
 //    preContext.prettyPrint();
 //    currentContext.prettyPrint();
     currentContext >> ctx;
@@ -640,8 +646,8 @@ VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
     PIN_SetThreadData(log_key, nullptr, tid);
 
     if (ContextsToUse.NumberOfValues() > 0) {
-        std::cout << "Input Contexts Passed: " << std::dec << totalInputContextPassed << std::endl;
-        std::cout << "Input Contexts Failed: " << std::dec << totalInputContextFailed << std::endl;
+        std::cout << "Input Contexts Passed: " << std::dec << totalInputContextsPassed << std::endl;
+        std::cout << "Input Contexts Failed: " << std::dec << totalInputContextsFailed << std::endl;
     }
 }
 

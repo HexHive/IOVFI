@@ -135,6 +135,7 @@ FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
             AllocatedArea *new_aa = new AllocatedArea(*aa);
             values[it.first] = new_aa->getAddr();
             pointer_registers[it.first] = new_aa;
+
         }
     }
 
@@ -201,17 +202,12 @@ AllocatedArea *FBZergContext::find_allocated_area(REG reg) const {
     return it->second;
 }
 
-void FBZergContext::reset_context(CONTEXT *ctx, const FBZergContext &orig) {
-    for (REG reg : FBZergContext::argument_regs) {
-        AllocatedArea *aa = find_allocated_area(reg);
-        if (aa == nullptr) {
-            PIN_SetContextReg(ctx, reg, orig.get_value(reg));
+void FBZergContext::reset_non_ptrs(const FBZergContext &ctx) {
+    for (auto it : pointer_registers) {
+        AllocatedArea *aa = ctx.find_allocated_area(it.first);
+        if (aa != nullptr) {
+            it.second->reset_non_ptrs(*aa);
         }
-    }
-
-    for (std::map<REG, AllocatedArea *>::iterator it = pointer_registers.begin(); it != pointer_registers.end(); ++it) {
-        it->second->reset();
-        PIN_SetContextReg(ctx, it->first, it->second->getAddr());
     }
 }
 
