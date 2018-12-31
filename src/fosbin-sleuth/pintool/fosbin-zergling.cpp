@@ -40,8 +40,8 @@ std::ofstream infofile;
 std::ifstream contextFile;
 std::vector<struct X86Context> fuzzing_run;
 
-uint64_t inputContextPassed;
-uint64_t inputContextFailed;
+uint64_t inputContextPassed, totalInputContextsPassed;
+uint64_t inputContextFailed, totalInputContextsFailed;
 
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
@@ -77,13 +77,16 @@ VOID read_new_context() {
     if (contextFile && contextFile.is_open() && contextFile.peek() == EOF) {
         std::cout << "Closing contextFile" << std::endl;
         contextFile.close();
+        std::cout << "contextFile closed" << std::endl;
         curr_context_file_num++;
     }
 
 //    std::cout << "Reading new context" << std::endl;
-    if (!contextFile || !contextFile.is_open()) {
-//        std::cout << "Opening " << ContextsToUse.Value(curr_context_file_num) << std::endl;
+    if ((!contextFile || !contextFile.is_open()) && curr_context_file_num < ContextsToUse.NumberOfValues()) {
+        std::cout << "Opening " << ContextsToUse.Value(curr_context_file_num) << std::endl;
         contextFile.open(ContextsToUse.Value(curr_context_file_num).c_str());
+        inputContextFailed = 0;
+        inputContextPassed = 0;
     }
 
     contextFile >> preContext;
@@ -257,8 +260,10 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
     if (contextFile && contextFile.is_open()) {
         if (currentContext == expectedContext) {
             inputContextPassed++;
+            totalInputContextsPassed++;
         } else {
             inputContextFailed++;
+            totalInputContextsFailed++;
         }
     }
 
@@ -403,6 +408,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //    displayCurrentContext(ctx);
     if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
         inputContextFailed++;
+        totalInputContextsFailed++;
 //        fuzz_count--;
 //        if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
 //            orig_fuzz_count--;
@@ -634,8 +640,8 @@ VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
     PIN_SetThreadData(log_key, nullptr, tid);
 
     if (ContextsToUse.NumberOfValues() > 0) {
-        std::cout << "Input Contexts Passed: " << std::dec << inputContextPassed << std::endl;
-        std::cout << "Input Contexts Failed: " << std::dec << inputContextFailed << std::endl;
+        std::cout << "Input Contexts Passed: " << std::dec << totalInputContextPassed << std::endl;
+        std::cout << "Input Contexts Failed: " << std::dec << totalInputContextFailed << std::endl;
     }
 }
 
