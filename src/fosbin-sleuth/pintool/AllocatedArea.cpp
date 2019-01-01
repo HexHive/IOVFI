@@ -266,7 +266,12 @@ void AllocatedArea::setup_for_round(bool fuzz) {
             curr += sizeof(ADDRINT);
             i += sizeof(ADDRINT) - 1;
         } else {
-            *curr = (fuzz ? rand() : 0);
+            /* Force the last 4 bytes to be zero for null termination */
+            if (i < mem_map.size() - 4) {
+                *curr = (fuzz ? rand() : 0);
+            } else {
+                *curr = '\0';
+            }
 //            std::cout << "Byte " << std::hex << (ADDRINT)curr << " set to " << ((int)*curr & 0xff) << std::endl;
             curr++;
         }

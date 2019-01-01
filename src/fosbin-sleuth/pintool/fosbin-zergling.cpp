@@ -46,6 +46,7 @@ std::string shared_library_name;
 std::ofstream infofile;
 std::ifstream contextFile;
 std::vector<struct X86Context> fuzzing_run;
+bool fuzzing_started = false;
 
 uint64_t inputContextPassed, totalInputContextsPassed;
 uint64_t inputContextFailed, totalInputContextsFailed;
@@ -148,11 +149,12 @@ VOID reset_to_preexecution(CONTEXT *ctx) {
 }
 
 ADDRINT gen_random() {
-    return ((((ADDRINT) rand() << 0) & 0x000000000000FFFFull) |
-            (((ADDRINT) rand() << 16) & 0x00000000FFFF0000ull) |
-            (((ADDRINT) rand() << 32) & 0x0000FFFF00000000ull) |
-            (((ADDRINT) rand() << 48) & 0xFFFF000000000000ull)
-    );
+    return ((ADDRINT) rand() << 0) & 0x000000000000FFFFull;
+//    return ((((ADDRINT) rand() << 0) & 0x000000000000FFFFull) |
+//            (((ADDRINT) rand() << 16) & 0x00000000FFFF0000ull) |
+//            (((ADDRINT) rand() << 32) & 0x0000FFFF00000000ull) |
+//            (((ADDRINT) rand() << 48) & 0xFFFF000000000000ull)
+//    );
 }
 
 VOID fuzz_registers(CONTEXT *ctx) {
@@ -222,31 +224,33 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 
 VOID trace_execution(TRACE trace, VOID *v) {
 //    if (TRACE_Rtn(trace) == target) {
-    for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
-        for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
-            if (RTN_Valid(INS_Rtn(ins)) && SEC_Name(RTN_Sec(INS_Rtn(ins))) == ".text") {
+    if (fuzzing_started) {
+        for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
+            for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
+                if (RTN_Valid(INS_Rtn(ins)) && SEC_Name(RTN_Sec(INS_Rtn(ins))) == ".text") {
 //                    if (!INS_Valid(INS_FindByAddress(INS_Address(ins)))) {
 //                        std::cout << "Invalid instruction at 0x" << INS_Address(ins) << ": " << INS_Disassemble(ins)
 //                                  << std::endl;
 //                    }
-                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R8,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R9,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R10,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R11,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R12,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R13,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R14,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R15,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
-                               IARG_INST_PTR,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
-                               IARG_END);
+                    INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R8,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R9,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R10,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R11,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R12,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R13,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R14,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_R15,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
+                                   IARG_INST_PTR,
+                                   IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
+                                   IARG_END);
+                }
             }
         }
     }
@@ -263,7 +267,7 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
 //    std::cout << "currentContext:" << std::endl;
 //    displayCurrentContext(ctx);
     currentContext << ctx;
-//    currentContext.prettyPrint();
+    currentContext.prettyPrint();
 //    std::cout << "Outputting currentContext" << std::endl;
     output_context(currentContext);
 
@@ -286,6 +290,7 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
 
 VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
     std::cout << "Beginning to fuzz" << std::endl;
+    fuzzing_started = true;
     PIN_SaveContext(ctx, &snapshot);
     start_fuzz_round(ctx);
 }
@@ -663,18 +668,19 @@ VOID ImageLoad(IMG img, VOID *v) {
             /* The loader program calls dlopen on the shared library, and then immediately returns,
              * so add a call at the return statement to start fuzzing the shared library function
              */
-            ADDRINT main_addr = IMG_Entry(img);
-            RTN main = RTN_FindByAddress(main_addr);
+            RTN main = RTN_FindByName(img, "main");
             if (!RTN_Valid(main)) {
                 std::cerr << "Invalid main" << std::endl;
                 exit(1);
             }
             RTN_Open(main);
+            std::cout << "Instrumenting loader main...";
             for (INS ins = RTN_InsHead(main); INS_Valid(ins); ins = INS_Next(ins)) {
                 if (INS_IsRet(ins)) {
                     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
                 }
             }
+            std::cout << "done!" << std::endl;
             RTN_Close(main);
             return;
         }
