@@ -152,6 +152,14 @@ private:
 
 VOID displayCurrentContext(const CONTEXT *ctx, UINT32 sig = 0);
 
+VOID log_message(std::stringstream &message);
+
+VOID log_error(std::stringstream &message);
+
+VOID log_message(const char *message);
+
+VOID log_error(const char *message);
+
 #include "PinLogger.cpp"
 #include "X86Context.cpp"
 #include "AllocatedArea.cpp"

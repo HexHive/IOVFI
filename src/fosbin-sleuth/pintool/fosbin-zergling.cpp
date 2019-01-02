@@ -11,6 +11,8 @@
 #include "FuzzResults.h"
 #include "fosbin-zergling.h"
 
+#define USER_MSG_TYPE   1000
+
 CONTEXT snapshot;
 //CONTEXT preexecution;
 
@@ -20,18 +22,16 @@ KNOB <uint32_t> FuzzTime(KNOB_MODE_WRITEONCE, "pintool", "fuzz-time", "0",
                          "The number of minutes to fuzz. Ignores fuzz-count if greater than 0.");
 KNOB <uint64_t> MaxInstructions(KNOB_MODE_WRITEONCE, "pintool", "ins", "1000000",
                                 "The max number of instructions to run per fuzzing round");
-KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.bin",
+KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.log",
                                "The name of the file to write "
-                               "fuzz output");
+                               "logging output");
 KNOB <std::string> ContextsToUse(KNOB_MODE_APPEND, "pintool", "contexts", "", "Contexts to use for fuzzing");
-
 KNOB <uint32_t> HardFuzzCount(KNOB_MODE_WRITEONCE, "pintool", "hard-limit", "0",
                               "The most fuzzing rounds regardless of time or segfaults. For debug purposes.");
-
-KNOB<bool> UsingSharedLibrary(KNOB_MODE_WRITEONCE, "pintool", "shared", "false",
-                              "Shared library to load. Must specify function name to fuzz.");
 KNOB <std::string> SharedLibraryFunc(KNOB_MODE_WRITEONCE, "pintool", "shared-func", "",
                                      "Shared library function to fuzz.");
+KNOB <uint32_t> PrintToScreen(KNOB_MODE_WRITEONCE, "pintool", "print", "1",
+                              "Print log messages to screen along with file");
 
 RTN target;
 uint32_t fuzz_count, orig_fuzz_count, curr_context_file_num, hard_count;
@@ -58,6 +58,38 @@ INT32 usage() {
 }
 
 inline BOOL timed_fuzz() { return FuzzTime.Value() > 0; }
+
+VOID log_message(std::stringstream &message) {
+    if (infofile.is_open()) {
+        infofile << message.str() << std::endl;
+    }
+    if (PrintToScreen.Value()) {
+        std::cout << message.str() << std::endl;
+    }
+    message.clear();
+}
+
+VOID log_error(std::stringstream &message) {
+    if (infofile.is_open()) {
+        infofile << message.str() << std::endl;
+    }
+    if (PrintToScreen.Value()) {
+        std::cout << message.str() << std::endl;
+    }
+    PIN_WriteErrorMessage(message.str().c_str(), USER_MSG_TYPE, PIN_ERR_FATAL, 0);
+}
+
+VOID log_message(const char *message) {
+    std::stringstream ss;
+    ss << message << std::endl;
+    log_message(ss);
+}
+
+VOID log_error(const char *message) {
+    std::stringstream ss;
+    ss << message << std::endl;
+    log_error(ss);
+}
 
 INS INS_FindByAddress(ADDRINT addr) {
     RTN rtn = RTN_FindByAddress(addr);
@@ -113,21 +145,27 @@ VOID reset_to_context(CONTEXT *ctx, bool readNewContext) {
 //    std::cout << "fuzz_count = " << std::dec << fuzz_count << " orig_fuzz_count = " << orig_fuzz_count << std::endl;
 
     if (HardFuzzCount.Value() > 0 && hard_count++ >= HardFuzzCount.Value()) {
-        std::cout << "Hit hard limit of " << std::dec << hard_count - 1 << std::endl;
+        std::stringstream ss;
+        ss << "Hit hard limit of " << std::dec << hard_count - 1 << std::endl;
+        log_message(ss);
         PIN_ExitApplication(0);
     }
 
     if (!timed_fuzz()) {
         if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count >= FuzzCount.Value()) {
-            std::cout << "Stopping fuzzing at " << std::dec << orig_fuzz_count << " of " << FuzzCount.Value()
+            std::stringstream ss;
+            ss << "Stopping fuzzing at " << std::dec << orig_fuzz_count << " of " << FuzzCount.Value()
                       << std::endl;
+            log_message(ss);
             PIN_ExitApplication(0);
         }
     } else {
         if (time(NULL) >= fuzz_end_time) {
-            std::cout << "Stopping fuzzing after " << std::dec << FuzzTime.Value() << " minute"
+            std::stringstream ss;
+            ss << "Stopping fuzzing after " << std::dec << FuzzTime.Value() << " minute"
                       << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
-            std::cout << "Total fuzzing iterations: " << std::dec << fuzz_count - 1 << std::endl;
+            ss << "Total fuzzing iterations: " << std::dec << fuzz_count - 1 << std::endl;
+            log_message(ss);
             PIN_ExitApplication(0);
         }
     }
@@ -205,7 +243,9 @@ VOID start_fuzz_round(CONTEXT *ctx) {
 //    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
     currentContext >> ctx;
 //    currentContext.prettyPrint();
-    std::cout << "Starting round " << std::dec << (fuzz_count + 1) << std::endl;
+    std::stringstream ss;
+    ss << "Starting round " << std::dec << (fuzz_count + 1) << std::endl;
+    log_message(ss);
     PIN_ExecuteAt(ctx);
 }
 
@@ -215,7 +255,9 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
                             ADDRINT rdi, ADDRINT rsi, ADDRINT rip, ADDRINT rbp
 ) {
     if (fuzzing_run.size() > MaxInstructions.Value()) {
-        std::cerr << "Too many instructions! Starting Over..." << std::endl;
+        std::stringstream ss;
+        ss << "Too many instructions! Starting Over...";
+        log_message(ss);
         start_fuzz_round(&snapshot);
     }
     struct X86Context tmp = {rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip, rbp};
@@ -258,8 +300,9 @@ VOID trace_execution(TRACE trace, VOID *v) {
 }
 
 VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
-    std::cout << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() << " instructions"
-              << std::endl;
+    std::stringstream ss;
+    ss << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() << " instructions";
+    log_message(ss);
 //    std::cout << "Post Execution Current Context addr = 0x" << std::hex << currentContext.find_allocated_area(FBZergContext::argument_regs[0])->getAddr() << std::endl;
 
 //    std::cout << "Outputting precontext" << std::endl;
@@ -267,7 +310,7 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
 //    std::cout << "currentContext:" << std::endl;
 //    displayCurrentContext(ctx);
     currentContext << ctx;
-    currentContext.prettyPrint();
+//    currentContext.prettyPrint();
 //    std::cout << "Outputting currentContext" << std::endl;
     output_context(currentContext);
 
@@ -289,26 +332,30 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
 }
 
 VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
-    std::cout << "Beginning to fuzz" << std::endl;
+    std::stringstream ss;
+    ss << "Beginning to fuzz";
+    log_message(ss);
     fuzzing_started = true;
     PIN_SaveContext(ctx, &snapshot);
     start_fuzz_round(ctx);
 }
 
 VOID displayCurrentContext(const CONTEXT *ctx, UINT32 sig) {
-    std::cout << "[" << (sig != SIGSEGV ? "CONTEXT" : "SIGSEGV")
+    std::stringstream ss;
+    ss << "[" << (sig != SIGSEGV ? "CONTEXT" : "SIGSEGV")
               << "]=----------------------------------------------------------" << std::endl;
-    std::cout << std::hex << std::internal << std::setfill('0')
-              << "RAX = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX) << " "
-              << "RBX = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX) << " "
-              << "RCX = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RCX) << std::endl
-              << "RDX = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RDX) << " "
-              << "RDI = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RDI) << " "
-              << "RSI = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSI) << std::endl
-              << "RBP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP) << " "
-              << "RSP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSP) << " "
-              << "RIP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << std::endl;
-    std::cout << "+-------------------------------------------------------------------" << std::endl;
+    ss << std::hex << std::internal << std::setfill('0')
+       << "RAX = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX) << " "
+       << "RBX = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX) << " "
+       << "RCX = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RCX) << std::endl
+       << "RDX = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RDX) << " "
+       << "RDI = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RDI) << " "
+       << "RSI = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSI) << std::endl
+       << "RBP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP) << " "
+       << "RSP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSP) << " "
+       << "RIP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << std::endl;
+    ss << "+-------------------------------------------------------------------" << std::endl;
+    log_message(ss);
 }
 
 ADDRINT compute_effective_address(INS ins, struct X86Context &ctx) {
@@ -402,8 +449,9 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
             currentContext = preContext;
         } else {
             if (!aa->fix_pointer(faulting_address)) {
-                std::cerr << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
-                PIN_ExitApplication(1);
+                std::stringstream ss;
+                ss << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
+                log_error(ss);
             }
             AllocatedArea *tmp = preContext.find_allocated_area(to.reg);
             aa->reset_non_ptrs(*tmp);
@@ -413,8 +461,9 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 //            std::cout << "Fixed pointer" << std::endl;
         }
     } else {
-        std::cerr << "Cannot taint non-registers" << std::endl;
-        PIN_ExitApplication(1);
+        std::stringstream ss;
+        ss << "Cannot taint non-registers";
+        log_error(ss);
     }
 
 }
@@ -433,7 +482,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //        }
         reset_context(ctx);
         currentContext = preContext;
-        std::cout << "Input context failed...trying a new one" << std::endl;
+        log_message("Input context failed...trying a new one");
         goto finish;
     }
 
@@ -444,7 +493,9 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
             struct X86Context &c = *it;
             INS ins = INS_FindByAddress(c.rip);
             if (!INS_Valid(ins)) {
-                std::cerr << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
+                std::stringstream ss;
+                ss << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
+                log_message(ss);
                 continue;
             }
 
@@ -474,9 +525,11 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
                 }
 
                 if (!REG_valid(base) || !REG_valid(wreg)) {
-                    std::cerr << "Memory Read invalid base (" << REG_StringShort(base)
+                    std::stringstream ss;
+                    ss << "Memory Read invalid base (" << REG_StringShort(base)
                               << ") or invalid wreg (" << REG_StringShort(wreg)
                               << ")" << std::endl;
+                    log_message(ss);
 //                PIN_ExitApplication(1);
                     continue;
                 }
@@ -519,9 +572,11 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
                 ADDRINT waddr = 0;
                 ADDRINT raddr = 0;
                 if (!REG_valid(base) || !REG_valid(rreg)) {
-                    std::cerr << "Memory Write invalid base (" << REG_StringShort(base)
+                    std::stringstream ss;
+                    ss << "Memory Write invalid base (" << REG_StringShort(base)
                               << ") or invalid rreg (" << REG_StringShort(rreg)
                               << ")" << std::endl;
+                    log_message(ss);
 //                PIN_ExitApplication(1);
                     continue;
                 }
@@ -586,7 +641,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
             create_allocated_area(taintedObject, faulting_addr);
         } else {
-            std::cerr << "Taint analysis failed for the following context: " << std::endl;
+            log_message("Taint analysis failed for the following context: ");
             displayCurrentContext(ctx);
         }
 
@@ -614,7 +669,7 @@ VOID ImageLoad(IMG img, VOID *v) {
         return;
     }
 
-    std::cout << "Image " << IMG_Name(img) << " loaded" << std::endl;
+//    std::cout << "Image " << IMG_Name(img) << " loaded" << std::endl;
 
     if (SharedLibraryFunc.Value() == "") {
         if (!IMG_IsMainExecutable(img)) {
@@ -624,9 +679,10 @@ VOID ImageLoad(IMG img, VOID *v) {
         ADDRINT target_addr = KnobStart.Value() + offset;
         target = RTN_FindByAddress(target_addr);
         if (!RTN_Valid(target)) {
-            std::cerr << "Could not find target at 0x" << std::hex << target_addr << " (0x" << offset << " + 0x" <<
+            std::stringstream ss;
+            ss << "Could not find target at 0x" << std::hex << target_addr << " (0x" << offset << " + 0x" <<
                       KnobStart.Value() << ")" << std::endl;
-            PIN_ExitApplication(1);
+            PIN_WriteErrorMessage(ss.str().c_str(), PIN_ERR_TOOL, PIN_ERR_FATAL, 0);
         }
 
         ADDRINT main_addr = IMG_Entry(img);
@@ -637,8 +693,9 @@ VOID ImageLoad(IMG img, VOID *v) {
                            IARG_END);
             RTN_Close(main);
         } else {
-            std::cerr << "Could not find main!" << std::endl;
-            exit(1);
+            std::stringstream ss;
+            ss << "Could not find main!" << std::endl;
+            PIN_WriteErrorMessage(ss.str().c_str(), PIN_ERR_TOOL, PIN_ERR_FATAL, 0);
         }
 
     } else {
@@ -670,23 +727,25 @@ VOID ImageLoad(IMG img, VOID *v) {
              */
             RTN main = RTN_FindByName(img, "main");
             if (!RTN_Valid(main)) {
-                std::cerr << "Invalid main" << std::endl;
-                exit(1);
+                log_error("Invalid main in fb-loader");
             }
             RTN_Open(main);
-            std::cout << "Instrumenting loader main...";
+            std::stringstream ss;
+            ss << "Instrumenting loader main...";
             for (INS ins = RTN_InsHead(main); INS_Valid(ins); ins = INS_Next(ins)) {
                 if (INS_IsRet(ins)) {
                     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
                 }
             }
-            std::cout << "done!" << std::endl;
+            ss << "done!";
+            log_message(ss);
             RTN_Close(main);
             return;
         }
     }
-    std::cout << "Found target: " << RTN_Name(target) << " at 0x" << std::hex << RTN_Address(target) << std::endl;
-    std::cout << "Instrumenting returns..." << std::flush;
+    std::stringstream ss;
+    ss << "Found target: " << RTN_Name(target) << " at 0x" << std::hex << RTN_Address(target) << std::endl;
+    ss << "Instrumenting returns...";
     RTN_Open(target);
     for (INS ins = RTN_InsHead(target); INS_Valid(ins); ins = INS_Next(ins)) {
         if (INS_IsRet(ins)) {
@@ -694,7 +753,8 @@ VOID ImageLoad(IMG img, VOID *v) {
         }
     }
     RTN_Close(target);
-    std::cout << "done." << std::endl;
+    ss << "done.";
+    log_message(ss);
 }
 
 VOID ThreadStart(THREADID tid, CONTEXT *ctx, INT32 flags, VOID *v) {
@@ -714,15 +774,18 @@ VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
     PIN_SetThreadData(log_key, nullptr, tid);
 
     if (ContextsToUse.NumberOfValues() > 0) {
-        std::cout << "Input Contexts Passed: " << std::dec << totalInputContextsPassed << std::endl;
-        std::cout << "Input Contexts Failed: " << std::dec << totalInputContextsFailed << std::endl;
+        std::stringstream ss;
+        ss << "Input Contexts Passed: " << std::dec << totalInputContextsPassed << std::endl;
+        ss << "Input Contexts Failed: " << std::dec << totalInputContextsFailed << std::endl;
+        log_message(ss);
     }
 }
 
 void initialize_system(int argc, char **argv) {
-    std::cout << "Initializing system...";
+    std::stringstream ss;
+    ss << "Initializing system...";
     srand(time(NULL));
-    std::string infoFileName = KnobOutName.Value() + ".info";
+    std::string infoFileName = KnobOutName.Value();
     infofile.open(infoFileName.c_str(), std::ios::out | std::ios::app);
 
     log_key = PIN_CreateThreadDataKey(0);
@@ -732,14 +795,14 @@ void initialize_system(int argc, char **argv) {
 
     if (SharedLibraryFunc.Value() != "") {
         if (strstr(argv[argc - 2], SHARED_LIBRARY_LOADER) == NULL) {
-            std::cerr << "fb-load must be the program run when fuzzing shared libraries" << std::endl;
-            exit(1);
+            ss << "fb-load must be the program run when fuzzing shared libraries" << std::endl;
+            log_error(ss);
         }
         shared_library_name = argv[argc - 1];
         IMG img = IMG_Open(shared_library_name);
         if (!IMG_Valid(img)) {
-            std::cerr << "Could not open " << shared_library_name << std::endl;
-            exit(1);
+            ss << "Could not open " << shared_library_name << std::endl;
+            log_error(ss);
         }
         bool found = false;
         for (SEC s = IMG_SecHead(img); SEC_Valid(s) && !found; s = SEC_Next(s)) {
@@ -751,20 +814,23 @@ void initialize_system(int argc, char **argv) {
             }
         }
         if (!found) {
-            std::cerr << "Could not find " << SharedLibraryFunc.Value() << " in library " << shared_library_name
-                      << std::endl;
+            ss << "Could not find " << SharedLibraryFunc.Value() << " in library " << shared_library_name
+               << std::endl;
             IMG_Close(img);
-            exit(1);
+            log_error(ss);
         }
 
         IMG_Close(img);
     }
 
-    std::cout << "done!" << std::endl;
+    ss << "done!" << std::endl;
+    log_message(ss);
 }
 
 int main(int argc, char **argv) {
-    std::cout << "Starting Zergling..." << std::endl;
+    std::stringstream ss;
+    ss << "Starting Zergling..." << std::endl;
+    log_message(ss);
     PIN_InitSymbols();
     if (PIN_Init(argc, argv)) {
         return usage();
@@ -776,17 +842,22 @@ int main(int argc, char **argv) {
     initialize_system(argc, argv);
 
     if (!timed_fuzz()) {
-        std::cout << "Fuzzing 0x" << std::hex << KnobStart.Value() << std::dec << " " << FuzzCount.Value() << " times."
-                  << std::endl;
+        if (SharedLibraryFunc.Value() == "") {
+            ss << "Fuzzing 0x" << std::hex << KnobStart.Value() << std::dec << " " << FuzzCount.Value() << " times."
+               << std::endl;
+        } else {
+            ss << "Fuzzing " << SharedLibraryFunc.Value() << " " << FuzzCount.Value() << " times."
+               << std::endl;
+        }
     } else {
-        std::cout << "Fuzzing 0x" << std::hex << KnobStart.Value() << " for " << std::dec << FuzzTime.Value()
-                  << " minute" << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
+        ss << "Fuzzing 0x" << std::hex << KnobStart.Value() << " for " << std::dec << FuzzTime.Value()
+           << " minute" << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
     }
 
+    log_message(ss);
     IMG_AddInstrumentFunction(ImageLoad, nullptr);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
     PIN_InterceptSignal(SIGSEGV, catchSignal, nullptr);
-    std::cout << "Starting Program" << std::endl;
     PIN_StartProgram();
 
     return 0;

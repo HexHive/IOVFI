@@ -134,17 +134,19 @@ AllocatedArea *AllocatedArea::get_subarea(size_t i) const {
 }
 
 void AllocatedArea::prettyPrint(size_t depth) const {
-    std::cout << std::hex << malloc_addr << ":" << std::endl;
+    std::stringstream ss;
+    ss << std::hex << malloc_addr << ":" << std::endl;
     for (size_t i = 0; i < mem_map.size(); i++) {
         if ((i % 16) == 0) {
-            if (i > 0) { std::cout << "\n"; }
-            for (size_t j = 0; j < depth; j++) { std::cout << "\t"; }
+            if (i > 0) { ss << std::endl; }
+            for (size_t j = 0; j < depth; j++) { ss << "\t"; }
         }
 
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << ((int) *((char *) malloc_addr + i) & 0xff) << " ";
+        ss << std::hex << std::setw(2) << std::setfill('0') << ((int) *((char *) malloc_addr + i) & 0xff) << " ";
     }
 
-    std::cout << std::endl;
+    ss << std::endl;
+    log_message(ss);
 
     for (AllocatedArea *subarea : subareas) {
         subarea->prettyPrint(depth + 1);
@@ -201,8 +203,10 @@ bool AllocatedArea::operator!=(const AllocatedArea &other) const {
 }
 
 bool AllocatedArea::operator==(const AllocatedArea &other) const {
+    std::stringstream ss;
     if (mem_map != other.mem_map) {
-        std::cout << "Memory Maps are not the same" << std::endl;
+        ss << "Memory Maps are not the same" << std::endl;
+        log_message(ss);
         return false;
     }
 
@@ -211,25 +215,29 @@ bool AllocatedArea::operator==(const AllocatedArea &other) const {
     for (size_t i = 0; i < mem_map.size(); i++) {
         if (!mem_map[i]) {
             if (this_addr[i] != that_addr[i]) {
-                std::cout << "AllocatedArea bytes are not the same" << std::endl;
-                std::cout << "This byte " << std::dec << i << " = " << std::hex << ((int) this_addr[i] & 0xff)
+                ss << "AllocatedArea bytes are not the same" << std::endl;
+                ss << "This byte " << std::dec << i << " = " << std::hex << ((int) this_addr[i] & 0xff)
                           << std::endl;
-                std::cout << "That byte " << std::dec << i << " = " << std::hex << ((int) that_addr[i] & 0xff)
-                          << std::endl;
+                ss << "That byte " << std::dec << i << " = " << std::hex << ((int) that_addr[i] & 0xff)
+                   << std::endl;
+                log_message(ss);
                 return false;
             }
         }
     }
 
     if (subareas.size() != other.subareas.size()) {
+        ss << "subarea sizes are not the same";
+        log_message(ss);
         return false;
     }
 
     for (size_t i = 0; i < subareas.size(); i++) {
         if (*subareas[i] != *other.get_subarea(i)) {
-            std::cout << "Subareas are not the same" << std::endl;
-            std::cout << "this size() = " << std::dec << subareas.size() << std::endl;
-            std::cout << "that size() = " << std::dec << other.subareas.size() << std::endl;
+            ss << "Subareas are not the same" << std::endl;
+            ss << "this size() = " << std::dec << subareas.size() << std::endl;
+            ss << "that size() = " << std::dec << other.subareas.size() << std::endl;
+            log_message(ss);
             return false;
         }
     }
@@ -285,13 +293,16 @@ void AllocatedArea::fuzz() {
 
 bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
     int64_t diff = faulting_addr - addr;
+    std::stringstream ss;
 //    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << " diff = 0x" << diff << std::endl;
     if (diff > (int64_t) size()) {
-        std::cout << "Diff (" << std::dec << diff << ") is outsize range (" << size() << ")" << std::endl;
+        ss << "Diff (" << std::dec << diff << ") is outsize range (" << size() << ")" << std::endl;
+        log_message(ss);
         size_t subarea_idx = 0;
         for (AllocatedArea *subarea : subareas) {
             if (subarea->fix_pointer(faulting_addr)) {
-                std::cout << "Subarea " << std::dec << subarea_idx << " fixed" << std::endl;
+                ss << "Subarea " << std::dec << subarea_idx << " fixed" << std::endl;
+                log_message(ss);
                 return true;
             }
             subarea_idx++;
@@ -317,8 +328,9 @@ bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
 //        std::cout << "Fixed pointer" << std::endl;
         return true;
     } else {
-        std::cout << "Something weird happened. faulting_addr = 0x" << std::hex << faulting_addr << " and addr = 0x"
-                  << addr << std::endl;
+        ss << "Something weird happened. faulting_addr = 0x" << std::hex << faulting_addr << " and addr = 0x"
+           << addr << std::endl;
+        log_message(ss);
         return false;
     }
 }

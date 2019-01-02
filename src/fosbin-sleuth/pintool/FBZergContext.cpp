@@ -144,13 +144,15 @@ FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
 }
 
 void FBZergContext::prettyPrint() const {
+    std::stringstream ss;
     for (REG reg : argument_regs) {
-        std::cout << REG_StringShort(reg) << "\t= " << std::hex << get_value(reg) << std::endl;
+        ss << REG_StringShort(reg) << "\t= " << std::hex << get_value(reg) << std::endl;
     }
 
-    std::cout << REG_StringShort(FBZergContext::return_reg) << "\t= " << std::hex
-              << get_value(FBZergContext::return_reg) << std::endl;
+    ss << REG_StringShort(FBZergContext::return_reg) << "\t= " << std::hex
+       << get_value(FBZergContext::return_reg) << std::endl;
 
+    log_message(ss);
     for (auto it : pointer_registers) {
         it.second->prettyPrint(1);
     }
