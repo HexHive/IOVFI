@@ -19,7 +19,7 @@ AllocatedArea::AllocatedArea(const AllocatedArea &aa) :
 }
 
 AllocatedArea::~AllocatedArea() {
-//    std::cout << "AllocatedArea destructor called" << std::endl;
+//    std::cout << "AllocatedArea destructor called. this = " << std::hex << (ADDRINT)this << std::endl;
 //    std::cout << "Freeing 0x" << std::hex << malloc_addr << std::endl;
     free((void *) malloc_addr);
 //    std::cout << "Freeing subareas" << std::endl;
@@ -102,8 +102,7 @@ std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
             in.read((char *) &magic, sizeof(magic));
 //            std::cout << std::hex << magic << " ";
             if (magic != AllocatedArea::MAGIC_VALUE) {
-                std::cerr << "Invalid AllocatedArea input!" << std::endl;
-                exit(1);
+                log_error("Invalid AllocatedArea input!");
             }
             AllocatedArea *aa = new AllocatedArea();
             ctx->subareas.push_back(aa);
@@ -264,7 +263,19 @@ void AllocatedArea::setup_for_round(bool fuzz) {
     }
 
     int pointer_count = 0;
-    char *curr = (char *) malloc_addr;
+    uint8_t *curr = (uint8_t *) malloc_addr;
+    for (size_t i = 0; i < mem_map.size(); i++) {
+        size_t write_size;
+        if (fuzz) {
+            write_size = fuzz_strategy((uint8_t *) malloc_addr, size());
+        } else {
+            write_size = 1;
+            *curr = '\0';
+        }
+//            std::cout << "Byte " << std::hex << (ADDRINT)curr << " set to " << ((int)*curr & 0xff) << std::endl;
+        curr += write_size;
+        i += write_size - 1;
+    }
     for (size_t i = 0; i < mem_map.size(); i++) {
         if (mem_map[i]) {
             AllocatedArea *aa = subareas[pointer_count];
@@ -273,15 +284,6 @@ void AllocatedArea::setup_for_round(bool fuzz) {
             *ptr = aa->getAddr();
             curr += sizeof(ADDRINT);
             i += sizeof(ADDRINT) - 1;
-        } else {
-            /* Force the last 4 bytes to be zero for null termination */
-            if (i < mem_map.size() - 4) {
-                *curr = (fuzz ? rand() : 0);
-            } else {
-                *curr = '\0';
-            }
-//            std::cout << "Byte " << std::hex << (ADDRINT)curr << " set to " << ((int)*curr & 0xff) << std::endl;
-            curr++;
         }
     }
 //    std::cout << "Done" << std::endl;

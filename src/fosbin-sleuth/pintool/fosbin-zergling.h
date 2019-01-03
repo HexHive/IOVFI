@@ -160,6 +160,8 @@ VOID log_message(const char *message);
 
 VOID log_error(const char *message);
 
+size_t fuzz_strategy(uint8_t *buffer, size_t size);
+
 #include "PinLogger.cpp"
 #include "X86Context.cpp"
 #include "AllocatedArea.cpp"

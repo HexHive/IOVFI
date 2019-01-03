@@ -8,13 +8,6 @@ import argparse
 
 fuzz_count = "5"
 
-
-def usage():
-    print("{} /path/to/pin/dir /path/to/fosbin-zergling.so /path/to/application [/path/to/application...]".format(
-        "fuzz-applications.py"))
-    sys.exit(1)
-
-
 def main():
     parser = argparse.ArgumentParser(description="Generate input/output vectors")
     parser.add_argument("-pindir", help="/path/to/pin/dir")
@@ -56,7 +49,8 @@ def main():
                 cmd = [os.path.join(results.pindir, "pin"), "-t", results.tool, "-fuzz-count", fuzz_count,
                        "-target", hex(func['offset']), "-error_file", func['offset'] + ".log", "--", results.bin]
             print("Running {}".format(" ".join(cmd)))
-            returnCode = subprocess.run(cmd, env=env_vars, timeout=10)
+            # returnCode = subprocess.run(cmd, env=env_vars, timeout=10)
+            returnCode = subprocess.run(cmd, env=env_vars)
             if returnCode.returncode != 0:
                 failed_count += 1
             else:

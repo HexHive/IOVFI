@@ -85,14 +85,22 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
         out << aa;
     }
 
+//    std::cout << "Done writing context" << std::endl;
+
     return out;
 }
 
 bool FBZergContext::operator==(const FBZergContext &ctx) const {
-    if (get_value(FBZergContext::return_reg) != ctx.get_value(FBZergContext::return_reg)) {
-//        std::cout << "Contexts return values mismatch:" << std::endl;
+    if (!(get_value(FBZergContext::return_reg) == ctx.get_value(FBZergContext::return_reg) ||
+          (get_value(FBZergContext::return_reg) < 0 && ctx.get_value(FBZergContext::return_reg) < 0) ||
+          (get_value(FBZergContext::return_reg) > 0 && ctx.get_value(FBZergContext::return_reg) > 0)
+    )) {
+        std::cout << "Contexts return values mismatch:" << std::endl;
 //        std::cout << "This " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << get_value(FBZergContext::return_reg) << std::endl;
 //        std::cout << "That " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << ctx.get_value(FBZergContext::return_reg) << std::endl;
+        prettyPrint();
+        std::cout << std::endl;
+        ctx.prettyPrint();
 
         return false;
     }
@@ -100,12 +108,12 @@ bool FBZergContext::operator==(const FBZergContext &ctx) const {
     for (auto it : pointer_registers) {
         AllocatedArea *aa = ctx.find_allocated_area(it.first);
         if (aa == nullptr) {
-//            std::cout << "Expected AllocatedArea is missing" << std::endl;
+            std::cout << "Expected AllocatedArea is missing" << std::endl;
             return false;
         }
 
         if (*aa != *it.second) {
-//            std::cout << "AllocatedAreas are not the same" << std::endl;
+            std::cout << "AllocatedAreas are not the same" << std::endl;
             return false;
         }
     }
@@ -122,6 +130,7 @@ FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
     for (auto it : pointer_registers) {
         delete it.second;
     }
+//    std::cout << "Done" << std::endl;
     pointer_registers.clear();
     values.clear();
 
@@ -230,6 +239,7 @@ void FBZergContext::add(REG reg, ADDRINT value) {
 }
 
 FBZergContext::~FBZergContext() {
+//    std::cout << "FBZergContext destructor called. this = " << std::hex << (ADDRINT)this << std::cout;
     for (auto it : pointer_registers) {
         delete it.second;
     }

@@ -3,6 +3,7 @@
 //
 
 ADDRINT X86Context::get_reg_value(REG reg) {
+    std::stringstream ss;
     switch (reg) {
         case LEVEL_BASE::REG_RAX:
             return rax;
@@ -48,6 +49,7 @@ std::ostream &operator<<(std::ostream &out, const struct X86Context &ctx) {
 }
 
 void X86Context::prettyPrint(std::ostream &out) {
+    out << std::hex;
     out << "RAX: " << rax << std::endl;
     out << "RBX: " << rbx << std::endl;
     out << "RCX: " << rcx << std::endl;
@@ -64,5 +66,6 @@ void X86Context::prettyPrint(std::ostream &out) {
     out << "R15: " << r15 << std::endl;
     out << "RIP: " << rip << std::endl;
     out << "RBP: " << rbp << std::endl;
+    out << std::endl;
 }
 
