@@ -16,6 +16,10 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
     std::map < REG, AllocatedArea * > allocs;
     for (REG reg : FBZergContext::argument_regs) {
         in.read((char *) &tmp, sizeof(tmp));
+        if (!in || in.eof()) {
+            log_error("Could not read all context bytes");
+        }
+        std::cout << in.gcount() << std::endl;
 //        std::cout << "Read in " << REG_StringShort(reg) << " = " << std::hex << tmp << std::endl;
         if (tmp == AllocatedArea::MAGIC_VALUE) {
             AllocatedArea *aa = new AllocatedArea();

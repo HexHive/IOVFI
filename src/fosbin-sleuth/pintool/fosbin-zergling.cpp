@@ -120,7 +120,7 @@ VOID read_new_context() {
         return;
     }
 
-    if (contextFile && contextFile.is_open() && contextFile.peek() == EOF) {
+    if (contextFile && contextFile.peek() == EOF) {
 //        std::cout << "Closing contextFile" << std::endl;
         contextFile.close();
 //        std::cout << "contextFile closed" << std::endl;
@@ -132,7 +132,7 @@ VOID read_new_context() {
         std::stringstream ss;
         ss << "Opening " << ContextsToUse.Value(curr_context_file_num);
         log_message(ss);
-        contextFile.open(ContextsToUse.Value(curr_context_file_num).c_str());
+        contextFile.open(ContextsToUse.Value(curr_context_file_num).c_str(), ios::in | ios::binary);
         inputContextFailed = 0;
         inputContextPassed = 0;
     }
@@ -164,6 +164,8 @@ VOID reset_to_context(CONTEXT *ctx, bool readNewContext) {
     }
 
     if (!timed_fuzz()) {
+        std::cout << "curr_context_file_num: " << std::dec << curr_context_file_num << std::endl;
+        std::cout << "orig_fuzz_count: " << orig_fuzz_count << std::endl;
         if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count >= FuzzCount.Value()) {
             std::stringstream ss;
             ss << "Stopping fuzzing at " << std::dec << orig_fuzz_count << " of " << FuzzCount.Value()
