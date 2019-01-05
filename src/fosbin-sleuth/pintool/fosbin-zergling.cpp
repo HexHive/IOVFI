@@ -116,15 +116,15 @@ INS INS_FindByAddress(ADDRINT addr) {
 }
 
 VOID read_new_context() {
-    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
-        return;
-    }
-
     if (contextFile && contextFile.peek() == EOF) {
 //        std::cout << "Closing contextFile" << std::endl;
         contextFile.close();
 //        std::cout << "contextFile closed" << std::endl;
         curr_context_file_num++;
+    }
+
+    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
+        return;
     }
 
 //    std::cout << "Reading new context" << std::endl;
@@ -164,8 +164,8 @@ VOID reset_to_context(CONTEXT *ctx, bool readNewContext) {
     }
 
     if (!timed_fuzz()) {
-        std::cout << "curr_context_file_num: " << std::dec << curr_context_file_num << std::endl;
-        std::cout << "orig_fuzz_count: " << orig_fuzz_count << std::endl;
+//        std::cout << "curr_context_file_num: " << std::dec << curr_context_file_num << std::endl;
+//        std::cout << "orig_fuzz_count: " << orig_fuzz_count << std::endl;
         if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count >= FuzzCount.Value()) {
             std::stringstream ss;
             ss << "Stopping fuzzing at " << std::dec << orig_fuzz_count << " of " << FuzzCount.Value()
@@ -391,7 +391,7 @@ void output_context(const FBZergContext &ctx) {
 
 VOID start_fuzz_round(CONTEXT *ctx) {
     reset_context(ctx);
-    if (curr_context_file_num > ContextsToUse.NumberOfValues()) {
+    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
         fuzz_registers(ctx);
     }
     currentContext = preContext;
@@ -493,7 +493,7 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
     }
 
     fuzz_count++;
-    if (curr_context_file_num > ContextsToUse.NumberOfValues()) {
+    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
         orig_fuzz_count++;
     }
     start_fuzz_round(ctx);
