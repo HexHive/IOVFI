@@ -116,7 +116,7 @@ INS INS_FindByAddress(ADDRINT addr) {
 }
 
 VOID read_new_context() {
-    if (contextFile && contextFile.peek() == EOF) {
+    if (contextFile && contextFile.is_open() && contextFile.peek() == EOF) {
 //        std::cout << "Closing contextFile" << std::endl;
         contextFile.close();
 //        std::cout << "contextFile closed" << std::endl;
@@ -350,7 +350,7 @@ size_t fuzz_strategy(uint8_t *buffer, size_t size) {
 }
 
 VOID fuzz_registers(CONTEXT *ctx) {
-    std::cout << "Fuzzing registers" << std::endl;
+//    std::cout << "Fuzzing registers" << std::endl;
     for (REG reg : FBZergContext::argument_regs) {
         AllocatedArea *aa = preContext.find_allocated_area(reg);
         if (aa == nullptr) {
