@@ -7,6 +7,7 @@ import subprocess
 import argparse
 
 fuzz_count = "5"
+watchdog = str(5 * 1000)
 
 def main():
     parser = argparse.ArgumentParser(description="Generate input/output vectors")
@@ -23,7 +24,7 @@ def main():
 
     env_vars = dict()
     r2 = r2pipe.open(results.bin)
-    r2.cmd('aaa')
+    r2.cmd('aa')
     func_count = 0
     failed_count = 0
     success_count = 0
@@ -44,10 +45,12 @@ def main():
 
             if os.path.splitext(results.bin)[1] == ".so":
                 cmd = [os.path.join(results.pindir, "pin"), "-t", results.tool, "-fuzz-count", fuzz_count,
-                       "-shared-func", func_name, "-out", func_name + ".log", "--", results.ld, results.bin]
+                       "-shared-func", func_name, "-out", func_name + ".log", "-watchdog", watchdog, "--", results.ld,
+                       results.bin]
             else:
                 cmd = [os.path.join(results.pindir, "pin"), "-t", results.tool, "-fuzz-count", fuzz_count,
-                       "-target", hex(func['offset']), "-error_file", func['offset'] + ".log", "--", results.bin]
+                       "-target", hex(func['offset']), "-out", str(func['name'][len("sym."):]) + ".log", "-watchdog",
+                       watchdog, "--", results.bin]
             print("Running {}".format(" ".join(cmd)))
             # returnCode = subprocess.run(cmd, env=env_vars, timeout=10)
             returnCode = subprocess.run(cmd, env=env_vars)
@@ -67,7 +70,8 @@ def main():
 
     print("{} has {} functions".format(results.bin, func_count))
     print("Fuzzable functions: {}".format(success_count))
-    print("Failed functions: {} ({})".format(failed_count, failed_count / (failed_count + success_count)))
+    if failed_count + success_count > 0:
+        print("Failed functions: {} ({})".format(failed_count, failed_count / (failed_count + success_count)))
     r2.quit()
 
 

@@ -369,24 +369,6 @@ void output_context(const FBZergContext &ctx) {
     std::vector < AllocatedArea * > allocs;
     PinLogger &logger = *(static_cast<PinLogger *>(PIN_GetThreadData(log_key, PIN_ThreadId())));
     logger << ctx;
-
-//    for (REG reg : FBZergContext::argument_regs) {
-//        std::map<REG, AllocatedArea *>::iterator it = pointer_registers.find(reg);
-//        if (it != pointer_registers.end()) {
-//            allocs.push_back(it->second);
-//            logger << AllocatedArea::MAGIC_VALUE;
-//        } else {
-//            ADDRINT val = PIN_GetContextReg(ctx, reg);
-//            logger << val;
-//        }
-//    }
-//
-//    ADDRINT rax = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX);
-//    logger << rax;
-//
-//    for (AllocatedArea *aa : allocs) {
-//        logger << aa;
-//    }
 }
 
 VOID start_fuzz_round(CONTEXT *ctx) {
@@ -553,14 +535,14 @@ ADDRINT compute_effective_address(REG base, REG idx, UINT32 scale, ADDRDELTA dis
 ADDRINT compute_effective_address(INS ins, struct X86Context &ctx, UINT32 operand = 0) {
     REG base = INS_OperandMemoryBaseReg(ins, operand);
     REG idx = INS_OperandMemoryIndexReg(ins, operand);
-    UINT32 scale = INS_OperandMemoryScale(ins, 0);
-    ADDRDELTA displacement = INS_OperandMemoryDisplacement(ins, 1);
+    UINT32 scale = INS_OperandMemoryScale(ins, operand);
+    ADDRDELTA displacement = INS_OperandMemoryDisplacement(ins, operand);
 //    std::cout << INS_Disassemble(ins) << std::endl;
 //    std::cout << "Base: " << REG_StringShort(base)
 //        << " Idx: " << REG_StringShort(idx)
 //        << " Scale: 0x" << std::hex << scale
 //        << " Disp: 0x" << displacement << std::endl;
-
+//
 //    ctx.prettyPrint(std::cout);
 
     ADDRINT ret = compute_effective_address(base, idx, scale, displacement, ctx);
@@ -636,7 +618,7 @@ BOOL inline is_rbp(REG reg) {
     return LEVEL_BASE::REG_RBP == reg;
 }
 
-VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
+BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
     if (to.isRegister) {
         /* Fuzzing is done with currentContext */
         AllocatedArea *aa = currentContext.find_allocated_area(to.reg);
@@ -651,12 +633,14 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
             if (!aa->fix_pointer(faulting_address)) {
                 std::stringstream ss;
                 ss << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
-                log_error(ss);
+                log_message(ss);
+                return false;
             }
             AllocatedArea *tmp = preContext.find_allocated_area(to.reg);
             aa->reset_non_ptrs(*tmp);
 //            currentContext.prettyPrint();
             *tmp = *aa;
+            preContext.add(to.reg, tmp);
 //            preContext.prettyPrint();
 //            std::cout << "Fixed pointer" << std::endl;
         }
@@ -681,9 +665,12 @@ VOID create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
         } else {
             ss << "Address 0x" << std::hex << to.addr << " could not be found in an image";
         }
-        log_error(ss);
+        log_message(ss);
+        return false;
     }
 
+//    preContext.prettyPrint();
+    return true;
 }
 
 BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
@@ -761,12 +748,9 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
                     wreg = INS_OperandReg(ins, 0);
 //                    log << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
                 } else if (INS_OperandIsMemory(ins, 0)) {
-                    writeAddr = compute_effective_address(ins, c);
-                    if (writeAddr == 0) {
-                        wreg = INS_OperandMemoryBaseReg(ins, 0);
-//                        log << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
-                    } else {
-//                        log << "\tWrite address is " << std::hex << writeAddr << std::endl;
+                    wreg = INS_OperandMemoryBaseReg(ins, 0);
+                    if (!REG_valid(wreg)) {
+                        writeAddr = compute_effective_address(ins, c);
                     }
                 } else {
                     std::stringstream ss;
@@ -793,12 +777,9 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
                     rreg = INS_OperandReg(ins, 1);
 //                    log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
                 } else if (INS_OperandIsMemory(ins, 1)) {
-                    readAddr = compute_effective_address(ins, c, 1);
-                    if (readAddr == 0) {
-                        rreg = INS_OperandMemoryBaseReg(ins, 1);
-//                        log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
-                    } else {
-//                        log << "\tRead address is " << std::hex << readAddr << std::endl;
+                    rreg = INS_OperandMemoryBaseReg(ins, 1);
+                    if (!REG_valid(rreg)) {
+                        readAddr = compute_effective_address(ins, c, 1);
                     }
                 } else if (INS_OperandIsImmediate(ins, 1)) {
                     continue;
@@ -850,123 +831,6 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
                     }
                 }
             }
-
-//            if (INS_IsMemoryRead(ins) || INS_HasMemoryRead2(ins)) {
-//                REG base = INS_MemoryBaseReg(ins);
-//                REG wreg = INS_RegW(ins, 0);
-//                BOOL read_tainted;
-//                BOOL write_tainted;
-//                ADDRINT waddr = 0;
-//                ADDRINT raddr = 0;
-//
-//                if (!REG_valid(base) && INS_SegPrefixIsMemoryRead(ins)) {
-//                    /* We're reading a segment register */
-//                    remove_taint(wreg, taintedObjs);
-//                    continue;
-//                }
-//
-//                if (!REG_valid(base) || !REG_valid(wreg)) {
-//                    std::stringstream ss;
-//                    ss << "Memory Read invalid base (" << REG_StringShort(base)
-//                       << ") or invalid wreg (" << REG_StringShort(wreg)
-//                       << ")" << std::endl;
-//                    log_message(ss);
-////                PIN_ExitApplication(1);
-//                    continue;
-//                }
-//
-//                if (is_rbp(base)) {
-//                    raddr = compute_effective_address(ins, c);
-//                    read_tainted = isTainted(raddr, taintedObjs);
-//                } else {
-//                    read_tainted = isTainted(base, taintedObjs);
-//                }
-//
-//                if (is_rbp(wreg)) {
-//                    waddr = compute_effective_address(ins, c);
-//                    write_tainted = isTainted(waddr, taintedObjs);
-//                } else {
-//                    write_tainted = isTainted(wreg, taintedObjs);
-//                }
-//
-//                if (write_tainted && !read_tainted) {
-//                    if (waddr) {
-//                        remove_taint(waddr, taintedObjs);
-//                    } else {
-//                        remove_taint(wreg, taintedObjs);
-//                    }
-//
-//                    if (raddr) {
-//                        add_taint(raddr, taintedObjs);
-//                    } else {
-//                        add_taint(base, taintedObjs);
-//                    }
-//                }
-//            } else if (INS_IsMemoryWrite(ins) && !INS_OperandIsImmediate(ins, 1)) {
-//                REG base = INS_MemoryBaseReg(ins);
-//                REG rreg = INS_RegR(ins, 1);
-////            std::cout << "\tbase: " << REG_StringShort(base)
-////                      << " rreg: " << REG_StringShort(rreg) << std::endl;
-//
-//                BOOL read_tainted;
-//                BOOL write_tainted;
-//                ADDRINT waddr = 0;
-//                ADDRINT raddr = 0;
-//                if (!REG_valid(base) || !REG_valid(rreg)) {
-//                    std::stringstream ss;
-//                    ss << "Memory Write invalid base (" << REG_StringShort(base)
-//                       << ") or invalid rreg (" << REG_StringShort(rreg)
-//                       << ")" << std::endl;
-//                    log_message(ss);
-////                PIN_ExitApplication(1);
-//                    continue;
-//                }
-//
-//                if (is_rbp(base)) {
-//                    waddr = compute_effective_address(ins, c);
-//                    write_tainted = isTainted(waddr, taintedObjs);
-//                } else {
-//                    write_tainted = isTainted(base, taintedObjs);
-//                }
-//
-//                if (is_rbp(rreg)) {
-//                    raddr = compute_effective_address(ins, c);
-//                    read_tainted = isTainted(raddr, taintedObjs);
-//                } else {
-//                    read_tainted = isTainted(rreg, taintedObjs);
-//                }
-//
-//                if (write_tainted && !read_tainted) {
-//                    if (waddr) {
-//                        remove_taint(waddr, taintedObjs);
-//                    } else {
-//                        remove_taint(base, taintedObjs);
-//                    }
-//
-//                    if (raddr) {
-//                        add_taint(raddr, taintedObjs);
-//                    } else {
-//                        add_taint(rreg, taintedObjs);
-//                    }
-//                }
-//            } else if (INS_IsMov(ins) || INS_IsLea(ins)) {
-//                REG wreg = INS_OperandReg(ins, 0);
-//                if()
-//                REG rreg = INS_OperandReg(ins, 1);
-//                if (!REG_valid(rreg)) {
-////                    ADDRINT addr = compute_effective_address(ins, c);
-////                    if(isTainted(wreg, taintedObjs) && !isTainted(addr, taintedObjs)) {
-////                        remove_taint(wreg, taintedObjs);
-////                        add_taint(addr, taintedObjs);
-////                    }
-//                }
-//
-//                if (isTainted(wreg, taintedObjs) && !isTainted(rreg, taintedObjs)) {
-//                    remove_taint(wreg, taintedObjs);
-//                    add_taint(rreg, taintedObjs);
-//                }
-//
-//            }
         }
 
         if (taintedObjs.size() > 0) {
@@ -981,7 +845,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
             INS ins = INS_FindByAddress(fuzzing_run.back().rip);
             REG faulting_reg = taint_source;
 //            std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
-            ADDRINT faulting_addr = 0;
+            ADDRINT faulting_addr = compute_effective_address(ins, fuzzing_run.back(), 1);
             for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
                  it != fuzzing_run.rend(); it++) {
                 if (it == fuzzing_run.rbegin()) {
@@ -991,19 +855,21 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //            std::cout << INS_Disassemble(ins) << std::endl;
                 if (INS_RegWContain(ins, faulting_reg)) {
 //                it->prettyPrint(std::cout);
-                    faulting_addr = compute_effective_address(ins, *it);
+//                    std::cout << "Write instruction: " << INS_Disassemble(ins) << std::endl;
+                    faulting_addr = compute_effective_address(ins, *it, 1);
 //                    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
                     break;
                 }
             }
 
-//            if(!faulting_addr) {
-//                std::stringstream ss;
-//                ss << "Could not find faulting address";
-//                log_error(ss);
-//            }
-//            log_message(log);
-            create_allocated_area(taintedObject, faulting_addr);
+            if (!create_allocated_area(taintedObject, faulting_addr)) {
+//                for(auto &it : fuzzing_run) {
+//                    std::cout << INS_Disassemble(INS_FindByAddress(it.rip)) << std::endl;
+//                }
+                reset_to_preexecution(ctx);
+                fuzz_registers(ctx);
+                goto finish;
+            }
         } else {
             log_message("Taint analysis failed for the following context: ");
             displayCurrentContext(ctx);
@@ -1012,12 +878,6 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 
         reset_to_preexecution(ctx);
     }
-
-//    fuzz_count--;
-//    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
-//        orig_fuzz_count--;
-//    }
-
     finish:
 
 //    preContext.prettyPrint();
@@ -1115,6 +975,7 @@ VOID ImageLoad(IMG img, VOID *v) {
     for (INS ins = RTN_InsHead(target); INS_Valid(ins); ins = INS_Next(ins)) {
         if (INS_IsRet(ins)) {
 //            std::cout << "Adding end_fuzzing_round" << std::endl;
+
             INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) end_fuzzing_round, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
         }
     }

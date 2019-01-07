@@ -298,8 +298,8 @@ bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
     std::stringstream ss;
 //    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << " diff = 0x" << diff << std::endl;
     if (diff > (int64_t) size()) {
-        ss << "Diff (" << std::dec << diff << ") is outsize range (" << size() << ")" << std::endl;
-        log_message(ss);
+//        ss << "Diff (" << std::dec << diff << ") is outsize range (" << size() << ")" << std::endl;
+//        log_message(ss);
         size_t subarea_idx = 0;
         for (AllocatedArea *subarea : subareas) {
             if (subarea->fix_pointer(faulting_addr)) {

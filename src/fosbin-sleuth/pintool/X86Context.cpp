@@ -15,6 +15,8 @@ ADDRINT X86Context::get_reg_value(REG reg) {
             return rdx;
         case LEVEL_BASE::REG_RSI:
             return rsi;
+        case LEVEL_BASE::REG_RDI:
+            return rdi;
         case LEVEL_BASE::REG_R8:
             return r8;
         case LEVEL_BASE::REG_R9:

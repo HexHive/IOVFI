@@ -235,7 +235,7 @@ void FBZergContext::add(REG reg, AllocatedArea *aa) {
         values[reg] = aa->getAddr();
     } else {
 //        std::cout << "Resetting AllocatedArea" << std::endl;
-        *pointer_registers[reg] = *aa;
+        pointer_registers[reg] = aa;
         values[reg] = aa->getAddr();
     }
 }
