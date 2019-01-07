@@ -19,8 +19,8 @@ contextHashes = dict()
 
 class AllocatedArea:
     def __init__(self, file):
-        self.size = numpy.fromstring(file.read(8), dtype=numpy.uint64)
-        self.mem_map = struct.unpack_from('?' * self.size, file.read(self.size))
+        self.size = struct.unpack_from("Q", file.read(8))[0]
+        self.mem_map = file.read(self.size)
         self.subareas = list()
         self.data = list()
         i = 0
