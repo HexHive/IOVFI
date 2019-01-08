@@ -1,21 +1,20 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.7
 
 import os
 import sys
-import subprocess
 import argparse
 import struct
 import hashlib
-import numpy
-
-mapFile = ""
-descFile = ""
+import pickle
+import subprocess
 
 AllocatedAreaMagic = 0xA110CA3D
 
+FIFO_PIPE_NAME = "fifo-pipe"
+watchdog = str(5 * 1000)
+
 passingHashes = dict()
 contextHashes = dict()
-
 
 class AllocatedArea:
     def __init__(self, file):
@@ -38,7 +37,7 @@ class AllocatedArea:
             self.subareas.append(AllocatedArea(file))
 
     def hash(self, hash):
-        i = 0;
+        i = 0
         curr_subarea = 0
         while i < self.size:
             if self.mem_map[i]:
@@ -54,7 +53,7 @@ class X86Context:
     def __init__(self, file):
         self.register_values = list()
         for i in range(0, 7):
-            reg_val = numpy.fromstring(file.read(8), dtype=numpy.uint64)
+            reg_val = struct.unpack_from('Q', file.read(8))[0]
             self.register_values.append(reg_val)
         self.allocated_areas = list()
         for reg in self.register_values:
@@ -63,11 +62,30 @@ class X86Context:
                 self.allocated_areas.append(AllocatedArea(file))
 
     def hash(self):
-        hash = hashlib.md5()
+        md5sum = hashlib.md5()
         for reg in self.register_values:
-            hash.update(reg)
+            md5sum.update(reg.to_bytes(8, sys.byteorder))
         for subarea in self.allocated_areas:
-            subarea.hash(hash)
+            subarea.hash(md5sum)
+
+        return md5sum.hexdigest()
+
+    def __hash__(self):
+        return hash()
+
+
+class IOVec:
+    def __init__(self, file):
+        self.input = X86Context(file)
+        self.output = X86Context(file)
+
+    def __hash__(self):
+        return hash()
+
+    def hash(self):
+        hash = hashlib.md5()
+        hash.update(self.input.hash().encode('utf-8'))
+        hash.update(self.output.hash().encode('utf-8'))
 
         return hash.hexdigest()
 
@@ -80,20 +98,62 @@ def main():
     parser.add_argument('-o', '--out', help="Output of which contexts execute with which functions", default="out.desc")
     parser.add_argument('-m', '--map', help="Map of hashes and contexts", default="hash.map")
     parser.add_argument("contexts", nargs='+', help="The contexts to try for each function in each program", type=str)
+    parser.add_argument("-pindir", help="/path/to/pin/dir")
+    parser.add_argument("-tool", help="/path/to/pintool")
+    parser.add_argument("-ignore", help="/path/to/ignored/functions")
+    parser.add_argument("-ld", help="/path/to/fb-load")
 
     results = parser.parse_args()
-    mapFile = results.map
-    descFile = results.out
+    mapFile = open(results.map, "wb")
+    descFile = open(results.out, "wb")
 
     descMap = dict()
+    hashMap = dict()
 
     for contextfile in results.contexts:
         with open(contextfile, 'rb') as f:
-            while f.tell() < os.fstat(f.fileno()).st_size:
-                context = X86Context(f)
-                hash = context.hash()
-                descMap[hash] = list()
-                print("{}".format(hash))
+            print("Reading {}".format(contextfile))
+            try:
+                while f.tell() < os.fstat(f.fileno()).st_size:
+                    iovec = IOVec(f)
+                    md5hash = iovec.hash()
+                    hashMap[md5hash] = iovec
+            except IndexError as e:
+                print("IndexError", file=sys.stderr)
+                continue
+            except struct.error as e:
+                print("Struct error", file=sys.stderr)
+                continue
+            except MemoryError as e:
+                print("MemoryError", file=sys.stderr)
+                continue
+            except OverflowError:
+                print("OverflowError", file=sys.stderr)
+                continue
+    print("Unique Hashes: {}".format(len(hashMap)))
+    pickle.dump(hashMap, mapFile)
+
+    if os.path.exists(FIFO_PIPE_NAME):
+        os.unlink(FIFO_PIPE_NAME)
+
+    fifo_pipe = os.mkfifo(FIFO_PIPE_NAME)
+    for idx in range(0, len(results.binary)):
+        binary = results.binary[idx][0]
+        location_map = dict()
+        readelf_cmd = subprocess.run(['readelf', '-s', binary], capture_output=True)
+        lines = readelf_cmd.stdout.split(b'\n')
+        for line in lines:
+            line = line.decode('utf-8')
+            toks = line.split()
+            if len(toks) > 4 and toks[3] == "FUNC":
+                location_map[int(toks[1], 16)] = toks[-1]
+        for hash, iovec in hashMap.items():
+            for loc, name in location_map.items():
+                cmd = [os.path.join(results.pindir, "pin"), "-t", results.tool, "-fuzz-count", "0",
+                       "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
+                       "-contexts", FIFO_PIPE_NAME, "--", binary]
+                fuzz_cmd = subprocess.run(cmd)
+
 
 
 if __name__ == "__main__":

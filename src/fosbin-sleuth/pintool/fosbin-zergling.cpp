@@ -45,6 +45,7 @@ FBZergContext currentContext;
 FBZergContext expectedContext;
 uint32_t watchdogtime;
 
+
 std::string shared_library_name;
 
 std::ofstream infofile;
@@ -116,6 +117,7 @@ INS INS_FindByAddress(ADDRINT addr) {
 }
 
 VOID read_new_context() {
+
     if (contextFile && contextFile.is_open() && contextFile.peek() == EOF) {
 //        std::cout << "Closing contextFile" << std::endl;
         contextFile.close();
@@ -633,8 +635,7 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
             if (!aa->fix_pointer(faulting_address)) {
                 std::stringstream ss;
                 ss << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
-                log_message(ss);
-                return false;
+                log_error(ss);
             }
             AllocatedArea *tmp = preContext.find_allocated_area(to.reg);
             aa->reset_non_ptrs(*tmp);
