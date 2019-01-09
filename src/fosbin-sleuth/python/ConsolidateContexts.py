@@ -20,20 +20,24 @@ contextHashes = dict()
 class AllocatedArea:
     def __init__(self, file):
         self.size = struct.unpack_from("Q", file.read(8))[0]
-        self.mem_map = file.read(self.size)
+        self.mem_map = [None] * self.size
+        for i in range(0, self.size):
+            self.mem_map[i] = struct.unpack_from("?", file.read(1))[0]
+
         self.subareas = list()
-        self.data = list()
+        self.data = [None] * self.size
         i = 0
         subareasToRead = 0
         while i < self.size:
             if self.mem_map[i]:
                 subareasToRead += 1
                 for j in range(0, 8):
-                    self.data.append(file.read(1))
+                    self.data[i] = struct.unpack_from("B", file.read(1))[0]
                     i += 1
             else:
-                self.data.append(file.read(1))
+                self.data[i] = struct.unpack_from("B", file.read(1))[0]
                 i += 1
+
         for x in range(0, subareasToRead):
             self.subareas.append(AllocatedArea(file))
 
@@ -46,7 +50,7 @@ class AllocatedArea:
                 curr_subarea += 1
                 i += 8
             else:
-                hash.update(self.data[i])
+                hash.update(self.data[i].to_bytes(1, sys.byteorder, signed=False))
                 i += 1
 
     def write_bin(self, file):
@@ -55,7 +59,6 @@ class AllocatedArea:
             file.write(struct.pack("?", self.mem_map[i]))
 
         for i in range(0, self.size):
-            print("{}".format(self.data))
             file.write(struct.pack("B", self.data[i]))
 
         for subarea in self.subareas:
@@ -70,7 +73,6 @@ class X86Context:
             self.register_values.append(reg_val)
         self.allocated_areas = list()
         for reg in self.register_values:
-            # print("Read {}".format(hex(reg)))
             if reg == AllocatedAreaMagic:
                 self.allocated_areas.append(AllocatedArea(file))
 
@@ -122,8 +124,8 @@ def main():
     parser.add_argument('-o', '--out', help="Output of which contexts execute with which functions", default="out.desc")
     parser.add_argument('-m', '--map', help="Map of hashes and contexts", default="hash.map")
     parser.add_argument("contexts", nargs='+', help="The contexts to try for each function in each program", type=str)
-    parser.add_argument("-pindir", help="/path/to/pin/dir")
-    parser.add_argument("-tool", help="/path/to/pintool")
+    parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
+    parser.add_argument("-tool", help="/path/to/pintool", required=True)
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
     parser.add_argument("-ld", help="/path/to/fb-load")
 
@@ -177,14 +179,17 @@ def main():
             out_pipe.close()
 
             for loc, name in location_map.items():
-                cmd = [os.path.join(results.pindir, "pin"), "-t", results.tool, "-fuzz-count", "0",
-                       "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
+                # cmd = [os.path.join(results.pindir, "pin"), "-t", results.tool, "-fuzz-count", "0",
+                #        "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
+                #        "-contexts", FIFO_PIPE_NAME, "--", binary]
+                cmd = [os.path.join(results.pindir, "pin"), "-t", results.tool, "-only-output",
                        "-contexts", FIFO_PIPE_NAME, "--", binary]
                 fuzz_cmd = subprocess.run(cmd)
                 if fuzz_cmd.returncode == 0:
                     output = fuzz_cmd.stdout.split(b'\n')
                     for line in output:
                         line = line.decode("utf-8")
+                        print(line)
                         if "Input Contexts Passed: 1" in line:
                             descMap[hash].append(name)
 
