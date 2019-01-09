@@ -16,6 +16,7 @@ watchdog = str(5 * 1000)
 passingHashes = dict()
 contextHashes = dict()
 
+
 class AllocatedArea:
     def __init__(self, file):
         self.size = struct.unpack_from("Q", file.read(8))[0]
@@ -48,6 +49,18 @@ class AllocatedArea:
                 hash.update(self.data[i])
                 i += 1
 
+    def write_bin(self, file):
+        file.write(struct.pack("Q", self.size))
+        for i in range(0, self.size):
+            file.write(struct.pack("?", self.mem_map[i]))
+
+        for i in range(0, self.size):
+            print("{}".format(self.data))
+            file.write(struct.pack("B", self.data[i]))
+
+        for subarea in self.subareas:
+            subarea.write_bin(file)
+
 
 class X86Context:
     def __init__(self, file):
@@ -73,6 +86,13 @@ class X86Context:
     def __hash__(self):
         return hash()
 
+    def write_bin(self, file):
+        for reg in self.register_values:
+            file.write(struct.pack('Q', reg))
+
+        for subarea in self.allocated_areas:
+            subarea.write_bin(file)
+
 
 class IOVec:
     def __init__(self, file):
@@ -88,6 +108,10 @@ class IOVec:
         hash.update(self.output.hash().encode('utf-8'))
 
         return hash.hexdigest()
+
+    def write_bin(self, file):
+        self.input.write_bin(file)
+        self.output.write_bin(file)
 
 
 def main():
@@ -136,7 +160,6 @@ def main():
     if os.path.exists(FIFO_PIPE_NAME):
         os.unlink(FIFO_PIPE_NAME)
 
-    fifo_pipe = os.mkfifo(FIFO_PIPE_NAME)
     for idx in range(0, len(results.binary)):
         binary = results.binary[idx][0]
         location_map = dict()
@@ -148,13 +171,28 @@ def main():
             if len(toks) > 4 and toks[3] == "FUNC":
                 location_map[int(toks[1], 16)] = toks[-1]
         for hash, iovec in hashMap.items():
+            descMap[hash] = list()
+            out_pipe = open(FIFO_PIPE_NAME, "wb")
+            iovec.write_bin(out_pipe)
+            out_pipe.close()
+
             for loc, name in location_map.items():
                 cmd = [os.path.join(results.pindir, "pin"), "-t", results.tool, "-fuzz-count", "0",
                        "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
                        "-contexts", FIFO_PIPE_NAME, "--", binary]
                 fuzz_cmd = subprocess.run(cmd)
+                if fuzz_cmd.returncode == 0:
+                    output = fuzz_cmd.stdout.split(b'\n')
+                    for line in output:
+                        line = line.decode("utf-8")
+                        if "Input Contexts Passed: 1" in line:
+                            descMap[hash].append(name)
 
-
+    if os.path.exists(FIFO_PIPE_NAME):
+        os.unlink(FIFO_PIPE_NAME)
+    pickle.dump(descMap, descFile)
+    for hash, funcs in descMap.items():
+        print("{}: {}".format(hash, funcs))
 
 if __name__ == "__main__":
     main()

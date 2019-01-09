@@ -71,6 +71,8 @@ public:
 
     void prettyPrint(size_t depth) const;
 
+    void prettyPrint(std::ostream &o, size_t depth) const;
+
 protected:
     ADDRINT addr;
     ADDRINT malloc_addr;
@@ -96,9 +98,9 @@ public:
 
     CONTEXT *operator>>(CONTEXT *ctx) const;
 
-    FBZergContext &operator=(const FBZergContext &orig);
-
     FBZergContext &operator<<(CONTEXT *ctx);
+
+    FBZergContext &operator=(const FBZergContext &orig);
 
     bool operator==(const FBZergContext &ctx) const;
 
@@ -118,7 +120,10 @@ public:
 
     void prettyPrint() const;
 
+    void prettyPrint(std::ostream &s) const;
+
     void reset_non_ptrs(const FBZergContext &ctx);
+
 protected:
     std::map <REG, ADDRINT> values;
     std::map<REG, AllocatedArea *> pointer_registers;
@@ -162,9 +167,12 @@ VOID log_error(const char *message);
 
 size_t fuzz_strategy(uint8_t *buffer, size_t size);
 
+void output_context(std::istream &in);
+
 #include "PinLogger.cpp"
 #include "X86Context.cpp"
 #include "AllocatedArea.cpp"
 #include "FBZergContext.cpp"
+#include "ContextReader.cpp"
 
 #endif //FOSBIN_FOSBIN_ZERGLING_H

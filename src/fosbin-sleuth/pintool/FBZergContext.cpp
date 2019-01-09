@@ -2,12 +2,11 @@
 // Created by derrick on 12/27/18.
 //
 
-#include "pin.H"
-
 const REG FBZergContext::argument_regs[] = {LEVEL_BASE::REG_RDI, LEVEL_BASE::REG_RSI, LEVEL_BASE::REG_RDX,
                                             LEVEL_BASE::REG_RCX, LEVEL_BASE::REG_R8, LEVEL_BASE::REG_R9};
 
 const REG FBZergContext::return_reg = LEVEL_BASE::REG_RAX;
+
 
 FBZergContext::FBZergContext() {}
 
@@ -160,16 +159,20 @@ FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
 
 void FBZergContext::prettyPrint() const {
     std::stringstream ss;
+    prettyPrint(ss);
+    log_message(ss);
+}
+
+void FBZergContext::prettyPrint(std::ostream &s) const {
     for (REG reg : argument_regs) {
-        ss << REG_StringShort(reg) << "\t= " << std::hex << get_value(reg) << std::endl;
+        s << REG_StringShort(reg) << "\t= " << std::hex << get_value(reg) << std::endl;
     }
 
-    ss << REG_StringShort(FBZergContext::return_reg) << "\t= " << std::hex
-       << get_value(FBZergContext::return_reg) << std::endl;
+    s << REG_StringShort(FBZergContext::return_reg) << "\t= " << std::hex
+      << get_value(FBZergContext::return_reg) << std::endl;
 
-    log_message(ss);
     for (auto it : pointer_registers) {
-        it.second->prettyPrint(1);
+        it.second->prettyPrint(s, 1);
     }
 }
 

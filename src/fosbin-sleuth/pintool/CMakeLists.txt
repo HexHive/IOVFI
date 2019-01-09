@@ -7,6 +7,7 @@ set(PINTOOL_SOURCES
         X86Context.cpp
         AllocatedArea.cpp
         FBZergContext.cpp
+        ContextReader.cpp
         makefile.rules.in
         makefile.in
         )

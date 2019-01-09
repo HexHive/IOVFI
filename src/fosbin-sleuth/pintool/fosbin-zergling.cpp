@@ -35,6 +35,7 @@ KNOB <uint32_t> PrintToScreen(KNOB_MODE_WRITEONCE, "pintool", "print", "1",
                               "Print log messages to screen along with file");
 KNOB <uint32_t> WatchDogTimeout(KNOB_MODE_WRITEONCE, "pintool", "watchdog", "20000", "Watchdog timeout in "
                                                                                      "milliseconds");
+KNOB<bool> OnlyOutputContexts(KNOB_MODE_WRITEONCE, "pintool", "only-output", "false", "Only output contexts and exit");
 
 RTN target;
 uint32_t fuzz_count, orig_fuzz_count, curr_context_file_num, hard_count;
@@ -44,7 +45,6 @@ FBZergContext preContext;
 FBZergContext currentContext;
 FBZergContext expectedContext;
 uint32_t watchdogtime;
-
 
 std::string shared_library_name;
 
@@ -1081,17 +1081,33 @@ VOID watch_dog(void *arg) {
 }
 
 int main(int argc, char **argv) {
-    std::stringstream ss;
-    ss << "Starting Zergling..." << std::endl;
-    log_message(ss);
     PIN_InitSymbols();
     if (PIN_Init(argc, argv)) {
         return usage();
     }
 
+    if (OnlyOutputContexts.Value()) {
+        for (size_t i = 0; i < ContextsToUse.NumberOfValues(); i++) {
+            contextFile.open(ContextsToUse.Value(i).c_str(), ios::in | ios::binary);
+            if (!contextFile) {
+                std::cerr << "Could not open " << ContextsToUse.Value(i) << std::endl;
+                continue;
+            }
+            std::cout << "Contexts in " << ContextsToUse.Value(i) << ":" << std::endl;
+            while (contextFile.peek() != EOF) {
+                output_context(contextFile);
+            }
+            contextFile.close();
+        }
+        exit(0);
+    }
+
     if (!KnobStart.Value() && SharedLibraryFunc.Value() == "") {
         return usage();
     }
+    std::stringstream ss;
+    ss << "Starting Zergling..." << std::endl;
+    log_message(ss);
     initialize_system(argc, argv);
 
     if (!timed_fuzz()) {

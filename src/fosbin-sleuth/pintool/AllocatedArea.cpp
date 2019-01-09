@@ -134,21 +134,25 @@ AllocatedArea *AllocatedArea::get_subarea(size_t i) const {
 
 void AllocatedArea::prettyPrint(size_t depth) const {
     std::stringstream ss;
-    ss << std::hex << malloc_addr << ":" << std::endl;
+    prettyPrint(ss, depth);
+    log_message(ss);
+}
+
+void AllocatedArea::prettyPrint(std::ostream &s, size_t depth) const {
+    s << std::hex << malloc_addr << ":" << std::endl;
     for (size_t i = 0; i < mem_map.size(); i++) {
         if ((i % 16) == 0) {
-            if (i > 0) { ss << std::endl; }
-            for (size_t j = 0; j < depth; j++) { ss << "\t"; }
+            if (i > 0) { s << std::endl; }
+            for (size_t j = 0; j < depth; j++) { s << "\t"; }
         }
 
-        ss << std::hex << std::setw(2) << std::setfill('0') << ((int) *((char *) malloc_addr + i) & 0xff) << " ";
+        s << std::hex << std::setw(2) << std::setfill('0') << ((int) *((char *) malloc_addr + i) & 0xff) << " ";
     }
 
-    ss << std::endl;
-    log_message(ss);
+    s << std::endl;
 
     for (AllocatedArea *subarea : subareas) {
-        subarea->prettyPrint(depth + 1);
+        subarea->prettyPrint(s, depth + 1);
     }
 }
 
