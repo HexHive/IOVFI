@@ -10,6 +10,7 @@ import subprocess
 import threading
 from concurrent import futures
 import shutil
+import multiprocessing
 
 AllocatedAreaMagic = 0xA110CA3D
 
@@ -30,7 +31,7 @@ invalidctx_lock = threading.RLock()
 descMap_lock = threading.RLock()
 print_lock = threading.RLock()
 
-max_workers = 4
+max_workers = multiprocessing.cpu_count()
 
 class AllocatedArea:
     def __init__(self, file):
