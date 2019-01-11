@@ -7,15 +7,30 @@ import struct
 import hashlib
 import pickle
 import subprocess
+import threading
+from concurrent import futures
+import shutil
 
 AllocatedAreaMagic = 0xA110CA3D
 
 FIFO_PIPE_NAME = "fifo-pipe"
+WORK_DIR = "_work"
 watchdog = str(5 * 1000)
 
 passingHashes = dict()
 contextHashes = dict()
 
+descMap = dict()
+hashMap = dict()
+
+invalid_contexts = set()
+
+hashlock = threading.RLock()
+invalidctx_lock = threading.RLock()
+descMap_lock = threading.RLock()
+print_lock = threading.RLock()
+
+max_workers = 4
 
 class AllocatedArea:
     def __init__(self, file):
@@ -120,6 +135,88 @@ class IOVec:
         self.output.write_bin(file)
 
 
+def read_contexts(contextFile):
+    contextfile = contextFile.strip()
+    with open(contextfile, 'rb') as f:
+        print("Reading {}".format(contextfile))
+        try:
+            while f.tell() < os.fstat(f.fileno()).st_size:
+                iovec = IOVec(f)
+                md5hash = iovec.hash()
+                hashlock.acquire()
+                hashMap[md5hash] = iovec
+                hashlock.release()
+        except IndexError as e:
+            print("IndexError", file=sys.stderr)
+            invalidctx_lock.acquire()
+            invalid_contexts.add(contextfile)
+            invalidctx_lock.release()
+        except struct.error as e:
+            print("Struct error", file=sys.stderr)
+            invalidctx_lock.acquire()
+            invalid_contexts.add(contextfile)
+            invalidctx_lock.release()
+        except MemoryError as e:
+            print("MemoryError", file=sys.stderr)
+            invalidctx_lock.acquire()
+            invalid_contexts.add(contextfile)
+            invalidctx_lock.release()
+        except OverflowError:
+            print("OverflowError", file=sys.stderr)
+            invalidctx_lock.acquire()
+            invalid_contexts.add(contextfile)
+            invalidctx_lock.release()
+        except ValueError:
+            print("ValueError", file=sys.stderr)
+            invalidctx_lock.acquire()
+            invalid_contexts.add(contextfile)
+            invalidctx_lock.release()
+
+
+def attempt_ctx(args):
+    binary = args[0]
+    pindir = args[1]
+    tool = args[2]
+    hash = args[3]
+    loc = args[4]
+    name = args[5]
+    cmd = [os.path.join(pindir, "pin"), "-t", tool, "-fuzz-count", "0",
+           "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
+           "-contexts", FIFO_PIPE_NAME, "--", binary]
+    try:
+        message = "Testing {}.{} ({}) with hash {}...".format(binary, name, hex(loc), hash)
+        fuzz_cmd = subprocess.run(cmd, capture_output=True, timeout=int(watchdog) / 1000 + 1, cwd=os.path.abspath(
+            WORK_DIR))
+        found = False
+        if fuzz_cmd.returncode == 0:
+            output = fuzz_cmd.stdout.split(b'\n')
+            for line in output:
+                try:
+                    line = line.decode("utf-8")
+                    if "Input Contexts Passed: 1" in line:
+                        found = True
+                        descMap_lock.acquire()
+                        descMap[hash].append(os.path.basename(binary) + "." + name)
+                        descMap_lock.release()
+                        break
+                except UnicodeDecodeError:
+                    continue
+
+        if found:
+            message += "accepted!"
+        else:
+            message += "failed"
+
+        print_lock.acquire()
+        print(message)
+        print_lock.release()
+    except subprocess.TimeoutExpired:
+        pass
+    except Exception as e:
+        print_lock.acquire()
+        print("General exception: {}".format(e))
+        print_lock.release()
+
 def main():
     parser = argparse.ArgumentParser(description="Consolidate")
     parser.add_argument("-b", "--binaries", help="File containing paths to binaries to test", required=True)
@@ -135,9 +232,6 @@ def main():
     mapFile = open(results.map, "wb")
     descFile = open(results.out, "wb")
 
-    descMap = dict()
-    hashMap = dict()
-
     if not os.path.exists(results.contexts):
         print("Could not find {}".format(results.contexts), file=sys.stderr)
         exit(1)
@@ -146,89 +240,53 @@ def main():
         print("Could not find {}".format(results.binaries), file=sys.stderr)
         exit(1)
 
-    contexts = open(results.contexts, "r")
-    binaries = open(results.binaries, "r")
-    invalid_contexts = set()
+    with open(results.contexts, "r") as contexts:
+        with futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+            pool.map(read_contexts, contexts)
 
-    for contextfile in contexts.readlines():
-        contextfile = contextfile.strip()
-        with open(contextfile, 'rb') as f:
-            print("Reading {}".format(contextfile))
-            try:
-                while f.tell() < os.fstat(f.fileno()).st_size:
-                    iovec = IOVec(f)
-                    md5hash = iovec.hash()
-                    hashMap[md5hash] = iovec
-            except IndexError as e:
-                print("IndexError", file=sys.stderr)
-                invalid_contexts.add(contextfile)
-                continue
-            except struct.error as e:
-                print("Struct error", file=sys.stderr)
-                invalid_contexts.add(contextfile)
-                continue
-            except MemoryError as e:
-                print("MemoryError", file=sys.stderr)
-                invalid_contexts.add(contextfile)
-                continue
-            except OverflowError:
-                print("OverflowError", file=sys.stderr)
-                invalid_contexts.add(contextfile)
-                continue
-            except ValueError:
-                print("ValueError", file=sys.stderr)
-                invalid_contexts.add(contextfile)
-                continue
     print("Unique Hashes: {}".format(len(hashMap)))
     pickle.dump(hashMap, mapFile)
 
-    if os.path.exists(FIFO_PIPE_NAME):
-        os.unlink(FIFO_PIPE_NAME)
+    if os.path.exists(WORK_DIR):
+        shutil.rmtree(WORK_DIR)
 
-    for binary in binaries.readlines():
-        binary = binary.strip()
-        location_map = dict()
+    os.mkdir(WORK_DIR)
 
-        readelf_cmd = subprocess.run(['readelf', '-s', binary], capture_output=True)
-        lines = readelf_cmd.stdout.split(b'\n')
-        for line in lines:
-            line = line.decode('utf-8')
-            toks = line.split()
-            if len(toks) > 4 and toks[3] == "FUNC":
-                loc = int(toks[1], 16)
-                name = toks[-1]
-                location_map[loc] = name
+    with open(results.binaries, "r") as binaries:
+        for binary in binaries.readlines():
+            binary = binary.strip()
+            binary = os.path.abspath(binary)
+            location_map = dict()
 
-        for hash, iovec in hashMap.items():
-            descMap[hash] = list()
-            out_pipe = open(FIFO_PIPE_NAME, "wb")
-            iovec.write_bin(out_pipe)
-            out_pipe.close()
+            print("Reading function locations for {}...".format(binary), end='')
+            sys.stdout.flush()
+            readelf_cmd = subprocess.run(['readelf', '-s', binary], capture_output=True)
+            lines = readelf_cmd.stdout.split(b'\n')
+            for line in lines:
+                line = line.decode('utf-8')
+                toks = line.split()
+                if len(toks) > 4 and toks[3] == "FUNC":
+                    loc = int(toks[1], 16)
+                    name = toks[-1]
+                    location_map[loc] = name
+            print("done")
 
-            for loc, name in location_map.items():
-                print("Testing {}.{} with hash {}...".format(binary, name, hash), end='')
-                cmd = [os.path.join(results.pindir, "pin"), "-t", results.tool, "-fuzz-count", "0",
-                       "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
-                       "-contexts", FIFO_PIPE_NAME, "--", binary]
-                fuzz_cmd = subprocess.run(cmd, capture_output=True)
-                found = False
-                if fuzz_cmd.returncode == 0:
-                    output = fuzz_cmd.stdout.split(b'\n')
-                    for line in output:
-                        line = line.decode("utf-8")
-                        if "Input Contexts Passed: 1" in line:
-                            found = True
-                            descMap[hash].append(os.path.basename(binary) + "." + name)
-                            break
-                if found:
-                    print("accepted!")
-                else:
-                    print("failed")
-    contexts.close()
-    binaries.close()
+            for hash, iovec in hashMap.items():
+                descMap[hash] = list()
+                if os.path.exists(FIFO_PIPE_NAME):
+                    os.unlink(FIFO_PIPE_NAME)
+                out_pipe = open(FIFO_PIPE_NAME, "wb")
+                iovec.write_bin(out_pipe)
+                out_pipe.close()
 
-    if os.path.exists(FIFO_PIPE_NAME):
-        os.unlink(FIFO_PIPE_NAME)
+                args = list()
+                for loc, name in location_map.items():
+                    args.append(
+                        [binary, os.path.abspath(results.pindir), os.path.abspath(results.tool), hash, loc, name])
+
+                with futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+                    pool.map(attempt_ctx, args)
+
     pickle.dump(descMap, descFile)
     for hash, funcs in descMap.items():
         print("{}: {}".format(hash, funcs))
