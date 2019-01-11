@@ -182,7 +182,7 @@ def attempt_ctx(args):
     name = args[5]
     cmd = [os.path.join(pindir, "pin"), "-t", tool, "-fuzz-count", "0",
            "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
-           "-contexts", FIFO_PIPE_NAME, "--", binary]
+           "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", binary]
     try:
         message = "Testing {}.{} ({}) with hash {}...".format(binary, name, hex(loc), hash)
         fuzz_cmd = subprocess.run(cmd, capture_output=True, timeout=int(watchdog) / 1000 + 1, cwd=os.path.abspath(
@@ -227,6 +227,7 @@ def main():
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
     parser.add_argument("-ld", help="/path/to/fb-load")
+    parser.add_argument("-target", help="Address to target single function")
 
     results = parser.parse_args()
     mapFile = open(results.map, "wb")
@@ -268,14 +269,16 @@ def main():
                 if len(toks) > 4 and toks[3] == "FUNC":
                     loc = int(toks[1], 16)
                     name = toks[-1]
-                    location_map[loc] = name
+                    if results.target is None or int(results.target, 16) == loc:
+                        location_map[loc] = name
             print("done")
 
             for hash, iovec in hashMap.items():
                 descMap[hash] = list()
-                if os.path.exists(FIFO_PIPE_NAME):
-                    os.unlink(FIFO_PIPE_NAME)
-                out_pipe = open(FIFO_PIPE_NAME, "wb")
+                ctxPath = os.path.join(WORK_DIR, FIFO_PIPE_NAME)
+                if os.path.exists(ctxPath):
+                    os.unlink(ctxPath)
+                out_pipe = open(ctxPath, "wb")
                 iovec.write_bin(out_pipe)
                 out_pipe.close()
 
