@@ -174,6 +174,9 @@ def read_contexts(contextFile):
             invalidctx_lock.release()
 
 
+def unique_identification(binary, name, hash):
+    return "{}.{}.{}".format(os.path.basename(binary), name, hash)
+
 def attempt_ctx(args):
     binary = args[0]
     pindir = args[1]
@@ -181,9 +184,12 @@ def attempt_ctx(args):
     hash = args[3]
     loc = args[4]
     name = args[5]
+    processedFile = args[6]
+
     cmd = [os.path.join(pindir, "pin"), "-t", tool, "-fuzz-count", "0",
            "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
            "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", binary]
+
     try:
         message = "Testing {}.{} ({}) with hash {}...".format(binary, name, hex(loc), hash)
         fuzz_cmd = subprocess.run(cmd, capture_output=True, timeout=int(watchdog) / 1000 + 1, cwd=os.path.abspath(
@@ -210,6 +216,7 @@ def attempt_ctx(args):
 
         print_lock.acquire()
         print(message)
+        print(unique_identification(binary, name, hash), file=processedFile)
         print_lock.release()
     except subprocess.TimeoutExpired:
         pass
@@ -233,6 +240,10 @@ def main():
     results = parser.parse_args()
     mapFile = open(results.map, "wb")
     descFile = open(results.out, "wb")
+    processedFile = open("processed.txt", "rwa+")
+    processedBinaries = set()
+    for binary in processedFile.readlines():
+        processedBinaries.add(binary)
 
     if not os.path.exists(results.contexts):
         print("Could not find {}".format(results.contexts), file=sys.stderr)
@@ -250,7 +261,7 @@ def main():
     pickle.dump(hashMap, mapFile)
 
     if os.path.exists(WORK_DIR):
-        shutil.rmtree(WORK_DIR)
+        shutil.rmtree(WORK_DIR, ignore_errors=True)
 
     os.mkdir(WORK_DIR)
 
@@ -285,13 +296,18 @@ def main():
 
                 args = list()
                 for loc, name in location_map.items():
+                    if unique_identification(binary, name, hash) in processedBinaries:
+                        continue
                     args.append(
-                        [binary, os.path.abspath(results.pindir), os.path.abspath(results.tool), hash, loc, name])
+                        [binary, os.path.abspath(results.pindir), os.path.abspath(results.tool), hash, loc, name,
+                         processedFile])
 
-                with futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-                    pool.map(attempt_ctx, args)
+                if len(args) > 0:
+                    with futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+                        pool.map(attempt_ctx, args)
 
     pickle.dump(descMap, descFile)
+    processedFile.close()
     for hash, funcs in descMap.items():
         print("{}: {}".format(hash, funcs))
 
