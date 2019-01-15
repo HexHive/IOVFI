@@ -50,8 +50,6 @@ def main():
     classifier = dtree.tree_
     idx = 0
 
-    print(fbDtree.labelEncoder)
-
     while idx < classifier.node_count:
         if classifier.children_left[idx] == classifier.children_right[idx]:
             print("Reached leaf")
