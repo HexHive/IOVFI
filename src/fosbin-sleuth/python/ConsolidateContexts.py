@@ -3,16 +3,14 @@
 import os
 import sys
 import argparse
-import struct
-import hashlib
 import pickle
 import subprocess
 import threading
 from concurrent import futures
-import shutil
 import multiprocessing
-
-AllocatedAreaMagic = 0xA110CA3D
+import signal
+import struct
+from contexts import IOVec
 
 FIFO_PIPE_NAME = "fifo-pipe"
 WORK_DIR = "_work"
@@ -21,119 +19,15 @@ watchdog = str(5 * 1000)
 passingHashes = dict()
 contextHashes = dict()
 
-descMap = dict()
+descMap = None
+descFile = None
 hashMap = dict()
-
 invalid_contexts = set()
-
 hashlock = threading.RLock()
 invalidctx_lock = threading.RLock()
 descMap_lock = threading.RLock()
 print_lock = threading.RLock()
-
 max_workers = multiprocessing.cpu_count()
-
-class AllocatedArea:
-    def __init__(self, file):
-        self.size = struct.unpack_from("Q", file.read(8))[0]
-        if self.size > 1024:
-            raise ValueError("{} ({})".format(self.size, hex(self.size)))
-        self.mem_map = [None] * self.size
-        for i in range(0, self.size):
-            self.mem_map[i] = struct.unpack_from("?", file.read(1))[0]
-
-        self.subareas = list()
-        self.data = [None] * self.size
-        i = 0
-        subareasToRead = 0
-        while i < self.size:
-            if self.mem_map[i]:
-                subareasToRead += 1
-                for j in range(0, 8):
-                    self.data[i] = struct.unpack_from("B", file.read(1))[0]
-                    i += 1
-            else:
-                self.data[i] = struct.unpack_from("B", file.read(1))[0]
-                i += 1
-
-        if subareasToRead > 0:
-            for x in range(0, subareasToRead):
-                self.subareas.append(AllocatedArea(file))
-
-    def hash(self, hash):
-        i = 0
-        curr_subarea = 0
-        while i < self.size:
-            if self.mem_map[i]:
-                self.subareas[curr_subarea].hash(hash)
-                curr_subarea += 1
-                i += 8
-            else:
-                hash.update(self.data[i].to_bytes(1, sys.byteorder, signed=False))
-                i += 1
-
-    def write_bin(self, file):
-        file.write(struct.pack("Q", self.size))
-        for i in range(0, self.size):
-            file.write(struct.pack("?", self.mem_map[i]))
-
-        for i in range(0, self.size):
-            file.write(struct.pack("B", self.data[i]))
-
-        for subarea in self.subareas:
-            subarea.write_bin(file)
-
-
-class X86Context:
-    def __init__(self, file):
-        self.register_values = list()
-        for i in range(0, 7):
-            reg_val = struct.unpack_from('Q', file.read(8))[0]
-            self.register_values.append(reg_val)
-        self.allocated_areas = list()
-        for idx in range(0, len(self.register_values)):
-            reg = self.register_values[idx]
-            if reg == AllocatedAreaMagic and idx < len(self.register_values) - 1:
-                self.allocated_areas.append(AllocatedArea(file))
-
-    def hash(self):
-        md5sum = hashlib.md5()
-        for reg in self.register_values:
-            md5sum.update(reg.to_bytes(8, sys.byteorder))
-        for subarea in self.allocated_areas:
-            subarea.hash(md5sum)
-
-        return md5sum.hexdigest()
-
-    def __hash__(self):
-        return hash()
-
-    def write_bin(self, file):
-        for reg in self.register_values:
-            file.write(struct.pack('Q', reg))
-
-        for subarea in self.allocated_areas:
-            subarea.write_bin(file)
-
-
-class IOVec:
-    def __init__(self, file):
-        self.input = X86Context(file)
-        self.output = X86Context(file)
-
-    def __hash__(self):
-        return hash()
-
-    def hash(self):
-        hash = hashlib.md5()
-        hash.update(self.input.hash().encode('utf-8'))
-        hash.update(self.output.hash().encode('utf-8'))
-
-        return hash.hexdigest()
-
-    def write_bin(self, file):
-        self.input.write_bin(file)
-        self.output.write_bin(file)
 
 
 def read_contexts(contextFile):
@@ -142,7 +36,7 @@ def read_contexts(contextFile):
         print("Reading {}".format(contextfile))
         try:
             while f.tell() < os.fstat(f.fileno()).st_size:
-                iovec = IOVec(f)
+                iovec = IOVec.IOVec(f)
                 md5hash = iovec.hash()
                 hashlock.acquire()
                 hashMap[md5hash] = iovec
@@ -172,10 +66,19 @@ def read_contexts(contextFile):
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
+        except Exception as e:
+            print("General Exception: {}".format(e))
 
 
 def unique_identification(binary, name, hash):
     return "{}.{}.{}".format(os.path.basename(binary), name, hash)
+
+
+def save_desc_for_later(signal, frame):
+    if descFile is not None:
+        pickle.dump(descMap, descFile)
+    exit(0)
+
 
 def attempt_ctx(args):
     binary = args[0]
@@ -191,6 +94,9 @@ def attempt_ctx(args):
            "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", binary]
 
     try:
+        id = unique_identification(binary, name, hash)
+        temp_file = open(id, "w+")
+        temp_file.close()
         message = "Testing {}.{} ({}) with hash {}...".format(binary, name, hex(loc), hash)
         fuzz_cmd = subprocess.run(cmd, capture_output=True, timeout=int(watchdog) / 1000 + 1, cwd=os.path.abspath(
             WORK_DIR))
@@ -216,7 +122,7 @@ def attempt_ctx(args):
 
         print_lock.acquire()
         print(message)
-        print(unique_identification(binary, name, hash), file=processedFile)
+        print(id, file=processedFile)
         print_lock.release()
     except subprocess.TimeoutExpired:
         pass
@@ -224,6 +130,10 @@ def attempt_ctx(args):
         print_lock.acquire()
         print("General exception: {}".format(e))
         print_lock.release()
+    finally:
+        if os.path.exists(id):
+            os.unlink(id)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Consolidate")
@@ -239,11 +149,26 @@ def main():
 
     results = parser.parse_args()
     mapFile = open(results.map, "wb")
+
+    global descMap
+    descMap = dict()
+    if os.path.exists(results.out):
+        descFile = open(results.out, "rb")
+        if os.fstat(descFile.fileno()).st_size > 0:
+            descMap = pickle.load(descFile)
+        descFile.close()
+
     descFile = open(results.out, "wb")
-    processedFile = open("processed.txt", "rwa+")
+    processedFile = open("processed.txt", "a+")
     processedBinaries = set()
     for binary in processedFile.readlines():
         processedBinaries.add(binary)
+
+    if os.path.exists(WORK_DIR):
+        # shutils.rmtree still caused errors, so call in the big guns...
+        os.system("rm -rf {}".format(WORK_DIR))
+
+    os.mkdir(WORK_DIR)
 
     if not os.path.exists(results.contexts):
         print("Could not find {}".format(results.contexts), file=sys.stderr)
@@ -260,10 +185,7 @@ def main():
     print("Unique Hashes: {}".format(len(hashMap)))
     pickle.dump(hashMap, mapFile)
 
-    if os.path.exists(WORK_DIR):
-        shutil.rmtree(WORK_DIR, ignore_errors=True)
-
-    os.mkdir(WORK_DIR)
+    signal.signal(signal.SIGTERM, save_desc_for_later)
 
     with open(results.binaries, "r") as binaries:
         for binary in binaries.readlines():
@@ -304,12 +226,16 @@ def main():
 
                 if len(args) > 0:
                     with futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-                        pool.map(attempt_ctx, args)
+                        try:
+                            pool.map(attempt_ctx, args)
+                        except KeyboardInterrupt:
+                            save_desc_for_later(signal.SIGTERM, None)
 
     pickle.dump(descMap, descFile)
     processedFile.close()
     for hash, funcs in descMap.items():
         print("{}: {}".format(hash, funcs))
+
 
 if __name__ == "__main__":
     main()
