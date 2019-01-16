@@ -21,14 +21,16 @@ def attempt_ctx(iovec, pindir, tool, loc, name, watchdog, binary, hash):
     iovec.write_bin(ctx_file)
     ctx_file.close()
     cmd = [os.path.abspath(os.path.join(pindir, "pin")), "-t", os.path.abspath(tool), "-fuzz-count", "0",
-           "-target", hex(loc), "-out", name + ".log", "-watchdog", str(watchdog),
+           "-target", hex(loc), "-out", os.path.basename(binary) + "." + name + ".log", "-watchdog", str(watchdog),
            "-contexts", fullPath, "--", os.path.abspath(binary)]
 
     accepted = False
+    devnull = open(os.devnull, "w")
     try:
         print("Testing {}.{} ({}) with hash {}...".format(os.path.basename(binary), name, hex(loc), hash), end='')
         sys.stdout.flush()
-        fuzz_cmd = subprocess.run(cmd, timeout=watchdog / 1000 + 1, cwd=os.path.abspath(WORK_DIR))
+        fuzz_cmd = subprocess.run(cmd, stdout=devnull, stderr=subprocess.STDOUT, timeout=watchdog / 1000 + 1, \
+                                  cwd=os.path.abspath(WORK_DIR))
         accepted = (fuzz_cmd.returncode == 0)
 
         if accepted:
@@ -110,6 +112,7 @@ def main():
     print("done!")
     print("Found {} functions".format(len(location_map)))
 
+    guesses = dict()
     for loc, name in location_map.items():
         idx = 0
         while idx < classifier.node_count:
@@ -118,7 +121,7 @@ def main():
                 for i in range(len(classifier.value[idx][0])):
                     if dtree.tree_.value[idx][0][i]:
                         func_guesses.add(dtree.classes_[i])
-                print("{}.{}: {}".format(os.path.basename(results.binary), name, func_guesses))
+                guesses["{}.{}".format(os.path.basename(results.binary), name)] = func_guesses
                 break
 
             hash = fbDtree.labelEncoder.inverse_transform([classifier.feature[idx]])[0]
@@ -128,6 +131,16 @@ def main():
             else:
                 idx = classifier.children_left[idx]
 
+    print("++++++++++++++++++++++++++++++++++++++++++++")
+    print("                  Guesses                   ")
+    print("++++++++++++++++++++++++++++++++++++++++++++")
+    for name, guess in guesses.items():
+        indicator = "X"
+        for func in guess:
+            if func.find(name[name.index("."):]) > 0:
+                indicator = "!"
+                break
+        print("[{}] {}: {}".format(indicator, name, guess))
 
 if __name__ == "__main__":
     main()
