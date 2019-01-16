@@ -135,7 +135,12 @@ def main():
     print("                  Guesses                   ")
     print("++++++++++++++++++++++++++++++++++++++++++++")
     for name, guess in guesses.items():
-        indicator = "X"
+        indicator = "?"
+        for func in dtree.classes_:
+            if func.find(name[name.index("."):]) > 0:
+                indicator = "X"
+                break
+
         for func in guess:
             if func.find(name[name.index("."):]) > 0:
                 indicator = "!"
