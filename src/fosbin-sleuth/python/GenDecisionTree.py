@@ -4,8 +4,7 @@ import os
 import sys
 import argparse
 import pickle
-from sklearn import tree
-from sklearn import preprocessing
+from sklearn import tree, preprocessing
 import numpy
 from sklearn.externals.six import StringIO
 from contexts import FBDecisionTree
@@ -88,15 +87,10 @@ def main():
                             a1Idx = idx2
                         else:
                             a2 = funcs_features[funcs_labels.index(dtree.classes_[idx2])]
-                            if not numpy.array_equal(a1, a2):
-                                print("\tSomething REALLY went wrong {} != {}".format(dtree.classes_[a1Idx],
-                                                                                      dtree.classes_[idx2]))
 
                 print("\n")
             else:
                 print("Unique: {}".format(dtree.classes_[idx]))
-
-    print("Average conflict size: {}".format(len(conflicts) / totalConflicts))
 
 if __name__ == "__main__":
     main()

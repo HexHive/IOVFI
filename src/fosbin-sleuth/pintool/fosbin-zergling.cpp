@@ -1012,6 +1012,11 @@ VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
         ss << "Input Contexts Passed: " << std::dec << totalInputContextsPassed << std::endl;
         ss << "Input Contexts Failed: " << std::dec << totalInputContextsFailed << std::endl;
         log_message(ss);
+        if (FuzzCount.Value() == 0 && totalInputContextsFailed > 0) {
+            PIN_ExitApplication(1);
+        } else if (FuzzCount.Value() == 0 && totalInputContextsFailed == 0) {
+            PIN_ExitApplication(0);
+        }
     }
 }
 
