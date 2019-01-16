@@ -66,31 +66,31 @@ def main():
     dotFile.write(dot_data.getvalue())
     print("done!")
 
-    conflicts = set()
-    totalConflicts = 0
-    for idx in range(dtree.tree_.node_count):
-        if dtree.tree_.children_left[idx] == dtree.tree_.children_right[idx]:
-            if dtree.tree_.n_node_samples[idx] > 1:
-                print("Conflicts: ", end='')
-                totalConflicts += 1
-                for idx2 in range(len(dtree.tree_.value[idx][0])):
-                    if dtree.tree_.value[idx][0][idx2]:
-                        conflicts.add(dtree.classes_[idx2])
-                        print(dtree.classes_[idx2], end=' ')
-                print()
-                a1 = None
-                a1Idx = None
-                for idx2 in range(len(dtree.tree_.value[idx][0])):
-                    if dtree.tree_.value[idx][0][idx2]:
-                        if a1 is None:
-                            a1 = funcs_features[funcs_labels.index(dtree.classes_[idx2])]
-                            a1Idx = idx2
-                        else:
-                            a2 = funcs_features[funcs_labels.index(dtree.classes_[idx2])]
-
-                print("\n")
-            else:
-                print("Unique: {}".format(dtree.classes_[idx]))
+    # conflicts = set()
+    # totalConflicts = 0
+    # for idx in range(dtree.tree_.node_count):
+    #     if dtree.tree_.children_left[idx] == dtree.tree_.children_right[idx]:
+    #         if dtree.tree_.n_node_samples[idx] > 1:
+    #             print("Conflicts: ", end='')
+    #             totalConflicts += 1
+    #             for idx2 in range(len(dtree.tree_.value[idx][0])):
+    #                 if dtree.tree_.value[idx][0][idx2]:
+    #                     conflicts.add(dtree.classes_[idx2])
+    #                     print(dtree.classes_[idx2], end=' ')
+    #             print()
+    #             a1 = None
+    #             a1Idx = None
+    #             for idx2 in range(len(dtree.tree_.value[idx][0])):
+    #                 if dtree.tree_.value[idx][0][idx2]:
+    #                     if a1 is None:
+    #                         a1 = funcs_features[funcs_labels.index(dtree.classes_[idx2])]
+    #                         a1Idx = idx2
+    #                     else:
+    #                         a2 = funcs_features[funcs_labels.index(dtree.classes_[idx2])]
+    #
+    #             print("\n")
+    #         else:
+    #             print("Unique: {}".format(dtree.classes_[idx]))
 
 if __name__ == "__main__":
     main()
