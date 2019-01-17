@@ -150,7 +150,8 @@ class FBDecisionTree:
                 used_labels.add(feature)
         used_hashes = labels.inverse_transform(list(used_labels))
         for used_hash in used_hashes:
-            available_hashes.remove(used_hash)
+            if used_hash in used_hashes:
+                available_hashes.remove(used_hash)
 
         if len(available_hashes) == 0:
             raise AssertionError("There are no available hashes to confirm {}({}) is {}".format(hex(location),
