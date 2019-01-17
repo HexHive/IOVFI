@@ -150,7 +150,7 @@ class FBDecisionTree:
                 used_labels.add(feature)
         used_hashes = labels.inverse_transform(list(used_labels))
         for used_hash in used_hashes:
-            if used_hash in used_hashes:
+            if used_hash in available_hashes:
                 available_hashes.remove(used_hash)
 
         if len(available_hashes) == 0:
