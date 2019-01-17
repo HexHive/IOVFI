@@ -148,7 +148,7 @@ class FBDecisionTree:
         for feature in dtree.tree_.feature:
             if feature > 0:
                 used_labels.add(feature)
-        used_hashes = labels.inverse_transform(used_labels)
+        used_hashes = labels.inverse_transform(list(used_labels))
         for used_hash in used_hashes:
             available_hashes.remove(used_hash)
 
