@@ -124,6 +124,8 @@ class FBDecisionTree:
             if dtree.tree_.value[tree_idx][0][i]:
                 equiv_classes.add(dtree.classes_[i])
 
+        return equiv_classes;
+
     def _confirm_leaf(self, location, pindir, tool, binary, name, index):
         if not self._is_leaf(index):
             raise AssertionError("{} is not a leaf".format(index))
