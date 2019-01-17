@@ -138,11 +138,11 @@ class FBDecisionTree:
 
         possible_equivs = self._get_equiv_classes(index)
 
-        available_hashes = set()
+        available_hashes = list()
         for hash, accepting_funcs in descMap.items():
             for possible_equiv in possible_equivs:
                 if possible_equiv in accepting_funcs:
-                    available_hashes.add(hash)
+                    available_hashes.append(hash)
 
         used_labels = set()
         for feature in dtree.tree_.feature:
