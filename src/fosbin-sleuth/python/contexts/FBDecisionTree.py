@@ -157,7 +157,7 @@ class FBDecisionTree:
         base_dtree_index = self._find_dtree_idx(index)
         tree_idx = index - base_dtree_index
         dtree = self.dtrees[base_dtree_index]
-        hash = self.labels[base_dtree_index].inverse_transform(dtree.tree_.feature[tree_idx])[0]
+        hash = self.labels[base_dtree_index].inverse_transform([dtree.tree_.feature[tree_idx]])[0]
         return hash
 
     def _get_iovec(self, index):
