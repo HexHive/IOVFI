@@ -11,7 +11,7 @@ class FBDecisionTree:
     UNKNOWN_FUNC = -1
     WATCHDOG_MS = 5000
 
-    def _log(self, msg, print_output, end='\n'):
+    def _log(self, msg, print_output=True, end='\n'):
         if print_output:
             print(msg, end=end)
             sys.stdout.flush()
@@ -203,6 +203,7 @@ class FBDecisionTree:
         base_idx = 0
         for dtree in self.dtrees.items():
             base_idx += dtree.tree_.node_count
+        self._log("base_idx = {}".format(base_idx), verbose)
 
         self._log("Loading {}...".format(descLoc), verbose, '')
         with open(descLoc, "rb") as descFile:
@@ -217,7 +218,7 @@ class FBDecisionTree:
         labels = preprocessing.LabelEncoder()
         hash_labels = set()
         self._log("Transforming function labels...", verbose, '')
-        for hashes in self.descMaps.keys():
+        for hashes in self.descMaps[base_idx].keys():
             hash_labels.add(hashes)
         labels.fit_transform(list(hash_labels))
         self.labels[base_idx] = labels

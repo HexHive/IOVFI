@@ -11,7 +11,6 @@ from contexts.FBDecisionTree import FBDecisionTree
 
 TREE_OUT = "tree.bin"
 
-
 def main():
     parser = argparse.ArgumentParser(description="GenDecisionTree")
     parser.add_argument('-d', '--desc', help="Map of context hashes to functions that accept them",
@@ -22,13 +21,13 @@ def main():
     parser.add_argument('--verbose', help="Output text about what's happening", default=True)
 
     results = parser.parse_args()
-    treeFile = open(results.tree, "wb+")
-    dotFile = open(results.dot, "w+")
 
     fbDtree = FBDecisionTree(results.desc, results.map, results.verbose)
+    treeFile = open(results.tree, "wb+")
     pickle.dump(fbDtree, treeFile)
 
     print("Generating dot file...", end='')
+    dotFile = open(results.dot, "w+")
     sys.stdout.flush()
     dot_data = StringIO()
     fbDtree.export_graphviz(dot_data)
