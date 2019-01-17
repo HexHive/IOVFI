@@ -1,5 +1,7 @@
 import subprocess
 
+WORK_DIR = "_work"
+CTX_FILENAME = "tmp.ctx"
 
 def find_funcs(binary, target=None):
     location_map = dict()
