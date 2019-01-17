@@ -120,7 +120,7 @@ class FBDecisionTree:
         dtree = self.dtrees[dtree_idx]
         tree_idx = index - dtree_idx
         equiv_classes = set()
-        for i in range(dtree.tree_.value[tree_idx][0]):
+        for i in range(len(dtree.tree_.value[tree_idx][0])):
             if dtree.tree_.value[tree_idx][0][i]:
                 equiv_classes.add(dtree.classes_[i])
 
