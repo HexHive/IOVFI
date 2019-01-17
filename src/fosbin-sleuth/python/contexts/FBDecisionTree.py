@@ -144,7 +144,11 @@ class FBDecisionTree:
                 if possible_equiv in accepting_funcs:
                     available_hashes.add(hash)
 
-        used_hashes = labels.inverse_transform(dtree.tree_.feature)
+        used_labels = set()
+        for feature in dtree.tree_.feature:
+            if feature > 0:
+                used_labels.add(feature)
+        used_hashes = labels.inverse_transform(used_labels)
         for used_hash in used_hashes:
             available_hashes.remove(used_hash)
 
