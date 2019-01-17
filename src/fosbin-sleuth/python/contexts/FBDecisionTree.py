@@ -41,6 +41,9 @@ class FBDecisionTree:
         return self._left_child(index) == self._right_child(index)
 
     def _attempt_ctx(self, iovec, pindir, tool, loc, name, binary, hash, verbose=False, watchdog=WATCHDOG_MS):
+        if iovec is None:
+            raise AssertionError("No iovec provided")
+
         fullPath = os.path.abspath(os.path.join(binaryutils.WORK_DIR, binaryutils.CTX_FILENAME))
         if not os.path.exists(binaryutils.WORK_DIR):
             os.mkdir(binaryutils.WORK_DIR)
@@ -106,7 +109,7 @@ class FBDecisionTree:
         dtree = self.dtrees[treeidx]
         tree.export_graphviz(dtree, out_file=outfile, filled=True, rounded=True, special_characters=True)
 
-    def get_equiv_classes(self, index):
+    def _get_equiv_classes(self, index):
         if index == self.UNKNOWN_FUNC:
             return {"UNKNOWN"}
 
@@ -121,6 +124,47 @@ class FBDecisionTree:
             if dtree.tree_.value[tree_idx][0][i]:
                 equiv_classes.add(dtree.classes_[i])
 
+    def _confirm_leaf(self, location, pindir, tool, binary, name, index):
+        if not self._is_leaf(index):
+            raise AssertionError("{} is not a leaf".format(index))
+
+        dtree_base_idx = self._find_dtree_idx(index)
+        dtree = self.dtrees[dtree_base_idx]
+        descMap = self.descMaps[dtree_base_idx]
+        hashMap = self.hashMaps[dtree_base_idx]
+        labels = self.labels[dtree_base_idx]
+
+        possible_equivs = self._get_equiv_classes(index)
+
+        available_hashes = set()
+        for hash, accepting_funcs in descMap.items():
+            for possible_equiv in possible_equivs:
+                if possible_equiv in accepting_funcs:
+                    available_hashes.add(hash)
+
+        used_hashes = labels.inverse_transform(dtree.tree_.features)
+        for used_hash in used_hashes:
+            available_hashes.remove(used_hash)
+
+        if len(available_hashes) == 0:
+            raise AssertionError("There are no available hashes to confirm {}({}) is {}".format(hex(location),
+                                                                                                name, possible_equivs))
+        hash = available_hashes[0]
+        iovec = hashMap[hash]
+        return self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash)
+
+    def _get_hash(self, index):
+        base_dtree_index = self._find_dtree_idx(index)
+        tree_idx = index - base_dtree_index
+        dtree = self.dtrees[base_dtree_index]
+        hash = self.labels[base_dtree_index].inverse_transform(dtree.tree_.feature[tree_idx])[0]
+        return hash
+
+    def _get_iovec(self, index):
+        hash = self._get_hash(index)
+        base_dtree_index = self._find_dtree_idx(index)
+        return self.hashMaps[base_dtree_index][hash]
+
     def identify(self, location, pindir, tool, binary, name=None):
         if name is None:
             name = hex(location)
@@ -128,18 +172,17 @@ class FBDecisionTree:
         idx = 0
         while idx < self.size():
             if self._is_leaf(idx):
-                return self.get_equiv_classes(idx)
+                if self._confirm_leaf(location, pindir, tool, binary, name, idx):
+                    return self._get_equiv_classes(idx)
+                break
 
-            dtree_base_idx = self._find_dtree_idx(idx)
-            dtree = self.dtrees[dtree_base_idx]
-            hash = self.labels[dtree_base_idx].inverse_transform([dtree.tree_.feature[idx]])[0]
-            iovec = self.hashMaps[dtree_base_idx][hash]
+            iovec = self._get_iovec(idx)
             if self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash):
                 idx = self._right_child(idx)
             else:
                 idx = self._left_child(idx)
 
-        return self.get_equiv_classes(self.UNKNOWN_FUNC)
+        return self._get_equiv_classes(self.UNKNOWN_FUNC)
 
     def size(self):
         size = 0
