@@ -43,8 +43,20 @@ def main():
     print("Found {} functions".format(len(location_map)))
 
     guesses = dict()
+    error_msgs = list()
     for loc, name in location_map.items():
-        guesses[name] = fbDtree.identify(loc, results.pindir, results.tool, results.binary, name, verbose=True)
+        try:
+            guesses[name] = fbDtree.identify(loc, results.pindir, results.tool, results.binary, name, verbose=True)
+        except Exception as e:
+            error_msgs.append(str(e))
+            print("Error: {}".format(e), file=sys.stderr)
+            continue
+
+    if (len(error_msgs) > 0):
+        print("++++++++++++++++++++++++++++++++++++++++++++")
+        print("                  Errors                    ")
+        print("++++++++++++++++++++++++++++++++++++++++++++")
+        print(error_msgs)
 
     print("++++++++++++++++++++++++++++++++++++++++++++")
     print("                  Guesses                   ")
