@@ -51,6 +51,10 @@ def main():
             error_msgs.append(str(e))
             print("Error: {}".format(e), file=sys.stderr)
             continue
+        except AssertionError as e:
+            error_msgs.append(str(e))
+            print("Error: {}".format(e), file=sys.stderr)
+            continue
 
     if (len(error_msgs) > 0):
         print("++++++++++++++++++++++++++++++++++++++++++++")
