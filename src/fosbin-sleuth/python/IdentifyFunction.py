@@ -52,13 +52,15 @@ def main():
     print("++++++++++++++++++++++++++++++++++++++++++++")
     for name, guess in guesses.items():
         indicator = "X"
+        print("{}: {}".format(name, guess))
+
         if name == FBDecisionTree.UNKNOWN_FUNC:
             indicator = "?"
         else:
             general_func_name = name[name.index("."):]
 
             for func in guess:
-                if func.find(general_func_name) > 0:
+                if func.find(general_func_name) >= 0:
                     indicator = "!"
                     break
         print("[{}] {}: {}".format(indicator, name, guess))
