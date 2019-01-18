@@ -40,7 +40,7 @@ class FBDecisionTree:
 
         return self._left_child(index) == self._right_child(index)
 
-    def _attempt_ctx(self, iovec, pindir, tool, loc, name, binary, hash, verbose=False, watchdog=WATCHDOG_MS):
+    def _attempt_ctx(self, iovec, pindir, tool, loc, name, binary, hash_sum, verbose=False, watchdog=WATCHDOG_MS):
         if iovec is None:
             raise AssertionError("No iovec provided")
 
@@ -58,7 +58,7 @@ class FBDecisionTree:
         accepted = False
         devnull = open(os.devnull, "w")
         try:
-            self._log("Testing {}.{} ({}) with hash {}...".format(os.path.basename(binary), name, hex(loc), hash),
+            self._log("Testing {}.{} ({}) with hash {}...".format(os.path.basename(binary), name, hex(loc), hash_sum),
                       verbose, end='')
             sys.stdout.flush()
             fuzz_cmd = subprocess.run(cmd, stdout=devnull, stderr=subprocess.STDOUT, timeout=watchdog / 1000 + 1, \
@@ -156,9 +156,9 @@ class FBDecisionTree:
         if len(available_hashes) == 0:
             raise AssertionError("There are no available hashes to confirm {}({}) is {}".format(hex(location),
                                                                                                 name, possible_equivs))
-        hash = available_hashes[0]
+        hash_sum = available_hashes[0]
         iovec = hashMap[hash]
-        return self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash)
+        return self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash_sum)
 
     def _get_hash(self, index):
         base_dtree_index = self._find_dtree_idx(index)
@@ -183,6 +183,7 @@ class FBDecisionTree:
                     return self._get_equiv_classes(idx)
                 break
 
+            hash = self._get_hash(idx)
             iovec = self._get_iovec(idx)
             if self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash, verbose=verbose):
                 idx = self._right_child(idx)
