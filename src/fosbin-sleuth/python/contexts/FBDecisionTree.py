@@ -126,7 +126,7 @@ class FBDecisionTree:
 
         return equiv_classes;
 
-    def _confirm_leaf(self, location, pindir, tool, binary, name, index):
+    def _confirm_leaf(self, location, pindir, tool, binary, name, index, verbose=False):
         if not self._is_leaf(index):
             raise AssertionError("{} is not a leaf".format(index))
 
@@ -179,12 +179,12 @@ class FBDecisionTree:
         idx = 0
         while idx < self.size():
             if self._is_leaf(idx):
-                if self._confirm_leaf(location, pindir, tool, binary, name, idx):
+                if self._confirm_leaf(location, pindir, tool, binary, name, idx, verbose):
                     return self._get_equiv_classes(idx)
                 break
 
             iovec = self._get_iovec(idx)
-            if self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash):
+            if self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash, verbose=verbose):
                 idx = self._right_child(idx)
             else:
                 idx = self._left_child(idx)
