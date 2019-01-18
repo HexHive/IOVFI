@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 import pickle
-from contexts import FBDecisionTree, binaryutils
+from contexts import FBDecisionTree.FBDecisionTree, binaryutils
 
 
 def check_inputs(argparser):
