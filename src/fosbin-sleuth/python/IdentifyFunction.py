@@ -44,7 +44,7 @@ def main():
 
     guesses = dict()
     for loc, name in location_map.items():
-        guesses[name] = fbDtree.identify(loc, results.pindir, results.tool, results.binary, name)
+        guesses[name] = fbDtree.identify(loc, results.pindir, results.tool, results.binary, name, verbose=True)
 
     print("++++++++++++++++++++++++++++++++++++++++++++")
     print("                  Guesses                   ")

@@ -172,7 +172,7 @@ class FBDecisionTree:
         base_dtree_index = self._find_dtree_idx(index)
         return self.hashMaps[base_dtree_index][hash]
 
-    def identify(self, location, pindir, tool, binary, name=None):
+    def identify(self, location, pindir, tool, binary, name=None, verbose=False):
         if name is None:
             name = hex(location)
 
