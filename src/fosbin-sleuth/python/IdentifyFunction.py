@@ -68,7 +68,7 @@ def main():
     for name, guess in guesses.items():
         indicator = "X"
 
-        if name == FBDecisionTree.UNKNOWN_FUNC:
+        if FBDecisionTree.UNKNOWN_FUNC in guess:
             indicator = "?"
         else:
             for func in guess:
