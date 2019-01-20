@@ -179,6 +179,7 @@ class FBDecisionTree:
         idx = 0
         while idx < self.size():
             if self._is_leaf(idx):
+                self._log("Confirming guess...")
                 if self._confirm_leaf(location, pindir, tool, binary, name, idx, verbose):
                     return self._get_equiv_classes(idx)
                 break

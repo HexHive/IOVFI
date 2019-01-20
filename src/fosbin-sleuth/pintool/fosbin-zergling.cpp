@@ -127,8 +127,10 @@ VOID read_new_context() {
 
     if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
         if (FuzzCount.Value() == 0 && totalInputContextsFailed > 0) {
+            log_message("Context Test Failed");
             PIN_ExitApplication(1);
         } else if (FuzzCount.Value() == 0 && totalInputContextsFailed == 0) {
+            log_message("Context Test Success");
             PIN_ExitApplication(0);
         }
         return;
