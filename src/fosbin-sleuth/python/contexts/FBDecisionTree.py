@@ -56,7 +56,7 @@ class FBDecisionTree:
                "-contexts", fullPath, "--", os.path.abspath(binary)]
 
         accepted = False
-        devnull = open("fuzz.log", "a")
+        devnull = open(os.devnull, "w")
         try:
             self._log("Testing {}.{} ({}) with hash {}...".format(os.path.basename(binary), name, hex(loc), hash_sum),
                       verbose, end='')
@@ -81,8 +81,8 @@ class FBDecisionTree:
             else:
                 self._log("accepted!", verbose)
 
-#            if os.path.exists(fullPath):
-#                os.unlink(fullPath)
+        if os.path.exists(fullPath):
+            os.unlink(fullPath)
 
     def _child(self, index, right_child):
         if index < 0:
