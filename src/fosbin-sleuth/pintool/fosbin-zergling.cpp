@@ -479,7 +479,6 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
             totalInputContextsPassed++;
         } else {
             inputContextFailed++;
-            log_message("1");
             totalInputContextsFailed++;
         }
     }

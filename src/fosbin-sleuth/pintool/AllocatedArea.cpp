@@ -106,9 +106,7 @@ std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
             }
             AllocatedArea *aa = new AllocatedArea();
             ctx->subareas.push_back(aa);
-            ADDRINT *tmp = (ADDRINT * ) & c[i];
 //            std::cout << "Writing " << std::hex << (void*)aa->getAddr() << " to " << (void*)&c[i] << std::endl;
-            *tmp = (ADDRINT) aa->getAddr();
             i += sizeof(AllocatedArea::MAGIC_VALUE) - 1;
         } else {
             in.read(&c[i], sizeof(char));
@@ -119,6 +117,17 @@ std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
 
     for (AllocatedArea *subarea : ctx->subareas) {
         in >> subarea;
+    }
+
+    c = (char *) ctx->malloc_addr;
+    size_t subarea_cnt = 0;
+    for (size_t i = 0; i < size; i++) {
+        if (ctx->mem_map[i]) {
+            ADDRINT *tmp = (ADDRINT * ) & c[i];
+            AllocatedArea *aa = ctx->subareas[subarea_cnt++];
+            *tmp = (ADDRINT) aa->getAddr();
+            i += sizeof(AllocatedArea::MAGIC_VALUE) - 1;
+        }
     }
 
     return in;
