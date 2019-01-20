@@ -148,11 +148,11 @@ VOID read_new_context() {
 
     contextFile >> preContext;
 //    log_message("preContext:");
-//    preContext.prettyPrint();
+    preContext.prettyPrint();
 //    std::cout << "Read precontext" << std::endl;
     contextFile >> expectedContext;
 //    log_message("expectedContext:");
-//    expectedContext.prettyPrint();
+    expectedContext.prettyPrint();
 //    std::cout << "Read expectedcontext" << std::endl;
 //    std::cout << "Done reading context" << std::endl;
 }
@@ -689,6 +689,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
     if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
         inputContextFailed++;
         log_message("2");
+        log_message(PIN_ExceptionToString(pExceptInfo).c_str());
         totalInputContextsFailed++;
 //        fuzz_count--;
 //        if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {

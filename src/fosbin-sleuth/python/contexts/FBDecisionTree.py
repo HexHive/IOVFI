@@ -56,14 +56,13 @@ class FBDecisionTree:
                "-contexts", fullPath, "--", os.path.abspath(binary)]
 
         accepted = False
-        devnull = open("fuzz.log", "w")
+        devnull = open("fuzz.log", "a")
         try:
             self._log("Testing {}.{} ({}) with hash {}...".format(os.path.basename(binary), name, hex(loc), hash_sum),
                       verbose, end='')
             sys.stdout.flush()
             fuzz_cmd = subprocess.run(cmd, stdout=devnull, stderr=subprocess.STDOUT, timeout=watchdog / 1000 + 1, \
                                       cwd=os.path.abspath(binaryutils.WORK_DIR))
-            print("return code = {}".format(fuzz_cmd.returncode))
             accepted = (fuzz_cmd.returncode == 0)
 
             if accepted:
@@ -82,8 +81,8 @@ class FBDecisionTree:
             else:
                 self._log("accepted!", verbose)
 
-            if os.path.exists(fullPath):
-                os.unlink(fullPath)
+#            if os.path.exists(fullPath):
+#                os.unlink(fullPath)
 
     def _child(self, index, right_child):
         if index < 0:
