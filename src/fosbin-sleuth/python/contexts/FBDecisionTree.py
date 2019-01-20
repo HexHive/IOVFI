@@ -159,7 +159,7 @@ class FBDecisionTree:
             raise AssertionError("There are no available hashes to confirm {}({}) is {}".format(hex(location),
                                                                                                 name, possible_equivs))
         hash_sum = available_hashes[0]
-        iovec = hashMap[hash]
+        iovec = hashMap[hash_sum]
         return self._attempt_ctx(iovec, pindir, tool, location, name, binary,
                 hash_sum, verbose)
 
