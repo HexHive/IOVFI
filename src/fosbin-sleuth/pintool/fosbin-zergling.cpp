@@ -479,6 +479,7 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
             totalInputContextsPassed++;
         } else {
             inputContextFailed++;
+            log_message("1");
             totalInputContextsFailed++;
         }
     }
@@ -688,6 +689,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //    currentContext.prettyPrint();
     if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
         inputContextFailed++;
+        log_message("2");
         totalInputContextsFailed++;
 //        fuzz_count--;
 //        if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
