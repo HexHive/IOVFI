@@ -56,13 +56,14 @@ class FBDecisionTree:
                "-contexts", fullPath, "--", os.path.abspath(binary)]
 
         accepted = False
-        devnull = open(os.devnull, "w")
+        devnull = open("fuzz.log", "w")
         try:
             self._log("Testing {}.{} ({}) with hash {}...".format(os.path.basename(binary), name, hex(loc), hash_sum),
                       verbose, end='')
             sys.stdout.flush()
             fuzz_cmd = subprocess.run(cmd, stdout=devnull, stderr=subprocess.STDOUT, timeout=watchdog / 1000 + 1, \
                                       cwd=os.path.abspath(binaryutils.WORK_DIR))
+            print("return code = {}".format(fuzz_cmd.returncode))
             accepted = (fuzz_cmd.returncode == 0)
 
             if accepted:
@@ -127,6 +128,8 @@ class FBDecisionTree:
         return equiv_classes;
 
     def _confirm_leaf(self, location, pindir, tool, binary, name, index, verbose=False):
+        self._log("Confirming {}({}) is {}".format(name, hex(location),
+            self._get_equiv_classes(index)), verbose)
         if not self._is_leaf(index):
             raise AssertionError("{} is not a leaf".format(index))
 
@@ -158,7 +161,8 @@ class FBDecisionTree:
                                                                                                 name, possible_equivs))
         hash_sum = available_hashes[0]
         iovec = hashMap[hash]
-        return self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash_sum)
+        return self._attempt_ctx(iovec, pindir, tool, location, name, binary,
+                hash_sum, verbose)
 
     def _get_hash(self, index):
         base_dtree_index = self._find_dtree_idx(index)
