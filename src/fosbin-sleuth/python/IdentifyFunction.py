@@ -6,7 +6,9 @@ import sys
 import pickle
 from contexts.FBDecisionTree import FBDecisionTree
 from contexts import binaryutils
+import random
 
+dangerous_functions = {'kill', '_exit', 'exit', '__kill', '_Exit', }
 
 def check_inputs(argparser):
     if not os.path.exists(argparser.tree):
@@ -44,7 +46,11 @@ def main():
 
     guesses = dict()
     error_msgs = list()
+    random.seed()
     for loc, name in location_map.items():
+        if name in dangerous_functions:
+            continue
+
         try:
             guesses[name] = fbDtree.identify(loc, results.pindir, results.tool, results.binary, name, verbose=True)
         except Exception as e:
@@ -67,15 +73,16 @@ def main():
     print("++++++++++++++++++++++++++++++++++++++++++++")
     for name, guess in guesses.items():
         indicator = "X"
+        guess_names = fbDtree.get_equiv_classes(guess)
 
-        if FBDecisionTree.UNKNOWN_FUNC in guess:
+        if FBDecisionTree.UNKNOWN_FUNC == guess:
             indicator = "?"
         else:
-            for func in guess:
+            for func in guess_names:
                 if func.find(name) >= 0:
                     indicator = "!"
                     break
-        print("[{}] {}: {}".format(indicator, name, guess))
+        print("[{}] {}: {}".format(indicator, name, guess_names))
 
 
 if __name__ == "__main__":

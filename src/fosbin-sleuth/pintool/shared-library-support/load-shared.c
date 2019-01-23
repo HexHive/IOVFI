@@ -12,5 +12,8 @@ int main(int argc, char **argv) {
     }
 
     void *sym = dlopen(argv[1], RTLD_NOW);
+    if (sym == NULL) {
+        fprintf(stderr, "ERROR Opening %s: %s", argv[1], dlerror());
+    }
     return 0;
 }

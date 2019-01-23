@@ -902,7 +902,7 @@ VOID ImageLoad(IMG img, VOID *v) {
         return;
     }
 
-//    std::cout << "Image " << IMG_Name(img) << " loaded" << std::endl;
+    std::cout << "Image " << IMG_Name(img) << " loaded" << std::endl;
 
     if (SharedLibraryFunc.Value() == "") {
         if (!IMG_IsMainExecutable(img)) {
@@ -949,7 +949,7 @@ VOID ImageLoad(IMG img, VOID *v) {
 //            std::cerr << "Could not find target " << SharedLibraryFunc.Value() << " in shared library " << SharedLibraryName.Value() << std::endl;
                 exit(1);
             } else {
-//                std::cout << "Found " << SharedLibraryFunc.Value() << std::endl;
+                std::cout << "Found " << SharedLibraryFunc.Value() << std::endl;
             }
         } else if (!IMG_IsMainExecutable(img)) {
 //            std::cout << "Irrelevant image" << std::endl;
@@ -1054,6 +1054,7 @@ void initialize_system(int argc, char **argv) {
         bool found = false;
         for (SEC s = IMG_SecHead(img); SEC_Valid(s) && !found; s = SEC_Next(s)) {
             for (RTN f = SEC_RtnHead(s); RTN_Valid(f); f = RTN_Next(f)) {
+//                std::cout << RTN_Name(f) << std::endl;
                 if (RTN_Name(f) == SharedLibraryFunc.Value()) {
                     found = true;
                     break;

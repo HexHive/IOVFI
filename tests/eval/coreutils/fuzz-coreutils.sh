@@ -18,7 +18,7 @@ for util in tsort printenv echo printf dirname false date sort basename sha1sum 
 	fi
 
 	mkdir -p $OUT_PATH
-	../../../src/fosbin-sleuth/qemu-afl/fuzz-applications.py -pindir ../../../src/pin/pin-3.7/ \
+	../../../src/fosbin-sleuth/python/fuzz-applications.py -pindir ../../../src/pin/pin-3.7/ \
 		-tool ../../../cmake-build-debug/pintools/intel64/fosbin-zergling.so \
 		-bin $UTIL_PATH
 	mv *.ctx *.log $OUT_PATH

@@ -11,6 +11,7 @@ from contexts.FBDecisionTree import FBDecisionTree
 
 TREE_OUT = "tree.bin"
 
+
 def main():
     parser = argparse.ArgumentParser(description="GenDecisionTree")
     parser.add_argument('-d', '--desc', help="Map of context hashes to functions that accept them",

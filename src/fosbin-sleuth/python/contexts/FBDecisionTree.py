@@ -5,6 +5,7 @@ from sklearn import tree, preprocessing
 import numpy
 import subprocess
 from contexts import binaryutils
+import random
 
 
 class FBDecisionTree:
@@ -44,7 +45,8 @@ class FBDecisionTree:
         if iovec is None:
             raise AssertionError("No iovec provided")
 
-        fullPath = os.path.abspath(os.path.join(binaryutils.WORK_DIR, binaryutils.CTX_FILENAME))
+        fullPath = os.path.abspath(os.path.join(binaryutils.WORK_DIR, str(random.randint(0, sys.maxsize)) + "." +
+                                                binaryutils.CTX_FILENAME))
         if not os.path.exists(binaryutils.WORK_DIR):
             os.mkdir(binaryutils.WORK_DIR)
 
@@ -109,7 +111,7 @@ class FBDecisionTree:
         dtree = self.dtrees[treeidx]
         tree.export_graphviz(dtree, out_file=outfile, filled=True, rounded=True, special_characters=True)
 
-    def _get_equiv_classes(self, index):
+    def get_equiv_classes(self, index):
         if index == self.UNKNOWN_FUNC:
             return {"UNKNOWN"}
 
@@ -128,7 +130,7 @@ class FBDecisionTree:
 
     def _confirm_leaf(self, location, pindir, tool, binary, name, index, verbose=False):
         self._log("Confirming {}({}) is {}".format(name, hex(location),
-            self._get_equiv_classes(index)), verbose)
+                                                   self.get_equiv_classes(index)), verbose)
         if not self._is_leaf(index):
             raise AssertionError("{} is not a leaf".format(index))
 
@@ -138,7 +140,7 @@ class FBDecisionTree:
         hashMap = self.hashMaps[dtree_base_idx]
         labels = self.labels[dtree_base_idx]
 
-        possible_equivs = self._get_equiv_classes(index)
+        possible_equivs = self.get_equiv_classes(index)
 
         available_hashes = list()
         for hash, accepting_funcs in descMap.items():
@@ -182,9 +184,8 @@ class FBDecisionTree:
         idx = 0
         while idx < self.size():
             if self._is_leaf(idx):
-                self._log("Confirming guess...")
                 if self._confirm_leaf(location, pindir, tool, binary, name, idx, verbose):
-                    return self._get_equiv_classes(idx)
+                    return idx
                 break
 
             hash = self._get_hash(idx)
@@ -194,7 +195,7 @@ class FBDecisionTree:
             else:
                 idx = self._left_child(idx)
 
-        return self._get_equiv_classes(self.UNKNOWN_FUNC)
+        return self.UNKNOWN_FUNC
 
     def size(self):
         size = 0
