@@ -5,10 +5,13 @@ import sys
 import subprocess
 import argparse
 from contexts import binaryutils
+import logging
 
 fuzz_count = "5"
 watchdog = 5 * 1000
 work_dir = "contexts"
+
+log = logging.getLogger(binaryutils.LOGGER_NAME)
 
 def main():
     parser = argparse.ArgumentParser(description="Generate input/output vectors")
@@ -24,6 +27,7 @@ def main():
         parser.print_help()
         exit(1)
 
+    log.setLevel(logging.INFO)
     func_count = 0
     failed_count = 0
     success_count = 0
@@ -53,9 +57,7 @@ def main():
     for location, func_name in locationMap.items():
         func_count += 1
         if '@' in func_name:
-            print("Original: {} ".format(func_name), end='')
             func_name = func_name[:func_name.find("@")]
-            print("Current: {}".format(func_name))
 
         try:
             if func_name in ignored_funcs:
@@ -71,7 +73,7 @@ def main():
                        "-fuzz-count", fuzz_count,
                        "-target", hex(location), "-out", str(func_name) + ".log", "-watchdog",
                        str(watchdog), "--", os.path.abspath(results.bin)]
-            print("Running {}".format(" ".join(cmd)))
+            log.info("Running {}".format(" ".join(cmd)))
             returnCode = subprocess.run(cmd, timeout=watchdog / 1000 + 1, cwd=os.path.abspath(work_dir))
             if returnCode.returncode != 0:
                 failed_count += 1
@@ -81,16 +83,16 @@ def main():
             failed_count += 1
             continue
         except Exception as e:
-            print("Error for {}:{} : {}".format(results.bin, func_name, e), file=sys.stderr)
+            log.error("Error for {}:{} : {}".format(results.bin, func_name, e))
             failed_count += 1
             continue
 
-        print("Finished {}".format(func_name))
+        log.info("Finished {}".format(func_name))
 
-    print("{} has {} functions".format(results.bin, func_count))
-    print("Fuzzable functions: {}".format(success_count))
+    log.info("{} has {} functions".format(results.bin, func_count))
+    log.info("Fuzzable functions: {}".format(success_count))
     if failed_count + success_count > 0:
-        print("Failed functions: {} ({})".format(failed_count, failed_count / (failed_count + success_count)))
+        log.info("Failed functions: {} ({})".format(failed_count, failed_count / (failed_count + success_count)))
 
 
 if __name__ == "__main__":
