@@ -6,16 +6,15 @@ import numpy
 import subprocess
 from contexts import binaryutils
 import random
+import logging
 
 
 class FBDecisionTree:
     UNKNOWN_FUNC = -1
     WATCHDOG_MS = 5000
 
-    def _log(self, msg, print_output=True, end='\n'):
-        if print_output:
-            print(msg, end=end)
-            sys.stdout.flush()
+    def _log(self, msg, level=logging.INFO):
+        logging.getLogger(binaryutils.LOGGER_NAME).log(level, msg)
 
     def _find_dtree_idx(self, index):
         if index < 0:
@@ -41,7 +40,7 @@ class FBDecisionTree:
 
         return self._left_child(index) == self._right_child(index)
 
-    def _attempt_ctx(self, iovec, pindir, tool, loc, name, binary, hash_sum, verbose=False, watchdog=WATCHDOG_MS):
+    def _attempt_ctx(self, iovec, pindir, tool, loc, name, binary, hash_sum, watchdog=WATCHDOG_MS):
         if iovec is None:
             raise AssertionError("No iovec provided")
 
@@ -59,10 +58,8 @@ class FBDecisionTree:
 
         accepted = False
         devnull = open(os.devnull, "w")
+        msg = "Testing {}.{} ({}) with hash {}...".format(os.path.basename(binary), name, hex(loc), hash_sum)
         try:
-            self._log("Testing {}.{} ({}) with hash {}...".format(os.path.basename(binary), name, hex(loc), hash_sum),
-                      verbose, end='')
-            sys.stdout.flush()
             fuzz_cmd = subprocess.run(cmd, stdout=devnull, stderr=subprocess.STDOUT, timeout=watchdog / 1000 + 1, \
                                       cwd=os.path.abspath(binaryutils.WORK_DIR))
             accepted = (fuzz_cmd.returncode == 0)
@@ -72,19 +69,21 @@ class FBDecisionTree:
             else:
                 return False
         except subprocess.TimeoutExpired:
-            self._log("Timeout", verbose)
+            msg += "Timeout..."
             return False
         except Exception as e:
-            self._log("General exception: {}".format(e), verbose)
+            msg += "General exception: {}...".format(e)
             return False
         finally:
             if not accepted:
-                self._log("failed", verbose)
+                msg += "failed"
             else:
-                self._log("accepted!", verbose)
+                msg += "accepted!"
 
-        if os.path.exists(fullPath):
-            os.unlink(fullPath)
+            self._log(msg)
+
+            if os.path.exists(fullPath):
+                os.unlink(fullPath)
 
     def _child(self, index, right_child):
         if index < 0:
@@ -130,7 +129,7 @@ class FBDecisionTree:
 
     def _confirm_leaf(self, location, pindir, tool, binary, name, index, verbose=False):
         self._log("Confirming {}({}) is {}".format(name, hex(location),
-                                                   self.get_equiv_classes(index)), verbose)
+                                                   self.get_equiv_classes(index)))
         if not self._is_leaf(index):
             raise AssertionError("{} is not a leaf".format(index))
 
@@ -162,8 +161,7 @@ class FBDecisionTree:
                                                                                                 name, possible_equivs))
         hash_sum = available_hashes[0]
         iovec = hashMap[hash_sum]
-        return self._attempt_ctx(iovec, pindir, tool, location, name, binary,
-                hash_sum, verbose)
+        return self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash_sum)
 
     def _get_hash(self, index):
         base_dtree_index = self._find_dtree_idx(index)
@@ -177,20 +175,20 @@ class FBDecisionTree:
         base_dtree_index = self._find_dtree_idx(index)
         return self.hashMaps[base_dtree_index][hash]
 
-    def identify(self, location, pindir, tool, binary, name=None, verbose=False):
+    def identify(self, location, pindir, tool, binary, name=None):
         if name is None:
             name = hex(location)
 
         idx = 0
         while idx < self.size():
             if self._is_leaf(idx):
-                if self._confirm_leaf(location, pindir, tool, binary, name, idx, verbose):
+                if self._confirm_leaf(location, pindir, tool, binary, name, idx):
                     return idx
                 break
 
             hash = self._get_hash(idx)
             iovec = self._get_iovec(idx)
-            if self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash, verbose=verbose):
+            if self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash):
                 idx = self._right_child(idx)
             else:
                 idx = self._left_child(idx)
@@ -207,7 +205,7 @@ class FBDecisionTree:
     def __sizeof__(self):
         return self.size()
 
-    def add_dtree(self, descLoc, hashMapLoc, verbose=False):
+    def add_dtree(self, descLoc, hashMapLoc):
         if not os.path.exists(descLoc):
             raise FileNotFoundError(descLoc)
         if not os.path.exists(hashMapLoc):
@@ -216,31 +214,31 @@ class FBDecisionTree:
         base_idx = 0
         for dtree in self.dtrees.items():
             base_idx += dtree.tree_.node_count
-        self._log("base_idx = {}".format(base_idx), verbose)
+        self._log("base_idx = {}".format(base_idx))
 
-        self._log("Loading {}...".format(descLoc), verbose, '')
+        msg = "Loading {}...".format(descLoc)
         with open(descLoc, "rb") as descFile:
             self.descMaps[base_idx] = pickle.load(descFile)
-        self._log("done!", verbose)
+        self._log(msg + "done!")
 
-        self._log("Loading {}...".format(hashMapLoc), verbose, '')
+        msg = "Loading {}...".format(hashMapLoc)
         with open(hashMapLoc, "rb") as hashMapFile:
             self.hashMaps[base_idx] = pickle.load(hashMapFile)
-        self._log("done!", verbose)
+        self._log(msg + "done!")
 
         labels = preprocessing.LabelEncoder()
         hash_labels = set()
-        self._log("Transforming function labels...", verbose, '')
+        msg = "Transforming function labels..."
         for hashes in self.descMaps[base_idx].keys():
             hash_labels.add(hashes)
         labels.fit_transform(list(hash_labels))
         self.labels[base_idx] = labels
-        self._log("done!", verbose)
+        self._log(msg + "done!")
 
         funcs_labels = list()
         funcs_features = list()
 
-        self._log("Reading in function labels...", verbose, '')
+        msg = "Reading in function labels..."
         for key, funcs in self.descMaps[base_idx].items():
             idx = self.labels[base_idx].transform([key])[0]
             for func in funcs:
@@ -249,15 +247,15 @@ class FBDecisionTree:
                     funcs_features.append(numpy.zeros(len(self.labels[base_idx].classes_), dtype=bool))
                 func_feature = funcs_features[funcs_labels.index(func)]
                 func_feature[idx] = True
-        self._log("done!", verbose)
+        self._log(msg + "done!")
 
         dtree = tree.DecisionTreeClassifier()
-        self._log("Creating decision tree...", verbose, '')
+        msg = "Creating decision tree..."
         dtree.fit(funcs_features, funcs_labels)
         self.dtrees[base_idx] = dtree
-        self._log("done!", verbose)
+        self._log(msg + "done!")
 
-    def __init__(self, descLoc, hashMapLoc, verbose=False):
+    def __init__(self, descLoc, hashMapLoc):
         # Map of base index to dtree
         self.dtrees = dict()
         # Map of Whole Tree Index to Child Subtree Whole Tree Index
@@ -269,4 +267,4 @@ class FBDecisionTree:
         # Map of Whole Tree Index to Corresponding Hash Maps
         self.hashMaps = dict()
 
-        self.add_dtree(descLoc, hashMapLoc, verbose)
+        self.add_dtree(descLoc, hashMapLoc)
