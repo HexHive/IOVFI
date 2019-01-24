@@ -6,11 +6,11 @@ LOGGER_NAME = "fb-logger"
 
 
 def find_funcs(binary, target=None):
-    target_is_name = False
+    target_is_name = True
     if target is not None:
         try:
             target = int(target, 16)
-            target_is_name = True
+            target_is_name = False
         except Exception:
             pass
     location_map = dict()

@@ -62,6 +62,7 @@ def main():
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
     parser.add_argument("-log", help="/path/to/log/file")
+    parser.add_argument("-loglevel", help="Level of output", default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", default=multiprocessing.cpu_count())
 
     results = parser.parse_args()
@@ -69,9 +70,10 @@ def main():
         parser.print_help()
         exit(1)
 
-    log.setLevel(logging.INFO)
+    log.setLevel(results.loglevel)
     if results.log is not None:
-        log.addHandler(results.log)
+        log.addHandler(logging.FileHandler(results.log, mode="w"))
+        log.addHandler(logging.StreamHandler(sys.stdout))
 
     func_count = 0
     ignored_funcs = set()
@@ -118,16 +120,19 @@ def main():
                    str(watchdog), "--", os.path.abspath(results.bin)]
         args.append([cmd, results.bin, func_name])
 
-    with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-        try:
-            pool.map(fuzz_one_function, args)
-        except KeyboardInterrupt:
-            exit(0)
+    if len(args) > 0:
+        with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
+            try:
+                pool.map(fuzz_one_function, args)
+            except KeyboardInterrupt:
+                exit(0)
 
-    log.info("{} has {} functions".format(results.bin, func_count))
-    log.info("Fuzzable functions: {}".format(success_count))
-    if failed_count + success_count > 0:
-        log.info("Failed functions: {} ({})".format(failed_count, failed_count / (failed_count + success_count)))
+        log.info("{} has {} functions".format(results.bin, func_count))
+        log.info("Fuzzable functions: {}".format(success_count))
+        if failed_count + success_count > 0:
+            log.info("Failed functions: {} ({})".format(failed_count, failed_count / (failed_count + success_count)))
+    else:
+        log.fatal("Could not find any functions to fuzz")
 
 
 if __name__ == "__main__":

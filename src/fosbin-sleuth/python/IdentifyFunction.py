@@ -73,7 +73,7 @@ def save_guesses_for_later():
 
 def main():
     parser = argparse.ArgumentParser(description="IdentifyFunction")
-    parser.add_argument('-t', '--tree', help="File to output decision tree", default="tree.bin")
+    parser.add_argument('-t', '--tree', help="/path/to/decision/tree", default="tree.bin")
     parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
     parser.add_argument("-b", "--binaries", help="/path/to/binary/list", required=True)
