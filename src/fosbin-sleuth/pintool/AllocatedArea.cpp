@@ -316,8 +316,8 @@ bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
         size_t subarea_idx = 0;
         for (AllocatedArea *subarea : subareas) {
             if (subarea->fix_pointer(faulting_addr)) {
-                ss << "Subarea " << std::dec << subarea_idx << " fixed" << std::endl;
-                log_message(ss);
+//                ss << "Subarea " << std::dec << subarea_idx << " fixed" << std::endl;
+//                log_message(ss);
                 return true;
             }
             subarea_idx++;

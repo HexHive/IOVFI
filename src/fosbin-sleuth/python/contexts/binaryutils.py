@@ -14,7 +14,7 @@ def find_funcs(binary, target=None):
         except Exception:
             pass
     location_map = dict()
-    readelf_cmd = subprocess.run(['readelf', '-s', binary], stdout=subprocess.PIPE)
+    readelf_cmd = subprocess.run(['readelf', '-Ws', binary], stdout=subprocess.PIPE)
     lines = readelf_cmd.stdout.split(b'\n')
     for line in lines:
         line = line.decode('utf-8')
