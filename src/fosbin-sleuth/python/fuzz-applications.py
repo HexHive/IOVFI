@@ -98,7 +98,6 @@ def main():
         locationMap = binaryutils.find_funcs(results.bin)
 
     args = list()
-    print(locationMap)
     for location, func_name in locationMap.items():
         func_count += 1
         if '@' in func_name:
