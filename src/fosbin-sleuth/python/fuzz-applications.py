@@ -89,17 +89,16 @@ def main():
     if results.funcs is not None:
         locationMap = dict()
         with open(results.funcs, "r") as f:
-            count = 0
             for line in f.readlines():
-                if line[0] != '.':
-                    line = line.strip()
-                    if line != "":
-                        locationMap[count] = line.strip()
-                        count += 1
+                line = line.strip()
+                temp = binaryutils.find_funcs(results.bin, line)
+                for loc, name in temp.items():
+                    locationMap[loc] = name
     else:
         locationMap = binaryutils.find_funcs(results.bin)
 
     args = list()
+    print(locationMap)
     for location, func_name in locationMap.items():
         func_count += 1
         if '@' in func_name:
