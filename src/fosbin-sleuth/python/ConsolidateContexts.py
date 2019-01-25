@@ -70,8 +70,8 @@ def read_contexts(contextFile):
             print("General Exception: {}".format(e))
 
 
-def unique_identification(binary, name, hash):
-    return "{}.{}.{}".format(os.path.basename(binary), name, hash)
+def unique_identification(binary, name, hash_sum):
+    return "{}.{}.{}".format(os.path.basename(binary), name, hash_sum)
 
 
 def save_desc_for_later(signal, frame):
@@ -84,7 +84,7 @@ def attempt_ctx(args):
     binary = args[0]
     pindir = args[1]
     tool = args[2]
-    hash = args[3]
+    hash_sum = args[3]
     loc = args[4]
     name = args[5]
     processedFile = args[6]
@@ -94,10 +94,11 @@ def attempt_ctx(args):
            "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", binary]
 
     try:
-        id = unique_identification(binary, name, hash)
+        id = unique_identification(binary, name, hash_sum)
         temp_file = open(id, "w+")
         temp_file.close()
-        message = "Testing {}.{} ({}) with hash {}...".format(binary, name, hex(loc), hash)
+        message = "Testing {}.{} ({}) with hash {}...".format(binary, name,
+                hex(loc), hash_sum)
         fuzz_cmd = subprocess.run(cmd, capture_output=True, timeout=int(watchdog) / 1000 + 1, cwd=os.path.abspath(
             WORK_DIR))
         found = False
@@ -109,7 +110,7 @@ def attempt_ctx(args):
                     if "Input Contexts Passed: 1" in line:
                         found = True
                         descMap_lock.acquire()
-                        descMap[hash].append(os.path.basename(binary) + "." + name)
+                        descMap[hash_sum].append(os.path.basename(binary) + "." + name)
                         descMap_lock.release()
                         break
                 except UnicodeDecodeError:
@@ -197,8 +198,8 @@ def main():
             location_map = binaryutils.find_funcs(binary, results.target)
             print("done")
 
-            for hash, iovec in hashMap.items():
-                descMap[hash] = list()
+            for hash_sum, iovec in hashMap.items():
+                descMap[hash_sum] = list()
                 ctxPath = os.path.join(WORK_DIR, FIFO_PIPE_NAME)
                 if os.path.exists(ctxPath):
                     os.unlink(ctxPath)
@@ -208,10 +209,11 @@ def main():
 
                 args = list()
                 for loc, name in location_map.items():
-                    if unique_identification(binary, name, hash) in processedBinaries:
+                    if unique_identification(binary, name, hash_sum) in processedBinaries:
                         continue
                     args.append(
-                        [binary, os.path.abspath(results.pindir), os.path.abspath(results.tool), hash, loc, name,
+                        [binary, os.path.abspath(results.pindir),
+                            os.path.abspath(results.tool), hash_sum, loc, name,
                          processedFile])
 
                 if len(args) > 0:
@@ -223,8 +225,8 @@ def main():
 
     pickle.dump(descMap, descFile)
     processedFile.close()
-    for hash, funcs in descMap.items():
-        print("{}: {}".format(hash, funcs))
+    for hash_sum, funcs in descMap.items():
+        print("{}: {}".format(hash_sum, funcs))
 
 
 if __name__ == "__main__":

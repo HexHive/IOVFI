@@ -43,11 +43,10 @@ def single_test(args):
     tool = args[2]
     binary = args[3]
     name = args[4]
-    verbose = args[5]
-    fbDtree = args[6]
+    fbDtree = args[5]
 
     try:
-        guess = fbDtree.identify(loc, pindir, tool, binary, name, verbose)
+        guess = fbDtree.identify(loc, pindir, tool, binary, name)
         guess_lock.acquire()
         guesses[name] = guess
         guess_lock.release()
@@ -65,7 +64,9 @@ def single_test(args):
 
 def save_guesses_for_later():
     if guessLoc is not None:
-        with open(guessLoc) as guessFile:
+        if not os.path.exists(os.path.dirname(guessLoc)):
+            os.mkdir(os.path.dirname(guessLoc))
+        with open(guessLoc, "wb+") as guessFile:
             pickle.dump(guesses, guessFile)
     exit(0)
 
@@ -76,12 +77,14 @@ def main():
     parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
     parser.add_argument("-b", "--binaries", help="/path/to/binary/list", required=True)
-    parser.add_argument("-log", help="Set log level", default=logging.INFO)
+    parser.add_argument("-log", help="Set log level", default=logging.DEBUG)
     parser.add_argument("-threads", help="Number of threads to use", default=multiprocessing.cpu_count())
     parser.add_argument("-target", help="Location or function name to target")
+    parser.add_argument("-verbose", help="Output more text", default=True)
     results = parser.parse_args()
 
     log.setLevel(results.log)
+    log.addHandler(logging.StreamHandler(sys.stdout))
 
     log.info("Checking inputs...")
     check_inputs(results)
@@ -100,8 +103,12 @@ def main():
                 log.error("Could not find {}".format(binaryLoc))
                 continue
 
-            basename = binaryLoc.replace(os.path.pathsep, ".")
-            loghandler = logging.FileHandler(basename + ".log", mode="w")
+            basename = binaryLoc.replace(os.sep, ".")[19:]
+            if not os.path.exists("logs"):
+                os.mkdir("logs")
+
+            loghandler = logging.FileHandler(os.path.join("logs", basename +
+                ".log"), mode="w")
             log.addHandler(loghandler)
             global error_msgs
             error_msgs.clear()
@@ -109,25 +116,25 @@ def main():
             guesses.clear()
 
             global guessLoc
-            guessLoc = binaryLoc.replace(basename + guessLocBase)
+            guessLoc = os.path.join("guesses", basename + guessLocBase)
 
             if os.path.exists(guessLoc):
-                print("Opening guesses at {}...".format(guessLoc), end='')
+                msg = "Opening guesses at {}...".format(guessLoc)
                 with open(guessLoc, "rb") as guessFile:
                     guesses = pickle.load(guessFile)
-                print("done!")
+                log.info(msg + "done!")
 
-            print("Finding functions in {}...".format(binaryLoc), end='')
+            msg = "Finding functions in {}...".format(binaryLoc)
             location_map = binaryutils.find_funcs(binaryLoc, results.target)
-            print("done!")
-            print("Found {} functions".format(len(location_map)))
+            log.info(msg + "done!")
+            log.info("Found {} functions".format(len(location_map)))
 
             random.seed()
             args = list()
             for loc, name in location_map.items():
                 if name in dangerous_functions or name in guesses:
                     continue
-                args.append([loc, results.pindir, results.tool, binaryLoc, name, results.verbose, fbDtree])
+                args.append([loc, results.pindir, results.tool, binaryLoc, name, fbDtree])
 
             if len(args) > 0:
                 with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
@@ -136,7 +143,9 @@ def main():
                     except KeyboardInterrupt:
                         save_guesses_for_later()
 
-                with open(guessLoc, "rb") as guessFile:
+                if not os.path.exists("guesses"):
+                    os.mkdir("guesses")
+                with open(guessLoc, "wb+") as guessFile:
                     pickle.dump(guesses, guessFile)
 
             if len(error_msgs) > 0:
