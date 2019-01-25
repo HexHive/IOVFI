@@ -37,6 +37,7 @@ def check_inputs(argparser):
 
 
 def single_test(args):
+    global error_msgs
     loc = args[0]
     pindir = args[1]
     tool = args[2]
@@ -52,13 +53,11 @@ def single_test(args):
         guess_lock.release()
     except Exception as e:
         error_lock.acquire()
-        global error_msgs
         error_msgs.append(str(e))
         log.error("Error: {}".format(e))
         error_lock.release()
     except AssertionError as e:
         error_lock.acquire()
-        global error_msgs
         error_msgs.append(str(e))
         log.error("Error: {}".format(e))
         error_lock.release()
@@ -115,7 +114,6 @@ def main():
             if os.path.exists(guessLoc):
                 print("Opening guesses at {}...".format(guessLoc), end='')
                 with open(guessLoc, "rb") as guessFile:
-                    global guesses
                     guesses = pickle.load(guessFile)
                 print("done!")
 
