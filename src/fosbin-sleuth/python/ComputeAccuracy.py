@@ -12,7 +12,7 @@ def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument("-prefix", default="", help="Guess entry prefix")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
-    parser.add_argument("guesses", action="append", help="/path/to/guess/dir")
+    parser.add_argument("guesses", action="append", nargs="+", help="/path/to/guess/dir")
 
     args = parser.parse_args()
 
