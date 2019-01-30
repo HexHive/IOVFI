@@ -28,6 +28,7 @@ def main():
             pathlist = Path(guess_path).glob("**/*.bin")
             for path in pathlist:
                 path = os.path.abspath(path)
+                print("Reading {}".format(path))
                 with open(path, "rb") as guessfile:
                     guessmap = pickle.load(guessfile)
                     for key, guess_idx in guessmap.items():
