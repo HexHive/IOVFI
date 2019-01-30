@@ -53,8 +53,9 @@ def main():
                             for guess in guesses:
                                 failed_set[key].add(guess)
 
-    for key, failed_guesses in failed_set.items():
-        print("{}: {}".format(key, failed_guesses))
+    for key, failed_guess in failed_set.items():
+        print("{}: {}".format(key, failed_guess))
+
     print("Successful guesses:  {} ({})".format(len(successful_guesses), len(successful_guesses) / (
                 len(successful_guesses) + len(failed_guesses))))
     print("Failed guesses:      {} ({})".format(len(failed_guesses),
