@@ -45,6 +45,7 @@ def single_test(args):
     name = args[4]
     fbDtree = args[5]
 
+    guess = FBDecisionTree.UNKNOWN_FUNC
     try:
         guess = fbDtree.identify(loc, pindir, tool, binary, name)
         guess_lock.acquire()
@@ -60,6 +61,11 @@ def single_test(args):
         error_msgs.append(str(e))
         log.error("Error: {}".format(e))
         error_lock.release()
+    finally:
+        guess_lock.acquire()
+        guesses[name] = guess
+        guess_lock.release()
+
 
 
 def save_guesses_for_later():
@@ -90,7 +96,7 @@ def main():
     check_inputs(results)
     log.info("done!")
 
-    log.info("Parsing tree at {}...".format(results.tree))
+    log.info("Parsing tree at {}...".format(os.path.abspath(results.tree)))
     treeFile = open(results.tree, "rb")
     fbDtree = pickle.load(treeFile)
     treeFile.close()
@@ -102,6 +108,7 @@ def main():
             if not os.path.exists(binaryLoc):
                 log.error("Could not find {}".format(binaryLoc))
                 continue
+            log.info("Analyzing {}".format(binaryLoc))
 
             basename = binaryLoc.replace(os.sep, ".")[19:]
             if not os.path.exists("logs"):
@@ -132,7 +139,8 @@ def main():
             random.seed()
             args = list()
             for loc, name in location_map.items():
-                if name in dangerous_functions or name in guesses:
+                if name in dangerous_functions or name in guesses.keys():
+                    log.info("Skipping {}".format(name))
                     continue
                 args.append([loc, results.pindir, results.tool, binaryLoc, name, fbDtree])
 
