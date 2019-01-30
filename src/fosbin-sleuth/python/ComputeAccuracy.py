@@ -22,6 +22,7 @@ def main():
     successful_guesses = list()
     failed_guesses = list()
     unknown_guesses = list()
+    failed_set = dict()
 
     for guess_path_list in args.guesses:
         for guess_path in guess_path_list:
@@ -47,7 +48,13 @@ def main():
 
                         if not found:
                             failed_guesses.append(key)
+                            if key not in failed_set:
+                                failed_set[key] = set()
+                            for guess in guesses:
+                                failed_set[key].add(guess)
 
+    for key, failed_guesses in failed_set.items():
+        print("{}: {}".format(key, failed_guesses))
     print("Successful guesses:  {} ({})".format(len(successful_guesses), len(successful_guesses) / (
                 len(successful_guesses) + len(failed_guesses))))
     print("Failed guesses:      {} ({})".format(len(failed_guesses),
