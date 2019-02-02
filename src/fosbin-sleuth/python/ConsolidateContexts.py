@@ -147,7 +147,7 @@ def main():
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-target", help="Address to target single function")
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
-    parser.add_argument("-loglevel", help="Level of output", default=logging.INFO)
+    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
 
     results = parser.parse_args()
@@ -199,7 +199,6 @@ def main():
         for binary in binaries.readlines():
             binary = binary.strip()
             binary = os.path.abspath(binary)
-
 
             msg = "Reading function locations for {}...".format(binary)
             location_map = binaryutils.find_funcs(binary, results.target)
