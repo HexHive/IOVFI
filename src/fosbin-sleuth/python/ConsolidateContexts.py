@@ -150,6 +150,14 @@ def main():
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
 
     results = parser.parse_args()
+    if not os.path.exists(results.contexts):
+        log.fatal("Could not find {}".format(results.contexts))
+        exit(1)
+
+    if not os.path.exists(results.binaries):
+        log.fatal("Could not find {}".format(results.binaries))
+        exit(1)
+
     mapFile = open(results.map, "wb")
 
     log.setLevel(results.loglevel)
@@ -177,14 +185,6 @@ def main():
 
     os.mkdir(WORK_DIR)
 
-    if not os.path.exists(results.contexts):
-        log.fatal("Could not find {}".format(results.contexts))
-        exit(1)
-
-    if not os.path.exists(results.binaries):
-        log.fatal("Could not find {}".format(results.binaries))
-        exit(1)
-
     with open(results.contexts, "r") as contexts:
         with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
             pool.map(read_contexts, contexts)
@@ -198,6 +198,7 @@ def main():
         for binary in binaries.readlines():
             binary = binary.strip()
             binary = os.path.abspath(binary)
+
 
             msg = "Reading function locations for {}...".format(binary)
             location_map = binaryutils.find_funcs(binary, results.target)
@@ -218,6 +219,10 @@ def main():
                         continue
 
                     if os.path.splitext(binary)[1] == ".so":
+                        if results.ld is None or not os.path.exists(results.ld):
+                            log.fatal("Could not find loader at {}".format(results.ld))
+                            exit(1)
+
                         args.append(
                             [binary, os.path.abspath(results.pindir),
                              os.path.abspath(results.tool), hash_sum, loc, name,
