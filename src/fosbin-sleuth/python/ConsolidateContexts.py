@@ -98,13 +98,14 @@ def attempt_ctx(args):
                "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", loader, binary]
     else:
         cmd = [os.path.join(pindir, "pin"), "-t", tool, "-fuzz-count", "0",
-           "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
-           "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", binary]
+               "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
+               "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", binary]
 
     try:
-        id = unique_identification(binary, name, hash_sum)
+        id = unique_identification(binary, name, hash_sum) + ".tmp"
         temp_file = open(id, "w+")
         temp_file.close()
+        log.debug("cmd: {}".format(" ".join(cmd)))
         message = "Testing {}.{} ({}) with hash {}...".format(binary, name,
                 hex(loc), hash_sum)
         fuzz_cmd = subprocess.run(cmd, capture_output=True, timeout=int(watchdog) / 1000 + 1, cwd=os.path.abspath(
@@ -217,6 +218,9 @@ def main():
                 for loc, name in location_map.items():
                     if unique_identification(binary, name, hash_sum) in processedBinaries:
                         continue
+
+                    if '@' in name:
+                        name = name[:name.find("@")]
 
                     if os.path.splitext(binary)[1] == ".so":
                         if results.ld is None or not os.path.exists(results.ld):
