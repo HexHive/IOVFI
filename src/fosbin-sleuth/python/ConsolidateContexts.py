@@ -92,7 +92,7 @@ def attempt_ctx(args):
     processedFile = args[6]
 
     if os.path.splitext(binary)[1] == ".so":
-        loader = args[7]
+        loader = os.path.abspath(args[7])
         cmd = [os.path.join(pindir, "pin"), "-t", tool, "-fuzz-count", "0",
                "-out", name + ".log", "-watchdog", watchdog, "-shared-func", name,
                "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", loader, binary]
