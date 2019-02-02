@@ -11,6 +11,9 @@ import multiprocessing
 import signal
 import struct
 from contexts import IOVec, binaryutils
+import logging
+
+log = logging.getLogger(binaryutils.LOGGER_NAME)
 
 FIFO_PIPE_NAME = "fifo-pipe"
 WORK_DIR = "_work"
@@ -33,7 +36,7 @@ max_workers = multiprocessing.cpu_count()
 def read_contexts(contextFile):
     contextfile = contextFile.strip()
     with open(contextfile, 'rb') as f:
-        print("Reading {}".format(contextfile))
+        log.info("Reading {}".format(contextfile))
         try:
             while f.tell() < os.fstat(f.fileno()).st_size:
                 iovec = IOVec.IOVec(f)
@@ -42,32 +45,32 @@ def read_contexts(contextFile):
                 hashMap[md5hash] = iovec
                 hashlock.release()
         except IndexError as e:
-            print("IndexError", file=sys.stderr)
+            log.error("IndexError")
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
         except struct.error as e:
-            print("Struct error", file=sys.stderr)
+            log.error("Struct error")
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
         except MemoryError as e:
-            print("MemoryError", file=sys.stderr)
+            log.error("MemoryError")
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
         except OverflowError:
-            print("OverflowError", file=sys.stderr)
+            log.error("OverflowError")
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
         except ValueError:
-            print("ValueError", file=sys.stderr)
+            log.error("ValueError")
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
         except Exception as e:
-            print("General Exception: {}".format(e))
+            log.error("General Exception: {}".format(e))
 
 
 def unique_identification(binary, name, hash_sum):
@@ -107,35 +110,25 @@ def attempt_ctx(args):
                 hex(loc), hash_sum)
         fuzz_cmd = subprocess.run(cmd, capture_output=True, timeout=int(watchdog) / 1000 + 1, cwd=os.path.abspath(
             WORK_DIR))
-        found = False
-        if fuzz_cmd.returncode == 0:
-            output = fuzz_cmd.stdout.split(b'\n')
-            for line in output:
-                try:
-                    line = line.decode("utf-8")
-                    if "Input Contexts Passed: 1" in line:
-                        found = True
-                        descMap_lock.acquire()
-                        descMap[hash_sum].append(os.path.basename(binary) + "." + name)
-                        descMap_lock.release()
-                        break
-                except UnicodeDecodeError:
-                    continue
+        accepted = (fuzz_cmd.returncode == 0)
 
-        if found:
+        if accepted:
+            descMap_lock.acquire()
+            descMap[hash_sum].append(os.path.basename(binary) + "." + name)
+            descMap_lock.release()
             message += "accepted!"
         else:
             message += "failed"
 
         print_lock.acquire()
-        print(message)
+        log.info(message)
         print(id, file=processedFile)
         print_lock.release()
     except subprocess.TimeoutExpired:
         pass
     except Exception as e:
         print_lock.acquire()
-        print("General exception: {}".format(e))
+        log.error("General exception: {}".format(e))
         print_lock.release()
     finally:
         if os.path.exists(id):
@@ -153,9 +146,16 @@ def main():
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-target", help="Address to target single function")
+    parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
+    parser.add_argument("-loglevel", help="Level of output", default=logging.INFO)
 
     results = parser.parse_args()
     mapFile = open(results.map, "wb")
+
+    log.setLevel(results.loglevel)
+    if results.log is not None:
+        log.addHandler(logging.FileHandler(results.log, mode="w"))
+    log.addHandler(logging.StreamHandler(sys.stdout))
 
     global descMap
     descMap = dict()
@@ -178,18 +178,18 @@ def main():
     os.mkdir(WORK_DIR)
 
     if not os.path.exists(results.contexts):
-        print("Could not find {}".format(results.contexts), file=sys.stderr)
+        log.fatal("Could not find {}".format(results.contexts))
         exit(1)
 
     if not os.path.exists(results.binaries):
-        print("Could not find {}".format(results.binaries), file=sys.stderr)
+        log.fatal("Could not find {}".format(results.binaries))
         exit(1)
 
     with open(results.contexts, "r") as contexts:
         with futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
             pool.map(read_contexts, contexts)
 
-    print("Unique Hashes: {}".format(len(hashMap)))
+    log.info("Unique Hashes: {}".format(len(hashMap)))
     pickle.dump(hashMap, mapFile)
 
     signal.signal(signal.SIGTERM, save_desc_for_later)
@@ -199,10 +199,9 @@ def main():
             binary = binary.strip()
             binary = os.path.abspath(binary)
 
-            print("Reading function locations for {}...".format(binary), end='')
-            sys.stdout.flush()
+            msg = "Reading function locations for {}...".format(binary)
             location_map = binaryutils.find_funcs(binary, results.target)
-            print("done")
+            log.info(msg + "done")
 
             for hash_sum, iovec in hashMap.items():
                 descMap[hash_sum] = list()
@@ -239,7 +238,7 @@ def main():
     pickle.dump(descMap, descFile)
     processedFile.close()
     for hash_sum, funcs in descMap.items():
-        print("{}: {}".format(hash_sum, funcs))
+        log.info("{}: {}".format(hash_sum, funcs))
 
 
 if __name__ == "__main__":
