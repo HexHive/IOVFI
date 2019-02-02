@@ -81,15 +81,21 @@ def save_desc_for_later(signal, frame):
 
 
 def attempt_ctx(args):
-    binary = args[0]
-    pindir = args[1]
-    tool = args[2]
+    binary = os.path.abspath(args[0])
+    pindir = os.path.abspath(args[1])
+    tool = os.path.abspath(args[2])
     hash_sum = args[3]
     loc = args[4]
     name = args[5]
     processedFile = args[6]
 
-    cmd = [os.path.join(pindir, "pin"), "-t", tool, "-fuzz-count", "0",
+    if os.path.splitext(binary)[1] == ".so":
+        loader = args[7]
+        cmd = [os.path.join(pindir, "pin"), "-t", tool, "-fuzz-count", "0",
+               "-out", name + ".log", "-watchdog", watchdog, "-shared-func", name,
+               "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", loader, binary]
+    else:
+        cmd = [os.path.join(pindir, "pin"), "-t", tool, "-fuzz-count", "0",
            "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
            "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", binary]
 
@@ -211,10 +217,17 @@ def main():
                 for loc, name in location_map.items():
                     if unique_identification(binary, name, hash_sum) in processedBinaries:
                         continue
-                    args.append(
-                        [binary, os.path.abspath(results.pindir),
-                            os.path.abspath(results.tool), hash_sum, loc, name,
-                         processedFile])
+
+                    if os.path.splitext(binary)[1] == ".so":
+                        args.append(
+                            [binary, os.path.abspath(results.pindir),
+                             os.path.abspath(results.tool), hash_sum, loc, name,
+                             processedFile, results.ld])
+                    else:
+                        args.append(
+                            [binary, os.path.abspath(results.pindir),
+                             os.path.abspath(results.tool), hash_sum, loc, name,
+                             processedFile])
 
                 if len(args) > 0:
                     with futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
