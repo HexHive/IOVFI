@@ -147,7 +147,7 @@ def main():
     parser.add_argument("-target", help="Address to target single function")
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
     parser.add_argument("-loglevel", help="Level of output", default=logging.INFO)
-    parser.add_argument("-threads", help="Number of threads to use", default=multiprocessing.cpu_count())
+    parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
 
     results = parser.parse_args()
     mapFile = open(results.map, "wb")
