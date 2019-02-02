@@ -30,7 +30,6 @@ hashlock = threading.RLock()
 invalidctx_lock = threading.RLock()
 descMap_lock = threading.RLock()
 print_lock = threading.RLock()
-max_workers = multiprocessing.cpu_count()
 
 
 def read_contexts(contextFile):
@@ -148,6 +147,7 @@ def main():
     parser.add_argument("-target", help="Address to target single function")
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
     parser.add_argument("-loglevel", help="Level of output", default=logging.INFO)
+    parser.add_argument("-threads", help="Number of threads to use", default=multiprocessing.cpu_count())
 
     results = parser.parse_args()
     mapFile = open(results.map, "wb")
@@ -186,7 +186,7 @@ def main():
         exit(1)
 
     with open(results.contexts, "r") as contexts:
-        with futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+        with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
             pool.map(read_contexts, contexts)
 
     log.info("Unique Hashes: {}".format(len(hashMap)))
@@ -229,7 +229,7 @@ def main():
                              processedFile])
 
                 if len(args) > 0:
-                    with futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+                    with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
                         try:
                             pool.map(attempt_ctx, args)
                         except KeyboardInterrupt:
