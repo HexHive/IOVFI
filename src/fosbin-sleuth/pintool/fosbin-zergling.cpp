@@ -65,13 +65,16 @@ INT32 usage() {
 inline BOOL timed_fuzz() { return FuzzTime.Value() > 0; }
 
 VOID log_message(std::stringstream &message) {
+    if (message.str().empty()) {
+        return;
+    }
     if (infofile.is_open()) {
         infofile << message.str() << std::endl;
     }
     if (PrintToScreen.Value()) {
         std::cout << message.str() << std::endl;
     }
-    message.clear();
+    message.str(std::string());
 }
 
 VOID log_error(std::stringstream &message) {
@@ -406,6 +409,9 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
                             ADDRINT r12, ADDRINT r13, ADDRINT r14, ADDRINT r15,
                             ADDRINT rdi, ADDRINT rsi, ADDRINT rip, ADDRINT rbp
 ) {
+    if (!fuzzing_started) {
+        return;
+    }
 //    std::cout << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
 //    std::cout << INS_Disassemble(INS_FindByAddress(rip)) << std::endl;
 
@@ -423,11 +429,12 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 }
 
 VOID trace_execution(TRACE trace, VOID *v) {
-//    if (TRACE_Rtn(trace) == target) {
-    if (fuzzing_started) {
+//    std::cout << RTN_Name(TRACE_Rtn(trace)) << " is executing" << std::endl;
+//    if (fuzzing_started) {
         for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
             for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
-                if (RTN_Valid(INS_Rtn(ins)) && SEC_Name(RTN_Sec(INS_Rtn(ins))) == ".text") {
+//                if(INS_IsLea(ins) || INS_Category(ins) == XED_CATEGORY_DATAXFER) {
+//                if (RTN_Valid(INS_Rtn(ins)) && SEC_Name(RTN_Sec(INS_Rtn(ins))) == ".text") {
 //                    if (!INS_Valid(INS_FindByAddress(INS_Address(ins)))) {
 //                        std::cout << "Invalid instruction at 0x" << INS_Address(ins) << ": " << INS_Disassemble(ins)
 //                                  << std::endl;
@@ -450,14 +457,17 @@ VOID trace_execution(TRACE trace, VOID *v) {
                                    IARG_INST_PTR,
                                    IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
                                    IARG_END);
-                }
+//                }
             }
         }
-    }
 //    }
 }
 
 VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
+    if (!fuzzing_started) {
+        return;
+    }
+
     std::stringstream ss;
     ss << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() << " instructions";
     log_message(ss);
@@ -491,9 +501,10 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
 }
 
 VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
-    std::stringstream ss;
-    ss << "Beginning to fuzz";
-    log_message(ss);
+    std::cout << "Beginning to fuzz" << std::endl;
+//    std::stringstream ss;
+//    ss << "Beginning to fuzz";
+//    log_message(ss);
     fuzzing_started = true;
     PIN_SaveContext(ctx, &snapshot);
     for (REG reg : FBZergContext::argument_regs) {
@@ -699,18 +710,43 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
         goto finish;
     }
 
+    if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
+//        std::stringstream msg;
+//        msg << "Invalid segfault: " << PIN_ExceptionToString(pExceptInfo);
+//        log_message(msg);
+        reset_context(ctx);
+        fuzz_registers(ctx);
+        currentContext = preContext;
+        goto finish;
+    }
+
     {
+        ADDRINT faulting_addr = -1;
+        if (!PIN_GetFaultyAccessAddress(pExceptInfo, &faulting_addr)) {
+            std::stringstream msg;
+            INS faulty_ins = INS_FindByAddress(fuzzing_run.back().rip);
+            msg << "Could not find faulty address for instruction at 0x" << std::hex << INS_Address(faulty_ins)
+                << " (" << INS_Disassemble(faulty_ins) << ")";
+            log_error(msg);
+        } else {
+//            std::stringstream msg;
+//            currentContext.prettyPrint();
+//            displayCurrentContext(ctx);
+//            msg << "Faulting address: 0x" << std::hex << faulting_addr;
+//            log_message(msg);
+        }
         std::stringstream log;
         std::vector<struct TaintedObject> taintedObjs;
         REG taint_source = REG_INVALID();
+        INS last_taint_ins = INS_Invalid();
         for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
-             it != fuzzing_run.rend(); ++it) {
+             it != fuzzing_run.rend(); it++) {
+            log.str(std::string());
             struct X86Context &c = *it;
             INS ins = INS_FindByAddress(c.rip);
             if (!INS_Valid(ins)) {
-                std::stringstream ss;
-                ss << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
-                log_error(ss);
+                log << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
+                log_error(log);
             }
 
 //            log << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
@@ -730,11 +766,11 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //            log_message(log);
 
             if (it == fuzzing_run.rbegin()) {
-                taint_source = REG_INVALID();
                 for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
                     REG possible_source = INS_OperandMemoryBaseReg(ins, i);
 //                    std::cout << std::dec << i << ": " << REG_StringShort(possible_source) << std::endl;
-                    if (REG_valid(possible_source) && preContext.find_allocated_area(possible_source) == nullptr) {
+                    if (REG_valid(possible_source) &&
+                        compute_effective_address(ins, fuzzing_run.back(), i) == faulting_addr) {
                         taint_source = possible_source;
                         break;
                     }
@@ -746,27 +782,27 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
                     log_error(ss);
                 }
                 add_taint(taint_source, taintedObjs);
-//                continue;
+                continue;
             }
 
-            if (INS_IsMov(ins) || INS_IsLea(ins) || INS_IsMemoryWrite(ins)) {
+            if (INS_IsLea(ins) || INS_Category(ins) == XED_CATEGORY_DATAXFER) {
                 REG wreg = REG_INVALID();
                 ADDRINT writeAddr = 0;
                 if (INS_OperandIsReg(ins, 0)) {
                     wreg = INS_OperandReg(ins, 0);
 //                    log << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
                 } else if (INS_OperandIsMemory(ins, 0)) {
+//                    log << "\tOperandIsMemory" << std::endl;
                     wreg = INS_OperandMemoryBaseReg(ins, 0);
                     if (!REG_valid(wreg)) {
                         writeAddr = compute_effective_address(ins, c);
                     }
                 } else {
-                    std::stringstream ss;
-                    ss << "Write operand is not memory or register: " << INS_Disassemble(ins);
-//                    log_error(ss);
+//                    log << "Write operand is not memory or register: " << INS_Disassemble(ins) << std::endl;
+//                    log_error(log);
                     continue;
                 }
-//                log_message(log);
+                log_message(log);
 
                 if (REG_valid(wreg) && !isTainted(wreg, taintedObjs)) {
 //                    log << "\tWrite register is not tainted" << std::endl;
@@ -795,24 +831,25 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
                     rreg = INS_OperandMemoryBaseReg(ins, 1);
 //                    log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
                 } else {
-                    std::stringstream ss;
-                    ss << "Read operand is not a register, memory address, or immediate: " << INS_Disassemble(ins) <<
-                       std::endl;
-                    ss << "OperandIsAddressGenerator: " << INS_OperandIsAddressGenerator(ins, 1) << std::endl;
-                    ss << "OperandIsFixedMemop: " << INS_OperandIsFixedMemop(ins, 1) << std::endl;
-                    ss << "OperandIsImplicit: " << INS_OperandIsImplicit(ins, 1) << std::endl;
-                    ss << "Base register: " << REG_StringShort(INS_MemoryBaseReg(ins)) << std::endl;
-                    ss << "Category: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
+                    log << "Read operand is not a register, memory address, or immediate: " << INS_Disassemble(ins) <<
+                        std::endl;
+                    log << "OperandIsAddressGenerator: " << INS_OperandIsAddressGenerator(ins, 1) << std::endl;
+                    log << "OperandIsFixedMemop: " << INS_OperandIsFixedMemop(ins, 1) << std::endl;
+                    log << "OperandIsImplicit: " << INS_OperandIsImplicit(ins, 1) << std::endl;
+                    log << "Base register: " << REG_StringShort(INS_MemoryBaseReg(ins)) << std::endl;
+                    log << "Category: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
                     for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
-                        ss << "Operand " << std::dec << i << " reg: " << REG_StringShort(INS_OperandReg(ins, i)) <<
-                           std::endl;
+                        log << "Operand " << std::dec << i << " reg: " << REG_StringShort(INS_OperandReg(ins, i)) <<
+                            std::endl;
                     }
 
-                    log_message(ss);
+                    log_message(log);
                     continue;
                 }
 
-//                log_message(log);
+                log_message(log);
+                last_taint_ins = ins;
+                faulting_addr = compute_effective_address(ins, c, 1);
                 if (REG_valid(wreg)) {
                     if (REG_valid(rreg)) {
                         if (isTainted(wreg, taintedObjs) && !isTainted(rreg, taintedObjs)) {
@@ -850,25 +887,24 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //            }
 
             /* Find the last write to the base register to find the address of the bad pointer */
-            INS ins = INS_FindByAddress(fuzzing_run.back().rip);
-            REG faulting_reg = taint_source;
-//            std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
-            ADDRINT faulting_addr = compute_effective_address(ins, fuzzing_run.back(), 1);
-            for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
-                 it != fuzzing_run.rend(); it++) {
-                if (it == fuzzing_run.rbegin()) {
-                    continue;
-                }
-                ins = INS_FindByAddress(it->rip);
-//            std::cout << INS_Disassemble(ins) << std::endl;
-                if (INS_RegWContain(ins, faulting_reg)) {
-//                it->prettyPrint(std::cout);
-//                    std::cout << "Write instruction: " << INS_Disassemble(ins) << std::endl;
-                    faulting_addr = compute_effective_address(ins, *it, 1);
-//                    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
-                    break;
-                }
-            }
+//            INS ins = INS_FindByAddress(fuzzing_run.back().rip);
+//            REG faulting_reg = taint_source;
+////            std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
+//            for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
+//                 it != fuzzing_run.rend(); it++) {
+//                if (it == fuzzing_run.rbegin()) {
+//                    continue;
+//                }
+//                ins = INS_FindByAddress(it->rip);
+////                std::cout << INS_Disassemble(ins) << std::endl;
+//                if (INS_RegWContain(ins, faulting_reg)) {
+////                it->prettyPrint(std::cout);
+////                    std::cout << "Write instruction: " << INS_Disassemble(ins) << std::endl;
+////                    faulting_addr = compute_effective_address(ins, *it, 1);
+////                    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
+//                    break;
+//                }
+//            }
 
             if (!create_allocated_area(taintedObject, faulting_addr)) {
 //                for(auto &it : fuzzing_run) {
@@ -894,6 +930,7 @@ BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const E
 //    fuzz_registers(ctx);
 //    PIN_SaveContext(ctx, &preexecution);
 //    displayCurrentContext(ctx);
+//    log_message("Ending segfault handler");
     return false;
 }
 
@@ -918,10 +955,15 @@ VOID ImageLoad(IMG img, VOID *v) {
             log_error(ss);
         }
 
-        ADDRINT main_addr = IMG_Entry(img);
-        RTN main = RTN_FindByAddress(main_addr);
+//        ADDRINT main_addr = IMG_Entry(img);
+//        RTN main = RTN_FindByAddress(main_addr);
+        RTN main = RTN_FindByName(img, "main");
         if (RTN_Valid(main)) {
             RTN_Open(main);
+            std::stringstream msg;
+            msg << "Adding call to begin_fuzzing to " << RTN_Name(main) << "(0x" << std::hex << RTN_Address(main)
+                << ")";
+            log_message(msg);
             INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID,
                            IARG_END);
             RTN_Close(main);

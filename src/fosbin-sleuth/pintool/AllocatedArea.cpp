@@ -70,6 +70,8 @@ std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
         delete subarea;
     }
 
+    ctx->subareas.clear();
+
     uint64_t non_ptr_start = 0;
     uint64_t non_ptr_end = 0;
     size_t size;

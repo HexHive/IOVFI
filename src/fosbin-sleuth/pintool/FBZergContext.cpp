@@ -13,6 +13,8 @@ FBZergContext::FBZergContext() {}
 std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
     ADDRINT tmp;
     std::map < REG, AllocatedArea * > allocs;
+    ctx.pointer_registers.clear();
+    ctx.values.clear();
     for (REG reg : FBZergContext::argument_regs) {
         in.read((char *) &tmp, sizeof(tmp));
         if (!in || in.eof()) {
@@ -219,6 +221,7 @@ AllocatedArea *FBZergContext::find_allocated_area(REG reg) const {
         return nullptr;
     }
 
+//    std::cout << "Found allocated area for register " << REG_StringShort(it->first) << " at 0x" << std::hex << it->second << std::endl;
     return it->second;
 }
 
