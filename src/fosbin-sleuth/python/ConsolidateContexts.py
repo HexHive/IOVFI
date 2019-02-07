@@ -77,9 +77,16 @@ def unique_identification(binary, name, hash_sum):
 
 
 def save_desc_for_later(signal, frame):
+    global descMap
+    global descFile
     if descFile is not None:
+        log.info("Outputting descMap to {}".format(os.path.abspath(descFile.name)))
         pickle.dump(descMap, descFile)
-    exit(0)
+        descFile.close()
+        descFile = None
+    else:
+        print("COULD NOT WRITE DESC FILE", file=sys.stderr)
+    sys.exit(0)
 
 
 def attempt_ctx(args):
@@ -90,6 +97,9 @@ def attempt_ctx(args):
     loc = args[4]
     name = args[5]
     processedFile = args[6]
+    global descMap
+    global descMap_lock
+    global print_lock
 
     if os.path.splitext(binary)[1] == ".so":
         loader = os.path.abspath(args[7])
@@ -167,10 +177,12 @@ def main():
     log.addHandler(logging.StreamHandler(sys.stdout))
 
     global descMap
+    global descFile
     descMap = dict()
     if os.path.exists(results.out):
         descFile = open(results.out, "rb")
         if os.fstat(descFile.fileno()).st_size > 0:
+            log.info("Reading existing descFile")
             descMap = pickle.load(descFile)
         descFile.close()
 
@@ -194,6 +206,7 @@ def main():
     pickle.dump(hashMap, mapFile)
 
     signal.signal(signal.SIGTERM, save_desc_for_later)
+    signal.signal(signal.SIGINT, save_desc_for_later)
 
     with open(results.binaries, "r") as binaries:
         for binary in binaries.readlines():
@@ -239,12 +252,14 @@ def main():
                 if len(args) > 0:
                     with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
                         try:
-                            pool.map(attempt_ctx, args)
-                        except KeyboardInterrupt:
-                            save_desc_for_later(signal.SIGTERM, None)
+                            pool.map(attempt_ctx, args, timeout=int(watchdog) / 1000 + 2)
+                        except futures.TimeoutError:
+                            print("Too long")
+                            pass
 
     pickle.dump(descMap, descFile)
     processedFile.close()
+    descFile.close()
     for hash_sum, funcs in descMap.items():
         log.info("{}: {}".format(hash_sum, funcs))
 
