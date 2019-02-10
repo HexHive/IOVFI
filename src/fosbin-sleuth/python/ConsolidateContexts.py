@@ -10,7 +10,7 @@ from concurrent import futures
 import multiprocessing
 import signal
 import struct
-from contexts import IOVec, binaryutils
+from contexts import IOVec, binaryutils, FunctionDescriptor
 import logging
 
 log = logging.getLogger(binaryutils.LOGGER_NAME)
@@ -124,7 +124,7 @@ def attempt_ctx(args):
 
         if accepted:
             descMap_lock.acquire()
-            descMap[hash_sum].append(os.path.basename(binary) + "." + name)
+            descMap[hash_sum].append(FunctionDescriptor(binary, name, loc))
             descMap_lock.release()
             message += "accepted!"
         else:

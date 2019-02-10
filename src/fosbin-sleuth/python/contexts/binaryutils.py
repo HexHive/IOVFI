@@ -3,6 +3,7 @@ import subprocess
 WORK_DIR = "_work"
 CTX_FILENAME = "tmp.ctx"
 LOGGER_NAME = "fb-logger"
+WATCHDOG_TIMEOUT = 5000
 
 
 def find_funcs(binary, target=None):

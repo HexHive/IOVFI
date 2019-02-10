@@ -73,7 +73,7 @@ def main():
     log.setLevel(results.loglevel)
     if results.log is not None:
         log.addHandler(logging.FileHandler(results.log, mode="w"))
-        log.addHandler(logging.StreamHandler(sys.stdout))
+    log.addHandler(logging.StreamHandler(sys.stdout))
 
     func_count = 0
     ignored_funcs = set()

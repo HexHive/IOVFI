@@ -123,9 +123,10 @@ class FBDecisionTree:
         equiv_classes = set()
         for i in range(len(dtree.tree_.value[tree_idx][0])):
             if dtree.tree_.value[tree_idx][0][i]:
-                equiv_classes.add(dtree.classes_[i])
+                hash_sum = dtree.classes_[i]
+                equiv_classes.add(self.funcDescs[hash_sum])
 
-        return equiv_classes;
+        return equiv_classes
 
     def _confirm_leaf(self, location, pindir, tool, binary, name, index, verbose=False):
         self._log("Confirming {}({}) is {}".format(name, hex(location),
@@ -142,10 +143,10 @@ class FBDecisionTree:
         possible_equivs = self.get_equiv_classes(index)
 
         available_hashes = list()
-        for hash, accepting_funcs in descMap.items():
+        for hash_sum, accepting_funcs in descMap.items():
             for possible_equiv in possible_equivs:
                 if possible_equiv in accepting_funcs:
-                    available_hashes.append(hash)
+                    available_hashes.append(hash_sum)
 
         used_labels = set()
         for feature in dtree.tree_.feature:
@@ -219,6 +220,9 @@ class FBDecisionTree:
         msg = "Loading {}...".format(descLoc)
         with open(descLoc, "rb") as descFile:
             self.descMaps[base_idx] = pickle.load(descFile)
+        for key, funcDescs in self.descMaps[base_idx].items():
+            for funcDesc in funcDescs:
+                self.funcDescs[hash(funcDesc)] = funcDesc
         self._log(msg + "done!")
 
         msg = "Loading {}...".format(hashMapLoc)
@@ -243,9 +247,9 @@ class FBDecisionTree:
             idx = self.labels[base_idx].transform([key])[0]
             for func in funcs:
                 if func not in funcs_labels:
-                    funcs_labels.append(func)
+                    funcs_labels.append(hash(func))
                     funcs_features.append(numpy.zeros(len(self.labels[base_idx].classes_), dtype=bool))
-                func_feature = funcs_features[funcs_labels.index(func)]
+                func_feature = funcs_features[funcs_labels.index(hash(func))]
                 func_feature[idx] = True
         self._log(msg + "done!")
 
@@ -266,5 +270,7 @@ class FBDecisionTree:
         self.descMaps = dict()
         # Map of Whole Tree Index to Corresponding Hash Maps
         self.hashMaps = dict()
+        # Map of all function hashes to FunctionDescriptors
+        self.funcDescs = dict()
 
         self.add_dtree(descLoc, hashMapLoc)
