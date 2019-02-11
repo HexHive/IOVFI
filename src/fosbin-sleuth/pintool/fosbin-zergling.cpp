@@ -36,6 +36,8 @@ KNOB <uint32_t> PrintToScreen(KNOB_MODE_WRITEONCE, "pintool", "print", "1",
 KNOB <uint32_t> WatchDogTimeout(KNOB_MODE_WRITEONCE, "pintool", "watchdog", "20000", "Watchdog timeout in "
                                                                                      "milliseconds");
 KNOB<bool> OnlyOutputContexts(KNOB_MODE_WRITEONCE, "pintool", "only-output", "false", "Only output contexts and exit");
+KNOB <std::string> KnobContextOutFile(KNOB_MODE_WRITEONCE, "pintool", "ctx-out", "",
+                                      "Filename of which to output accepted contexts");
 
 RTN target;
 uint32_t fuzz_count, orig_fuzz_count, curr_context_file_num, hard_count;
@@ -1038,7 +1040,9 @@ VOID ImageLoad(IMG img, VOID *v) {
 
 VOID ThreadStart(THREADID tid, CONTEXT *ctx, INT32 flags, VOID *v) {
     std::string fname;
-    if (SharedLibraryFunc.Value() != "") {
+    if (KnobContextOutFile.Value() != "") {
+        fname = KnobContextOutFile.Value();
+    } else if (SharedLibraryFunc.Value() != "") {
         fname = SharedLibraryFunc.Value() + "." + decstr(tid) + ".ctx";
     } else {
         fname = RTN_Name(target) + "." + decstr(tid) + ".ctx";
