@@ -1,7 +1,9 @@
 import os
-from .binaryutils import log
 import subprocess
+import logging
+from .binaryutils import LOGGER_NAME
 
+log = logging.getLogger(LOGGER_NAME)
 
 class PinRun:
     def __init__(self, pin_loc, pintool_loc, binary_loc, target, loader_loc=None):
