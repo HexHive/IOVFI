@@ -7,6 +7,7 @@ import subprocess
 from contexts import binaryutils
 import random
 import logging
+from .FBLogging import logger
 
 
 class FBDecisionTree:
@@ -14,7 +15,7 @@ class FBDecisionTree:
     WATCHDOG_MS = 5000
 
     def _log(self, msg, level=logging.INFO):
-        logging.getLogger(binaryutils.LOGGER_NAME).log(level, msg)
+        logger.log(level, msg)
 
     def _find_dtree_idx(self, index):
         if index < 0:

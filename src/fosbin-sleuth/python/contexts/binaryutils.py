@@ -1,13 +1,10 @@
 import subprocess
-import logging
 import os
 from .PinRun import PinRun
 
 WORK_DIR = "_work"
 CTX_FILENAME = "tmp.ctx"
-LOGGER_NAME = "fb-logger"
 WATCHDOG_TIMEOUT = 5000
-log = logging.getLogger(LOGGER_NAME)
 
 def find_funcs(binary, target=None):
     target_is_name = True

@@ -1,18 +1,11 @@
 import os
 import subprocess
-import logging
-from .binaryutils import LOGGER_NAME
+from .FBLogging import logger
 
-log = logging.getLogger(LOGGER_NAME)
 
 class PinRun:
     def __init__(self, pin_loc, pintool_loc, binary_loc, target, loader_loc=None):
-        self.return_code = None
-        self.in_contexts = None
-        self.out_contexts = None
         self.binary = os.path.abspath(binary_loc)
-        self.completed_proc = None
-        self.process_timedout = None
 
         try:
             self.target = hex(int(target, 16))
@@ -21,11 +14,16 @@ class PinRun:
 
         self.pin_loc = os.path.abspath(pin_loc)
         self.pintool_loc = os.path.abspath(pintool_loc)
+        if loader_loc is not None:
+            self.loader_loc = os.path.abspath(loader_loc)
+
+        self.in_contexts = None
+        self.out_contexts = None
         self.watchdog = None
         self.fuzz_count = None
         self.log_loc = None
-        if loader_loc is not None:
-            self.loader_loc = os.path.abspath(loader_loc)
+        self.completed_proc = None
+        self.process_timedout = None
 
     def _check_state(self):
         if self.pin_loc is None:
@@ -85,7 +83,7 @@ class PinRun:
             timeout = int(self.watchdog) / 1000 + 1
         else:
             timeout = 0
-        log.info("Running {}".format(" ".join(cmd)))
+        logger.info("Running {}".format(" ".join(cmd)))
 
         try:
             self.completed_proc = subprocess.run(cmd, timeout=timeout, cwd=os.path.abspath(cwd),

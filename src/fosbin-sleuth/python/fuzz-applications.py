@@ -4,17 +4,16 @@ import os
 import sys
 import subprocess
 import argparse
-from contexts import binaryutils
-import logging
+from contexts import binaryutils, FBLogging
 import multiprocessing
 import threading
 from concurrent import futures
+import contexts.FBLogging.logger as logger
+import logging
 
 fuzz_count = "5"
 watchdog = 5 * 1000
 work_dir = "contexts"
-
-log = logging.getLogger(binaryutils.LOGGER_NAME)
 
 failed_count = 0
 fail_lock = threading.RLock()
@@ -54,11 +53,11 @@ def fuzz_one_function(args):
         fail_lock.release()
     except Exception as e:
         fail_lock.acquire()
-        log.error("Error for {}:{} : {}".format(binary, func_name, e))
+        logger.error("Error for {}:{} : {}".format(binary, func_name, e))
         failed_count += 1
         fail_lock.release()
     finally:
-        log.info("Finished {}".format(func_name))
+        logger.info("Finished {}".format(func_name))
 
 
 def main():
@@ -84,10 +83,9 @@ def main():
     pintool_loc = results.tool
     pin_loc = os.path.join(results.pindir, "pin")
 
-    log.setLevel(results.loglevel)
+    logger.setLevel(results.loglevel)
     if results.log is not None:
-        log.addHandler(logging.FileHandler(results.log, mode="w"))
-    log.addHandler(logging.StreamHandler(sys.stdout))
+        logger.addHandler(logging.FileHandler(results.log, mode="w"))
 
     func_count = 0
     ignored_funcs = set()

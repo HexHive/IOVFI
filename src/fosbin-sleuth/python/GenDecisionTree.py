@@ -8,10 +8,10 @@ from sklearn.externals.six import StringIO
 from contexts.FBDecisionTree import FBDecisionTree
 from contexts import binaryutils
 import logging
+from contexts.FBLogging import logger
 
 TREE_OUT = "tree.bin"
 
-log = logging.getLogger(binaryutils.LOGGER_NAME)
 
 def main():
     parser = argparse.ArgumentParser(description="GenDecisionTree")
@@ -33,7 +33,7 @@ def main():
     dot_data = StringIO()
     fbDtree.export_graphviz(dot_data)
     dotFile.write(dot_data.getvalue())
-    log.info(msg + "done!")
+    logger.info(msg + "done!")
 
 
 if __name__ == "__main__":

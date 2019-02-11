@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import sys
 import pickle
 from contexts.FBDecisionTree import FBDecisionTree
 from contexts import binaryutils
@@ -10,6 +9,7 @@ import random
 import threading
 from concurrent import futures
 import multiprocessing
+from contexts.FBLogging import logger
 import logging
 
 dangerous_functions = {'kill', '_exit', 'exit', '__kill', '_Exit', }
@@ -23,16 +23,14 @@ guessLoc = None
 
 guessLocBase = ".guesses.bin"
 
-log = logging.getLogger(binaryutils.LOGGER_NAME)
-log.setLevel(logging.INFO)
 
 def check_inputs(argparser):
     if not os.path.exists(argparser.tree):
-        log.fatal("Could not find {}".format(argparser.tree))
+        logger.fatal("Could not find {}".format(argparser.tree))
         exit(1)
 
     if not os.path.exists(argparser.binaries):
-        log.fatal("Could not find {}".format(argparser.binaries))
+        logger.fatal("Could not find {}".format(argparser.binaries))
         exit(1)
 
 
@@ -54,12 +52,12 @@ def single_test(args):
     except Exception as e:
         error_lock.acquire()
         error_msgs.append(str(e))
-        log.error("Error: {}".format(e))
+        logger.error("Error: {}".format(e))
         error_lock.release()
     except AssertionError as e:
         error_lock.acquire()
         error_msgs.append(str(e))
-        log.error("Error: {}".format(e))
+        logger.error("Error: {}".format(e))
         error_lock.release()
     finally:
         guess_lock.acquire()
@@ -89,26 +87,25 @@ def main():
     parser.add_argument("-verbose", help="Output more text", default=True)
     results = parser.parse_args()
 
-    log.setLevel(results.log)
-    log.addHandler(logging.StreamHandler(sys.stdout))
+    logger.setLevel(results.log)
 
-    log.info("Checking inputs...")
+    logger.info("Checking inputs...")
     check_inputs(results)
-    log.info("done!")
+    logger.info("done!")
 
-    log.info("Parsing tree at {}...".format(os.path.abspath(results.tree)))
+    logger.info("Parsing tree at {}...".format(os.path.abspath(results.tree)))
     treeFile = open(results.tree, "rb")
     fbDtree = pickle.load(treeFile)
     treeFile.close()
-    log.info("done!")
+    logger.info("done!")
 
     with open(results.binaries, "r") as binaryFile:
         for binaryLoc in binaryFile.readlines():
             binaryLoc = os.path.abspath(binaryLoc.strip())
             if not os.path.exists(binaryLoc):
-                log.error("Could not find {}".format(binaryLoc))
+                logger.error("Could not find {}".format(binaryLoc))
                 continue
-            log.info("Analyzing {}".format(binaryLoc))
+            logger.info("Analyzing {}".format(binaryLoc))
 
             basename = binaryLoc.replace(os.sep, ".")[19:]
             if not os.path.exists("logs"):
@@ -116,7 +113,7 @@ def main():
 
             loghandler = logging.FileHandler(os.path.join("logs", basename +
                 ".log"), mode="w")
-            log.addHandler(loghandler)
+            logger.addHandler(loghandler)
             global error_msgs
             error_msgs.clear()
             global guesses
@@ -129,18 +126,18 @@ def main():
                 msg = "Opening guesses at {}...".format(guessLoc)
                 with open(guessLoc, "rb") as guessFile:
                     guesses = pickle.load(guessFile)
-                log.info(msg + "done!")
+                logger.info(msg + "done!")
 
             msg = "Finding functions in {}...".format(binaryLoc)
             location_map = binaryutils.find_funcs(binaryLoc, results.target)
-            log.info(msg + "done!")
-            log.info("Found {} functions".format(len(location_map)))
+            logger.info(msg + "done!")
+            logger.info("Found {} functions".format(len(location_map)))
 
             random.seed()
             args = list()
             for loc, name in location_map.items():
                 if name in dangerous_functions or name in guesses.keys():
-                    log.info("Skipping {}".format(name))
+                    logger.info("Skipping {}".format(name))
                     continue
                 args.append([loc, results.pindir, results.tool, binaryLoc, name, fbDtree])
 
@@ -157,14 +154,14 @@ def main():
                     pickle.dump(guesses, guessFile)
 
             if len(error_msgs) > 0:
-                log.info("++++++++++++++++++++++++++++++++++++++++++++")
-                log.info("                  Errors                    ")
-                log.info("++++++++++++++++++++++++++++++++++++++++++++")
-                log.info(error_msgs)
+                logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+                logger.info("                  Errors                    ")
+                logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+                logger.info(error_msgs)
 
-            log.info("++++++++++++++++++++++++++++++++++++++++++++")
-            log.info("                  Guesses                   ")
-            log.info("++++++++++++++++++++++++++++++++++++++++++++")
+            logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+            logger.info("                  Guesses                   ")
+            logger.info("++++++++++++++++++++++++++++++++++++++++++++")
             for name, guess in guesses.items():
                 indicator = "X"
                 guess_names = fbDtree.get_equiv_classes(guess)
@@ -176,8 +173,8 @@ def main():
                         if func.find(name) >= 0:
                             indicator = "!"
                             break
-                log.info("[{}] {}: {}".format(indicator, name, guess_names))
-            log.removeHandler(loghandler)
+                logger.info("[{}] {}: {}".format(indicator, name, guess_names))
+            logger.removeHandler(loghandler)
 
 
 if __name__ == "__main__":

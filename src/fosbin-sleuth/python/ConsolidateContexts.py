@@ -10,10 +10,10 @@ from concurrent import futures
 import multiprocessing
 import signal
 import struct
-from contexts import IOVec, binaryutils, FunctionDescriptor
+from contexts import IOVec, binaryutils, FunctionDescriptor, FBLogging
 import logging
 
-log = logging.getLogger(binaryutils.LOGGER_NAME)
+logger = FBLogging.logger
 
 FIFO_PIPE_NAME = "fifo-pipe"
 WORK_DIR = "_work"
@@ -35,7 +35,7 @@ print_lock = threading.RLock()
 def read_contexts(contextFile):
     contextfile = contextFile.strip()
     with open(contextfile, 'rb') as f:
-        log.info("Reading {}".format(contextfile))
+        logger.info("Reading {}".format(contextfile))
         try:
             while f.tell() < os.fstat(f.fileno()).st_size:
                 iovec = IOVec.IOVec(f)
@@ -44,32 +44,32 @@ def read_contexts(contextFile):
                 hashMap[md5hash] = iovec
                 hashlock.release()
         except IndexError as e:
-            log.error("IndexError")
+            logger.error("IndexError")
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
         except struct.error as e:
-            log.error("Struct error")
+            logger.error("Struct error")
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
         except MemoryError as e:
-            log.error("MemoryError")
+            logger.error("MemoryError")
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
         except OverflowError:
-            log.error("OverflowError")
+            logger.error("OverflowError")
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
         except ValueError:
-            log.error("ValueError")
+            logger.error("ValueError")
             invalidctx_lock.acquire()
             invalid_contexts.add(contextfile)
             invalidctx_lock.release()
         except Exception as e:
-            log.error("General Exception: {}".format(e))
+            logger.error("General Exception: {}".format(e))
 
 
 def unique_identification(binary, name, hash_sum):
@@ -80,7 +80,7 @@ def save_desc_for_later(signal, frame):
     global descMap
     global descFile
     if descFile is not None:
-        log.info("Outputting descMap to {}".format(os.path.abspath(descFile.name)))
+        logger.info("Outputting descMap to {}".format(os.path.abspath(descFile.name)))
         pickle.dump(descMap, descFile)
         descFile.close()
         descFile = None
@@ -115,7 +115,7 @@ def attempt_ctx(args):
         id = unique_identification(binary, name, hash_sum) + ".tmp"
         temp_file = open(id, "w+")
         temp_file.close()
-        log.debug("cmd: {}".format(" ".join(cmd)))
+        logger.debug("cmd: {}".format(" ".join(cmd)))
         message = "Testing {}.{} ({}) with hash {}...".format(binary, name,
                 hex(loc), hash_sum)
         fuzz_cmd = subprocess.run(cmd, capture_output=True, timeout=int(watchdog) / 1000 + 1, cwd=os.path.abspath(
@@ -131,14 +131,14 @@ def attempt_ctx(args):
             message += "failed"
 
         print_lock.acquire()
-        log.info(message)
+        logger.info(message)
         print(id, file=processedFile)
         print_lock.release()
     except subprocess.TimeoutExpired:
         pass
     except Exception as e:
         print_lock.acquire()
-        log.error("General exception: {}".format(e))
+        logger.error("General exception: {}".format(e))
         print_lock.release()
     finally:
         if os.path.exists(id):
@@ -162,19 +162,18 @@ def main():
 
     results = parser.parse_args()
     if not os.path.exists(results.contexts):
-        log.fatal("Could not find {}".format(results.contexts))
+        logger.fatal("Could not find {}".format(results.contexts))
         exit(1)
 
     if not os.path.exists(results.binaries):
-        log.fatal("Could not find {}".format(results.binaries))
+        logger.fatal("Could not find {}".format(results.binaries))
         exit(1)
 
     mapFile = open(results.map, "wb")
 
-    log.setLevel(results.loglevel)
+    logger.setLevel(results.loglevel)
     if results.log is not None:
-        log.addHandler(logging.FileHandler(results.log, mode="w"))
-    log.addHandler(logging.StreamHandler(sys.stdout))
+        logger.addHandler(logging.FileHandler(results.log, mode="w"))
 
     global descMap
     global descFile
@@ -182,7 +181,7 @@ def main():
     if os.path.exists(results.out):
         descFile = open(results.out, "rb")
         if os.fstat(descFile.fileno()).st_size > 0:
-            log.info("Reading existing descFile")
+            logger.info("Reading existing descFile")
             descMap = pickle.load(descFile)
         descFile.close()
 
@@ -202,7 +201,7 @@ def main():
         with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
             pool.map(read_contexts, contexts)
 
-    log.info("Unique Hashes: {}".format(len(hashMap)))
+    logger.info("Unique Hashes: {}".format(len(hashMap)))
     pickle.dump(hashMap, mapFile)
 
     signal.signal(signal.SIGTERM, save_desc_for_later)
@@ -215,7 +214,7 @@ def main():
 
             msg = "Reading function locations for {}...".format(binary)
             location_map = binaryutils.find_funcs(binary, results.target)
-            log.info(msg + "done")
+            logger.info(msg + "done")
 
             for hash_sum, iovec in hashMap.items():
                 descMap[hash_sum] = list()
@@ -236,7 +235,7 @@ def main():
 
                     if os.path.splitext(binary)[1] == ".so":
                         if results.ld is None or not os.path.exists(results.ld):
-                            log.fatal("Could not find loader at {}".format(results.ld))
+                            logger.fatal("Could not find loader at {}".format(results.ld))
                             exit(1)
 
                         args.append(
@@ -261,7 +260,7 @@ def main():
     processedFile.close()
     descFile.close()
     for hash_sum, funcs in descMap.items():
-        log.info("{}: {}".format(hash_sum, funcs))
+        logger.info("{}: {}".format(hash_sum, funcs))
 
 
 if __name__ == "__main__":

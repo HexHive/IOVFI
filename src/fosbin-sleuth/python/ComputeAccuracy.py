@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 
 import os
-import sys
 import pickle
 import argparse
 from pathlib import Path
 from contexts.FBDecisionTree import FBDecisionTree
+import contexts.FBLogging.logger as logger
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
             pathlist = Path(guess_path).glob("**/*.bin")
             for path in pathlist:
                 path = os.path.abspath(path)
-                print("Reading {}".format(path))
+                logger.info("Reading {}".format(path))
                 with open(path, "rb") as guessfile:
                     guessmap = pickle.load(guessfile)
                     for key, guess_idx in guessmap.items():
@@ -54,13 +54,13 @@ def main():
                                 failed_set[key].add(guess)
 
     for key, failed_guess in failed_set.items():
-        print("{}: {}".format(key, failed_guess))
+        logger.info("{}: {}".format(key, failed_guess))
 
-    print("Successful guesses:  {} ({})".format(len(successful_guesses), len(successful_guesses) / (
+    logger.info("Successful guesses:  {} ({})".format(len(successful_guesses), len(successful_guesses) / (
                 len(successful_guesses) + len(failed_guesses))))
-    print("Failed guesses:      {} ({})".format(len(failed_guesses),
-                                                len(failed_guesses) / (len(successful_guesses) + len(failed_guesses))))
-    print("Unknown guesses:     {}".format(len(unknown_guesses)))
+    logger.info("Failed guesses:      {} ({})".format(len(failed_guesses),
+                                                      len(failed_guesses) / (len(successful_guesses) + len(failed_guesses))))
+    logger.info("Unknown guesses:     {}".format(len(unknown_guesses)))
 
 
 if __name__ == "__main__":
