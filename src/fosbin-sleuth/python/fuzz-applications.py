@@ -22,35 +22,43 @@ fail_lock = threading.RLock()
 success_count = 0
 success_lock = threading.RLock()
 
+binary = None
+pin_loc = None
+pintool_loc = None
+loader_loc = None
+
 
 def fuzz_one_function(args):
-    cmd = args[0]
-    binary = args[1]
-    func_name = args[2]
-    global failed_count
-    global success_count
+    global failed_count, success_count, binary, target, pin_loc, pintool_loc, loader_loc
+    target = args[0]
+    func_name = args[1]
+    if os.path.splitext(binary)[1] == ".so":
+        target = func_name
+
     try:
-        log.info("Running {}".format(" ".join(cmd)))
-        returnCode = subprocess.run(cmd, timeout=watchdog / 1000 + 1, cwd=os.path.abspath(work_dir))
-        if returnCode.returncode != 0:
+        pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, cwd=work_dir, watchdog=watchdog,
+                                            log_loc=os.path.abspath(work_dir, "{}.{}.log".format()),
+                                            loader_loc=loader_loc)
+
+        if pin_run.returncode != 0:
             fail_lock.acquire()
             failed_count += 1
             fail_lock.release()
         else:
             success_lock.acquire()
             success_count += 1
-            log.info("Finished {}".format(func_name))
             success_lock.release()
     except subprocess.TimeoutExpired:
         fail_lock.acquire()
         failed_count += 1
-        log.info("Finished {}".format(func_name))
         fail_lock.release()
     except Exception as e:
         fail_lock.acquire()
         log.error("Error for {}:{} : {}".format(binary, func_name, e))
         failed_count += 1
         fail_lock.release()
+    finally:
+        log.info("Finished {}".format(func_name))
 
 
 def main():
@@ -70,6 +78,12 @@ def main():
         parser.print_help()
         exit(1)
 
+    global loader_loc, binary, pintool_loc, pin_loc
+    loader_loc = results.ld
+    binary = results.bin
+    pintool_loc = results.tool
+    pin_loc = os.path.join(results.pindir, "pin")
+
     log.setLevel(results.loglevel)
     if results.log is not None:
         log.addHandler(logging.FileHandler(results.log, mode="w"))
@@ -87,18 +101,19 @@ def main():
                 ignored_funcs.add(line)
 
     if results.funcs is not None:
-        locationMap = dict()
+        location_map = dict()
         with open(results.funcs, "r") as f:
             for line in f.readlines():
                 line = line.strip()
                 temp = binaryutils.find_funcs(results.bin, line)
                 for loc, name in temp.items():
-                    locationMap[loc] = name
+                    location_map[loc] = name
     else:
-        locationMap = binaryutils.find_funcs(results.bin)
+        location_map = binaryutils.find_funcs(results.bin)
 
     args = list()
-    for location, func_name in locationMap.items():
+    for location, func_name in location_map.items():
+        func_name = func_name.strip()
         func_count += 1
         if '@' in func_name:
             func_name = func_name[:func_name.find("@")]
@@ -106,17 +121,7 @@ def main():
         if func_name in ignored_funcs:
             continue
 
-        if os.path.splitext(results.bin)[1] == ".so":
-            cmd = [os.path.join(os.path.abspath(results.pindir), "pin"), "-t", os.path.abspath(results.tool),
-                   "-fuzz-count", fuzz_count,
-                   "-shared-func", func_name, "-out", func_name + ".log", "-watchdog", str(watchdog), "--",
-                   os.path.abspath(results.ld), os.path.abspath(results.bin)]
-        else:
-            cmd = [os.path.join(os.path.abspath(results.pindir), "pin"), "-t", os.path.abspath(results.tool),
-                   "-fuzz-count", fuzz_count,
-                   "-target", hex(location), "-out", str(func_name) + ".log", "-watchdog",
-                   str(watchdog), "--", os.path.abspath(results.bin)]
-        args.append([cmd, results.bin, func_name])
+        args.append([location, func_name])
 
     if len(args) > 0:
         with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:

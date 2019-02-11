@@ -31,7 +31,7 @@ def find_funcs(binary, target=None):
     return location_map
 
 
-def fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=None, cwd=os.getcwd(), fuzz_count=0,
+def fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=None, cwd=os.getcwd(), fuzz_count=None,
                   out_contexts=None, watchdog=WATCHDOG_TIMEOUT, log_loc=None, loader_loc=None):
     pin_run = PinRun(pin_loc, pintool_loc, binary, target, loader_loc)
     pin_run.watchdog = watchdog
@@ -41,7 +41,7 @@ def fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=None, cwd=os
         pin_run.in_contexts = os.path.abspath(in_contexts)
 
     if log_loc is None:
-        pin_run.log_loc = os.path.abspath(os.path.join(cwd, "{}.{}.log".format(os.path.basename(binary), function)))
+        pin_run.log_loc = os.path.abspath(os.path.join(cwd, "{}.{}.log".format(os.path.basename(binary), target)))
     else:
         pin_run.log_loc = os.path.abspath(log_loc)
 
@@ -49,7 +49,7 @@ def fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=None, cwd=os
         pin_run.out_contexts = os.path.abspath(os.path.join(cwd, out_contexts))
     else:
         pin_run.out_contexts = \
-            os.path.abspath(os.path.join(cwd, "{}.{}.ctx".format(os.path.basename(binary), function)))
+            os.path.abspath(os.path.join(cwd, "{}.{}.ctx".format(os.path.basename(binary), target)))
 
     pin_run.execute_cmd(cwd)
     return pin_run

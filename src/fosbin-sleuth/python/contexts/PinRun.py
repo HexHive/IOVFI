@@ -92,3 +92,8 @@ class PinRun:
         except subprocess.TimeoutExpired as e:
             self.process_timedout = True
             raise e
+
+    def returncode(self):
+        if self.completed_proc is not None:
+            return self.completed_proc.returncode
+        return None
