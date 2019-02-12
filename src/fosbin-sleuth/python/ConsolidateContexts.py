@@ -1,16 +1,14 @@
 #!/usr/bin/python3.7
 
 import os
-import sys
 import argparse
 import pickle
-import subprocess
 import threading
 from concurrent import futures
 import multiprocessing
 import signal
 import struct
-from contexts import IOVec, binaryutils, FunctionDescriptor, FBLogging
+from contexts import IOVec, binaryutils, FBLogging, FunctionDescriptor
 import logging
 
 logger = FBLogging.logger
@@ -19,130 +17,107 @@ FIFO_PIPE_NAME = "fifo-pipe"
 WORK_DIR = "_work"
 watchdog = str(5 * 1000)
 
-passingHashes = dict()
-contextHashes = dict()
+desc_map = dict()
+desc_file = None
+desc_lock = threading.RLock()
 
-descMap = None
-descFile = None
-hashMap = dict()
-invalid_contexts = set()
-hashlock = threading.RLock()
-invalidctx_lock = threading.RLock()
-descMap_lock = threading.RLock()
-print_lock = threading.RLock()
+hash_map = dict()
+hash_file = None
+hash_lock = threading.RLock()
+
+contexts = set()
+contexts_lock = threading.RLock()
+
+pin_loc = None
+pintool_loc = None
+loader_loc = None
 
 
-def read_contexts(contextFile):
-    contextfile = contextFile.strip()
-    with open(contextfile, 'rb') as f:
-        logger.info("Reading {}".format(contextfile))
+def add_contexts(context_file):
+    global contexts
+    io_vecs = read_contexts(context_file)
+    contexts_lock.acquire()
+    for io_vec in io_vecs:
+        contexts.add(io_vec)
+    contexts_lock.release()
+
+
+def read_contexts(context_file):
+    results = list()
+    context_file = context_file.strip()
+    with open(context_file, 'rb') as f:
+        logger.info("Reading {}".format(context_file))
         try:
             while f.tell() < os.fstat(f.fileno()).st_size:
-                iovec = IOVec.IOVec(f)
-                md5hash = iovec.hash()
-                hashlock.acquire()
-                hashMap[md5hash] = iovec
-                hashlock.release()
+                io_vec = IOVec.IOVec(f)
+                results.append(io_vec)
         except IndexError as e:
             logger.error("IndexError")
-            invalidctx_lock.acquire()
-            invalid_contexts.add(contextfile)
-            invalidctx_lock.release()
         except struct.error as e:
             logger.error("Struct error")
-            invalidctx_lock.acquire()
-            invalid_contexts.add(contextfile)
-            invalidctx_lock.release()
         except MemoryError as e:
             logger.error("MemoryError")
-            invalidctx_lock.acquire()
-            invalid_contexts.add(contextfile)
-            invalidctx_lock.release()
         except OverflowError:
             logger.error("OverflowError")
-            invalidctx_lock.acquire()
-            invalid_contexts.add(contextfile)
-            invalidctx_lock.release()
         except ValueError:
             logger.error("ValueError")
-            invalidctx_lock.acquire()
-            invalid_contexts.add(contextfile)
-            invalidctx_lock.release()
         except Exception as e:
             logger.error("General Exception: {}".format(e))
+        finally:
+            return results
 
 
-def unique_identification(binary, name, hash_sum):
-    return "{}.{}.{}".format(os.path.basename(binary), name, hash_sum)
+def signal_handler(signal, frame):
+    save_desc_for_later()
+    os.exit(signal)
 
 
-def save_desc_for_later(signal, frame):
-    global descMap
-    global descFile
-    if descFile is not None:
-        logger.info("Outputting descMap to {}".format(os.path.abspath(descFile.name)))
-        pickle.dump(descMap, descFile)
-        descFile.close()
-        descFile = None
-    else:
-        print("COULD NOT WRITE DESC FILE", file=sys.stderr)
-    sys.exit(0)
+def save_desc_for_later():
+    global desc_map, desc_file, hash_map, hash_file
+    if desc_file is not None:
+        logger.info("Outputting desc_map to {}".format(os.path.abspath(desc_file.name)))
+        pickle.dump(desc_map, desc_file)
+        desc_file.close()
+        desc_file = None
+
+    if hash_file is not None:
+        logger.info("Outputting hash_map to {}".format(os.path.abspath(hash_file.name)))
+        pickle.dump(hash_map, hash_file)
+        hash_file.close()
+        hash_file = None
 
 
 def attempt_ctx(args):
-    binary = os.path.abspath(args[0])
-    pindir = os.path.abspath(args[1])
-    tool = os.path.abspath(args[2])
-    hash_sum = args[3]
-    loc = args[4]
-    name = args[5]
-    processedFile = args[6]
-    global descMap
-    global descMap_lock
-    global print_lock
-
-    if os.path.splitext(binary)[1] == ".so":
-        loader = os.path.abspath(args[7])
-        cmd = [os.path.join(pindir, "pin"), "-t", tool, "-fuzz-count", "0",
-               "-out", name + ".log", "-watchdog", watchdog, "-shared-func", name,
-               "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", loader, binary]
-    else:
-        cmd = [os.path.join(pindir, "pin"), "-t", tool, "-fuzz-count", "0",
-               "-target", hex(loc), "-out", name + ".log", "-watchdog", watchdog,
-               "-contexts", os.path.abspath(os.path.join(WORK_DIR, FIFO_PIPE_NAME)), "--", binary]
-
+    global pin_loc, pintool_loc, loader_loc, desc_map, hash_map
+    binary = args[0]
+    target = args[1]
+    func_name = args[2]
+    name = "{}.{}".format(os.path.basename(binary), target)
+    in_contexts = os.path.join(WORK_DIR, FIFO_PIPE_NAME)
+    out_contexts = os.path.join(WORK_DIR, "{}.all.ctx".format(name))
+    cwd = WORK_DIR
     try:
-        id = unique_identification(binary, name, hash_sum) + ".tmp"
-        temp_file = open(id, "w+")
-        temp_file.close()
-        logger.debug("cmd: {}".format(" ".join(cmd)))
-        message = "Testing {}.{} ({}) with hash {}...".format(binary, name,
-                hex(loc), hash_sum)
-        fuzz_cmd = subprocess.run(cmd, capture_output=True, timeout=int(watchdog) / 1000 + 1, cwd=os.path.abspath(
-            WORK_DIR))
-        accepted = (fuzz_cmd.returncode == 0)
+        pin_run = binaryutils.fuzz_function(binary, pin_loc, pintool_loc, in_contexts=in_contexts, cwd=cwd,
+                                            out_contexts=out_contexts, loader_loc=loader_loc)
+        if pin_run is not None:
+            func_desc = FunctionDescriptor(binary, func_name, target)
+            for io_vec in read_contexts(out_contexts):
+                hash_sum = io_vec.hash()
+                desc_lock.acquire()
+                if hash_sum not in desc_map:
+                    desc_map[hash_sum] = list()
+                desc_map[hash_sum].append(func_desc)
+                desc_lock.release()
 
-        if accepted:
-            descMap_lock.acquire()
-            descMap[hash_sum].append(FunctionDescriptor(binary, name, loc))
-            descMap_lock.release()
-            message += "accepted!"
-        else:
-            message += "failed"
-
-        print_lock.acquire()
-        logger.info(message)
-        print(id, file=processedFile)
-        print_lock.release()
-    except subprocess.TimeoutExpired:
-        pass
+                hash_lock.acquire()
+                hash_map[hash_sum] = io_vec
+                hash_lock.release()
+    except TimeoutError:
+        logger.error("{} timed out".format(name))
     except Exception as e:
-        print_lock.acquire()
-        logger.error("General exception: {}".format(e))
-        print_lock.release()
+        logger.error("Error categorizing {}: {}".format(name, e))
     finally:
-        if os.path.exists(id):
-            os.unlink(id)
+        logger.info("Completed {}".format(name))
 
 
 def main():
@@ -161,105 +136,84 @@ def main():
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
 
     results = parser.parse_args()
-    if not os.path.exists(results.contexts):
-        logger.fatal("Could not find {}".format(results.contexts))
-        exit(1)
-
-    if not os.path.exists(results.binaries):
-        logger.fatal("Could not find {}".format(results.binaries))
-        exit(1)
-
-    mapFile = open(results.map, "wb")
-
     logger.setLevel(results.loglevel)
     if results.log is not None:
         logger.addHandler(logging.FileHandler(results.log, mode="w"))
 
-    global descMap
-    global descFile
-    descMap = dict()
+    if not os.path.exists(results.contexts):
+        logger.fatal("Could not find {}".format(results.contexts))
+        os.exit(1)
+
+    if not os.path.exists(results.binaries):
+        logger.fatal("Could not find {}".format(results.binaries))
+        os.exit(1)
+
+    global desc_file, desc_map, pin_loc, pintool_loc, loader_loc, contexts, hash_file
+    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
+    if not os.path.exists(pin_loc):
+        logger.fatal("Could not find {}".format(pin_loc))
+        os.exit(1)
+
+    pintool_loc = os.path.abspath(results.tool)
+    if not os.path.exists(pintool_loc):
+        logger.fatal("Could not find {}".format(pintool_loc))
+        os.exit(1)
+
+    if results.ld is not None:
+        loader_loc = os.path.abspath(results.ld)
+        if not os.path.exists(loader_loc):
+            logger.fatal("Could not find {}".format(loader_loc))
+            os.exit(1)
+
     if os.path.exists(results.out):
-        descFile = open(results.out, "rb")
-        if os.fstat(descFile.fileno()).st_size > 0:
-            logger.info("Reading existing descFile")
-            descMap = pickle.load(descFile)
-        descFile.close()
+        desc_file = open(results.out, "rb")
+        if os.fstat(desc_file.fileno()).st_size > 0:
+            logger.info("Reading existing desc_file")
+            desc_map = pickle.load(desc_file)
+        desc_file.close()
 
-    descFile = open(results.out, "wb")
-    processedFile = open("processed.txt", "a+")
-    processedBinaries = set()
-    for binary in processedFile.readlines():
-        processedBinaries.add(binary)
-
-    if os.path.exists(WORK_DIR):
-        # shutils.rmtree still caused errors, so call in the big guns...
-        os.system("rm -rf {}".format(WORK_DIR))
-
-    os.mkdir(WORK_DIR)
+    desc_file = open(results.out, "wb")
+    hash_file = open(results.map, "wb")
 
     with open(results.contexts, "r") as contexts:
         with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-            pool.map(read_contexts, contexts)
+            pool.map(add_contexts, contexts)
 
-    logger.info("Unique Hashes: {}".format(len(hashMap)))
-    pickle.dump(hashMap, mapFile)
+    logger.info("Unique Hashes: {}".format(len(contexts)))
 
-    signal.signal(signal.SIGTERM, save_desc_for_later)
-    signal.signal(signal.SIGINT, save_desc_for_later)
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
+    if not os.path.exists(WORK_DIR):
+        os.mkdir(WORK_DIR)
+    ctx_path = os.path.join(WORK_DIR, FIFO_PIPE_NAME)
+
+    with open(ctx_path, "wb+") as ctxFile:
+        for io_vec in contexts:
+            io_vec.write_bin(ctxFile)
 
     with open(results.binaries, "r") as binaries:
         for binary in binaries.readlines():
-            binary = binary.strip()
-            binary = os.path.abspath(binary)
+            binary = os.path.abspath(binary.strip())
 
             msg = "Reading function locations for {}...".format(binary)
             location_map = binaryutils.find_funcs(binary, results.target)
             logger.info(msg + "done")
 
-            for hash_sum, iovec in hashMap.items():
-                descMap[hash_sum] = list()
-                ctxPath = os.path.join(WORK_DIR, FIFO_PIPE_NAME)
-                if os.path.exists(ctxPath):
-                    os.unlink(ctxPath)
-                out_pipe = open(ctxPath, "wb")
-                iovec.write_bin(out_pipe)
-                out_pipe.close()
+            args = list()
+            for loc, name in location_map.items():
+                args.append([binary, loc, name])
 
-                args = list()
-                for loc, name in location_map.items():
-                    if unique_identification(binary, name, hash_sum) in processedBinaries:
-                        continue
+            if len(args) > 0:
+                with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
+                    try:
+                        pool.map(attempt_ctx, args, timeout=int(watchdog) / 1000 + 2)
+                    except futures.TimeoutError:
+                        print("Too long")
+                        pass
 
-                    if '@' in name:
-                        name = name[:name.find("@")]
-
-                    if os.path.splitext(binary)[1] == ".so":
-                        if results.ld is None or not os.path.exists(results.ld):
-                            logger.fatal("Could not find loader at {}".format(results.ld))
-                            exit(1)
-
-                        args.append(
-                            [binary, os.path.abspath(results.pindir),
-                             os.path.abspath(results.tool), hash_sum, loc, name,
-                             processedFile, results.ld])
-                    else:
-                        args.append(
-                            [binary, os.path.abspath(results.pindir),
-                             os.path.abspath(results.tool), hash_sum, loc, name,
-                             processedFile])
-
-                if len(args) > 0:
-                    with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-                        try:
-                            pool.map(attempt_ctx, args, timeout=int(watchdog) / 1000 + 2)
-                        except futures.TimeoutError:
-                            print("Too long")
-                            pass
-
-    pickle.dump(descMap, descFile)
-    processedFile.close()
-    descFile.close()
-    for hash_sum, funcs in descMap.items():
+    save_desc_for_later()
+    for hash_sum, funcs in desc_map.items():
         logger.info("{}: {}".format(hash_sum, funcs))
 
 

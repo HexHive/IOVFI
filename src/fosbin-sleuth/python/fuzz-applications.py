@@ -1,10 +1,9 @@
 #!/usr/bin/python3
 
 import os
-import sys
 import subprocess
 import argparse
-from contexts import binaryutils, FBLogging
+from contexts import binaryutils
 import multiprocessing
 import threading
 from concurrent import futures
@@ -128,12 +127,12 @@ def main():
             except KeyboardInterrupt:
                 exit(0)
 
-        log.info("{} has {} functions".format(results.bin, func_count))
-        log.info("Fuzzable functions: {}".format(success_count))
+        logger.info("{} has {} functions".format(results.bin, func_count))
+        logger.info("Fuzzable functions: {}".format(success_count))
         if failed_count + success_count > 0:
-            log.info("Failed functions: {} ({})".format(failed_count, failed_count / (failed_count + success_count)))
+            logger.info("Failed functions: {} ({})".format(failed_count, failed_count / (failed_count + success_count)))
     else:
-        log.fatal("Could not find any functions to fuzz")
+        logger.fatal("Could not find any functions to fuzz")
 
 
 if __name__ == "__main__":

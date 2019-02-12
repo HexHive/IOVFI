@@ -6,6 +6,7 @@ WORK_DIR = "_work"
 CTX_FILENAME = "tmp.ctx"
 WATCHDOG_TIMEOUT = 5000
 
+
 def find_funcs(binary, target=None):
     target_is_name = True
     if target is not None:
@@ -23,6 +24,8 @@ def find_funcs(binary, target=None):
         if len(toks) > 4 and toks[3] == "FUNC":
             loc = int(toks[1], 16)
             name = toks[-1]
+            if '@' in name:
+                name = name[:name.find("@")]
             if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
                 location_map[loc] = name
     return location_map

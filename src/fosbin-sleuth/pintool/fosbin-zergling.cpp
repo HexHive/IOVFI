@@ -58,6 +58,8 @@ bool fuzzing_started = false;
 uint64_t inputContextPassed, totalInputContextsPassed;
 uint64_t inputContextFailed, totalInputContextsFailed;
 
+THREADID curr_app_thread = INVALID_THREADID;
+
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
     std::cerr << KNOB_BASE::StringKnobSummary() << std::endl;
@@ -504,6 +506,7 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
 
 VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
     std::cout << "Beginning to fuzz" << std::endl;
+    curr_app_thread = tid;
 //    std::stringstream ss;
 //    ss << "Beginning to fuzz";
 //    log_message(ss);
@@ -1131,7 +1134,15 @@ VOID watch_dog(void *arg) {
     UINT32 millis = *(UINT32 *) arg;
     PIN_Sleep(millis);
     log_message("Watchdog tripped");
-    PIN_ExitProcess(1);
+    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
+        EXCEPTION_INFO exception_info;
+        PIN_InitExceptionInfo(&exception_info, EXCEPTCODE_DBG_BREAKPOINT_TRAP, 0);
+        PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
+        PIN_RaiseException(&snapshot, curr_app_thread, &exception_info);
+        /* PIN_RaiseException does not return, at least according to the documentation... */
+    } else {
+        PIN_ExitProcess(1);
+    }
 }
 
 int main(int argc, char **argv) {
@@ -1181,6 +1192,7 @@ int main(int argc, char **argv) {
     IMG_AddInstrumentFunction(ImageLoad, nullptr);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
     PIN_InterceptSignal(SIGSEGV, catchSignal, nullptr);
+    PIN_InterceptSignal(SIGTRAP, catchSignal, nullptr);
     PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
     PIN_StartProgram();
 
