@@ -1,6 +1,7 @@
 #!/usr/bin/python3.7
 
 import os
+import sys
 import argparse
 import pickle
 import threading
@@ -8,7 +9,7 @@ from concurrent import futures
 import multiprocessing
 import signal
 import struct
-from .contexts import IOVec, binaryutils, FBLogging, FunctionDescriptor
+from contexts import IOVec, binaryutils, FBLogging, FunctionDescriptor
 import logging
 
 logger = FBLogging.logger
@@ -35,11 +36,17 @@ loader_loc = None
 
 def add_contexts(context_file):
     global contexts
+
+    context_file = context_file.strip()
     io_vecs = read_contexts(context_file)
-    contexts_lock.acquire()
-    for io_vec in io_vecs:
-        contexts.add(io_vec)
-    contexts_lock.release()
+    # logger.debug("Attempting to get contexts_lock for {}".format(context_file))
+    # contexts_lock.acquire()
+    # logger.debug("{} got contexts_lock".format(context_file))
+    for vec in io_vecs:
+        logger.debug("{} adding IOVec {}".format(context_file, vec))
+        contexts.add(vec)
+    # contexts_lock.release()
+    # logger.debug("{} released contexts_lock")
 
 
 def read_contexts(context_file):
@@ -63,13 +70,14 @@ def read_contexts(context_file):
             logger.error("ValueError")
         except Exception as e:
             logger.error("General Exception: {}".format(e))
-        finally:
-            return results
+
+    logger.debug("{} contained {} valid contexts".format(context_file, len(results)))
+    return results
 
 
 def signal_handler(signal, frame):
     save_desc_for_later()
-    os.exit(signal)
+    sys.exit(signal)
 
 
 def save_desc_for_later():
@@ -97,8 +105,8 @@ def attempt_ctx(args):
     out_contexts = os.path.join(WORK_DIR, "{}.all.ctx".format(name))
     cwd = WORK_DIR
     try:
-        pin_run = binaryutils.fuzz_function(binary, pin_loc, pintool_loc, in_contexts=in_contexts, cwd=cwd,
-                                            out_contexts=out_contexts, loader_loc=loader_loc)
+        pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=in_contexts, cwd=cwd,
+                                            out_contexts=out_contexts, loader_loc=loader_loc, fuzz_count=0)
         if pin_run is not None:
             func_desc = FunctionDescriptor(binary, func_name, target)
             for io_vec in read_contexts(out_contexts):
@@ -142,28 +150,28 @@ def main():
 
     if not os.path.exists(results.contexts):
         logger.fatal("Could not find {}".format(results.contexts))
-        os.exit(1)
+        sys.exit(1)
 
     if not os.path.exists(results.binaries):
         logger.fatal("Could not find {}".format(results.binaries))
-        os.exit(1)
+        sys.exit(1)
 
     global desc_file, desc_map, pin_loc, pintool_loc, loader_loc, contexts, hash_file
     pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
     if not os.path.exists(pin_loc):
         logger.fatal("Could not find {}".format(pin_loc))
-        os.exit(1)
+        sys.exit(1)
 
     pintool_loc = os.path.abspath(results.tool)
     if not os.path.exists(pintool_loc):
         logger.fatal("Could not find {}".format(pintool_loc))
-        os.exit(1)
+        sys.exit(1)
 
     if results.ld is not None:
         loader_loc = os.path.abspath(results.ld)
         if not os.path.exists(loader_loc):
             logger.fatal("Could not find {}".format(loader_loc))
-            os.exit(1)
+            sys.exit(1)
 
     if os.path.exists(results.out):
         desc_file = open(results.out, "rb")
@@ -175,11 +183,16 @@ def main():
     desc_file = open(results.out, "wb")
     hash_file = open(results.map, "wb")
 
-    with open(results.contexts, "r") as contexts:
-        with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-            pool.map(add_contexts, contexts)
+    all_context_files = set()
+    with open(results.contexts, "r") as contexts_file:
+        for context_file in contexts_file:
+            all_context_files.add(context_file.strip())
+
+    with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
+        pool.map(add_contexts, all_context_files)
 
     logger.info("Unique Hashes: {}".format(len(contexts)))
+    sys.exit(0)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -189,8 +202,10 @@ def main():
     ctx_path = os.path.join(WORK_DIR, FIFO_PIPE_NAME)
 
     with open(ctx_path, "wb+") as ctxFile:
+        logger.info("Writting contexts to {}".format(ctxFile))
         for io_vec in contexts:
             io_vec.write_bin(ctxFile)
+        logger.info("done")
 
     with open(results.binaries, "r") as binaries:
         for binary in binaries.readlines():

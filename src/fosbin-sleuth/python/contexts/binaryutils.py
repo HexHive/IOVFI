@@ -48,7 +48,7 @@ def fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=None, cwd=os
         pin_run.log_loc = os.path.abspath(log_loc)
 
     if out_contexts is not None:
-        pin_run.out_contexts = os.path.abspath(os.path.join(cwd, out_contexts))
+        pin_run.out_contexts = out_contexts
     else:
         pin_run.out_contexts = \
             os.path.abspath(os.path.join(cwd, "{}.{}.ctx".format(os.path.basename(binary), target)))

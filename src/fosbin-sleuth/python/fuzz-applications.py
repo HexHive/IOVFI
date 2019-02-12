@@ -35,7 +35,7 @@ def fuzz_one_function(args):
         target = func_name
 
     logger.debug("target = {} func_name = {}".format(target, func_name))
-    out_contexts = "{}.{}.ctx".format(os.path.basename(binary), func_name)
+    out_contexts = os.path.join(work_dir, "{}.{}.ctx".format(os.path.basename(binary), func_name))
 
     try:
         pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, cwd=work_dir, watchdog=watchdog,
