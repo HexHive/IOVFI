@@ -26,6 +26,7 @@ class PinRun:
         self.process_timedout = None
 
     def _check_state(self):
+        logger.debug("Checking state")
         if self.pin_loc is None:
             raise ValueError("pin_loc is None")
         if self.pintool_loc is None:
@@ -34,7 +35,7 @@ class PinRun:
             raise ValueError("binary_loc is None")
         if self.target is None:
             raise ValueError("function is None")
-        if os.path.splitext(self.binary_loc)[1] == ".so" and self.loader_loc is None:
+        if os.path.splitext(self.binary)[1] == ".so" and self.loader_loc is None:
             raise ValueError("loader_loc is None")
 
     def generate_cmd(self):

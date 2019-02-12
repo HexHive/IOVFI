@@ -7,7 +7,7 @@ from contexts import binaryutils
 import multiprocessing
 import threading
 from concurrent import futures
-import contexts.FBLogging.logger as logger
+from contexts.FBLogging import logger
 import logging
 
 fuzz_count = "5"
@@ -27,15 +27,20 @@ loader_loc = None
 
 
 def fuzz_one_function(args):
+    logger.debug("Fuzzing one function")
     global failed_count, success_count, binary, target, pin_loc, pintool_loc, loader_loc
     target = args[0]
     func_name = args[1]
     if os.path.splitext(binary)[1] == ".so":
         target = func_name
 
+    logger.debug("target = {} func_name = {}".format(target, func_name))
+
     try:
         pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, cwd=work_dir, watchdog=watchdog,
-                                            log_loc=os.path.abspath(work_dir, "{}.{}.log".format()),
+                                            log_loc=os.path.abspath(work_dir,
+                                                                    "{}.{}.fuzz.log".format(os.path.basename(binary),
+                                                                                            func_name)),
                                             loader_loc=loader_loc)
 
         if pin_run.returncode != 0:
@@ -52,9 +57,10 @@ def fuzz_one_function(args):
         fail_lock.release()
     except Exception as e:
         fail_lock.acquire()
-        logger.error("Error for {}:{} : {}".format(binary, func_name, e))
+        logger.error("Error for {}.{}: {}".format(os.path.basename(binary), func_name, e))
         failed_count += 1
         fail_lock.release()
+        raise e
     finally:
         logger.info("Finished {}".format(func_name))
 
@@ -68,8 +74,8 @@ def main():
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
     parser.add_argument("-log", help="/path/to/log/file")
-    parser.add_argument("-loglevel", help="Level of output", default=logging.INFO)
-    parser.add_argument("-threads", help="Number of threads to use", default=multiprocessing.cpu_count())
+    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.DEBUG)
+    parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
 
     results = parser.parse_args()
     if os.path.splitext(results.bin)[1] == ".so" and (results.ld is None or results.ld == ""):

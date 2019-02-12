@@ -8,7 +8,7 @@ from concurrent import futures
 import multiprocessing
 import signal
 import struct
-from contexts import IOVec, binaryutils, FBLogging, FunctionDescriptor
+from .contexts import IOVec, binaryutils, FBLogging, FunctionDescriptor
 import logging
 
 logger = FBLogging.logger

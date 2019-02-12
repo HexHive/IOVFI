@@ -5,10 +5,8 @@ import sys
 import argparse
 import pickle
 from sklearn.externals.six import StringIO
-from contexts.FBDecisionTree import FBDecisionTree
-from contexts import binaryutils
-import logging
-from contexts.FBLogging import logger
+from .contexts.FBDecisionTree import FBDecisionTree
+from .contexts.FBLogging import logger
 
 TREE_OUT = "tree.bin"
 
