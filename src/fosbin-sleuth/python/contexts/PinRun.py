@@ -5,7 +5,7 @@ from .FBLogging import logger
 
 class PinRun:
     def __init__(self, pin_loc, pintool_loc, binary_loc, target, loader_loc=None):
-        self.binary = os.path.abspath(binary_loc)
+        self.binary_loc = os.path.abspath(binary_loc)
 
         try:
             self.target = hex(int(target, 16))
@@ -35,7 +35,7 @@ class PinRun:
             raise ValueError("binary_loc is None")
         if self.target is None:
             raise ValueError("function is None")
-        if os.path.splitext(self.binary)[1] == ".so" and self.loader_loc is None:
+        if os.path.splitext(self.binary_loc)[1] == ".so" and self.loader_loc is None:
             raise ValueError("loader_loc is None")
 
     def generate_cmd(self):
@@ -63,17 +63,18 @@ class PinRun:
 
         if os.path.splitext(self.binary_loc)[1] == ".so":
             cmd.append("-shared-func")
+            cmd.append(self.target)
         else:
             cmd.append("-target")
+            cmd.append(hex(self.target))
 
-        cmd.append(self.target)
         cmd.append("--")
 
         if os.path.splitext(self.binary_loc)[1] == ".so":
             cmd.append(self.loader_loc)
-            cmd.append(self.binary)
+            cmd.append(self.binary_loc)
         else:
-            cmd.append(self.binary)
+            cmd.append(self.binary_loc)
 
         return cmd
 

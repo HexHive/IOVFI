@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.7
 
 import os
 import subprocess
@@ -35,15 +35,18 @@ def fuzz_one_function(args):
         target = func_name
 
     logger.debug("target = {} func_name = {}".format(target, func_name))
+    out_contexts = "{}.{}.ctx".format(os.path.basename(binary), func_name)
 
     try:
         pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, cwd=work_dir, watchdog=watchdog,
-                                            log_loc=os.path.abspath(work_dir,
+                                            log_loc=os.path.abspath(os.path.join(work_dir,
                                                                     "{}.{}.fuzz.log".format(os.path.basename(binary),
-                                                                                            func_name)),
-                                            loader_loc=loader_loc)
+                                                                                            func_name))),
+                                            loader_loc=loader_loc,
+                                            out_contexts=out_contexts)
 
-        if pin_run.returncode != 0:
+        if pin_run.returncode != 0 or (os.path.exists(os.path.join(work_dir, out_contexts)) and os.path.getsize(
+                os.path.join(work_dir, out_contexts)) == 0):
             fail_lock.acquire()
             failed_count += 1
             fail_lock.release()
