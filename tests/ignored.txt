@@ -6,3 +6,5 @@ _exit
 _Exit
 pipe_fork
 clone
+__clone
+pause
