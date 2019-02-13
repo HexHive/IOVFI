@@ -27,7 +27,6 @@ loader_loc = None
 
 
 def fuzz_one_function(args):
-    logger.debug("Fuzzing one function")
     global failed_count, success_count, binary, target, pin_loc, pintool_loc, loader_loc
     target = args[0]
     func_name = args[1]
@@ -45,7 +44,8 @@ def fuzz_one_function(args):
                                             loader_loc=loader_loc,
                                             out_contexts=out_contexts)
 
-        if pin_run.returncode != 0 or (os.path.exists(os.path.join(work_dir, out_contexts)) and os.path.getsize(
+        logger.debug("{} pin_run.returncode = {}".format(out_contexts, pin_run.returncode()))
+        if pin_run.returncode() != 0 or (os.path.exists(os.path.join(work_dir, out_contexts)) and os.path.getsize(
                 os.path.join(work_dir, out_contexts)) == 0):
             fail_lock.acquire()
             failed_count += 1
@@ -77,7 +77,7 @@ def main():
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
     parser.add_argument("-log", help="/path/to/log/file")
-    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.DEBUG)
+    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
 
     results = parser.parse_args()
