@@ -1,0 +1,7 @@
+kill
+__kill
+_kill
+exit
+_exit
+_Exit
+pipe_fork
