@@ -156,6 +156,16 @@ def main():
         logger.fatal("Could not find {}".format(results.binaries))
         sys.exit(1)
 
+    if results.ignore is not None and not os.path.exists(results.ignore):
+        logger.fatal("Could not find {}".format(results.ignore))
+        sys.exit(1)
+
+    ignored = set()
+    if results.ignore is not None:
+        with open(results.ignore, "r") as ignored_funcs:
+            for ignored_func in ignored_funcs.readlines():
+                ignored.add(ignored_func.strip())
+
     global desc_file, desc_map, pin_loc, pintool_loc, loader_loc, contexts, hash_file
     pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
     if not os.path.exists(pin_loc):
@@ -211,7 +221,7 @@ def main():
             binary = os.path.abspath(binary.strip())
 
             msg = "Reading function locations for {}...".format(binary)
-            location_map = binaryutils.find_funcs(binary, results.target)
+            location_map = binaryutils.find_funcs(binary, results.target, ignored)
             logger.info(msg + "done")
 
             args = list()
