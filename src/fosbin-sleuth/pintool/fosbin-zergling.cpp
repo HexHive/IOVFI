@@ -718,22 +718,36 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
     return true;
 }
 
-BOOL catchSignal(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
+BOOL catchOtherFault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo,
+                     VOID *v) {
+    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
+        inputContextFailed++;
+        totalInputContextsFailed++;
+
+        reset_context(ctx);
+        currentContext = preContext;
+        log_message("Input context failed...trying a new one");
+        currentContext >> ctx;
+
+        return false;
+    }
+
+    return true;
+}
+
+BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
 //    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
 //    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
 //    displayCurrentContext(ctx);
 //    currentContext.prettyPrint();
     if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
-        inputContextFailed++;
-        totalInputContextsFailed++;
-//        fuzz_count--;
-//        if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
-//            orig_fuzz_count--;
-//        }
-        reset_context(ctx);
-        currentContext = preContext;
-        log_message("Input context failed...trying a new one");
-        goto finish;
+//        inputContextFailed++;
+//        totalInputContextsFailed++;
+//        reset_context(ctx);
+//        currentContext = preContext;
+//        log_message("Input context failed...trying a new one");
+//        goto finish;
+        return catchOtherFault(tid, sig, ctx, hasHandler, pExceptInfo, v);
     }
 
     if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
@@ -1200,9 +1214,15 @@ int main(int argc, char **argv) {
     log_message(ss);
     IMG_AddInstrumentFunction(ImageLoad, nullptr);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
-    PIN_InterceptSignal(SIGSEGV, catchSignal, nullptr);
-    PIN_InterceptSignal(SIGTRAP, catchSignal, nullptr);
-//    PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
+
+    /* Catch segfaults for pointer taint analysis */
+    PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
+
+    /* Catch everything else */
+    PIN_InterceptSignal(SIGTRAP, catchOtherFault, nullptr);
+    PIN_InterceptSignal(SIGILL, catchOtherFault, nullptr);
+    PIN_InterceptSignal(SIGFPE, catchOtherFault, nullptr);
+    PIN_InterceptSignal(SIGBUS, catchOtherFault, nullptr);
     PIN_StartProgram();
 
     return 0;
