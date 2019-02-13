@@ -504,11 +504,10 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
 }
 
 VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
-    std::cout << "Beginning to fuzz" << std::endl;
+    std::stringstream ss;
+    ss << "Beginning to fuzz thread " << tid << std::endl;
     curr_app_thread = tid;
-//    std::stringstream ss;
-//    ss << "Beginning to fuzz";
-//    log_message(ss);
+    log_message(ss);
     fuzzing_started = true;
     PIN_SaveContext(ctx, &snapshot);
     for (REG reg : FBZergContext::argument_regs) {
