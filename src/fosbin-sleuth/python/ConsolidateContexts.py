@@ -99,7 +99,10 @@ def attempt_ctx(args):
     name = "{}.{}".format(os.path.basename(binary), target)
     in_contexts = os.path.join(WORK_DIR, FIFO_PIPE_NAME)
     out_contexts = os.path.join(WORK_DIR, "{}.all.ctx".format(name))
-    cwd = WORK_DIR
+    cwd = os.path.abspath("combined-contexts")
+    if not os.path.exists(cwd):
+        os.mkdir(cwd)
+
     try:
         pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=in_contexts, cwd=cwd,
                                             out_contexts=out_contexts, loader_loc=loader_loc, fuzz_count=0)
@@ -219,7 +222,7 @@ def main():
                     attempt_ctx(arg)
                 # with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
                 #     try:
-                #         pool.map(attempt_ctx, args, timeout=int(watchdog) / 1000 + 2)
+                #         pool.map(attempt_ctx, args)
                 #     except futures.TimeoutError:
                 #         print("Too long")
                 #         pass

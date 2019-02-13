@@ -5,7 +5,7 @@ from .FBLogging import logger
 
 WORK_DIR = "_work"
 CTX_FILENAME = "tmp.ctx"
-WATCHDOG_TIMEOUT = 5000
+WATCHDOG_TIMEOUT = 1000 * 60
 
 
 def find_funcs(binary, target=None):
@@ -33,7 +33,7 @@ def find_funcs(binary, target=None):
 
 
 def fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=None, cwd=os.getcwd(), fuzz_count=None,
-                  out_contexts=None, watchdog=WATCHDOG_TIMEOUT, log_loc=None, loader_loc=None):
+                  out_contexts=None, watchdog=None, log_loc=None, loader_loc=None):
     logger.debug("Fuzzing binary {}".format(binary))
     pin_run = PinRun(pin_loc, pintool_loc, binary, target, loader_loc)
     pin_run.watchdog = watchdog
