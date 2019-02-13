@@ -1158,6 +1158,7 @@ int main(int argc, char **argv) {
     }
 
     if (OnlyOutputContexts.Value()) {
+        UINT32 total_input_contexts = 0;
         for (size_t i = 0; i < ContextsToUse.NumberOfValues(); i++) {
             contextFile.open(ContextsToUse.Value(i).c_str(), ios::in | ios::binary);
             if (!contextFile) {
@@ -1167,9 +1168,11 @@ int main(int argc, char **argv) {
             std::cout << "Contexts in " << ContextsToUse.Value(i) << ":" << std::endl;
             while (contextFile.peek() != EOF) {
                 output_context(contextFile);
+                total_input_contexts++;
             }
             contextFile.close();
         }
+        std::cout << "Total input contexts: " << std::dec << total_input_contexts << std::endl;
         exit(0);
     }
 
