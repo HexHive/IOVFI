@@ -80,10 +80,10 @@ class PinRun:
     def execute_cmd(self, cwd=os.getcwd(), capture_out=False):
         self._check_state()
         cmd = self.generate_cmd()
+        timeout = None
         if self.watchdog is not None:
             timeout = int(self.watchdog) / 1000 + 1
-        else:
-            timeout = 0
+
         logger.info("Running {}".format(" ".join(cmd)))
 
         try:
