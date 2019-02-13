@@ -43,7 +43,6 @@ def add_contexts(context_file):
     # contexts_lock.acquire()
     # logger.debug("{} got contexts_lock".format(context_file))
     for vec in io_vecs:
-        logger.debug("{} adding IOVec {}".format(context_file, vec))
         contexts.add(vec)
     # contexts_lock.release()
     # logger.debug("{} released contexts_lock")
@@ -71,7 +70,6 @@ def read_contexts(context_file):
         except Exception as e:
             logger.error("General Exception: {}".format(e))
 
-    logger.debug("{} contained {} valid contexts".format(context_file, len(results)))
     return results
 
 
@@ -192,7 +190,6 @@ def main():
         pool.map(add_contexts, all_context_files)
 
     logger.info("Unique Hashes: {}".format(len(contexts)))
-    sys.exit(0)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)

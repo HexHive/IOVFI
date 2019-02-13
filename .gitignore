@@ -1,3 +1,5 @@
+**/__pycache__/
+
 src/pin/
 .clion.source.upload.marker
 tests/taint-analysis/submembers
@@ -12,6 +14,7 @@ cmake-build-*/
 
 tests/build/
 tests/desc/
+tests/eval
 
 # Prerequisites
 *.d

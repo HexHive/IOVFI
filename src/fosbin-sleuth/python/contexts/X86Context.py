@@ -1,12 +1,12 @@
 import hashlib
 import struct
+import sys
 from .AllocatedArea import AllocatedArea, AllocatedAreaMagic
 from .FBLogging import logger
 
 
 class X86Context:
     def __init__(self, file):
-        logger.debug("X86Context __init__ called")
         self.register_values = list()
         for i in range(0, 7):
             reg_val = struct.unpack_from('Q', file.read(8))[0]
@@ -18,24 +18,17 @@ class X86Context:
                 self.allocated_areas.append(AllocatedArea(file))
 
     def hash(self):
-        logger.debug("X86Context hash called")
         md5sum = hashlib.md5()
-        logger.debug("x86Context hash 1")
         for reg in self.register_values:
-            logger.debug("x86Context hash 2")
             md5sum.update(reg.to_bytes(8, sys.byteorder))
         for subarea in self.allocated_areas:
-            logger.debug("x86Context hash 3")
-            md5sum.update(hash(subarea))
-
-        logger.debug("x86Context hash 4")
+            sub_hash = hash(subarea)
+            md5sum.update(str(sub_hash).encode("utf-8"))
 
         result = hash(md5sum)
-        logger.debug("X86Context returned {}".format(result))
         return result
 
     def __hash__(self):
-        logger.debug("X86Context __hash__ called")
         return self.hash()
 
     def write_bin(self, file):

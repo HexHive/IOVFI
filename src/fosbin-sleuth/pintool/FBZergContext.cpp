@@ -101,13 +101,13 @@ bool FBZergContext::operator==(const FBZergContext &ctx) const {
           (get_value(FBZergContext::return_reg) < 0 && ctx.get_value(FBZergContext::return_reg) < 0) ||
           (get_value(FBZergContext::return_reg) > 0 && ctx.get_value(FBZergContext::return_reg) > 0)
     )) {
-        log_message("Contexts return values mismatch:");
+//        log_message("Contexts return values mismatch:");
 //        std::cout << "This " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << get_value(FBZergContext::return_reg) << std::endl;
 //        std::cout << "That " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << ctx.get_value(FBZergContext::return_reg) << std::endl;
-        log_message("This context:");
-        prettyPrint();
-        log_message("That context:");
-        ctx.prettyPrint();
+//        log_message("This context:");
+//        prettyPrint();
+//        log_message("That context:");
+//        ctx.prettyPrint();
 
         return false;
     }

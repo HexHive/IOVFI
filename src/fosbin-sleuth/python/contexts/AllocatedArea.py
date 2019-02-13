@@ -9,7 +9,6 @@ AllocatedAreaMagic = 0xA110CA3D
 class AllocatedArea:
 
     def __init__(self, file):
-        logger.debug("AllocatedArea __init__ called")
         self.size = struct.unpack_from("Q", file.read(8))[0]
         if self.size > 1024:
             raise ValueError("{} ({})".format(self.size, hex(self.size)))
@@ -36,21 +35,20 @@ class AllocatedArea:
                 self.subareas.append(AllocatedArea(file))
 
     def __hash__(self):
-        logger.debug("AllocatedArea __hash__ called")
         return self.hash()
 
     def hash(self):
-        logger.debug("AllocatedArea hash called")
         i = 0
         curr_subarea = 0
         hash_sum = hashlib.md5()
         while i < self.size:
             if self.mem_map[i]:
-                hash_sum.update(hash(self.subareas[curr_subarea]))
+                sub_hash = hash(self.subareas[curr_subarea])
+                hash_sum.update(str(sub_hash).encode("utf-8"))
                 curr_subarea += 1
                 i += 8
             else:
-                hash_sum.update(self.data[i].to_bytes(1, sys.byteorder, signed=False))
+                hash_sum.update(struct.pack("B", self.data[i]))
                 i += 1
 
         return hash(hash_sum)
