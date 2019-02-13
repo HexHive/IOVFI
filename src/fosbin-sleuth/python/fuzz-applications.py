@@ -45,7 +45,7 @@ def fuzz_one_function(args):
                                             out_contexts=out_contexts)
 
         logger.debug("{} pin_run.returncode = {}".format(out_contexts, pin_run.returncode()))
-        if pin_run.returncode() != 0 and (os.path.exists(os.path.join(work_dir, out_contexts)) and os.path.getsize(
+        if pin_run.returncode() != 0 or (os.path.exists(os.path.join(work_dir, out_contexts)) and os.path.getsize(
                 os.path.join(work_dir, out_contexts)) == 0):
             fail_lock.acquire()
             failed_count += 1
