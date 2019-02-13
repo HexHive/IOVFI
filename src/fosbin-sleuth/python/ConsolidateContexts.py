@@ -9,7 +9,8 @@ from concurrent import futures
 import multiprocessing
 import signal
 import struct
-from contexts import IOVec, binaryutils, FBLogging, FunctionDescriptor
+from contexts import IOVec, binaryutils, FBLogging
+from contexts import FunctionDescriptor as FD
 import logging
 
 logger = FBLogging.logger
@@ -39,13 +40,10 @@ def add_contexts(context_file):
 
     context_file = context_file.strip()
     io_vecs = read_contexts(context_file)
-    # logger.debug("Attempting to get contexts_lock for {}".format(context_file))
-    # contexts_lock.acquire()
-    # logger.debug("{} got contexts_lock".format(context_file))
+    contexts_lock.acquire()
     for vec in io_vecs:
         contexts.add(vec)
-    # contexts_lock.release()
-    # logger.debug("{} released contexts_lock")
+    contexts_lock.release()
 
 
 def read_contexts(context_file):
@@ -106,7 +104,7 @@ def attempt_ctx(args):
         pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=in_contexts, cwd=cwd,
                                             out_contexts=out_contexts, loader_loc=loader_loc, fuzz_count=0)
         if pin_run is not None:
-            func_desc = FunctionDescriptor(binary, func_name, target)
+            func_desc = FD.FunctionDescriptor(binary, func_name, target)
             for io_vec in read_contexts(out_contexts):
                 hash_sum = io_vec.hash()
                 desc_lock.acquire()
