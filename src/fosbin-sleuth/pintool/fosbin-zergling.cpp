@@ -1137,6 +1137,9 @@ VOID watch_dog(void *arg) {
         EXCEPTION_INFO exception_info;
         PIN_InitExceptionInfo(&exception_info, EXCEPTCODE_DBG_BREAKPOINT_TRAP, 0);
         PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
+        std::stringstream msg;
+        msg << "Sending signal to " << curr_app_thread << std::endl;
+        log_message(msg);
         PIN_RaiseException(&snapshot, curr_app_thread, &exception_info);
         /* PIN_RaiseException does not return, at least according to the documentation... */
     } else {
