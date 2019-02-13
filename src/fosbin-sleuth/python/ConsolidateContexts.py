@@ -240,7 +240,10 @@ def main():
 
     save_desc_for_later()
     for hash_sum, funcs in desc_map.items():
-        logger.info("{}: {}".format(hash_sum, funcs))
+        func_str = ""
+        for func in funcs:
+            func_str += str(func) + " "
+        logger.info("{}: {}".format(hash_sum, func_str))
 
 
 if __name__ == "__main__":
