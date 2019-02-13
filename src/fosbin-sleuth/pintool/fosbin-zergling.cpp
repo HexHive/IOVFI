@@ -1131,12 +1131,13 @@ void initialize_system(int argc, char **argv) {
 VOID watch_dog(void *arg) {
     UINT32 millis = *(UINT32 *) arg;
     PIN_Sleep(millis);
-    log_message("Watchdog tripped");
+    std::stringstream msg;
+    msg << "Watchdog tripped after " << millis << " ms" << std::endl;
+    log_message(msg);
     if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
         EXCEPTION_INFO exception_info;
         PIN_InitExceptionInfo(&exception_info, EXCEPTCODE_DBG_BREAKPOINT_TRAP, 0);
         PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
-        std::stringstream msg;
         msg << "Sending signal to " << curr_app_thread << std::endl;
         log_message(msg);
         PIN_RaiseException(&snapshot, curr_app_thread, &exception_info);
