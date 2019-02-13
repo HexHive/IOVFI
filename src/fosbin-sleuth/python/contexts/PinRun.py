@@ -24,6 +24,7 @@ class PinRun:
         self.log_loc = None
         self.completed_proc = None
         self.process_timedout = None
+        self.total_time = None
 
     def _check_state(self):
         if self.pin_loc is None:
@@ -80,14 +81,11 @@ class PinRun:
     def execute_cmd(self, cwd=os.getcwd(), capture_out=False):
         self._check_state()
         cmd = self.generate_cmd()
-        timeout = None
-        if self.watchdog is not None:
-            timeout = int(self.watchdog) / 1000 + 1
 
         logger.info("Running {}".format(" ".join(cmd)))
 
         try:
-            self.completed_proc = subprocess.run(cmd, timeout=timeout, cwd=os.path.abspath(cwd),
+            self.completed_proc = subprocess.run(cmd, timeout=self.total_time, cwd=os.path.abspath(cwd),
                                                  capture_output=capture_out)
             self.process_timedout = False
         except subprocess.TimeoutExpired as e:

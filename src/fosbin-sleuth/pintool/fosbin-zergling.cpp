@@ -124,7 +124,6 @@ INS INS_FindByAddress(ADDRINT addr) {
 }
 
 VOID read_new_context() {
-
     if (contextFile && contextFile.is_open() && contextFile.peek() == EOF) {
 //        std::cout << "Closing contextFile" << std::endl;
         contextFile.close();
@@ -403,7 +402,7 @@ VOID start_fuzz_round(CONTEXT *ctx) {
 //    currentContext.prettyPrint();
 //    displayCurrentContext(ctx);
     std::stringstream ss;
-    ss << "Starting round " << std::dec << (fuzz_count + 1) << std::endl;
+    ss << "Starting round " << std::dec << (++fuzz_count) << std::endl;
     log_message(ss);
     PIN_ExecuteAt(ctx);
 }
@@ -497,7 +496,7 @@ VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
         }
     }
 
-    fuzz_count++;
+//    fuzz_count++;
     if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
         orig_fuzz_count++;
     }

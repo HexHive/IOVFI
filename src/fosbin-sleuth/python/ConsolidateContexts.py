@@ -17,7 +17,8 @@ logger = FBLogging.logger
 
 FIFO_PIPE_NAME = "fifo-pipe"
 WORK_DIR = "_work"
-watchdog = str(5 * 1000)
+watchdog = 100
+total_time = None
 
 desc_map = dict()
 desc_file = None
@@ -92,7 +93,7 @@ def save_desc_for_later():
 
 
 def attempt_ctx(args):
-    global pin_loc, pintool_loc, loader_loc, desc_map, hash_map
+    global pin_loc, pintool_loc, loader_loc, desc_map, hash_map, watchdog, total_time
     binary = args[0]
     target = args[1]
     func_name = args[2]
@@ -106,7 +107,7 @@ def attempt_ctx(args):
     try:
         pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=in_contexts, cwd=cwd,
                                             out_contexts=out_contexts, loader_loc=loader_loc, fuzz_count=0,
-                                            watchdog=60 * 1000)
+                                            watchdog=watchdog, total_time=total_time)
         if pin_run is not None:
             func_desc = FD.FunctionDescriptor(binary, func_name, target)
             for io_vec in read_contexts(out_contexts):
@@ -142,6 +143,8 @@ def main():
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
+    parser.add_argument("-timeout", help="Number of ms to wait for each context to finish completing", type=int,
+                        default=watchdog)
 
     results = parser.parse_args()
     logger.setLevel(results.loglevel)
@@ -166,7 +169,9 @@ def main():
             for ignored_func in ignored_funcs.readlines():
                 ignored.add(ignored_func.strip())
 
-    global desc_file, desc_map, pin_loc, pintool_loc, loader_loc, contexts, hash_file
+    global desc_file, desc_map, pin_loc, pintool_loc, loader_loc, contexts, hash_file, watchdog, total_time
+    watchdog = results.timeout
+
     pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
     if not os.path.exists(pin_loc):
         logger.fatal("Could not find {}".format(pin_loc))
@@ -202,6 +207,8 @@ def main():
         pool.map(add_contexts, all_context_files)
 
     logger.info("Unique Hashes: {}".format(len(contexts)))
+    # Add a second for initialization and other things
+    total_time = len(contexts) * watchdog / 1000 + 1
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
