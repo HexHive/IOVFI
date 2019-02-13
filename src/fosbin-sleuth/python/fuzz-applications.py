@@ -38,6 +38,7 @@ def fuzz_one_function(args):
 
     try:
         pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, cwd=work_dir, watchdog=watchdog,
+                                            total_time=watchdog / 1000 + 1,
                                             log_loc=os.path.abspath(os.path.join(work_dir,
                                                                     "{}.{}.fuzz.log".format(os.path.basename(binary),
                                                                                             func_name))),
