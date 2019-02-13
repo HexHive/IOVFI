@@ -130,6 +130,8 @@ def attempt_ctx(args):
 
 
 def main():
+    global desc_file, desc_map, pin_loc, pintool_loc, loader_loc, contexts, hash_file, watchdog, total_time
+
     parser = argparse.ArgumentParser(description="Consolidate")
     parser.add_argument("-b", "--binaries", help="File containing paths to binaries to test", required=True)
     parser.add_argument('-o', '--out', help="Output of which contexts execute with which functions", default="out.desc")
@@ -169,7 +171,6 @@ def main():
             for ignored_func in ignored_funcs.readlines():
                 ignored.add(ignored_func.strip())
 
-    global desc_file, desc_map, pin_loc, pintool_loc, loader_loc, contexts, hash_file, watchdog, total_time
     watchdog = results.timeout
 
     pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
