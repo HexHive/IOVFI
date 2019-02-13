@@ -26,7 +26,6 @@ class PinRun:
         self.process_timedout = None
 
     def _check_state(self):
-        logger.debug("Checking state")
         if self.pin_loc is None:
             raise ValueError("pin_loc is None")
         if self.pintool_loc is None:

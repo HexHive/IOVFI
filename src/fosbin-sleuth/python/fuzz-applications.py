@@ -45,20 +45,24 @@ def fuzz_one_function(args):
                                             out_contexts=out_contexts)
 
         logger.debug("{} pin_run.returncode = {}".format(out_contexts, pin_run.returncode()))
-        if pin_run.returncode() != 0 or (os.path.exists(os.path.join(work_dir, out_contexts)) and os.path.getsize(
+        if pin_run.returncode() != 0 and (os.path.exists(os.path.join(work_dir, out_contexts)) and os.path.getsize(
                 os.path.join(work_dir, out_contexts)) == 0):
+            logger.debug("{} failed".format(out_contexts))
             fail_lock.acquire()
             failed_count += 1
             fail_lock.release()
         else:
+            logger.debug("{} succeeded".format(out_contexts))
             success_lock.acquire()
             success_count += 1
             success_lock.release()
     except subprocess.TimeoutExpired:
+        logger.debug("{} failed".format(out_contexts))
         fail_lock.acquire()
         failed_count += 1
         fail_lock.release()
     except Exception as e:
+        logger.debug("{} failed".format(out_contexts))
         fail_lock.acquire()
         logger.error("Error for {}.{}: {}".format(os.path.basename(binary), func_name, e))
         failed_count += 1

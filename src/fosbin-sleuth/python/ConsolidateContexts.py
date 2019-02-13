@@ -217,12 +217,14 @@ def main():
                 args.append([binary, loc, name])
 
             if len(args) > 0:
-                with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-                    try:
-                        pool.map(attempt_ctx, args, timeout=int(watchdog) / 1000 + 2)
-                    except futures.TimeoutError:
-                        print("Too long")
-                        pass
+                for arg in args:
+                    attempt_ctx(arg)
+                # with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
+                #     try:
+                #         pool.map(attempt_ctx, args, timeout=int(watchdog) / 1000 + 2)
+                #     except futures.TimeoutError:
+                #         print("Too long")
+                #         pass
 
     save_desc_for_later()
     for hash_sum, funcs in desc_map.items():
