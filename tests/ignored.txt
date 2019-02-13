@@ -5,3 +5,4 @@ exit
 _exit
 _Exit
 pipe_fork
+clone
