@@ -219,8 +219,8 @@ bool AllocatedArea::operator!=(const AllocatedArea &other) const {
 bool AllocatedArea::operator==(const AllocatedArea &other) const {
     std::stringstream ss;
     if (mem_map != other.mem_map) {
-        ss << "Memory Maps are not the same" << std::endl;
-        log_message(ss);
+//        ss << "Memory Maps are not the same" << std::endl;
+//        log_message(ss);
         return false;
     }
 
@@ -229,29 +229,29 @@ bool AllocatedArea::operator==(const AllocatedArea &other) const {
     for (size_t i = 0; i < mem_map.size(); i++) {
         if (!mem_map[i]) {
             if (this_addr[i] != that_addr[i]) {
-                ss << "AllocatedArea bytes are not the same" << std::endl;
-                ss << "This byte " << std::dec << i << " = " << std::hex << ((int) this_addr[i] & 0xff)
-                          << std::endl;
-                ss << "That byte " << std::dec << i << " = " << std::hex << ((int) that_addr[i] & 0xff)
-                   << std::endl;
-                log_message(ss);
+//                ss << "AllocatedArea bytes are not the same" << std::endl;
+//                ss << "This byte " << std::dec << i << " = " << std::hex << ((int) this_addr[i] & 0xff)
+//                          << std::endl;
+//                ss << "That byte " << std::dec << i << " = " << std::hex << ((int) that_addr[i] & 0xff)
+//                   << std::endl;
+//                log_message(ss);
                 return false;
             }
         }
     }
 
     if (subareas.size() != other.subareas.size()) {
-        ss << "subarea sizes are not the same";
-        log_message(ss);
+//        ss << "subarea sizes are not the same";
+//        log_message(ss);
         return false;
     }
 
     for (size_t i = 0; i < subareas.size(); i++) {
         if (*subareas[i] != *other.get_subarea(i)) {
-            ss << "Subareas are not the same" << std::endl;
-            ss << "this size() = " << std::dec << subareas.size() << std::endl;
-            ss << "that size() = " << std::dec << other.subareas.size() << std::endl;
-            log_message(ss);
+//            ss << "Subareas are not the same" << std::endl;
+//            ss << "this size() = " << std::dec << subareas.size() << std::endl;
+//            ss << "that size() = " << std::dec << other.subareas.size() << std::endl;
+//            log_message(ss);
             return false;
         }
     }
