@@ -105,7 +105,8 @@ def attempt_ctx(args):
 
     try:
         pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=in_contexts, cwd=cwd,
-                                            out_contexts=out_contexts, loader_loc=loader_loc, fuzz_count=0)
+                                            out_contexts=out_contexts, loader_loc=loader_loc, fuzz_count=0,
+                                            watchdog=60 * 1000)
         if pin_run is not None:
             func_desc = FD.FunctionDescriptor(binary, func_name, target)
             for io_vec in read_contexts(out_contexts):
@@ -218,14 +219,14 @@ def main():
                 args.append([binary, loc, name])
 
             if len(args) > 0:
-                for arg in args:
-                    attempt_ctx(arg)
-                # with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-                #     try:
-                #         pool.map(attempt_ctx, args)
-                #     except futures.TimeoutError:
-                #         print("Too long")
-                #         pass
+                # for arg in args:
+                #     attempt_ctx(arg)
+                with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
+                    try:
+                        pool.map(attempt_ctx, args)
+                    except futures.TimeoutError:
+                        print("Too long")
+                        pass
 
     save_desc_for_later()
     for hash_sum, funcs in desc_map.items():
