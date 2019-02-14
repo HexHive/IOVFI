@@ -82,10 +82,20 @@ class PinRun:
         self._check_state()
         cmd = self.generate_cmd()
 
-        logger.info("Running {}".format(" ".join(cmd)))
+        full_cmd = list()
+        if self.total_time is not None:
+            full_cmd.append("timeout")
+            full_cmd.append("-k")
+            full_cmd.append("1")
+            full_cmd.append(str(self.total_time - 2))
+
+        for cmd_token in cmd:
+            full_cmd.append(cmd_token)
+
+        logger.info("Running {}".format(" ".join(full_cmd)))
 
         try:
-            self.completed_proc = subprocess.run(cmd, timeout=self.total_time, cwd=os.path.abspath(cwd),
+            self.completed_proc = subprocess.run(full_cmd, timeout=self.total_time, cwd=os.path.abspath(cwd),
                                                  capture_output=capture_out)
             self.process_timedout = False
         except subprocess.TimeoutExpired as e:
