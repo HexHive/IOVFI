@@ -175,4 +175,7 @@ void output_context(std::istream &in);
 #include "FBZergContext.cpp"
 #include "ContextReader.cpp"
 
+#include "ZergCommand.h"
+#include "ZergCommandServer.h"
+
 #endif //FOSBIN_FOSBIN_ZERGLING_H

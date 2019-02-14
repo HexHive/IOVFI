@@ -8,6 +8,10 @@ set(PINTOOL_SOURCES
         AllocatedArea.cpp
         FBZergContext.cpp
         ContextReader.cpp
+        ZergCommandServer.cpp
+        ZergCommandServer.h
+        ZergCommand.h
+        ZergCommand.cpp
         makefile.rules.in
         makefile.in
         )

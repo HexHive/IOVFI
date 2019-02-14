@@ -17,20 +17,20 @@
 CONTEXT snapshot;
 //CONTEXT preexecution;
 
-KNOB <ADDRINT> KnobStart(KNOB_MODE_WRITEONCE, "pintool", "target", "0", "The target address of the fuzzing target");
-KNOB <uint32_t> FuzzCount(KNOB_MODE_WRITEONCE, "pintool", "fuzz-count", "4", "The number of times to fuzz a target");
-KNOB <uint32_t> FuzzTime(KNOB_MODE_WRITEONCE, "pintool", "fuzz-time", "0",
-                         "The number of minutes to fuzz. Ignores fuzz-count if greater than 0.");
+//KNOB <ADDRINT> KnobStart(KNOB_MODE_WRITEONCE, "pintool", "target", "0", "The target address of the fuzzing target");
+//KNOB <uint32_t> FuzzCount(KNOB_MODE_WRITEONCE, "pintool", "fuzz-count", "4", "The number of times to fuzz a target");
+//KNOB <uint32_t> FuzzTime(KNOB_MODE_WRITEONCE, "pintool", "fuzz-time", "0",
+//                         "The number of minutes to fuzz. Ignores fuzz-count if greater than 0.");
 KNOB <uint64_t> MaxInstructions(KNOB_MODE_WRITEONCE, "pintool", "ins", "1000000",
                                 "The max number of instructions to run per fuzzing round");
-KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.log",
-                               "The name of the file to write "
-                               "logging output");
-KNOB <std::string> ContextsToUse(KNOB_MODE_APPEND, "pintool", "contexts", "", "Contexts to use for fuzzing");
-KNOB <uint32_t> HardFuzzCount(KNOB_MODE_WRITEONCE, "pintool", "hard-limit", "0",
-                              "The most fuzzing rounds regardless of time or segfaults. For debug purposes.");
-KNOB <std::string> SharedLibraryFunc(KNOB_MODE_WRITEONCE, "pintool", "shared-func", "",
-                                     "Shared library function to fuzz.");
+//KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.log",
+//                               "The name of the file to write "
+//                               "logging output");
+//KNOB <std::string> ContextsToUse(KNOB_MODE_APPEND, "pintool", "contexts", "", "Contexts to use for fuzzing");
+//KNOB <uint32_t> HardFuzzCount(KNOB_MODE_WRITEONCE, "pintool", "hard-limit", "0",
+//                              "The most fuzzing rounds regardless of time or segfaults. For debug purposes.");
+//KNOB <std::string> SharedLibraryFunc(KNOB_MODE_WRITEONCE, "pintool", "shared-func", "",
+//                                     "Shared library function to fuzz.");
 KNOB <uint32_t> PrintToScreen(KNOB_MODE_WRITEONCE, "pintool", "print", "1",
                               "Print log messages to screen along with file");
 KNOB <uint32_t> WatchDogTimeout(KNOB_MODE_WRITEONCE, "pintool", "watchdog", "20000", "Watchdog timeout in "
@@ -38,6 +38,9 @@ KNOB <uint32_t> WatchDogTimeout(KNOB_MODE_WRITEONCE, "pintool", "watchdog", "200
 KNOB<bool> OnlyOutputContexts(KNOB_MODE_WRITEONCE, "pintool", "only-output", "false", "Only output contexts and exit");
 KNOB <std::string> KnobContextOutFile(KNOB_MODE_WRITEONCE, "pintool", "ctx-out", "",
                                       "Filename of which to output accepted contexts");
+KNOB <std::string> KnobInPipe(KNOB_MODE_WRITEONCE, "pintool", "in-pipe", "", "Filename of in pipe");
+KNOB <std::string> KnobOutPipe(KNOB_MODE_WRITEONCE, "pintool", "out-pipe", "", "Filename of out pipe");
+
 
 RTN target;
 uint32_t fuzz_count, orig_fuzz_count, curr_context_file_num, hard_count;
@@ -60,13 +63,15 @@ uint64_t inputContextFailed, totalInputContextsFailed;
 
 THREADID curr_app_thread = INVALID_THREADID;
 
+ZergCommandServer *cmd_server;
+
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
     std::cerr << KNOB_BASE::StringKnobSummary() << std::endl;
     return -1;
 }
 
-inline BOOL timed_fuzz() { return FuzzTime.Value() > 0; }
+//inline BOOL timed_fuzz() { return FuzzTime.Value() > 0; }
 
 VOID log_message(std::stringstream &message) {
     if (message.str().empty()) {
@@ -103,27 +108,27 @@ VOID log_error(const char *message) {
     log_error(ss);
 }
 
-VOID watch_dog(void *arg) {
-    UINT32 millis = *(UINT32 *) arg;
-    UINT32 curr_fuzz_count = fuzz_count;
-    PIN_Sleep(millis);
-    std::stringstream msg;
-    msg << "Watchdog tripped after " << millis << " ms" << std::endl;
-    log_message(msg);
-    if (curr_fuzz_count == fuzz_count) {
-        if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
-            EXCEPTION_INFO exception_info;
-            PIN_InitExceptionInfo(&exception_info, EXCEPTCODE_DBG_BREAKPOINT_TRAP, 0);
-//            PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
-            msg << "Sending signal to " << curr_app_thread << std::endl;
-            log_message(msg);
-            PIN_RaiseException(&snapshot, curr_app_thread, &exception_info);
-            /* PIN_RaiseException does not return, at least according to the documentation... */
-        } else {
-            PIN_ExitProcess(1);
-        }
-    }
-}
+//VOID watch_dog(void *arg) {
+//    UINT32 millis = *(UINT32 *) arg;
+//    UINT32 curr_fuzz_count = fuzz_count;
+//    PIN_Sleep(millis);
+//    std::stringstream msg;
+//    msg << "Watchdog tripped after " << millis << " ms" << std::endl;
+//    log_message(msg);
+//    if (curr_fuzz_count == fuzz_count) {
+//        if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
+//            EXCEPTION_INFO exception_info;
+//            PIN_InitExceptionInfo(&exception_info, EXCEPTCODE_DBG_BREAKPOINT_TRAP, 0);
+////            PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
+//            msg << "Sending signal to " << curr_app_thread << std::endl;
+//            log_message(msg);
+//            PIN_RaiseException(&snapshot, curr_app_thread, &exception_info);
+//            /* PIN_RaiseException does not return, at least according to the documentation... */
+//        } else {
+//            PIN_ExitProcess(1);
+//        }
+//    }
+//}
 
 INS INS_FindByAddress(ADDRINT addr) {
     PIN_LockClient();
@@ -145,93 +150,93 @@ INS INS_FindByAddress(ADDRINT addr) {
     return ret;
 }
 
-VOID read_new_context() {
-    if (contextFile && contextFile.is_open() && contextFile.peek() == EOF) {
-//        std::cout << "Closing contextFile" << std::endl;
-        contextFile.close();
-//        std::cout << "contextFile closed" << std::endl;
-        curr_context_file_num++;
-    }
+//VOID read_new_context() {
+//    if (contextFile && contextFile.is_open() && contextFile.peek() == EOF) {
+////        std::cout << "Closing contextFile" << std::endl;
+//        contextFile.close();
+////        std::cout << "contextFile closed" << std::endl;
+//        curr_context_file_num++;
+//    }
+//
+//    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
+//        if (FuzzCount.Value() == 0 && totalInputContextsFailed > 0) {
+//            log_message("Context Test Failed");
+//            PIN_ExitApplication(1);
+//        } else if (FuzzCount.Value() == 0 && totalInputContextsFailed == 0) {
+//            log_message("Context Test Success");
+//            PIN_ExitApplication(0);
+//        }
+//        return;
+//    }
+//
+////    std::cout << "Reading new context" << std::endl;
+//    if ((!contextFile || !contextFile.is_open()) && curr_context_file_num < ContextsToUse.NumberOfValues()) {
+//        std::stringstream ss;
+//        ss << "Opening " << ContextsToUse.Value(curr_context_file_num);
+//        log_message(ss);
+//        contextFile.open(ContextsToUse.Value(curr_context_file_num).c_str(), ios::in | ios::binary);
+//        inputContextFailed = 0;
+//        inputContextPassed = 0;
+//    }
+//
+//    contextFile >> preContext;
+////    log_message("preContext:");
+////    preContext.prettyPrint();
+////    std::cout << "Read precontext" << std::endl;
+//    contextFile >> expectedContext;
+////    log_message("expectedContext:");
+////    expectedContext.prettyPrint();
+////    std::cout << "Read expectedcontext" << std::endl;
+////    std::cout << "Done reading context" << std::endl;
+//}
 
-    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
-        if (FuzzCount.Value() == 0 && totalInputContextsFailed > 0) {
-            log_message("Context Test Failed");
-            PIN_ExitApplication(1);
-        } else if (FuzzCount.Value() == 0 && totalInputContextsFailed == 0) {
-            log_message("Context Test Success");
-            PIN_ExitApplication(0);
-        }
-        return;
-    }
+//VOID reset_to_context(CONTEXT *ctx, bool readNewContext) {
+////    fuzz_count++;
+////    std::cout << "fuzz_count = " << std::dec << fuzz_count << " orig_fuzz_count = " << orig_fuzz_count << std::endl;
+//
+//    if (HardFuzzCount.Value() > 0 && hard_count++ >= HardFuzzCount.Value()) {
+//        std::stringstream ss;
+//        ss << "Hit hard limit of " << std::dec << hard_count - 1 << std::endl;
+//        log_message(ss);
+//        PIN_ExitApplication(0);
+//    }
+//
+//    if (curr_context_file_num < ContextsToUse.NumberOfValues() && readNewContext) {
+//        read_new_context();
+//    }
+//
+//    if (!timed_fuzz()) {
+////        std::cout << "curr_context_file_num: " << std::dec << curr_context_file_num << std::endl;
+////        std::cout << "orig_fuzz_count: " << orig_fuzz_count << std::endl;
+//        if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count >= FuzzCount.Value()) {
+//            std::stringstream ss;
+//            ss << "Stopping fuzzing at " << std::dec << orig_fuzz_count << " of " << FuzzCount.Value()
+//               << std::endl;
+//            log_message(ss);
+//            PIN_ExitApplication(0);
+//        }
+//    } else {
+//        if (time(NULL) >= fuzz_end_time) {
+//            std::stringstream ss;
+//            ss << "Stopping fuzzing after " << std::dec << FuzzTime.Value() << " minute"
+//               << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
+//            ss << "Total fuzzing iterations: " << std::dec << fuzz_count - 1 << std::endl;
+//            log_message(ss);
+//            PIN_ExitApplication(0);
+//        }
+//    }
+//
+//    PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
+//    fuzzing_run.clear();
+//}
 
-//    std::cout << "Reading new context" << std::endl;
-    if ((!contextFile || !contextFile.is_open()) && curr_context_file_num < ContextsToUse.NumberOfValues()) {
-        std::stringstream ss;
-        ss << "Opening " << ContextsToUse.Value(curr_context_file_num);
-        log_message(ss);
-        contextFile.open(ContextsToUse.Value(curr_context_file_num).c_str(), ios::in | ios::binary);
-        inputContextFailed = 0;
-        inputContextPassed = 0;
-    }
-
-    contextFile >> preContext;
-//    log_message("preContext:");
-//    preContext.prettyPrint();
-//    std::cout << "Read precontext" << std::endl;
-    contextFile >> expectedContext;
-//    log_message("expectedContext:");
-//    expectedContext.prettyPrint();
-//    std::cout << "Read expectedcontext" << std::endl;
-//    std::cout << "Done reading context" << std::endl;
-}
-
-VOID reset_to_context(CONTEXT *ctx, bool readNewContext) {
-//    fuzz_count++;
-//    std::cout << "fuzz_count = " << std::dec << fuzz_count << " orig_fuzz_count = " << orig_fuzz_count << std::endl;
-
-    if (HardFuzzCount.Value() > 0 && hard_count++ >= HardFuzzCount.Value()) {
-        std::stringstream ss;
-        ss << "Hit hard limit of " << std::dec << hard_count - 1 << std::endl;
-        log_message(ss);
-        PIN_ExitApplication(0);
-    }
-
-    if (curr_context_file_num < ContextsToUse.NumberOfValues() && readNewContext) {
-        read_new_context();
-    }
-
-    if (!timed_fuzz()) {
-//        std::cout << "curr_context_file_num: " << std::dec << curr_context_file_num << std::endl;
-//        std::cout << "orig_fuzz_count: " << orig_fuzz_count << std::endl;
-        if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count >= FuzzCount.Value()) {
-            std::stringstream ss;
-            ss << "Stopping fuzzing at " << std::dec << orig_fuzz_count << " of " << FuzzCount.Value()
-               << std::endl;
-            log_message(ss);
-            PIN_ExitApplication(0);
-        }
-    } else {
-        if (time(NULL) >= fuzz_end_time) {
-            std::stringstream ss;
-            ss << "Stopping fuzzing after " << std::dec << FuzzTime.Value() << " minute"
-               << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
-            ss << "Total fuzzing iterations: " << std::dec << fuzz_count - 1 << std::endl;
-            log_message(ss);
-            PIN_ExitApplication(0);
-        }
-    }
-
-    PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
-    fuzzing_run.clear();
-}
-
-VOID reset_context(CONTEXT *ctx) {
-    reset_to_context(ctx, true);
-}
-
-VOID reset_to_preexecution(CONTEXT *ctx) {
-    reset_to_context(ctx, false);
-}
+//VOID reset_context(CONTEXT *ctx) {
+//    reset_to_context(ctx, true);
+//}
+//
+//VOID reset_to_preexecution(CONTEXT *ctx) {
+//    reset_to_context(ctx, false);
+//}
 
 uint64_t gen_random() {
     return ((((ADDRINT) rand() << 0) & 0x000000000000FFFFull) |
@@ -408,27 +413,27 @@ void output_context(const FBZergContext &ctx) {
     logger << ctx;
 }
 
-VOID start_fuzz_round(CONTEXT *ctx) {
-    reset_context(ctx);
-    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
-        fuzz_registers(ctx);
-    }
-    currentContext = preContext;
-//    std::cout << "==========================" << std::endl;
-//    preContext.prettyPrint();
-//    std::cout << "==========================" << std::endl;
-//    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-//    currentContext.prettyPrint();
-//    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-    currentContext >> ctx;
-//    currentContext.prettyPrint();
-//    displayCurrentContext(ctx);
-    std::stringstream ss;
-    ss << "Starting round " << std::dec << (++fuzz_count) << std::endl;
-    log_message(ss);
-    PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
-    PIN_ExecuteAt(ctx);
-}
+//VOID start_fuzz_round(CONTEXT *ctx) {
+//    reset_context(ctx);
+//    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
+//        fuzz_registers(ctx);
+//    }
+//    currentContext = preContext;
+////    std::cout << "==========================" << std::endl;
+////    preContext.prettyPrint();
+////    std::cout << "==========================" << std::endl;
+////    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+////    currentContext.prettyPrint();
+////    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+//    currentContext >> ctx;
+////    currentContext.prettyPrint();
+////    displayCurrentContext(ctx);
+//    std::stringstream ss;
+//    ss << "Starting round " << std::dec << (++fuzz_count) << std::endl;
+//    log_message(ss);
+//    PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
+//    PIN_ExecuteAt(ctx);
+//}
 
 VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
                             ADDRINT r8, ADDRINT r9, ADDRINT r10, ADDRINT r11,
@@ -446,12 +451,12 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 //    tmp.prettyPrint(std::cout);
 //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
 //    std::cout << std::dec << diff << std::endl;
-    if (fuzzing_run.size() > MaxInstructions.Value()) {
-        std::stringstream ss;
-        ss << "Too many instructions! Starting Over...";
-        log_message(ss);
-        start_fuzz_round(&snapshot);
-    }
+//    if (fuzzing_run.size() > MaxInstructions.Value()) {
+//        std::stringstream ss;
+//        ss << "Too many instructions! Starting Over...";
+//        log_message(ss);
+//        start_fuzz_round(&snapshot);
+//    }
 }
 
 VOID trace_execution(TRACE trace, VOID *v) {
@@ -489,55 +494,55 @@ VOID trace_execution(TRACE trace, VOID *v) {
 //    }
 }
 
-VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
-    if (!fuzzing_started) {
-        return;
-    }
+//VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
+//    if (!fuzzing_started) {
+//        return;
+//    }
+//
+//    std::stringstream ss;
+//    ss << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() << " instructions";
+//    log_message(ss);
+////    std::cout << "Post Execution Current Context addr = 0x" << std::hex << currentContext.find_allocated_area(FBZergContext::argument_regs[0])->getAddr() << std::endl;
+//
+////    std::cout << "Outputting precontext" << std::endl;
+////    preContext.prettyPrint();
+//    output_context(preContext);
+////    std::cout << "currentContext:" << std::endl;
+////    displayCurrentContext(ctx);
+//    currentContext << ctx;
+////    std::cout << "Outputting currentContext" << std::endl;
+////    currentContext.prettyPrint();
+//    output_context(currentContext);
+//
+//    if (contextFile && contextFile.is_open()) {
+//        if (currentContext == expectedContext) {
+//            inputContextPassed++;
+//            totalInputContextsPassed++;
+//        } else {
+//            inputContextFailed++;
+//            totalInputContextsFailed++;
+//        }
+//    }
+//
+////    fuzz_count++;
+//    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
+//        orig_fuzz_count++;
+//    }
+//    start_fuzz_round(ctx);
+//}
 
-    std::stringstream ss;
-    ss << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() << " instructions";
-    log_message(ss);
-//    std::cout << "Post Execution Current Context addr = 0x" << std::hex << currentContext.find_allocated_area(FBZergContext::argument_regs[0])->getAddr() << std::endl;
-
-//    std::cout << "Outputting precontext" << std::endl;
-//    preContext.prettyPrint();
-    output_context(preContext);
-//    std::cout << "currentContext:" << std::endl;
-//    displayCurrentContext(ctx);
-    currentContext << ctx;
-//    std::cout << "Outputting currentContext" << std::endl;
-//    currentContext.prettyPrint();
-    output_context(currentContext);
-
-    if (contextFile && contextFile.is_open()) {
-        if (currentContext == expectedContext) {
-            inputContextPassed++;
-            totalInputContextsPassed++;
-        } else {
-            inputContextFailed++;
-            totalInputContextsFailed++;
-        }
-    }
-
-//    fuzz_count++;
-    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
-        orig_fuzz_count++;
-    }
-    start_fuzz_round(ctx);
-}
-
-VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
-    std::stringstream ss;
-    ss << "Beginning to fuzz thread " << tid << std::endl;
-    curr_app_thread = tid;
-    log_message(ss);
-    fuzzing_started = true;
-    PIN_SaveContext(ctx, &snapshot);
-    for (REG reg : FBZergContext::argument_regs) {
-        preContext.add(reg, (ADDRINT) 0);
-    }
-    start_fuzz_round(ctx);
-}
+//VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
+//    std::stringstream ss;
+//    ss << "Beginning to fuzz thread " << tid << std::endl;
+//    curr_app_thread = tid;
+//    log_message(ss);
+//    fuzzing_started = true;
+//    PIN_SaveContext(ctx, &snapshot);
+//    for (REG reg : FBZergContext::argument_regs) {
+//        preContext.add(reg, (ADDRINT) 0);
+//    }
+//    start_fuzz_round(ctx);
+//}
 
 EXCEPT_HANDLING_RESULT globalSegfaultHandler(THREADID tid, EXCEPTION_INFO *exceptionInfo, PHYSICAL_CONTEXT
 *physContext, VOID *v) {
@@ -718,451 +723,502 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
     return true;
 }
 
-BOOL catchOtherFault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo,
-                     VOID *v) {
-    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
-        inputContextFailed++;
-        totalInputContextsFailed++;
-
-        reset_context(ctx);
-        currentContext = preContext;
-        log_message("Input context failed...trying a new one");
-        currentContext >> ctx;
-
-        return false;
-    }
-
-    return true;
-}
-
-BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
-//    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
-//    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
-//    displayCurrentContext(ctx);
-//    currentContext.prettyPrint();
-    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
+//BOOL catchOtherFault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo,
+//                     VOID *v) {
+//    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
 //        inputContextFailed++;
 //        totalInputContextsFailed++;
+//
 //        reset_context(ctx);
 //        currentContext = preContext;
 //        log_message("Input context failed...trying a new one");
+//        currentContext >> ctx;
+//
+//        return false;
+//    }
+//
+//    return true;
+//}
+
+//BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
+////    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
+////    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
+////    displayCurrentContext(ctx);
+////    currentContext.prettyPrint();
+//    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
+////        inputContextFailed++;
+////        totalInputContextsFailed++;
+////        reset_context(ctx);
+////        currentContext = preContext;
+////        log_message("Input context failed...trying a new one");
+////        goto finish;
+//        return catchOtherFault(tid, sig, ctx, hasHandler, pExceptInfo, v);
+//    }
+//
+//    if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
+////        std::stringstream msg;
+////        msg << "Invalid segfault: " << PIN_ExceptionToString(pExceptInfo);
+////        log_message(msg);
+//        reset_context(ctx);
+//        fuzz_registers(ctx);
+//        currentContext = preContext;
 //        goto finish;
-        return catchOtherFault(tid, sig, ctx, hasHandler, pExceptInfo, v);
-    }
-
-    if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
-//        std::stringstream msg;
-//        msg << "Invalid segfault: " << PIN_ExceptionToString(pExceptInfo);
-//        log_message(msg);
-        reset_context(ctx);
-        fuzz_registers(ctx);
-        currentContext = preContext;
-        goto finish;
-    }
-
-    {
-        ADDRINT faulting_addr = -1;
-        if (!PIN_GetFaultyAccessAddress(pExceptInfo, &faulting_addr)) {
-            std::stringstream msg;
-            INS faulty_ins = INS_FindByAddress(fuzzing_run.back().rip);
-            msg << "Could not find faulty address for instruction at 0x" << std::hex << INS_Address(faulty_ins)
-                << " (" << INS_Disassemble(faulty_ins) << ")";
-            log_error(msg);
-        } else {
+//    }
+//
+//    {
+//        ADDRINT faulting_addr = -1;
+//        if (!PIN_GetFaultyAccessAddress(pExceptInfo, &faulting_addr)) {
 //            std::stringstream msg;
-//            currentContext.prettyPrint();
-//            displayCurrentContext(ctx);
-//            msg << "Faulting address: 0x" << std::hex << faulting_addr;
-//            log_message(msg);
-        }
-        std::stringstream log;
-        std::vector<struct TaintedObject> taintedObjs;
-        REG taint_source = REG_INVALID();
-        INS last_taint_ins = INS_Invalid();
-        for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
-             it != fuzzing_run.rend(); it++) {
-            log.str(std::string());
-            struct X86Context &c = *it;
-            INS ins = INS_FindByAddress(c.rip);
-            if (!INS_Valid(ins)) {
-                log << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
-                log_error(log);
-            }
-
-//            log << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
-//                      << "(0x" << std::hex << INS_Address(ins) << "): " << INS_Disassemble(ins) << std::endl;
-//            log << "\tINS_IsMemoryRead: " << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
-//            log << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
-//            log << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
-//            log << "\tCategory: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
-//            log << "\tINS_MaxNumRRegs: " << INS_MaxNumRRegs(ins) << std::endl;
-//            for (unsigned int i = 0; i < INS_MaxNumRRegs(ins); i++) {
-//                log << "\t\t" << REG_StringShort(INS_RegR(ins, i)) << std::endl;
+//            INS faulty_ins = INS_FindByAddress(fuzzing_run.back().rip);
+//            msg << "Could not find faulty address for instruction at 0x" << std::hex << INS_Address(faulty_ins)
+//                << " (" << INS_Disassemble(faulty_ins) << ")";
+//            log_error(msg);
+//        } else {
+////            std::stringstream msg;
+////            currentContext.prettyPrint();
+////            displayCurrentContext(ctx);
+////            msg << "Faulting address: 0x" << std::hex << faulting_addr;
+////            log_message(msg);
+//        }
+//        std::stringstream log;
+//        std::vector<struct TaintedObject> taintedObjs;
+//        REG taint_source = REG_INVALID();
+//        INS last_taint_ins = INS_Invalid();
+//        for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
+//             it != fuzzing_run.rend(); it++) {
+//            log.str(std::string());
+//            struct X86Context &c = *it;
+//            INS ins = INS_FindByAddress(c.rip);
+//            if (!INS_Valid(ins)) {
+//                log << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
+//                log_error(log);
 //            }
-//            log << "\tINS_MaxNumWRegs: " << INS_MaxNumWRegs(ins) << std::endl;
-//            for (unsigned int i = 0; i < INS_MaxNumWRegs(ins); i++) {
-//                log << "\t\t" << REG_StringShort(INS_RegW(ins, i)) << std::endl;
+//
+////            log << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
+////                      << "(0x" << std::hex << INS_Address(ins) << "): " << INS_Disassemble(ins) << std::endl;
+////            log << "\tINS_IsMemoryRead: " << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
+////            log << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
+////            log << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
+////            log << "\tCategory: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
+////            log << "\tINS_MaxNumRRegs: " << INS_MaxNumRRegs(ins) << std::endl;
+////            for (unsigned int i = 0; i < INS_MaxNumRRegs(ins); i++) {
+////                log << "\t\t" << REG_StringShort(INS_RegR(ins, i)) << std::endl;
+////            }
+////            log << "\tINS_MaxNumWRegs: " << INS_MaxNumWRegs(ins) << std::endl;
+////            for (unsigned int i = 0; i < INS_MaxNumWRegs(ins); i++) {
+////                log << "\t\t" << REG_StringShort(INS_RegW(ins, i)) << std::endl;
+////            }
+////            log_message(log);
+//
+//            if (it == fuzzing_run.rbegin()) {
+//                for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
+//                    REG possible_source = INS_OperandMemoryBaseReg(ins, i);
+////                    std::cout << std::dec << i << ": " << REG_StringShort(possible_source) << std::endl;
+//                    if (REG_valid(possible_source) &&
+//                        compute_effective_address(ins, fuzzing_run.back(), i) == faulting_addr) {
+//                        taint_source = possible_source;
+//                        break;
+//                    }
+//                }
+//
+//                if (!REG_valid(taint_source)) {
+//                    std::stringstream ss;
+//                    ss << "Could not find valid base register for instruction: " << INS_Disassemble(ins);
+//                    log_error(ss);
+//                }
+//                add_taint(taint_source, taintedObjs);
+//                continue;
 //            }
-//            log_message(log);
-
-            if (it == fuzzing_run.rbegin()) {
-                for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
-                    REG possible_source = INS_OperandMemoryBaseReg(ins, i);
-//                    std::cout << std::dec << i << ": " << REG_StringShort(possible_source) << std::endl;
-                    if (REG_valid(possible_source) &&
-                        compute_effective_address(ins, fuzzing_run.back(), i) == faulting_addr) {
-                        taint_source = possible_source;
-                        break;
-                    }
-                }
-
-                if (!REG_valid(taint_source)) {
-                    std::stringstream ss;
-                    ss << "Could not find valid base register for instruction: " << INS_Disassemble(ins);
-                    log_error(ss);
-                }
-                add_taint(taint_source, taintedObjs);
-                continue;
-            }
-
-            if (INS_IsLea(ins) || INS_Category(ins) == XED_CATEGORY_DATAXFER) {
-                REG wreg = REG_INVALID();
-                ADDRINT writeAddr = 0;
-                if (INS_OperandIsReg(ins, 0)) {
-                    wreg = INS_OperandReg(ins, 0);
-//                    log << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
-                } else if (INS_OperandIsMemory(ins, 0)) {
-//                    log << "\tOperandIsMemory" << std::endl;
-                    wreg = INS_OperandMemoryBaseReg(ins, 0);
-                    if (!REG_valid(wreg)) {
-                        writeAddr = compute_effective_address(ins, c);
-                    }
-                } else {
-//                    log << "Write operand is not memory or register: " << INS_Disassemble(ins) << std::endl;
-//                    log_error(log);
-                    continue;
-                }
-                log_message(log);
-
-                if (REG_valid(wreg) && !isTainted(wreg, taintedObjs)) {
-//                    log << "\tWrite register is not tainted" << std::endl;
-//                    log_message(log);
-                    continue;
-                } else if (!REG_valid(wreg) && !isTainted(writeAddr, taintedObjs)) {
-//                    log << "\tWrite address is not tainted" << std::endl;
-//                    log_message(log);
-                    continue;
-                }
-
-                REG rreg = REG_INVALID();
-                ADDRINT readAddr = 0;
-
-                if (INS_OperandIsReg(ins, 1)) {
-                    rreg = INS_OperandReg(ins, 1);
-//                    log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
-                } else if (INS_OperandIsMemory(ins, 1)) {
-                    rreg = INS_OperandMemoryBaseReg(ins, 1);
-                    if (!REG_valid(rreg)) {
-                        readAddr = compute_effective_address(ins, c, 1);
-                    }
-                } else if (INS_OperandIsImmediate(ins, 1)) {
-                    continue;
-                } else if (INS_OperandIsAddressGenerator(ins, 1) || INS_MemoryOperandIsRead(ins, 1)) {
-                    rreg = INS_OperandMemoryBaseReg(ins, 1);
-//                    log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
-                } else {
-                    log << "Read operand is not a register, memory address, or immediate: " << INS_Disassemble(ins) <<
-                        std::endl;
-                    log << "OperandIsAddressGenerator: " << INS_OperandIsAddressGenerator(ins, 1) << std::endl;
-                    log << "OperandIsFixedMemop: " << INS_OperandIsFixedMemop(ins, 1) << std::endl;
-                    log << "OperandIsImplicit: " << INS_OperandIsImplicit(ins, 1) << std::endl;
-                    log << "Base register: " << REG_StringShort(INS_MemoryBaseReg(ins)) << std::endl;
-                    log << "Category: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
-                    for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
-                        log << "Operand " << std::dec << i << " reg: " << REG_StringShort(INS_OperandReg(ins, i)) <<
-                            std::endl;
-                    }
-
-                    log_message(log);
-                    continue;
-                }
-
-                log_message(log);
-                last_taint_ins = ins;
-                faulting_addr = compute_effective_address(ins, c, 1);
-                if (REG_valid(wreg)) {
-                    if (REG_valid(rreg)) {
-                        if (isTainted(wreg, taintedObjs) && !isTainted(rreg, taintedObjs)) {
-                            remove_taint(wreg, taintedObjs);
-                            add_taint(rreg, taintedObjs);
-                        }
-                    } else {
-                        if (isTainted(wreg, taintedObjs) && !isTainted(readAddr, taintedObjs)) {
-                            remove_taint(wreg, taintedObjs);
-                            add_taint(readAddr, taintedObjs);
-                        }
-                    }
-                } else {
-                    if (REG_valid(rreg)) {
-                        if (isTainted(writeAddr, taintedObjs) && !isTainted(rreg, taintedObjs)) {
-                            remove_taint(wreg, taintedObjs);
-                            add_taint(rreg, taintedObjs);
-                        }
-                    } else {
-                        if (isTainted(writeAddr, taintedObjs) && !isTainted(readAddr, taintedObjs)) {
-                            remove_taint(wreg, taintedObjs);
-                            add_taint(readAddr, taintedObjs);
-                        }
-                    }
-                }
-            }
-        }
-
-        if (taintedObjs.size() > 0) {
-            struct TaintedObject taintedObject = taintedObjs.back();
-//            if (taintedObject.isRegister) {
-//                log << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
-//            } else {
-//                log << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
-//            }
-
-            /* Find the last write to the base register to find the address of the bad pointer */
-//            INS ins = INS_FindByAddress(fuzzing_run.back().rip);
-//            REG faulting_reg = taint_source;
-////            std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
-//            for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
-//                 it != fuzzing_run.rend(); it++) {
-//                if (it == fuzzing_run.rbegin()) {
+//
+//            if (INS_IsLea(ins) || INS_Category(ins) == XED_CATEGORY_DATAXFER) {
+//                REG wreg = REG_INVALID();
+//                ADDRINT writeAddr = 0;
+//                if (INS_OperandIsReg(ins, 0)) {
+//                    wreg = INS_OperandReg(ins, 0);
+////                    log << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
+//                } else if (INS_OperandIsMemory(ins, 0)) {
+////                    log << "\tOperandIsMemory" << std::endl;
+//                    wreg = INS_OperandMemoryBaseReg(ins, 0);
+//                    if (!REG_valid(wreg)) {
+//                        writeAddr = compute_effective_address(ins, c);
+//                    }
+//                } else {
+////                    log << "Write operand is not memory or register: " << INS_Disassemble(ins) << std::endl;
+////                    log_error(log);
 //                    continue;
 //                }
-//                ins = INS_FindByAddress(it->rip);
-////                std::cout << INS_Disassemble(ins) << std::endl;
-//                if (INS_RegWContain(ins, faulting_reg)) {
-////                it->prettyPrint(std::cout);
-////                    std::cout << "Write instruction: " << INS_Disassemble(ins) << std::endl;
-////                    faulting_addr = compute_effective_address(ins, *it, 1);
-////                    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
+//                log_message(log);
+//
+//                if (REG_valid(wreg) && !isTainted(wreg, taintedObjs)) {
+////                    log << "\tWrite register is not tainted" << std::endl;
+////                    log_message(log);
+//                    continue;
+//                } else if (!REG_valid(wreg) && !isTainted(writeAddr, taintedObjs)) {
+////                    log << "\tWrite address is not tainted" << std::endl;
+////                    log_message(log);
+//                    continue;
+//                }
+//
+//                REG rreg = REG_INVALID();
+//                ADDRINT readAddr = 0;
+//
+//                if (INS_OperandIsReg(ins, 1)) {
+//                    rreg = INS_OperandReg(ins, 1);
+////                    log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
+//                } else if (INS_OperandIsMemory(ins, 1)) {
+//                    rreg = INS_OperandMemoryBaseReg(ins, 1);
+//                    if (!REG_valid(rreg)) {
+//                        readAddr = compute_effective_address(ins, c, 1);
+//                    }
+//                } else if (INS_OperandIsImmediate(ins, 1)) {
+//                    continue;
+//                } else if (INS_OperandIsAddressGenerator(ins, 1) || INS_MemoryOperandIsRead(ins, 1)) {
+//                    rreg = INS_OperandMemoryBaseReg(ins, 1);
+////                    log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
+//                } else {
+//                    log << "Read operand is not a register, memory address, or immediate: " << INS_Disassemble(ins) <<
+//                        std::endl;
+//                    log << "OperandIsAddressGenerator: " << INS_OperandIsAddressGenerator(ins, 1) << std::endl;
+//                    log << "OperandIsFixedMemop: " << INS_OperandIsFixedMemop(ins, 1) << std::endl;
+//                    log << "OperandIsImplicit: " << INS_OperandIsImplicit(ins, 1) << std::endl;
+//                    log << "Base register: " << REG_StringShort(INS_MemoryBaseReg(ins)) << std::endl;
+//                    log << "Category: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
+//                    for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
+//                        log << "Operand " << std::dec << i << " reg: " << REG_StringShort(INS_OperandReg(ins, i)) <<
+//                            std::endl;
+//                    }
+//
+//                    log_message(log);
+//                    continue;
+//                }
+//
+//                log_message(log);
+//                last_taint_ins = ins;
+//                faulting_addr = compute_effective_address(ins, c, 1);
+//                if (REG_valid(wreg)) {
+//                    if (REG_valid(rreg)) {
+//                        if (isTainted(wreg, taintedObjs) && !isTainted(rreg, taintedObjs)) {
+//                            remove_taint(wreg, taintedObjs);
+//                            add_taint(rreg, taintedObjs);
+//                        }
+//                    } else {
+//                        if (isTainted(wreg, taintedObjs) && !isTainted(readAddr, taintedObjs)) {
+//                            remove_taint(wreg, taintedObjs);
+//                            add_taint(readAddr, taintedObjs);
+//                        }
+//                    }
+//                } else {
+//                    if (REG_valid(rreg)) {
+//                        if (isTainted(writeAddr, taintedObjs) && !isTainted(rreg, taintedObjs)) {
+//                            remove_taint(wreg, taintedObjs);
+//                            add_taint(rreg, taintedObjs);
+//                        }
+//                    } else {
+//                        if (isTainted(writeAddr, taintedObjs) && !isTainted(readAddr, taintedObjs)) {
+//                            remove_taint(wreg, taintedObjs);
+//                            add_taint(readAddr, taintedObjs);
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//        if (taintedObjs.size() > 0) {
+//            struct TaintedObject taintedObject = taintedObjs.back();
+////            if (taintedObject.isRegister) {
+////                log << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
+////            } else {
+////                log << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
+////            }
+//
+//            /* Find the last write to the base register to find the address of the bad pointer */
+////            INS ins = INS_FindByAddress(fuzzing_run.back().rip);
+////            REG faulting_reg = taint_source;
+//////            std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
+////            for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
+////                 it != fuzzing_run.rend(); it++) {
+////                if (it == fuzzing_run.rbegin()) {
+////                    continue;
+////                }
+////                ins = INS_FindByAddress(it->rip);
+//////                std::cout << INS_Disassemble(ins) << std::endl;
+////                if (INS_RegWContain(ins, faulting_reg)) {
+//////                it->prettyPrint(std::cout);
+//////                    std::cout << "Write instruction: " << INS_Disassemble(ins) << std::endl;
+//////                    faulting_addr = compute_effective_address(ins, *it, 1);
+//////                    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
+////                    break;
+////                }
+////            }
+//
+//            if (!create_allocated_area(taintedObject, faulting_addr)) {
+////                for(auto &it : fuzzing_run) {
+////                    std::cout << INS_Disassemble(INS_FindByAddress(it.rip)) << std::endl;
+////                }
+//                reset_to_preexecution(ctx);
+//                fuzz_registers(ctx);
+//                goto finish;
+//            }
+//        } else {
+//            log_message("Taint analysis failed for the following context: ");
+//            displayCurrentContext(ctx);
+//            PIN_ExitApplication(1);
+//        }
+//
+//        reset_to_preexecution(ctx);
+//    }
+//    finish:
+//
+////    preContext.prettyPrint();
+////    currentContext.prettyPrint();
+//    currentContext >> ctx;
+////    fuzz_registers(ctx);
+////    PIN_SaveContext(ctx, &preexecution);
+////    displayCurrentContext(ctx);
+////    log_message("Ending segfault handler");
+//    return false;
+//}
+
+//VOID ImageLoad(IMG img, VOID *v) {
+//    if (!IMG_Valid(img)) {
+//        return;
+//    }
+//
+////    std::cout << "Image " << IMG_Name(img) << " loaded" << std::endl;
+//
+//    if (SharedLibraryFunc.Value() == "") {
+//        if (!IMG_IsMainExecutable(img)) {
+//            return;
+//        }
+//        ADDRINT offset = IMG_LoadOffset(img);
+//        ADDRINT target_addr = KnobStart.Value() + offset;
+//        target = RTN_FindByAddress(target_addr);
+//        if (!RTN_Valid(target)) {
+//            std::stringstream ss;
+//            ss << "Could not find target at 0x" << std::hex << target_addr << " (0x" << offset << " + 0x" <<
+//               KnobStart.Value() << ")" << std::endl;
+//            log_error(ss);
+//        }
+//
+////        ADDRINT main_addr = IMG_Entry(img);
+////        RTN main = RTN_FindByAddress(main_addr);
+//        RTN main = RTN_FindByName(img, "main");
+//        if (RTN_Valid(main)) {
+//            RTN_Open(main);
+//            std::stringstream msg;
+//            msg << "Adding call to begin_fuzzing to " << RTN_Name(main) << "(0x" << std::hex << RTN_Address(main)
+//                << ")";
+//            log_message(msg);
+//            INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID,
+//                           IARG_END);
+//            RTN_Close(main);
+//        } else {
+//            std::stringstream ss;
+//            ss << "Could not find main!" << std::endl;
+//            log_error(ss);
+//        }
+//
+//    } else {
+//        if (IMG_Name(img) == shared_library_name) {
+////            std::cout << shared_library_name << " has been loaded" << std::endl;
+//            bool found = false;
+//            for (SEC s = IMG_SecHead(img); SEC_Valid(s) && !found; s = SEC_Next(s)) {
+//                for (RTN f = SEC_RtnHead(s); RTN_Valid(f); f = RTN_Next(f)) {
+////                    std::cout << "Found " << RTN_Name(f) << std::endl;
+//                    if (RTN_Name(f) == SharedLibraryFunc.Value()) {
+//                        target = f;
+//                        found = true;
+//                        break;
+//                    }
+//                }
+//            }
+//            if (!found) {
+////            std::cerr << "Could not find target " << SharedLibraryFunc.Value() << " in shared library " << SharedLibraryName.Value() << std::endl;
+//                exit(1);
+//            } else {
+////                std::cout << "Found " << SharedLibraryFunc.Value() << std::endl;
+//            }
+//        } else if (!IMG_IsMainExecutable(img)) {
+////            std::cout << "Irrelevant image" << std::endl;
+//            return;
+//        } else {
+//            /* The loader program calls dlopen on the shared library, and then immediately returns,
+//             * so add a call at the return statement to start fuzzing the shared library function
+//             */
+//            RTN main = RTN_FindByName(img, "main");
+//            if (!RTN_Valid(main)) {
+//                log_error("Invalid main in fb-loader");
+//            }
+//            RTN_Open(main);
+//            std::stringstream ss;
+//            ss << "Instrumenting loader main...";
+//            for (INS ins = RTN_InsHead(main); INS_Valid(ins); ins = INS_Next(ins)) {
+//                if (INS_IsRet(ins)) {
+//                    INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
+//                }
+//            }
+//            ss << "done!";
+//            log_message(ss);
+//            RTN_Close(main);
+//            return;
+//        }
+//    }
+//    std::stringstream ss;
+//    ss << "Found target: " << RTN_Name(target) << " at 0x" << std::hex << RTN_Address(target) << std::endl;
+//    ss << "Instrumenting returns...";
+//    RTN_Open(target);
+//    for (INS ins = RTN_InsHead(target); INS_Valid(ins); ins = INS_Next(ins)) {
+//        if (INS_IsRet(ins)) {
+////            std::cout << "Adding end_fuzzing_round" << std::endl;
+//
+//            INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) end_fuzzing_round, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
+//        }
+//    }
+//    INS_InsertCall(RTN_InsTail(target), IPOINT_BEFORE, (AFUNPTR) end_fuzzing_round, IARG_CONTEXT, IARG_THREAD_ID,
+//                   IARG_END);
+//    RTN_Close(target);
+//    ss << "done.";
+//    log_message(ss);
+//}
+
+//VOID ThreadStart(THREADID tid, CONTEXT *ctx, INT32 flags, VOID *v) {
+//    std::string fname;
+//    if (KnobContextOutFile.Value() != "") {
+//        fname = KnobContextOutFile.Value();
+//    } else if (SharedLibraryFunc.Value() != "") {
+//        fname = SharedLibraryFunc.Value() + "." + decstr(tid) + ".ctx";
+//    } else {
+//        fname = RTN_Name(target) + "." + decstr(tid) + ".ctx";
+//    }
+//    PinLogger *logger = new PinLogger(tid, fname);
+//    PIN_SetThreadData(log_key, logger, tid);
+//}
+
+//VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
+//    VOID *logger_loc = PIN_GetThreadData(log_key, tid);
+//    if (logger_loc != nullptr) {
+////        std::cout << "Deleting logger" << std::endl;
+//        PinLogger *logger = static_cast<PinLogger *>(logger_loc);
+//        delete logger;
+//        PIN_SetThreadData(log_key, nullptr, tid);
+//    }
+//
+//    if (ContextsToUse.NumberOfValues() > 0) {
+//        std::stringstream ss;
+//        ss << "Input Contexts Passed: " << std::dec << totalInputContextsPassed << std::endl;
+//        ss << "Input Contexts Failed: " << std::dec << totalInputContextsFailed << std::endl;
+//        log_message(ss);
+//    }
+//}
+
+//void initialize_system(int argc, char **argv) {
+//    std::stringstream ss;
+//    ss << "Initializing system...";
+//    srand(time(NULL));
+//    std::string infoFileName = KnobOutName.Value();
+//    infofile.open(infoFileName.c_str(), std::ios::out | std::ios::app);
+
+//    log_key = PIN_CreateThreadDataKey(0);
+//    PIN_AddThreadStartFunction(ThreadStart, 0);
+//    PIN_AddThreadFiniFunction(ThreadFini, 0);
+//    fuzz_end_time = time(NULL) + 60 * FuzzTime.Value();
+
+//    if (FuzzTime.Value()) {
+//        watchdogtime = FuzzTime.Value() * 1000 * 60 + 5;
+//    } else {
+//        watchdogtime = WatchDogTimeout.Value();
+//    }
+
+//    if (SharedLibraryFunc.Value() != "") {
+//        if (strstr(argv[argc - 2], SHARED_LIBRARY_LOADER) == NULL) {
+//            ss << "fb-load must be the program run when fuzzing shared libraries" << std::endl;
+//            log_error(ss);
+//        }
+//        shared_library_name = argv[argc - 1];
+//        IMG img = IMG_Open(shared_library_name);
+//        if (!IMG_Valid(img)) {
+//            ss << "Could not open " << shared_library_name << std::endl;
+//            log_error(ss);
+//        }
+//        bool found = false;
+//        for (SEC s = IMG_SecHead(img); SEC_Valid(s) && !found; s = SEC_Next(s)) {
+//            for (RTN f = SEC_RtnHead(s); RTN_Valid(f); f = RTN_Next(f)) {
+////                std::cout << RTN_Name(f) << std::endl;
+//                if (RTN_Name(f) == SharedLibraryFunc.Value()) {
+//                    found = true;
 //                    break;
 //                }
 //            }
+//        }
+//        if (!found) {
+//            ss << "Could not find " << SharedLibraryFunc.Value() << " in library " << shared_library_name
+//               << std::endl;
+//            IMG_Close(img);
+//            log_error(ss);
+//        }
+//
+//        IMG_Close(img);
+//    }
+//
+//    if (ContextsToUse.NumberOfValues() > 0) {
+//        ss << "Using contexts: " << std::endl;
+//        for (size_t i = 0; i < ContextsToUse.NumberOfValues(); i++) {
+//            ss << ContextsToUse.Value(i) << std::endl;
+//        }
+//    }
+//    ss << "done!" << std::endl;
+//    log_message(ss);
+//}
 
-            if (!create_allocated_area(taintedObject, faulting_addr)) {
-//                for(auto &it : fuzzing_run) {
-//                    std::cout << INS_Disassemble(INS_FindByAddress(it.rip)) << std::endl;
-//                }
-                reset_to_preexecution(ctx);
-                fuzz_registers(ctx);
-                goto finish;
-            }
-        } else {
-            log_message("Taint analysis failed for the following context: ");
-            displayCurrentContext(ctx);
-            PIN_ExitApplication(1);
-        }
+void report_success() {
 
-        reset_to_preexecution(ctx);
-    }
-    finish:
-
-//    preContext.prettyPrint();
-//    currentContext.prettyPrint();
-    currentContext >> ctx;
-//    fuzz_registers(ctx);
-//    PIN_SaveContext(ctx, &preexecution);
-//    displayCurrentContext(ctx);
-//    log_message("Ending segfault handler");
-    return false;
 }
 
-VOID ImageLoad(IMG img, VOID *v) {
-    if (!IMG_Valid(img)) {
+void create_and_start_cmd_server(void *v) {
+    struct PinSystem pin_config;
+    pin_config.target = &target;
+    pin_config.fuzz_round_end = (AFUNPTR) report_success;
+    pin_config.pipe_in = KnobInPipe.Value();
+    pin_config.pipe_out = KnobOutPipe.Value();
+    pin_config.trace_func = (TRACE_INSTRUMENT_CALLBACK) trace_execution;
+
+    cmd_server = new ZergCommandServer(&pin_config);
+    cmd_server->start();
+}
+
+void wait_to_start() {
+    while (true) {
+        if (cmd_server) {
+            cmd_server->set_exe_thread(PIN_ThreadId());
+            PIN_Yield();
+        }
+    }
+}
+
+VOID FindMain(IMG img, VOID *v) {
+    if (!IMG_Valid(img) || !IMG_IsMainExecutable(img)) {
         return;
     }
 
-//    std::cout << "Image " << IMG_Name(img) << " loaded" << std::endl;
-
-    if (SharedLibraryFunc.Value() == "") {
-        if (!IMG_IsMainExecutable(img)) {
-            return;
-        }
-        ADDRINT offset = IMG_LoadOffset(img);
-        ADDRINT target_addr = KnobStart.Value() + offset;
-        target = RTN_FindByAddress(target_addr);
-        if (!RTN_Valid(target)) {
-            std::stringstream ss;
-            ss << "Could not find target at 0x" << std::hex << target_addr << " (0x" << offset << " + 0x" <<
-               KnobStart.Value() << ")" << std::endl;
-            log_error(ss);
-        }
-
-//        ADDRINT main_addr = IMG_Entry(img);
-//        RTN main = RTN_FindByAddress(main_addr);
-        RTN main = RTN_FindByName(img, "main");
-        if (RTN_Valid(main)) {
-            RTN_Open(main);
-            std::stringstream msg;
-            msg << "Adding call to begin_fuzzing to " << RTN_Name(main) << "(0x" << std::hex << RTN_Address(main)
-                << ")";
-            log_message(msg);
-            INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID,
-                           IARG_END);
-            RTN_Close(main);
-        } else {
-            std::stringstream ss;
-            ss << "Could not find main!" << std::endl;
-            log_error(ss);
-        }
-
+    RTN main = RTN_FindByName(img, "main");
+    if (RTN_Valid(main)) {
+        RTN_Open(main);
+        std::stringstream msg;
+        msg << "Adding call to wait_to_start to " << RTN_Name(main) << "(0x" << std::hex << RTN_Address(main)
+            << ")";
+        log_message(msg);
+        INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) wait_to_start, IARG_END);
+        RTN_Close(main);
     } else {
-        if (IMG_Name(img) == shared_library_name) {
-//            std::cout << shared_library_name << " has been loaded" << std::endl;
-            bool found = false;
-            for (SEC s = IMG_SecHead(img); SEC_Valid(s) && !found; s = SEC_Next(s)) {
-                for (RTN f = SEC_RtnHead(s); RTN_Valid(f); f = RTN_Next(f)) {
-//                    std::cout << "Found " << RTN_Name(f) << std::endl;
-                    if (RTN_Name(f) == SharedLibraryFunc.Value()) {
-                        target = f;
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            if (!found) {
-//            std::cerr << "Could not find target " << SharedLibraryFunc.Value() << " in shared library " << SharedLibraryName.Value() << std::endl;
-                exit(1);
-            } else {
-//                std::cout << "Found " << SharedLibraryFunc.Value() << std::endl;
-            }
-        } else if (!IMG_IsMainExecutable(img)) {
-//            std::cout << "Irrelevant image" << std::endl;
-            return;
-        } else {
-            /* The loader program calls dlopen on the shared library, and then immediately returns,
-             * so add a call at the return statement to start fuzzing the shared library function
-             */
-            RTN main = RTN_FindByName(img, "main");
-            if (!RTN_Valid(main)) {
-                log_error("Invalid main in fb-loader");
-            }
-            RTN_Open(main);
-            std::stringstream ss;
-            ss << "Instrumenting loader main...";
-            for (INS ins = RTN_InsHead(main); INS_Valid(ins); ins = INS_Next(ins)) {
-                if (INS_IsRet(ins)) {
-                    INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) begin_fuzzing, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
-                }
-            }
-            ss << "done!";
-            log_message(ss);
-            RTN_Close(main);
-            return;
-        }
-    }
-    std::stringstream ss;
-    ss << "Found target: " << RTN_Name(target) << " at 0x" << std::hex << RTN_Address(target) << std::endl;
-    ss << "Instrumenting returns...";
-    RTN_Open(target);
-    for (INS ins = RTN_InsHead(target); INS_Valid(ins); ins = INS_Next(ins)) {
-        if (INS_IsRet(ins)) {
-//            std::cout << "Adding end_fuzzing_round" << std::endl;
-
-            INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) end_fuzzing_round, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
-        }
-    }
-    INS_InsertCall(RTN_InsTail(target), IPOINT_BEFORE, (AFUNPTR) end_fuzzing_round, IARG_CONTEXT, IARG_THREAD_ID,
-                   IARG_END);
-    RTN_Close(target);
-    ss << "done.";
-    log_message(ss);
-}
-
-VOID ThreadStart(THREADID tid, CONTEXT *ctx, INT32 flags, VOID *v) {
-    std::string fname;
-    if (KnobContextOutFile.Value() != "") {
-        fname = KnobContextOutFile.Value();
-    } else if (SharedLibraryFunc.Value() != "") {
-        fname = SharedLibraryFunc.Value() + "." + decstr(tid) + ".ctx";
-    } else {
-        fname = RTN_Name(target) + "." + decstr(tid) + ".ctx";
-    }
-    PinLogger *logger = new PinLogger(tid, fname);
-    PIN_SetThreadData(log_key, logger, tid);
-}
-
-VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
-    VOID *logger_loc = PIN_GetThreadData(log_key, tid);
-    if (logger_loc != nullptr) {
-//        std::cout << "Deleting logger" << std::endl;
-        PinLogger *logger = static_cast<PinLogger *>(logger_loc);
-        delete logger;
-        PIN_SetThreadData(log_key, nullptr, tid);
-    }
-
-    if (ContextsToUse.NumberOfValues() > 0) {
         std::stringstream ss;
-        ss << "Input Contexts Passed: " << std::dec << totalInputContextsPassed << std::endl;
-        ss << "Input Contexts Failed: " << std::dec << totalInputContextsFailed << std::endl;
-        log_message(ss);
+        ss << "Could not find main!" << std::endl;
+        log_error(ss);
     }
 }
 
-void initialize_system(int argc, char **argv) {
-    std::stringstream ss;
-    ss << "Initializing system...";
-    srand(time(NULL));
-    std::string infoFileName = KnobOutName.Value();
-    infofile.open(infoFileName.c_str(), std::ios::out | std::ios::app);
-
-    log_key = PIN_CreateThreadDataKey(0);
-    PIN_AddThreadStartFunction(ThreadStart, 0);
-    PIN_AddThreadFiniFunction(ThreadFini, 0);
-    fuzz_end_time = time(NULL) + 60 * FuzzTime.Value();
-
-    if (FuzzTime.Value()) {
-        watchdogtime = FuzzTime.Value() * 1000 * 60 + 5;
-    } else {
-        watchdogtime = WatchDogTimeout.Value();
-    }
-
-    if (SharedLibraryFunc.Value() != "") {
-        if (strstr(argv[argc - 2], SHARED_LIBRARY_LOADER) == NULL) {
-            ss << "fb-load must be the program run when fuzzing shared libraries" << std::endl;
-            log_error(ss);
-        }
-        shared_library_name = argv[argc - 1];
-        IMG img = IMG_Open(shared_library_name);
-        if (!IMG_Valid(img)) {
-            ss << "Could not open " << shared_library_name << std::endl;
-            log_error(ss);
-        }
-        bool found = false;
-        for (SEC s = IMG_SecHead(img); SEC_Valid(s) && !found; s = SEC_Next(s)) {
-            for (RTN f = SEC_RtnHead(s); RTN_Valid(f); f = RTN_Next(f)) {
-//                std::cout << RTN_Name(f) << std::endl;
-                if (RTN_Name(f) == SharedLibraryFunc.Value()) {
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if (!found) {
-            ss << "Could not find " << SharedLibraryFunc.Value() << " in library " << shared_library_name
-               << std::endl;
-            IMG_Close(img);
-            log_error(ss);
-        }
-
-        IMG_Close(img);
-    }
-
-    if (ContextsToUse.NumberOfValues() > 0) {
-        ss << "Using contexts: " << std::endl;
-        for (size_t i = 0; i < ContextsToUse.NumberOfValues(); i++) {
-            ss << ContextsToUse.Value(i) << std::endl;
-        }
-    }
-    ss << "done!" << std::endl;
-    log_message(ss);
+void start_execution(void *v) {
+    IMG_AddInstrumentFunction(FindMain, nullptr);
+    PIN_StartProgram();
 }
 
 int main(int argc, char **argv) {
@@ -1171,59 +1227,67 @@ int main(int argc, char **argv) {
         return usage();
     }
 
-    if (OnlyOutputContexts.Value()) {
-        UINT32 total_input_contexts = 0;
-        for (size_t i = 0; i < ContextsToUse.NumberOfValues(); i++) {
-            contextFile.open(ContextsToUse.Value(i).c_str(), ios::in | ios::binary);
-            if (!contextFile) {
-                std::cerr << "Could not open " << ContextsToUse.Value(i) << std::endl;
-                continue;
-            }
-            std::cout << "Contexts in " << ContextsToUse.Value(i) << ":" << std::endl;
-            while (contextFile.peek() != EOF) {
-                output_context(contextFile);
-                total_input_contexts++;
-            }
-            contextFile.close();
-        }
-        std::cout << "Total input contexts: " << std::dec << total_input_contexts << std::endl;
-        exit(0);
-    }
+//    if (OnlyOutputContexts.Value()) {
+//        UINT32 total_input_contexts = 0;
+//        for (size_t i = 0; i < ContextsToUse.NumberOfValues(); i++) {
+//            contextFile.open(ContextsToUse.Value(i).c_str(), ios::in | ios::binary);
+//            if (!contextFile) {
+//                std::cerr << "Could not open " << ContextsToUse.Value(i) << std::endl;
+//                continue;
+//            }
+//            std::cout << "Contexts in " << ContextsToUse.Value(i) << ":" << std::endl;
+//            while (contextFile.peek() != EOF) {
+//                output_context(contextFile);
+//                total_input_contexts++;
+//            }
+//            contextFile.close();
+//        }
+//        std::cout << "Total input contexts: " << std::dec << total_input_contexts << std::endl;
+//        PIN_ExitApplication(0);
+//    }
 
-    if (!KnobStart.Value() && SharedLibraryFunc.Value() == "") {
-        return usage();
-    }
+//    if (!KnobStart.Value() && SharedLibraryFunc.Value() == "") {
+//        return usage();
+//    }
     std::stringstream ss;
     ss << "Starting Zergling..." << std::endl;
     log_message(ss);
-    initialize_system(argc, argv);
+//    initialize_system(argc, argv);
 
-    if (!timed_fuzz()) {
-        if (SharedLibraryFunc.Value() == "") {
-            ss << "Fuzzing 0x" << std::hex << KnobStart.Value() << std::dec << " " << FuzzCount.Value() << " times."
-               << std::endl;
-        } else {
-            ss << "Fuzzing " << SharedLibraryFunc.Value() << " " << FuzzCount.Value() << " times."
-               << std::endl;
-        }
-    } else {
-        ss << "Fuzzing 0x" << std::hex << KnobStart.Value() << " for " << std::dec << FuzzTime.Value()
-           << " minute" << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
-    }
+//    if (!timed_fuzz()) {
+//        if (SharedLibraryFunc.Value() == "") {
+//            ss << "Fuzzing 0x" << std::hex << KnobStart.Value() << std::dec << " " << FuzzCount.Value() << " times."
+//               << std::endl;
+//        } else {
+//            ss << "Fuzzing " << SharedLibraryFunc.Value() << " " << FuzzCount.Value() << " times."
+//               << std::endl;
+//        }
+//    } else {
+//        ss << "Fuzzing 0x" << std::hex << KnobStart.Value() << " for " << std::dec << FuzzTime.Value()
+//           << " minute" << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
+//    }
 
-    log_message(ss);
-    IMG_AddInstrumentFunction(ImageLoad, nullptr);
-    TRACE_AddInstrumentFunction(trace_execution, nullptr);
+//    log_message(ss);
+//    IMG_AddInstrumentFunction(ImageLoad, nullptr);
+//    TRACE_AddInstrumentFunction(trace_execution, nullptr);
+//
+//    /* Catch segfaults for pointer taint analysis */
+//    PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
+//
+//    /* Catch everything else */
+//    PIN_InterceptSignal(SIGTRAP, catchOtherFault, nullptr);
+//    PIN_InterceptSignal(SIGILL, catchOtherFault, nullptr);
+//    PIN_InterceptSignal(SIGFPE, catchOtherFault, nullptr);
+//    PIN_InterceptSignal(SIGBUS, catchOtherFault, nullptr);
+    PIN_THREAD_UID cmd_thread_uid;
+    PIN_THREAD_UID exe_thread_uid;
+    int32_t exit_code = 0;
 
-    /* Catch segfaults for pointer taint analysis */
-    PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
+    PIN_SpawnInternalThread(create_and_start_cmd_server, nullptr, 0, &cmd_thread_uid);
+    PIN_SpawnInternalThread(start_execution, nullptr, 0, &exe_thread_uid);
 
-    /* Catch everything else */
-    PIN_InterceptSignal(SIGTRAP, catchOtherFault, nullptr);
-    PIN_InterceptSignal(SIGILL, catchOtherFault, nullptr);
-    PIN_InterceptSignal(SIGFPE, catchOtherFault, nullptr);
-    PIN_InterceptSignal(SIGBUS, catchOtherFault, nullptr);
-    PIN_StartProgram();
+    PIN_WaitForThreadTermination(cmd_thread_uid, WatchDogTimeout.Value(), &exit_code);
+    PIN_ExitApplication(exit_code);
 
     return 0;
 }
