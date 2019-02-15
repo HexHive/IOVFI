@@ -8,3 +8,6 @@ pipe_fork
 clone
 __clone
 pause
+fork
+__libc_fork
+__fork
