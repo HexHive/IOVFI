@@ -3,6 +3,7 @@
 //
 
 #include "ZergCommandServer.h"
+#include "ZergCommand.h"
 
 ZergCommandServer::ZergCommandServer(struct PinSystem *system) :
         current_state_(ZERG_SERVER_START),
@@ -62,6 +63,6 @@ void ZergCommandServer::stop() {
     }
 }
 
-void ZergCommandServer::log(std::string &msg) {
+void ZergCommandServer::log(const std::string &msg) {
     std::cout << msg << std::endl;
 }

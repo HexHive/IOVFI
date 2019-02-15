@@ -12,7 +12,7 @@ typedef enum zerg_cmd_result_t_ {
     NOT_FOUND
 } zerg_cmd_result_t;
 
-#include "ZergCommandServer.h"
+class ZergCommandServer;
 
 class ZergCommand {
 public:

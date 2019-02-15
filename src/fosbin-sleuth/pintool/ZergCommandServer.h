@@ -25,8 +25,6 @@ struct PinSystem {
 };
 
 class ZergCommandServer {
-    friend class ZergCommand;
-
 public:
     ZergCommandServer(struct PinSystem *system);
 
@@ -40,14 +38,17 @@ public:
 
     void set_exe_thread(THREADID exe_thread_id);
 
-protected:
+
+//protected:
+    friend class ZergCommand;
+
     zerg_server_state_t current_state_;
     std::ifstream in_pipe_;
     std::ofstream out_pipe_;
     THREADID exe_thread_id_;
     PinSystem *system_;
 
-    void log(std::string &msg);
+    void log(const std::string &msg);
 };
 
 #include "ZergCommandServer.cpp"
