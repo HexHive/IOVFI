@@ -43,8 +43,8 @@ public:
     friend class ZergCommand;
 
     zerg_server_state_t current_state_;
-    std::ifstream in_pipe_;
-    std::ofstream out_pipe_;
+    int in_pipe_;
+    int out_pipe_;
     THREADID exe_thread_id_;
     PinSystem *system_;
 

@@ -32,14 +32,18 @@ void ZergCommand::log(std::stringstream &msg) {
 SetTargetCommand::SetTargetCommand(ZergCommandServer &server) :
         ZergCommand(SetTargetCommand::COMMAND_ID, server),
         new_target_(0) {
-    server_.in_pipe_.read((char *) &new_target_, sizeof(new_target_));
     std::stringstream msg;
+    if (read(server_.in_pipe_, (char *) &new_target_, sizeof(new_target_)) < 0) {
+        msg << "Error reading new target" << std::endl;
+        log(msg);
+        return;
+    }
     msg << "Read in new target 0x" << std::hex << new_target_;
     log(msg);
 }
 
 zerg_cmd_result_t SetTargetCommand::execute() {
-    if (server_.exe_thread_id_ == INVALID_THREADID) {
+    if (server_.exe_thread_id_ == INVALID_THREADID || !new_target_) {
         return ERROR;
     }
 
