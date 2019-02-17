@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <vector>
 #include <limits.h>
+#include <unistd.h>
 #include "FuzzResults.h"
 #include "fosbin-zergling.h"
 
@@ -64,6 +65,9 @@ uint64_t inputContextFailed, totalInputContextsFailed;
 THREADID curr_app_thread = INVALID_THREADID;
 
 ZergCommandServer *cmd_server;
+int internal_pipe[2];
+int cmd_out;
+int cmd_in;
 
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
@@ -1174,25 +1178,16 @@ void report_success() {
 
 }
 
-void create_and_start_cmd_server(void *v) {
-    struct PinSystem pin_config;
-    pin_config.target = &target;
-    pin_config.fuzz_round_end = (AFUNPTR) report_success;
-    pin_config.pipe_in = KnobInPipe.Value();
-    pin_config.pipe_out = KnobOutPipe.Value();
-    pin_config.trace_func = (TRACE_INSTRUMENT_CALLBACK) trace_execution;
-
-    cmd_server = new ZergCommandServer(&pin_config);
+void start_cmd_server(void *v) {
     cmd_server->start();
+    delete cmd_server;
+    PIN_ExitApplication(0);
 }
 
 void wait_to_start() {
-    while (true) {
-        if (cmd_server) {
-            cmd_server->set_exe_thread(PIN_ThreadId());
-            PIN_Yield();
-        }
-    }
+    fd_set set;
+    FD_ZERO(&set);
+    FD_SET(internal_pipe)
 }
 
 VOID FindMain(IMG img, VOID *v) {
@@ -1214,11 +1209,6 @@ VOID FindMain(IMG img, VOID *v) {
         ss << "Could not find main!" << std::endl;
         log_error(ss);
     }
-}
-
-void start_execution(void *v) {
-    IMG_AddInstrumentFunction(FindMain, nullptr);
-    PIN_StartProgram();
 }
 
 int main(int argc, char **argv) {
@@ -1283,11 +1273,22 @@ int main(int argc, char **argv) {
     PIN_THREAD_UID exe_thread_uid;
     int32_t exit_code = 0;
 
-    PIN_SpawnInternalThread(create_and_start_cmd_server, nullptr, 0, &cmd_thread_uid);
-    PIN_SpawnInternalThread(start_execution, nullptr, 0, &exe_thread_uid);
+    if (!pipe(internal_pipe)) {
+        log_error("Error creating internal pipe");
+    }
+    cmd_in = open(KnobInPipe.Value().c_str(), 0, O_RDONLY);
+    cmd_out = open(KnobOutPipe.Value().c_str(), 0, O_WRONLY);
 
-    PIN_WaitForThreadTermination(cmd_thread_uid, WatchDogTimeout.Value(), &exit_code);
-    PIN_ExitApplication(exit_code);
+    if (cmd_in < 0) {
+        log_error("Could not open in pipe");
+    }
+    if (cmd_out < 0) {
+        log_error("Could not open out pipe");
+    }
+
+    IMG_AddInstrumentFunction(ImageLoad, nullptr);
+    TRACE_AddInstrumentFunction(trace_execution, nullptr);
+    PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, &cmd_thread_uid);
 
     return 0;
 }

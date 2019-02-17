@@ -16,17 +16,9 @@ typedef enum zerg_server_state {
     ZERG_SERVER_EXIT
 } zerg_server_state_t;
 
-struct PinSystem {
-    RTN *target;
-    AFUNPTR fuzz_round_end;
-    std::string pipe_in;
-    std::string pipe_out;
-    TRACE_INSTRUMENT_CALLBACK trace_func;
-};
-
 class ZergCommandServer {
 public:
-    ZergCommandServer(struct PinSystem *system);
+    ZergCommandServer(int internal_w, int internal_r, int cmd_w, int cmd_r);
 
     ~ZergCommandServer();
 
@@ -36,19 +28,25 @@ public:
 
     zerg_server_state_t get_state();
 
-    void set_exe_thread(THREADID exe_thread_id);
+    void write_to_commander(const char *msg, size_t size);
 
+    void write_to_executor(const char *msg, size_t size);
 
-//protected:
-    friend class ZergCommand;
+    void read_from_commander(char *buf, size_t size);
 
+    void read_from_executor(char *buf, size_t size);
+
+protected:
     zerg_server_state_t current_state_;
-    int in_pipe_;
-    int out_pipe_;
-    THREADID exe_thread_id_;
-    PinSystem *system_;
 
     void log(const std::string &msg);
+
+    void handle_command();
+
+    void handle_executor_msg();
+
+    int internal_w_fd, internal_r_fd, cmd_w_fd, cmd_r_fd;
+    fd_set fd_w_set_, fd_r_set_;
 };
 
 #include "ZergCommandServer.cpp"
