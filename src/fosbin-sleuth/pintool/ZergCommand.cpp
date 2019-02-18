@@ -8,6 +8,8 @@
 const zerg_cmd_t SetTargetCommand::COMMAND_ID = 1;
 const zerg_cmd_t InvalidCommand::COMMAND_ID = 2;
 const zerg_cmd_t ExitCommand::COMMAND_ID = 3;
+const zerg_cmd_t FuzzCommand::COMMAND_ID = 4;
+const zerg_cmd_t ExecuteCommand::COMMAND_ID = 5;
 
 ZergCommand::ZergCommand(zerg_cmd_t type, ZergCommandServer &server) :
         server_(server),
@@ -19,10 +21,37 @@ ZergCommand *ZergCommand::create(zerg_cmd_t type, ZergCommandServer &server) {
     switch (type) {
         case SetTargetCommand::COMMAND_ID:
             return new SetTargetCommand(server);
+        case ExitCommand::COMMAND_ID:
+            return new ExitCommand(server);
+        case FuzzCommand::COMMAND_ID:
+            return new FuzzCommand(server);
+        case ExecuteCommand::COMMAND_ID:
+            return new ExecuteCommand(server);
         default:
             return new InvalidCommand(server);
     }
 }
+
+const char *ZergCommand::result_to_str(zerg_cmd_result_t result) {
+    std::stringstream ss;
+    switch (result) {
+        case OK:
+            return "OK";
+        case ERROR:
+            return "ERROR";
+        case NOT_FOUND:
+            return "NOT_FOUND";
+        case INTERRUPTED:
+            return "INTERRUPTED";
+        case TOO_MANY_INS:
+            return "TOO_MANY_INS";
+        case FAILED_CTX:
+            return "FAILED_CTX";
+        default:
+            ss << "UNKNOWN: " << result;
+            return ss.str().c_str();
+    }
+};
 
 void ZergCommand::log(std::stringstream &msg) {
     std::cout << msg << std::endl;
@@ -43,25 +72,75 @@ SetTargetCommand::SetTargetCommand(ZergCommandServer &server) :
 }
 
 zerg_cmd_result_t SetTargetCommand::execute() {
-    if (new_target_ == 0) {
+    if (new_target_ == 0 || server_.get_state() != ZERG_SERVER_WAIT_FOR_TARGET) {
         return ERROR;
     }
 
     server_.write_to_executor((char *) &SetTargetCommand::COMMAND_ID, sizeof(SetTargetCommand::COMMAND_ID));
     server_.write_to_executor((char *) &new_target_, sizeof(new_target_));
 
-    return OK;
+    zerg_cmd_result_t result;
+    server_.read_from_executor(&result, sizeof(result));
+    if (result == OK) {
+        server_.set_state(ZERG_SERVER_WAIT_FOR_CMD);
+    } else {
+        std::cout << "CommandServer received " << ZergCommand::result_to_str(result) << std::endl;
+    }
+
+    return result;
 }
 
 InvalidCommand::InvalidCommand(ZergCommandServer &server) :
         ZergCommand(InvalidCommand::COMMAND_ID, server) {}
 
-zerg_cmd_result_t InvalidCommand::execute() { return ERROR; }
+zerg_cmd_result_t InvalidCommand::execute() {
+    std::cout << "InvalidCommand executed" << std::endl;
+    return ERROR;
+}
 
 ExitCommand::ExitCommand(ZergCommandServer &server) :
         ZergCommand(ExitCommand::COMMAND_ID, server) {}
 
 zerg_cmd_result_t ExitCommand::execute() {
+    std::cout << "Stopping server" << std::endl;
     server_.stop();
+    return OK;
+}
+
+FuzzCommand::FuzzCommand(ZergCommandServer &server) :
+        ZergCommand(FuzzCommand::COMMAND_ID, server) {}
+
+zerg_cmd_result_t FuzzCommand::execute() {
+    if (server_.get_state() != ZERG_SERVER_WAIT_FOR_CMD) {
+        std::cout << "Invalid state" << std::endl;
+        return ERROR;
+    }
+
+    zerg_cmd_result_t result;
+    if (server_.write_to_executor(&type_, sizeof(type_)) <= 0) {
+        return ERROR;
+    }
+    server_.set_state(ZERG_SERVER_FUZZING);
+    if (server_.read_from_executor(&result, sizeof(result)) <= 0) {
+        return ERROR;
+    }
+    server_.set_state(ZERG_SERVER_WAIT_FOR_CMD);
+
+    return result;
+}
+
+ExecuteCommand::ExecuteCommand(ZergCommandServer &server) :
+        ZergCommand(ExecuteCommand::COMMAND_ID, server) {}
+
+zerg_cmd_result_t ExecuteCommand::execute() {
+    if (server_.get_state() != ZERG_SERVER_WAIT_FOR_CMD) {
+        return ERROR;
+    }
+
+    if (server_.write_to_executor(&type_, sizeof(type_)) <= 0) {
+        return ERROR;
+    }
+    server_.set_state(ZERG_SERVER_EXECUTING);
+
     return OK;
 }

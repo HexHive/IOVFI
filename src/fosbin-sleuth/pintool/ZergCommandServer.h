@@ -13,6 +13,8 @@ typedef enum zerg_server_state {
     ZERG_SERVER_START,
     ZERG_SERVER_WAIT_FOR_TARGET,
     ZERG_SERVER_WAIT_FOR_CMD,
+    ZERG_SERVER_FUZZING,
+    ZERG_SERVER_EXECUTING,
     ZERG_SERVER_EXIT
 } zerg_server_state_t;
 
@@ -28,13 +30,15 @@ public:
 
     zerg_server_state_t get_state();
 
-    int write_to_commander(const char *msg, size_t size);
+    void set_state(zerg_server_state_t state);
 
-    int write_to_executor(const char *msg, size_t size);
+    int write_to_commander(const void *msg, size_t size);
 
-    int read_from_commander(char *buf, size_t size);
+    int write_to_executor(const void *msg, size_t size);
 
-    int read_from_executor(char *buf, size_t size);
+    int read_from_commander(void *buf, size_t size);
+
+    int read_from_executor(void *buf, size_t size);
 
 protected:
     zerg_server_state_t current_state_;

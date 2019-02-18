@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include "FuzzResults.h"
 #include "fosbin-zergling.h"
+#include <string.h>
 
 #define USER_MSG_TYPE   1000
 
@@ -43,26 +44,18 @@ KNOB <std::string> KnobInPipe(KNOB_MODE_WRITEONCE, "pintool", "in-pipe", "", "Fi
 KNOB <std::string> KnobOutPipe(KNOB_MODE_WRITEONCE, "pintool", "out-pipe", "", "Filename of out pipe");
 
 
-RTN target;
-uint32_t fuzz_count, orig_fuzz_count, curr_context_file_num, hard_count;
-time_t fuzz_end_time;
+RTN target = RTN_Invalid();
 TLS_KEY log_key;
 FBZergContext preContext;
 FBZergContext currentContext;
 FBZergContext expectedContext;
-uint32_t watchdogtime;
 
 std::string shared_library_name;
 
 std::ofstream infofile;
 std::ifstream contextFile;
 std::vector<struct X86Context> fuzzing_run;
-bool fuzzing_started = false;
-
-uint64_t inputContextPassed, totalInputContextsPassed;
-uint64_t inputContextFailed, totalInputContextsFailed;
-
-THREADID curr_app_thread = INVALID_THREADID;
+bool fuzzed_input = false;
 
 ZergCommandServer *cmd_server;
 int internal_pipe_in[2];
@@ -79,8 +72,6 @@ INT32 usage() {
     std::cerr << KNOB_BASE::StringKnobSummary() << std::endl;
     return -1;
 }
-
-//inline BOOL timed_fuzz() { return FuzzTime.Value() > 0; }
 
 VOID log_message(std::stringstream &message) {
     if (message.str().empty()) {
@@ -107,37 +98,23 @@ VOID log_error(std::stringstream &message) {
 
 VOID log_message(const char *message) {
     std::stringstream ss;
-    ss << message << std::endl;
+    ss << message;
     log_message(ss);
 }
 
 VOID log_error(const char *message) {
     std::stringstream ss;
-    ss << message << std::endl;
+    ss << message;
     log_error(ss);
 }
 
-//VOID watch_dog(void *arg) {
-//    UINT32 millis = *(UINT32 *) arg;
-//    UINT32 curr_fuzz_count = fuzz_count;
-//    PIN_Sleep(millis);
-//    std::stringstream msg;
-//    msg << "Watchdog tripped after " << millis << " ms" << std::endl;
-//    log_message(msg);
-//    if (curr_fuzz_count == fuzz_count) {
-//        if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
-//            EXCEPTION_INFO exception_info;
-//            PIN_InitExceptionInfo(&exception_info, EXCEPTCODE_DBG_BREAKPOINT_TRAP, 0);
-////            PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
-//            msg << "Sending signal to " << curr_app_thread << std::endl;
-//            log_message(msg);
-//            PIN_RaiseException(&snapshot, curr_app_thread, &exception_info);
-//            /* PIN_RaiseException does not return, at least according to the documentation... */
-//        } else {
-//            PIN_ExitProcess(1);
-//        }
-//    }
-//}
+int read_from_cmd_server(void *buf, size_t size) {
+    return read(internal_pipe_in[0], buf, size);
+}
+
+int write_to_cmd_server(void *buf, size_t size) {
+    return write(internal_pipe_out[1], &buf, size);
+}
 
 INS INS_FindByAddress(ADDRINT addr) {
     PIN_LockClient();
@@ -262,18 +239,13 @@ uint8_t *find_byte_at_random_offset(uint8_t *buffer, size_t buffer_size, size_t 
         return buffer;
     }
     do {
-//        std::cout << "Finding random byte between " << std::hex << (ADDRINT) buffer << " and "
-//                  << (ADDRINT)(buffer + buffer_size) << " to fit a write_size of " << std::dec << write_size
-//                  << std::endl;
         offset = gen_random() % buffer_size;
         result = buffer + offset;
     } while (!(result + write_size <= buffer + buffer_size));
-//    std::cout << "Result = " << std::hex << (ADDRINT)result << std::endl;
     return result;
 }
 
 size_t flip_bit_at_random_offset(uint8_t *buffer, size_t size) {
-//    std::cout << "flip_bit_at_random_offset" << std::endl;
     int bit_to_flip = rand() % CHAR_BIT;
     uint8_t *loc = find_byte_at_random_offset(buffer, size, sizeof(uint8_t));
 
@@ -282,8 +254,6 @@ size_t flip_bit_at_random_offset(uint8_t *buffer, size_t size) {
 }
 
 size_t set_interesting_byte_at_random_offset(uint8_t *buffer, size_t size) {
-//    std::cout << "set_interesting_byte_at_random_offset" << std::endl;
-
     int8_t interestingvalues[] = {0, -1, 1, CHAR_MIN, CHAR_MAX};
 
     uint8_t *loc = find_byte_at_random_offset(buffer, size, sizeof(int8_t));
@@ -293,8 +263,6 @@ size_t set_interesting_byte_at_random_offset(uint8_t *buffer, size_t size) {
 }
 
 size_t set_interesting_word_at_random_offset(uint8_t *buffer, size_t size) {
-//    std::cout << "set_interesting_word_at_random_offset" << std::endl;
-
     int32_t interestingvalues[] = {0, -1, 1, INT_MIN, INT_MAX};
     if (size < sizeof(int32_t)) {
         return set_interesting_byte_at_random_offset(buffer, size);
@@ -307,8 +275,6 @@ size_t set_interesting_word_at_random_offset(uint8_t *buffer, size_t size) {
 }
 
 size_t set_interesting_dword_at_random_offset(uint8_t *buffer, size_t size) {
-//    std::cout << "set_interesting_dword_at_random_offset" << std::endl;
-
     if (size < sizeof(int64_t)) {
         return set_interesting_word_at_random_offset(buffer, size);
     }
@@ -321,32 +287,24 @@ size_t set_interesting_dword_at_random_offset(uint8_t *buffer, size_t size) {
 }
 
 size_t inc_random_byte_at_random_offset(uint8_t *buffer, size_t size) {
-//    std::cout << "inc_random_byte_at_random_offset" << std::endl;
-
     uint8_t *loc = find_byte_at_random_offset(buffer, size, sizeof(int8_t));
     *loc += 1;
     return sizeof(int8_t);
 }
 
 size_t inc_random_word_at_random_offset(uint8_t *buffer, size_t size) {
-//    std::cout << "inc_random_word_at_random_offset" << std::endl;
-
     int32_t *loc = (int32_t *) find_byte_at_random_offset(buffer, size, sizeof(int32_t));
     *loc += 1;
     return sizeof(int32_t);
 }
 
 size_t inc_random_dword_at_random_offset(uint8_t *buffer, size_t size) {
-//    std::cout << "inc_random_dword_at_random_offset" << std::endl;
-
     int64_t *loc = (int64_t *) find_byte_at_random_offset(buffer, size, sizeof(int64_t));
     *loc += 1;
     return sizeof(int64_t);
 }
 
 size_t set_random_byte_at_random_offset(uint8_t *buffer, size_t size) {
-//    std::cout << "set_random_byte_at_random_offset" << std::endl;
-
     uint8_t *loc = find_byte_at_random_offset(buffer, size, sizeof(uint8_t));
     uint8_t value = (uint8_t) rand();
     *loc = value;
@@ -400,8 +358,7 @@ size_t fuzz_strategy(uint8_t *buffer, size_t size) {
     return 0;
 }
 
-VOID fuzz_registers(CONTEXT *ctx) {
-//    std::cout << "Fuzzing registers" << std::endl;
+VOID fuzz_registers() {
     for (REG reg : FBZergContext::argument_regs) {
         AllocatedArea *aa = preContext.find_allocated_area(reg);
         if (aa == nullptr) {
@@ -409,10 +366,8 @@ VOID fuzz_registers(CONTEXT *ctx) {
             fuzz_strategy((uint8_t * ) & value, sizeof(value));
             preContext.add(reg, value);
         } else {
-//            std::cout << "Fuzzing allocated area" << std::endl;
             aa->fuzz();
         }
-//        std::cout << "Done fuzzing register " << REG_StringShort(reg) << std::endl;
     }
 }
 
@@ -449,8 +404,11 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
                             ADDRINT r12, ADDRINT r13, ADDRINT r14, ADDRINT r15,
                             ADDRINT rdi, ADDRINT rsi, ADDRINT rip, ADDRINT rbp
 ) {
-    if (!fuzzing_started) {
-        return;
+    if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
+        zerg_cmd_result_t failure = INTERRUPTED;
+        log_message("write_to_cmd 2");
+        write_to_cmd_server(&failure, sizeof(failure));
+        wait_to_start();
     }
 //    std::cout << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
 //    std::cout << INS_Disassemble(INS_FindByAddress(rip)) << std::endl;
@@ -460,47 +418,39 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 //    tmp.prettyPrint(std::cout);
 //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
 //    std::cout << std::dec << diff << std::endl;
-//    if (fuzzing_run.size() > MaxInstructions.Value()) {
-//        std::stringstream ss;
-//        ss << "Too many instructions! Starting Over...";
-//        log_message(ss);
-//        start_fuzz_round(&snapshot);
-//    }
+    if (fuzzing_run.size() > MaxInstructions.Value()) {
+        zerg_cmd_result_t failure = TOO_MANY_INS;
+        log_message("write_to_cmd 3");
+        write_to_cmd_server(&failure, sizeof(failure));
+        wait_to_start();
+    }
 }
 
 VOID trace_execution(TRACE trace, VOID *v) {
-//    std::cout << RTN_Name(TRACE_Rtn(trace)) << " is executing" << std::endl;
-//    if (fuzzing_started) {
+    if (RTN_Valid(target)) {
         for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
             for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
-//                if(INS_IsLea(ins) || INS_Category(ins) == XED_CATEGORY_DATAXFER) {
-//                if (RTN_Valid(INS_Rtn(ins)) && SEC_Name(RTN_Sec(INS_Rtn(ins))) == ".text") {
-//                    if (!INS_Valid(INS_FindByAddress(INS_Address(ins)))) {
-//                        std::cout << "Invalid instruction at 0x" << INS_Address(ins) << ": " << INS_Disassemble(ins)
-//                                  << std::endl;
-//                    }
-                    INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R8,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R9,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R10,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R11,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R12,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R13,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R14,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_R15,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
-                                   IARG_INST_PTR,
-                                   IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
-                                   IARG_END);
-//                }
+                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R8,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R9,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R10,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R11,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R12,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R13,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R14,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_R15,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
+                               IARG_INST_PTR,
+                               IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
+                               IARG_END);
             }
         }
-//    }
+    }
 }
 
 //VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
@@ -749,20 +699,24 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 //    return true;
 //}
 
-//BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
+BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
 ////    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
 ////    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
 ////    displayCurrentContext(ctx);
 ////    currentContext.prettyPrint();
-//    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
-////        inputContextFailed++;
-////        totalInputContextsFailed++;
-////        reset_context(ctx);
-////        currentContext = preContext;
-////        log_message("Input context failed...trying a new one");
-////        goto finish;
-//        return catchOtherFault(tid, sig, ctx, hasHandler, pExceptInfo, v);
-//    }
+
+    if (!fuzzed_input) {
+        zerg_cmd_result_t failure = FAILED_CTX;
+        log_message("write_to_cmd 4");
+        write_to_cmd_server(&failure, sizeof(failure));
+        wait_to_start();
+    } else if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
+        zerg_cmd_result_t failure = ERROR;
+        log_message("write_to_cmd 5");
+        write_to_cmd_server(&failure, sizeof(failure));
+        wait_to_start();
+    }
+
 //
 //    if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
 ////        std::stringstream msg;
@@ -774,219 +728,225 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 //        goto finish;
 //    }
 //
-//    {
-//        ADDRINT faulting_addr = -1;
-//        if (!PIN_GetFaultyAccessAddress(pExceptInfo, &faulting_addr)) {
+    {
+        ADDRINT faulting_addr = -1;
+        if (!PIN_GetFaultyAccessAddress(pExceptInfo, &faulting_addr)) {
+            std::stringstream msg;
+            INS faulty_ins = INS_FindByAddress(fuzzing_run.back().rip);
+            msg << "Could not find faulty address for instruction at 0x" << std::hex << INS_Address(faulty_ins)
+                << " (" << INS_Disassemble(faulty_ins) << ")";
+            log_error(msg);
+        } else {
 //            std::stringstream msg;
-//            INS faulty_ins = INS_FindByAddress(fuzzing_run.back().rip);
-//            msg << "Could not find faulty address for instruction at 0x" << std::hex << INS_Address(faulty_ins)
-//                << " (" << INS_Disassemble(faulty_ins) << ")";
-//            log_error(msg);
-//        } else {
-////            std::stringstream msg;
-////            currentContext.prettyPrint();
-////            displayCurrentContext(ctx);
-////            msg << "Faulting address: 0x" << std::hex << faulting_addr;
-////            log_message(msg);
-//        }
-//        std::stringstream log;
-//        std::vector<struct TaintedObject> taintedObjs;
-//        REG taint_source = REG_INVALID();
-//        INS last_taint_ins = INS_Invalid();
-//        for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
-//             it != fuzzing_run.rend(); it++) {
-//            log.str(std::string());
-//            struct X86Context &c = *it;
-//            INS ins = INS_FindByAddress(c.rip);
-//            if (!INS_Valid(ins)) {
-//                log << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
-//                log_error(log);
+//            currentContext.prettyPrint();
+//            displayCurrentContext(ctx);
+//            msg << "Faulting address: 0x" << std::hex << faulting_addr;
+//            log_message(msg);
+        }
+        std::stringstream log;
+        std::vector<struct TaintedObject> taintedObjs;
+        REG taint_source = REG_INVALID();
+        INS last_taint_ins = INS_Invalid();
+        for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
+             it != fuzzing_run.rend(); it++) {
+            log.str(std::string());
+            struct X86Context &c = *it;
+            INS ins = INS_FindByAddress(c.rip);
+            if (!INS_Valid(ins)) {
+                log << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
+                log_error(log);
+            }
+
+//            log << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
+//                      << "(0x" << std::hex << INS_Address(ins) << "): " << INS_Disassemble(ins) << std::endl;
+//            log << "\tINS_IsMemoryRead: " << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
+//            log << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
+//            log << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
+//            log << "\tCategory: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
+//            log << "\tINS_MaxNumRRegs: " << INS_MaxNumRRegs(ins) << std::endl;
+//            for (unsigned int i = 0; i < INS_MaxNumRRegs(ins); i++) {
+//                log << "\t\t" << REG_StringShort(INS_RegR(ins, i)) << std::endl;
 //            }
-//
-////            log << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
-////                      << "(0x" << std::hex << INS_Address(ins) << "): " << INS_Disassemble(ins) << std::endl;
-////            log << "\tINS_IsMemoryRead: " << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
-////            log << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
-////            log << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
-////            log << "\tCategory: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
-////            log << "\tINS_MaxNumRRegs: " << INS_MaxNumRRegs(ins) << std::endl;
-////            for (unsigned int i = 0; i < INS_MaxNumRRegs(ins); i++) {
-////                log << "\t\t" << REG_StringShort(INS_RegR(ins, i)) << std::endl;
-////            }
-////            log << "\tINS_MaxNumWRegs: " << INS_MaxNumWRegs(ins) << std::endl;
-////            for (unsigned int i = 0; i < INS_MaxNumWRegs(ins); i++) {
-////                log << "\t\t" << REG_StringShort(INS_RegW(ins, i)) << std::endl;
-////            }
-////            log_message(log);
-//
-//            if (it == fuzzing_run.rbegin()) {
-//                for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
-//                    REG possible_source = INS_OperandMemoryBaseReg(ins, i);
-////                    std::cout << std::dec << i << ": " << REG_StringShort(possible_source) << std::endl;
-//                    if (REG_valid(possible_source) &&
-//                        compute_effective_address(ins, fuzzing_run.back(), i) == faulting_addr) {
-//                        taint_source = possible_source;
-//                        break;
-//                    }
-//                }
-//
-//                if (!REG_valid(taint_source)) {
-//                    std::stringstream ss;
-//                    ss << "Could not find valid base register for instruction: " << INS_Disassemble(ins);
-//                    log_error(ss);
-//                }
-//                add_taint(taint_source, taintedObjs);
-//                continue;
+//            log << "\tINS_MaxNumWRegs: " << INS_MaxNumWRegs(ins) << std::endl;
+//            for (unsigned int i = 0; i < INS_MaxNumWRegs(ins); i++) {
+//                log << "\t\t" << REG_StringShort(INS_RegW(ins, i)) << std::endl;
 //            }
-//
-//            if (INS_IsLea(ins) || INS_Category(ins) == XED_CATEGORY_DATAXFER) {
-//                REG wreg = REG_INVALID();
-//                ADDRINT writeAddr = 0;
-//                if (INS_OperandIsReg(ins, 0)) {
-//                    wreg = INS_OperandReg(ins, 0);
-////                    log << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
-//                } else if (INS_OperandIsMemory(ins, 0)) {
-////                    log << "\tOperandIsMemory" << std::endl;
-//                    wreg = INS_OperandMemoryBaseReg(ins, 0);
-//                    if (!REG_valid(wreg)) {
-//                        writeAddr = compute_effective_address(ins, c);
-//                    }
-//                } else {
-////                    log << "Write operand is not memory or register: " << INS_Disassemble(ins) << std::endl;
-////                    log_error(log);
-//                    continue;
-//                }
-//                log_message(log);
-//
-//                if (REG_valid(wreg) && !isTainted(wreg, taintedObjs)) {
-////                    log << "\tWrite register is not tainted" << std::endl;
-////                    log_message(log);
-//                    continue;
-//                } else if (!REG_valid(wreg) && !isTainted(writeAddr, taintedObjs)) {
-////                    log << "\tWrite address is not tainted" << std::endl;
-////                    log_message(log);
-//                    continue;
-//                }
-//
-//                REG rreg = REG_INVALID();
-//                ADDRINT readAddr = 0;
-//
-//                if (INS_OperandIsReg(ins, 1)) {
-//                    rreg = INS_OperandReg(ins, 1);
-////                    log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
-//                } else if (INS_OperandIsMemory(ins, 1)) {
-//                    rreg = INS_OperandMemoryBaseReg(ins, 1);
-//                    if (!REG_valid(rreg)) {
-//                        readAddr = compute_effective_address(ins, c, 1);
-//                    }
-//                } else if (INS_OperandIsImmediate(ins, 1)) {
-//                    continue;
-//                } else if (INS_OperandIsAddressGenerator(ins, 1) || INS_MemoryOperandIsRead(ins, 1)) {
-//                    rreg = INS_OperandMemoryBaseReg(ins, 1);
-////                    log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
-//                } else {
-//                    log << "Read operand is not a register, memory address, or immediate: " << INS_Disassemble(ins) <<
-//                        std::endl;
-//                    log << "OperandIsAddressGenerator: " << INS_OperandIsAddressGenerator(ins, 1) << std::endl;
-//                    log << "OperandIsFixedMemop: " << INS_OperandIsFixedMemop(ins, 1) << std::endl;
-//                    log << "OperandIsImplicit: " << INS_OperandIsImplicit(ins, 1) << std::endl;
-//                    log << "Base register: " << REG_StringShort(INS_MemoryBaseReg(ins)) << std::endl;
-//                    log << "Category: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
-//                    for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
-//                        log << "Operand " << std::dec << i << " reg: " << REG_StringShort(INS_OperandReg(ins, i)) <<
-//                            std::endl;
-//                    }
-//
+//            log_message(log);
+
+            if (it == fuzzing_run.rbegin()) {
+                for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
+                    REG possible_source = INS_OperandMemoryBaseReg(ins, i);
+//                    std::cout << std::dec << i << ": " << REG_StringShort(possible_source) << std::endl;
+                    if (REG_valid(possible_source) &&
+                        compute_effective_address(ins, fuzzing_run.back(), i) == faulting_addr) {
+                        taint_source = possible_source;
+                        break;
+                    }
+                }
+
+                if (!REG_valid(taint_source)) {
+                    std::stringstream ss;
+                    ss << "Could not find valid base register for instruction: " << INS_Disassemble(ins);
+                    log_error(ss);
+                }
+                add_taint(taint_source, taintedObjs);
+                continue;
+            }
+
+            if (INS_IsLea(ins) || INS_Category(ins) == XED_CATEGORY_DATAXFER) {
+                REG wreg = REG_INVALID();
+                ADDRINT writeAddr = 0;
+                if (INS_OperandIsReg(ins, 0)) {
+                    wreg = INS_OperandReg(ins, 0);
+//                    log << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
+                } else if (INS_OperandIsMemory(ins, 0)) {
+//                    log << "\tOperandIsMemory" << std::endl;
+                    wreg = INS_OperandMemoryBaseReg(ins, 0);
+                    if (!REG_valid(wreg)) {
+                        writeAddr = compute_effective_address(ins, c);
+                    }
+                } else {
+//                    log << "Write operand is not memory or register: " << INS_Disassemble(ins) << std::endl;
+//                    log_error(log);
+                    continue;
+                }
+                log_message(log);
+
+                if (REG_valid(wreg) && !isTainted(wreg, taintedObjs)) {
+//                    log << "\tWrite register is not tainted" << std::endl;
 //                    log_message(log);
+                    continue;
+                } else if (!REG_valid(wreg) && !isTainted(writeAddr, taintedObjs)) {
+//                    log << "\tWrite address is not tainted" << std::endl;
+//                    log_message(log);
+                    continue;
+                }
+
+                REG rreg = REG_INVALID();
+                ADDRINT readAddr = 0;
+
+                if (INS_OperandIsReg(ins, 1)) {
+                    rreg = INS_OperandReg(ins, 1);
+//                    log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
+                } else if (INS_OperandIsMemory(ins, 1)) {
+                    rreg = INS_OperandMemoryBaseReg(ins, 1);
+                    if (!REG_valid(rreg)) {
+                        readAddr = compute_effective_address(ins, c, 1);
+                    }
+                } else if (INS_OperandIsImmediate(ins, 1)) {
+                    continue;
+                } else if (INS_OperandIsAddressGenerator(ins, 1) || INS_MemoryOperandIsRead(ins, 1)) {
+                    rreg = INS_OperandMemoryBaseReg(ins, 1);
+//                    log << "\tRead register is " << REG_StringShort(rreg) << std::endl;
+                } else {
+                    log << "Read operand is not a register, memory address, or immediate: " << INS_Disassemble(ins) <<
+                        std::endl;
+                    log << "OperandIsAddressGenerator: " << INS_OperandIsAddressGenerator(ins, 1) << std::endl;
+                    log << "OperandIsFixedMemop: " << INS_OperandIsFixedMemop(ins, 1) << std::endl;
+                    log << "OperandIsImplicit: " << INS_OperandIsImplicit(ins, 1) << std::endl;
+                    log << "Base register: " << REG_StringShort(INS_MemoryBaseReg(ins)) << std::endl;
+                    log << "Category: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
+                    for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
+                        log << "Operand " << std::dec << i << " reg: " << REG_StringShort(INS_OperandReg(ins, i)) <<
+                            std::endl;
+                    }
+
+                    log_message(log);
+                    continue;
+                }
+
+                log_message(log);
+                last_taint_ins = ins;
+                faulting_addr = compute_effective_address(ins, c, 1);
+                if (REG_valid(wreg)) {
+                    if (REG_valid(rreg)) {
+                        if (isTainted(wreg, taintedObjs) && !isTainted(rreg, taintedObjs)) {
+                            remove_taint(wreg, taintedObjs);
+                            add_taint(rreg, taintedObjs);
+                        }
+                    } else {
+                        if (isTainted(wreg, taintedObjs) && !isTainted(readAddr, taintedObjs)) {
+                            remove_taint(wreg, taintedObjs);
+                            add_taint(readAddr, taintedObjs);
+                        }
+                    }
+                } else {
+                    if (REG_valid(rreg)) {
+                        if (isTainted(writeAddr, taintedObjs) && !isTainted(rreg, taintedObjs)) {
+                            remove_taint(wreg, taintedObjs);
+                            add_taint(rreg, taintedObjs);
+                        }
+                    } else {
+                        if (isTainted(writeAddr, taintedObjs) && !isTainted(readAddr, taintedObjs)) {
+                            remove_taint(wreg, taintedObjs);
+                            add_taint(readAddr, taintedObjs);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (taintedObjs.size() > 0) {
+            struct TaintedObject taintedObject = taintedObjs.back();
+//            if (taintedObject.isRegister) {
+//                log << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
+//            } else {
+//                log << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
+//            }
+
+            /* Find the last write to the base register to find the address of the bad pointer */
+//            INS ins = INS_FindByAddress(fuzzing_run.back().rip);
+//            REG faulting_reg = taint_source;
+////            std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
+//            for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
+//                 it != fuzzing_run.rend(); it++) {
+//                if (it == fuzzing_run.rbegin()) {
 //                    continue;
 //                }
-//
-//                log_message(log);
-//                last_taint_ins = ins;
-//                faulting_addr = compute_effective_address(ins, c, 1);
-//                if (REG_valid(wreg)) {
-//                    if (REG_valid(rreg)) {
-//                        if (isTainted(wreg, taintedObjs) && !isTainted(rreg, taintedObjs)) {
-//                            remove_taint(wreg, taintedObjs);
-//                            add_taint(rreg, taintedObjs);
-//                        }
-//                    } else {
-//                        if (isTainted(wreg, taintedObjs) && !isTainted(readAddr, taintedObjs)) {
-//                            remove_taint(wreg, taintedObjs);
-//                            add_taint(readAddr, taintedObjs);
-//                        }
-//                    }
-//                } else {
-//                    if (REG_valid(rreg)) {
-//                        if (isTainted(writeAddr, taintedObjs) && !isTainted(rreg, taintedObjs)) {
-//                            remove_taint(wreg, taintedObjs);
-//                            add_taint(rreg, taintedObjs);
-//                        }
-//                    } else {
-//                        if (isTainted(writeAddr, taintedObjs) && !isTainted(readAddr, taintedObjs)) {
-//                            remove_taint(wreg, taintedObjs);
-//                            add_taint(readAddr, taintedObjs);
-//                        }
-//                    }
+//                ins = INS_FindByAddress(it->rip);
+////                std::cout << INS_Disassemble(ins) << std::endl;
+//                if (INS_RegWContain(ins, faulting_reg)) {
+////                it->prettyPrint(std::cout);
+////                    std::cout << "Write instruction: " << INS_Disassemble(ins) << std::endl;
+////                    faulting_addr = compute_effective_address(ins, *it, 1);
+////                    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
+//                    break;
 //                }
 //            }
-//        }
-//
-//        if (taintedObjs.size() > 0) {
-//            struct TaintedObject taintedObject = taintedObjs.back();
-////            if (taintedObject.isRegister) {
-////                log << "Tainted register: " << REG_StringShort(taintedObject.reg) << std::endl;
-////            } else {
-////                log << "Tainted address: 0x" << std::hex << taintedObject.addr << std::endl;
-////            }
-//
-//            /* Find the last write to the base register to find the address of the bad pointer */
-////            INS ins = INS_FindByAddress(fuzzing_run.back().rip);
-////            REG faulting_reg = taint_source;
-//////            std::cout << "Faulting reg: " << REG_StringShort(faulting_reg) << std::endl;
-////            for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
-////                 it != fuzzing_run.rend(); it++) {
-////                if (it == fuzzing_run.rbegin()) {
-////                    continue;
-////                }
-////                ins = INS_FindByAddress(it->rip);
-//////                std::cout << INS_Disassemble(ins) << std::endl;
-////                if (INS_RegWContain(ins, faulting_reg)) {
-//////                it->prettyPrint(std::cout);
-//////                    std::cout << "Write instruction: " << INS_Disassemble(ins) << std::endl;
-//////                    faulting_addr = compute_effective_address(ins, *it, 1);
-//////                    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << std::endl;
-////                    break;
-////                }
-////            }
-//
-//            if (!create_allocated_area(taintedObject, faulting_addr)) {
-////                for(auto &it : fuzzing_run) {
-////                    std::cout << INS_Disassemble(INS_FindByAddress(it.rip)) << std::endl;
-////                }
+
+            if (!create_allocated_area(taintedObject, faulting_addr)) {
+//                for(auto &it : fuzzing_run) {
+//                    std::cout << INS_Disassemble(INS_FindByAddress(it.rip)) << std::endl;
+//                }
 //                reset_to_preexecution(ctx);
 //                fuzz_registers(ctx);
 //                goto finish;
-//            }
-//        } else {
-//            log_message("Taint analysis failed for the following context: ");
-//            displayCurrentContext(ctx);
-//            PIN_ExitApplication(1);
-//        }
-//
+                zerg_cmd_result_t failure = ERROR;
+                log_message("write_to_cmd 6");
+                write_to_cmd_server(&failure, sizeof(failure));
+                wait_to_start();
+            }
+        } else {
+            log_message("Taint analysis failed for the following context: ");
+            displayCurrentContext(ctx);
+            zerg_cmd_result_t failure = ERROR;
+            log_message("write_to_cmd 7");
+            write_to_cmd_server(&failure, sizeof(failure));
+            wait_to_start();
+        }
+
 //        reset_to_preexecution(ctx);
-//    }
-//    finish:
-//
-////    preContext.prettyPrint();
-////    currentContext.prettyPrint();
-//    currentContext >> ctx;
-////    fuzz_registers(ctx);
-////    PIN_SaveContext(ctx, &preexecution);
-////    displayCurrentContext(ctx);
-////    log_message("Ending segfault handler");
-//    return false;
-//}
+    }
+
+//    preContext.prettyPrint();
+//    currentContext.prettyPrint();
+    currentContext >> ctx;
+//    fuzz_registers(ctx);
+//    PIN_SaveContext(ctx, &preexecution);
+//    displayCurrentContext(ctx);
+//    log_message("Ending segfault handler");
+    return false;
+}
 
 //VOID ImageLoad(IMG img, VOID *v) {
 //    if (!IMG_Valid(img)) {
@@ -1181,7 +1141,8 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 
 void report_success() {
     zerg_cmd_result_t success = OK;
-    if (write(internal_pipe_out[1], &success, sizeof(success)) < 0) {
+    log_message("write_to_cmd 7");
+    if (write_to_cmd_server(&success, sizeof(success)) < 0) {
         log_message("Could not write success to command server");
     }
 
@@ -1196,7 +1157,7 @@ void start_cmd_server(void *v) {
 
 zerg_cmd_result_t handle_set_target() {
     uintptr_t new_target_addr;
-    if (cmd_server->read_from_commander((char *) &new_target_addr, sizeof(new_target_addr)) <= 0) {
+    if (read_from_cmd_server(&new_target_addr, sizeof(new_target_addr)) <= 0) {
         log_message("Could not read new target from command server");
         return ERROR;
     }
@@ -1204,10 +1165,12 @@ zerg_cmd_result_t handle_set_target() {
     std::stringstream msg;
     msg << "Setting new target to 0x" << std::hex << new_target_addr;
     log_message(msg);
+    PIN_LockClient();
     RTN new_target = RTN_FindByAddress(new_target_addr);
     if (!RTN_Valid(new_target)) {
         msg << "Could not find valid target";
         log_message(msg);
+        PIN_UnlockClient();
         return ERROR;
     }
 
@@ -1227,6 +1190,8 @@ zerg_cmd_result_t handle_set_target() {
     INS_InsertCall(RTN_InsTail(new_target), IPOINT_BEFORE, (AFUNPTR) report_success, IARG_CONTEXT,
                    IARG_THREAD_ID, IARG_END);
     RTN_Close(new_target);
+    PIN_UnlockClient();
+
     target = new_target;
 
     msg << "done.";
@@ -1234,27 +1199,61 @@ zerg_cmd_result_t handle_set_target() {
     return OK;
 }
 
+zerg_cmd_result_t handle_fuzz_cmd() {
+    fuzz_registers();
+    return OK;
+}
+
+zerg_cmd_result_t handle_execute_cmd() {
+    fuzzing_run.clear();
+    currentContext = preContext;
+    currentContext >> &snapshot;
+    PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
+    PIN_ExecuteAt(&snapshot);
+    return OK;
+}
+
 zerg_cmd_result_t handle_cmd() {
     zerg_cmd_t cmd;
-    if (cmd_server->read_from_commander((char *) &cmd, sizeof(cmd)) <= 0) {
+    std::stringstream msg;
+    if (read_from_cmd_server(&cmd, sizeof(cmd)) <= 0) {
         log_message("Could not read command from server");
         return ERROR;
     }
 
     switch (cmd) {
         case SetTargetCommand::COMMAND_ID:
+            log_message("Received SetTargetCommand");
             return handle_set_target();
+        case FuzzCommand::COMMAND_ID:
+            log_message("Received FuzzCommand");
+            return handle_fuzz_cmd();
+        case ExecuteCommand::COMMAND_ID:
+            log_message("Received ExecuteCommand");
+            return handle_execute_cmd();
         default:
+            msg << "Unknown command: " << cmd;
+            log_message(msg);
             return ERROR;
     }
 }
 
+void begin_execution(CONTEXT *ctx) {
+    PIN_SaveContext(ctx, &snapshot);
+    for (REG reg : FBZergContext::argument_regs) {
+        preContext.add(reg, (ADDRINT) 0);
+    }
+    wait_to_start();
+}
+
 void wait_to_start() {
     while (true) {
-        if (select(FD_SETSIZE, &exe_fd_set_in, &exe_fd_set_out, nullptr, nullptr) > 0) {
+        log_message("Executor waiting for command");
+        if (select(FD_SETSIZE, &exe_fd_set_in, nullptr, nullptr, nullptr) > 0) {
             if (FD_ISSET(internal_pipe_in[0], &exe_fd_set_in)) {
                 zerg_cmd_result_t result = handle_cmd();
-                write(internal_pipe_out[1], &result, sizeof(result));
+                log_message(ZergCommand::result_to_str(result));
+                write_to_cmd_server(&result, sizeof(result));
             }
         } else {
             PIN_ExitApplication(0);
@@ -1274,7 +1273,7 @@ VOID FindMain(IMG img, VOID *v) {
         msg << "Adding call to wait_to_start to " << RTN_Name(main) << "(0x" << std::hex << RTN_Address(main)
             << ")";
         log_message(msg);
-        INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) wait_to_start, IARG_END);
+        INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) begin_execution, IARG_CONTEXT, IARG_END);
         RTN_Close(main);
     } else {
         std::stringstream ss;
@@ -1289,82 +1288,48 @@ int main(int argc, char **argv) {
         return usage();
     }
 
-//    if (OnlyOutputContexts.Value()) {
-//        UINT32 total_input_contexts = 0;
-//        for (size_t i = 0; i < ContextsToUse.NumberOfValues(); i++) {
-//            contextFile.open(ContextsToUse.Value(i).c_str(), ios::in | ios::binary);
-//            if (!contextFile) {
-//                std::cerr << "Could not open " << ContextsToUse.Value(i) << std::endl;
-//                continue;
-//            }
-//            std::cout << "Contexts in " << ContextsToUse.Value(i) << ":" << std::endl;
-//            while (contextFile.peek() != EOF) {
-//                output_context(contextFile);
-//                total_input_contexts++;
-//            }
-//            contextFile.close();
-//        }
-//        std::cout << "Total input contexts: " << std::dec << total_input_contexts << std::endl;
-//        PIN_ExitApplication(0);
-//    }
-
-//    if (!KnobStart.Value() && SharedLibraryFunc.Value() == "") {
-//        return usage();
-//    }
     std::stringstream ss;
-    ss << "Starting Zergling..." << std::endl;
+    ss << "Starting Zergling as process " << PIN_GetPid() << "..." << std::endl;
     log_message(ss);
-//    initialize_system(argc, argv);
 
-//    if (!timed_fuzz()) {
-//        if (SharedLibraryFunc.Value() == "") {
-//            ss << "Fuzzing 0x" << std::hex << KnobStart.Value() << std::dec << " " << FuzzCount.Value() << " times."
-//               << std::endl;
-//        } else {
-//            ss << "Fuzzing " << SharedLibraryFunc.Value() << " " << FuzzCount.Value() << " times."
-//               << std::endl;
-//        }
-//    } else {
-//        ss << "Fuzzing 0x" << std::hex << KnobStart.Value() << " for " << std::dec << FuzzTime.Value()
-//           << " minute" << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
-//    }
-
-//    log_message(ss);
-//    IMG_AddInstrumentFunction(ImageLoad, nullptr);
-//    TRACE_AddInstrumentFunction(trace_execution, nullptr);
-//
-//    /* Catch segfaults for pointer taint analysis */
-//    PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
-//
-//    /* Catch everything else */
-//    PIN_InterceptSignal(SIGTRAP, catchOtherFault, nullptr);
-//    PIN_InterceptSignal(SIGILL, catchOtherFault, nullptr);
-//    PIN_InterceptSignal(SIGFPE, catchOtherFault, nullptr);
-//    PIN_InterceptSignal(SIGBUS, catchOtherFault, nullptr);
-
-    if (!pipe(internal_pipe_in) || !pipe(internal_pipe_out)) {
+    if (pipe(internal_pipe_in) != 0 || pipe(internal_pipe_out) != 0) {
         log_error("Error creating internal pipe");
     }
+
     FD_ZERO(&exe_fd_set_in);
     FD_ZERO(&exe_fd_set_out);
     FD_SET(internal_pipe_in[0], &exe_fd_set_in);
     FD_SET(internal_pipe_out[1], &exe_fd_set_out);
 
-    cmd_in = open(KnobInPipe.Value().c_str(), 0, O_RDONLY);
-    cmd_out = open(KnobOutPipe.Value().c_str(), 0, O_WRONLY);
-
+    ss << "Opening command in pipe " << KnobInPipe.Value();
+    log_message(ss);
+    cmd_in = open(KnobInPipe.Value().c_str(), O_RDONLY);
     if (cmd_in < 0) {
-        log_error("Could not open in pipe");
-    }
-    if (cmd_out < 0) {
-        log_error("Could not open out pipe");
+        ss << "Could not open in pipe: " << strerror(errno);
+        log_error(ss);
     }
 
-    cmd_server = new ZergCommandServer(internal_pipe_in[1], internal_pipe_out[0], cmd_in, cmd_out);
+    ss << "Opening command out pipe " << KnobOutPipe.Value();
+    log_message(ss);
+    cmd_out = open(KnobOutPipe.Value().c_str(), O_WRONLY);
+    if (cmd_out < 0) {
+        ss << "Could not open out pipe: " << strerror(errno);
+        log_error(ss);
+    }
+    log_message("done opening command pipes");
+
+    log_message("Creating command server");
+    cmd_server = new ZergCommandServer(internal_pipe_in[1], internal_pipe_out[0], cmd_out, cmd_in);
+    log_message("done");
 
     IMG_AddInstrumentFunction(FindMain, nullptr);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
     PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, nullptr);
+
+    PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
+
+    log_message("Starting");
+    PIN_StartProgram();
 
     return 0;
 }
