@@ -25,7 +25,7 @@ ZergCommand *ZergCommand::create(zerg_cmd_t type, ZergCommandServer &server) {
 }
 
 void ZergCommand::log(std::stringstream &msg) {
-    server_.log(msg.str());
+    std::cout << msg << std::endl;
     msg.str(std::string());
 }
 
@@ -33,7 +33,7 @@ SetTargetCommand::SetTargetCommand(ZergCommandServer &server) :
         ZergCommand(SetTargetCommand::COMMAND_ID, server),
         new_target_(0) {
     std::stringstream msg;
-    if (read(server_.in_pipe_, (char *) &new_target_, sizeof(new_target_)) < 0) {
+    if (server.read_from_commander((char *) &new_target_, sizeof(new_target_)) < 0) {
         msg << "Error reading new target" << std::endl;
         log(msg);
         return;
@@ -43,36 +43,13 @@ SetTargetCommand::SetTargetCommand(ZergCommandServer &server) :
 }
 
 zerg_cmd_result_t SetTargetCommand::execute() {
-    if (server_.exe_thread_id_ == INVALID_THREADID || !new_target_) {
+    if (new_target_ == 0) {
         return ERROR;
     }
 
-    PIN_StopApplicationThreads(server_.exe_thread_id_);
+    server_.write_to_executor((char *) &SetTargetCommand::COMMAND_ID, sizeof(SetTargetCommand::COMMAND_ID));
+    server_.write_to_executor((char *) &new_target_, sizeof(new_target_));
 
-    std::stringstream msg;
-    msg << "Setting new target to 0x" << std::hex << new_target_;
-    log(msg);
-    RTN new_target = RTN_FindByAddress(new_target_);
-    if (!RTN_Valid(new_target)) {
-        msg << "Could not find valid target";
-        log(msg);
-        return NOT_FOUND;
-    }
-
-    msg << "Found target: " << RTN_Name(new_target) << " at 0x" << std::hex << RTN_Address(new_target) << std::endl;
-    log(msg);
-    msg << "Instrumenting returns...";
-    RTN_Open(new_target);
-    for (INS ins = RTN_InsHead(new_target); INS_Valid(ins); ins = INS_Next(ins)) {
-        if (INS_IsRet(ins)) {
-            INS_InsertCall(ins, IPOINT_BEFORE, server_.system_->fuzz_round_end, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
-        }
-    }
-    INS_InsertCall(RTN_InsTail(new_target), IPOINT_BEFORE, server_.system_->fuzz_round_end, IARG_CONTEXT,
-                   IARG_THREAD_ID, IARG_END);
-    RTN_Close(new_target);
-    msg << "done.";
-    log(msg);
     return OK;
 }
 

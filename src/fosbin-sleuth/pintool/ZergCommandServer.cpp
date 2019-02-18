@@ -26,10 +26,6 @@ ZergCommandServer::~ZergCommandServer() {
     stop();
 }
 
-void ZergCommandServer::set_exe_thread(THREADID exe_thread_id) {
-    exe_thread_id_ = exe_thread_id;
-}
-
 zerg_server_state_t ZergCommandServer::get_state() {
     return current_state_;
 }
@@ -40,7 +36,6 @@ void ZergCommandServer::handle_command() {
     if (read(cmd_r_fd, (char *) &cmd, sizeof(cmd)) < 0) {
         log("Error reading from command pipe");
     } else {
-        zerg_cmd_result_t result;
         ZergCommand *zergCommand = ZergCommand::create(cmd, *this);
         if (zergCommand) {
             result = zergCommand->execute();
@@ -52,15 +47,14 @@ void ZergCommandServer::handle_command() {
 
 void ZergCommandServer::start() {
     std::cout << "Starting ZergCommandServer" << std::endl;
-    zerg_cmd_t cmd_type;
 
     current_state_ = ZERG_SERVER_WAIT_FOR_TARGET;
     while (current_state_ != ZERG_SERVER_EXIT) {
         if (select(FD_SETSIZE, &fd_r_set_, &fd_w_set_, NULL, NULL) > 0) {
-            if (FD_ISSET(&fd_r_set, cmd_r_fd)) {
+            if (FD_ISSET(cmd_r_fd, &fd_r_set_)) {
                 handle_command();
             }
-            if (FD_ISSET(&fd_r_set, internal_r_fd)) {
+            if (FD_ISSET(internal_r_fd, &fd_r_set_)) {
                 handle_executor_msg();
             }
         } else if (errno == EINTR) {
@@ -71,15 +65,39 @@ void ZergCommandServer::start() {
 
 void ZergCommandServer::stop() {
     current_state_ = ZERG_SERVER_EXIT;
-    if (in_pipe_ > 0) {
-        close(in_pipe_);
+    if (internal_w_fd > 0) {
+        close(internal_w_fd);
     }
 
-    if (out_pipe_ > 0) {
-        close(out_pipe_);
+    if (internal_r_fd > 0) {
+        close(internal_r_fd);
+    }
+
+    if (cmd_w_fd > 0) {
+        close(cmd_w_fd);
+    }
+
+    if (cmd_r_fd > 0) {
+        close(cmd_r_fd);
     }
 }
 
 void ZergCommandServer::log(const std::string &msg) {
     std::cout << msg << std::endl;
+}
+
+int ZergCommandServer::write_to_commander(const char *msg, size_t size) {
+    return write(cmd_w_fd, msg, size);
+}
+
+int ZergCommandServer::write_to_executor(const char *msg, size_t size) {
+    return write(internal_w_fd, msg, size);
+}
+
+int ZergCommandServer::read_from_commander(char *buf, size_t size) {
+    return read(cmd_r_fd, buf, size);
+}
+
+int ZergCommandServer::read_from_executor(char *buf, size_t size) {
+    return read(internal_r_fd, buf, size);
 }

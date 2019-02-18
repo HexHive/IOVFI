@@ -28,13 +28,13 @@ public:
 
     zerg_server_state_t get_state();
 
-    void write_to_commander(const char *msg, size_t size);
+    int write_to_commander(const char *msg, size_t size);
 
-    void write_to_executor(const char *msg, size_t size);
+    int write_to_executor(const char *msg, size_t size);
 
-    void read_from_commander(char *buf, size_t size);
+    int read_from_commander(char *buf, size_t size);
 
-    void read_from_executor(char *buf, size_t size);
+    int read_from_executor(char *buf, size_t size);
 
 protected:
     zerg_server_state_t current_state_;

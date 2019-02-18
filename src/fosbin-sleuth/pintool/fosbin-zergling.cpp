@@ -65,9 +65,14 @@ uint64_t inputContextFailed, totalInputContextsFailed;
 THREADID curr_app_thread = INVALID_THREADID;
 
 ZergCommandServer *cmd_server;
-int internal_pipe[2];
+int internal_pipe_in[2];
+int internal_pipe_out[2];
 int cmd_out;
 int cmd_in;
+fd_set exe_fd_set_in;
+fd_set exe_fd_set_out;
+
+void wait_to_start();
 
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
@@ -1175,7 +1180,12 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 //}
 
 void report_success() {
+    zerg_cmd_result_t success = OK;
+    if (write(internal_pipe_out[1], &success, sizeof(success)) < 0) {
+        log_message("Could not write success to command server");
+    }
 
+    wait_to_start();
 }
 
 void start_cmd_server(void *v) {
@@ -1184,10 +1194,72 @@ void start_cmd_server(void *v) {
     PIN_ExitApplication(0);
 }
 
+zerg_cmd_result_t handle_set_target() {
+    uintptr_t new_target_addr;
+    if (cmd_server->read_from_commander((char *) &new_target_addr, sizeof(new_target_addr)) <= 0) {
+        log_message("Could not read new target from command server");
+        return ERROR;
+    }
+
+    std::stringstream msg;
+    msg << "Setting new target to 0x" << std::hex << new_target_addr;
+    log_message(msg);
+    RTN new_target = RTN_FindByAddress(new_target_addr);
+    if (!RTN_Valid(new_target)) {
+        msg << "Could not find valid target";
+        log_message(msg);
+        return ERROR;
+    }
+
+    if (RTN_Valid(target)) {
+        PIN_RemoveInstrumentationInRange(RTN_Address(target), RTN_Address(target) + RTN_Size(target));
+    }
+
+    msg << "Found target: " << RTN_Name(new_target) << " at 0x" << std::hex << RTN_Address(new_target) << std::endl;
+    log_message(msg);
+    msg << "Instrumenting returns...";
+    RTN_Open(new_target);
+    for (INS ins = RTN_InsHead(new_target); INS_Valid(ins); ins = INS_Next(ins)) {
+        if (INS_IsRet(ins)) {
+            INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) report_success, IARG_CONTEXT, IARG_THREAD_ID, IARG_END);
+        }
+    }
+    INS_InsertCall(RTN_InsTail(new_target), IPOINT_BEFORE, (AFUNPTR) report_success, IARG_CONTEXT,
+                   IARG_THREAD_ID, IARG_END);
+    RTN_Close(new_target);
+    target = new_target;
+
+    msg << "done.";
+    log_message(msg);
+    return OK;
+}
+
+zerg_cmd_result_t handle_cmd() {
+    zerg_cmd_t cmd;
+    if (cmd_server->read_from_commander((char *) &cmd, sizeof(cmd)) <= 0) {
+        log_message("Could not read command from server");
+        return ERROR;
+    }
+
+    switch (cmd) {
+        case SetTargetCommand::COMMAND_ID:
+            return handle_set_target();
+        default:
+            return ERROR;
+    }
+}
+
 void wait_to_start() {
-    fd_set set;
-    FD_ZERO(&set);
-    FD_SET(internal_pipe)
+    while (true) {
+        if (select(FD_SETSIZE, &exe_fd_set_in, &exe_fd_set_out, nullptr, nullptr) > 0) {
+            if (FD_ISSET(internal_pipe_in[0], &exe_fd_set_in)) {
+                zerg_cmd_result_t result = handle_cmd();
+                write(internal_pipe_out[1], &result, sizeof(result));
+            }
+        } else {
+            PIN_ExitApplication(0);
+        }
+    }
 }
 
 VOID FindMain(IMG img, VOID *v) {
@@ -1269,13 +1341,15 @@ int main(int argc, char **argv) {
 //    PIN_InterceptSignal(SIGILL, catchOtherFault, nullptr);
 //    PIN_InterceptSignal(SIGFPE, catchOtherFault, nullptr);
 //    PIN_InterceptSignal(SIGBUS, catchOtherFault, nullptr);
-    PIN_THREAD_UID cmd_thread_uid;
-    PIN_THREAD_UID exe_thread_uid;
-    int32_t exit_code = 0;
 
-    if (!pipe(internal_pipe)) {
+    if (!pipe(internal_pipe_in) || !pipe(internal_pipe_out)) {
         log_error("Error creating internal pipe");
     }
+    FD_ZERO(&exe_fd_set_in);
+    FD_ZERO(&exe_fd_set_out);
+    FD_SET(internal_pipe_in[0], &exe_fd_set_in);
+    FD_SET(internal_pipe_out[1], &exe_fd_set_out);
+
     cmd_in = open(KnobInPipe.Value().c_str(), 0, O_RDONLY);
     cmd_out = open(KnobOutPipe.Value().c_str(), 0, O_WRONLY);
 
@@ -1286,9 +1360,11 @@ int main(int argc, char **argv) {
         log_error("Could not open out pipe");
     }
 
-    IMG_AddInstrumentFunction(ImageLoad, nullptr);
+    cmd_server = new ZergCommandServer(internal_pipe_in[1], internal_pipe_out[0], cmd_in, cmd_out);
+
+    IMG_AddInstrumentFunction(FindMain, nullptr);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
-    PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, &cmd_thread_uid);
+    PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, nullptr);
 
     return 0;
 }
