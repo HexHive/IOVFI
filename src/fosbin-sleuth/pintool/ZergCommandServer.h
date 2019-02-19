@@ -20,7 +20,7 @@ typedef enum zerg_server_state {
 
 class ZergCommandServer {
 public:
-    ZergCommandServer(int internal_w, int internal_r, int cmd_w, int cmd_r);
+    ZergCommandServer(int internal_w, int internal_r, std::string cmd_in_name, std::string cmd_out_name);
 
     ~ZergCommandServer();
 
@@ -51,8 +51,11 @@ protected:
 
     void handle_executor_msg();
 
+    std::string cmd_in_name_, cmd_out_name_;
+
     int internal_w_fd, internal_r_fd, cmd_w_fd, cmd_r_fd;
     fd_set fd_w_set_, fd_r_set_;
+
 };
 
 #include "ZergCommandServer.cpp"

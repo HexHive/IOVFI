@@ -153,7 +153,6 @@ GetServerStateCommand::GetServerStateCommand(ZergCommandServer &server) :
 
 zerg_cmd_result_t GetServerStateCommand::execute() {
     const std::string name = server_.get_state_string();
-    std::cout << "Writing " << name << " to commander" << std::endl;
     if (server_.write_to_commander(name.c_str(), name.size() + 1) <= 0) {
         std::cout << "Error writing server state to commander" << std::endl;
     }

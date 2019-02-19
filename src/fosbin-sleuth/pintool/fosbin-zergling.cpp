@@ -1308,6 +1308,7 @@ int main(int argc, char **argv) {
         ss << "Could not open in pipe: " << strerror(errno);
         log_error(ss);
     }
+    close(cmd_in);
 
     ss << "Opening command out pipe " << KnobOutPipe.Value();
     log_message(ss);
@@ -1316,10 +1317,12 @@ int main(int argc, char **argv) {
         ss << "Could not open out pipe: " << strerror(errno);
         log_error(ss);
     }
+    close(cmd_out);
     log_message("done opening command pipes");
 
     log_message("Creating command server");
-    cmd_server = new ZergCommandServer(internal_pipe_in[1], internal_pipe_out[0], cmd_out, cmd_in);
+    cmd_server = new ZergCommandServer(internal_pipe_in[1], internal_pipe_out[0], KnobInPipe.Value(),
+                                       KnobOutPipe.Value());
     log_message("done");
 
     IMG_AddInstrumentFunction(FindMain, nullptr);

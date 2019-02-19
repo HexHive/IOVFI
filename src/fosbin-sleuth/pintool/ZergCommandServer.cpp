@@ -9,17 +9,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-ZergCommandServer::ZergCommandServer(int internal_w, int internal_r, int cmd_w, int cmd_r) :
+ZergCommandServer::ZergCommandServer(int internal_w, int internal_r, std::string cmd_in_name, std::string cmd_out_name)
+        :
         current_state_(ZERG_SERVER_START),
+        cmd_in_name_(cmd_in_name), cmd_out_name_(cmd_out_name),
         internal_w_fd(internal_w), internal_r_fd(internal_r),
-        cmd_w_fd(cmd_w), cmd_r_fd(cmd_r) {
+        cmd_w_fd(-1), cmd_r_fd(-1) {
     FD_ZERO(&fd_w_set_);
     FD_ZERO(&fd_r_set_);
-
-    FD_SET(internal_w, &fd_w_set_);
-    FD_SET(cmd_w, &fd_w_set_);
-    FD_SET(internal_r, &fd_r_set_);
-    FD_SET(cmd_r, &fd_r_set_);
 }
 
 ZergCommandServer::~ZergCommandServer() {
@@ -36,41 +33,62 @@ void ZergCommandServer::set_state(zerg_server_state_t state) {
 
 void ZergCommandServer::handle_command() {
     zerg_cmd_t cmd;
-//    zerg_cmd_result_t result = ERROR;
-    if (read_from_commander(&cmd, sizeof(cmd)) < 0) {
-        log("Error reading from command pipe");
-        current_state_ = ZERG_SERVER_EXIT;
-        PIN_ExitApplication(1);
-        return;
-    } else {
-        std::cout << "Read command " << cmd << std::endl;
-        ZergCommand *zergCommand = ZergCommand::create(cmd, *this);
-        if (zergCommand) {
-//            result = zergCommand->execute();
-            zergCommand->execute();
-            delete zergCommand;
-        }
+    zerg_cmd_result_t result = ERROR;
+    read_from_commander(&cmd, sizeof(cmd));
+    ZergCommand *zergCommand = ZergCommand::create(cmd, *this);
+    if (zergCommand) {
+        result = zergCommand->execute();
+        delete zergCommand;
     }
-//    if(write_to_commander(&result, sizeof(result)) <= 0) {
-//        std::cout << "Error writing to commander: " << strerror(errno) << std::endl;
-//    }
+    if (write_to_commander(&result, sizeof(result)) <= 0) {
+        std::cout << "Error writing to commander: " << strerror(errno) << std::endl;
+    }
 }
 
 void ZergCommandServer::start() {
+    cmd_r_fd = open(cmd_in_name_.c_str(), O_RDONLY);
+    if (cmd_r_fd <= 0) {
+        std::cout << "Command Server could not open " << cmd_in_name_ << std::endl;
+        return;
+    }
+    cmd_w_fd = open(cmd_out_name_.c_str(), O_WRONLY);
+    if (cmd_w_fd <= 0) {
+        std::cout << "Command Server could not open " << cmd_out_name_ << std::endl;
+        return;
+    }
+
     std::cout << "Starting ZergCommandServer" << std::endl;
 
     current_state_ = ZERG_SERVER_WAIT_FOR_TARGET;
     while (current_state_ != ZERG_SERVER_EXIT) {
+        FD_ZERO(&fd_r_set_);
+        FD_SET(cmd_r_fd, &fd_r_set_);
+        FD_SET(internal_r_fd, &fd_r_set_);
         std::cout << "ZergCommandServer waiting for command" << std::endl;
         if (select(FD_SETSIZE, &fd_r_set_, nullptr, nullptr, nullptr) > 0) {
+            bool reset_connection = false;
             if (FD_ISSET(cmd_r_fd, &fd_r_set_)) {
                 handle_command();
+                reset_connection = true;
             }
             if (FD_ISSET(internal_r_fd, &fd_r_set_)) {
                 handle_executor_msg();
+                reset_connection = true;
+            }
+
+            if (reset_connection) {
+                /* There is some implementation bug in pin that prevents
+                 * data from immediately writing to a pipe, even if fflush is used.
+                 * This is a hack to get around this bug.
+                 * The intent is that if we *ever* write data to the commander
+                 * process, close the pipe and reopen it to flush data.
+                 */
+                close(cmd_w_fd);
+                cmd_w_fd = open(cmd_out_name_.c_str(), O_WRONLY);
             }
         } else if (errno == EINTR) {
             current_state_ = ZERG_SERVER_EXIT;
+            std::cout << "Command Server Detected Interrupt" << std::endl;
         }
     }
 }
@@ -92,9 +110,6 @@ int ZergCommandServer::write_to_commander(const void *msg, size_t size) {
     if (result < 0) {
         std::cout << "Write failed: " << strerror(errno) << std::endl;
     }
-    if (fsync(cmd_w_fd) < 0) {
-        std::cout << "Error syncing pipe: " << strerror(errno) << std::endl;
-    }
     return result;
 }
 
@@ -104,7 +119,18 @@ int ZergCommandServer::write_to_executor(const void *msg, size_t size) {
 }
 
 int ZergCommandServer::read_from_commander(void *buf, size_t size) {
-    return read(cmd_r_fd, buf, size);
+    int bytes_read = read(cmd_r_fd, buf, size);
+    if (bytes_read < 0) {
+        log("Error reading from command pipe");
+        stop();
+        PIN_ExitApplication(1);
+    } else if (bytes_read == 0) {
+        log("Write end of command pipe closed");
+        stop();
+        PIN_ExitApplication(0);
+    }
+
+    return bytes_read;
 }
 
 int ZergCommandServer::read_from_executor(void *buf, size_t size) {
