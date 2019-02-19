@@ -36,7 +36,7 @@ void ZergCommandServer::set_state(zerg_server_state_t state) {
 
 void ZergCommandServer::handle_command() {
     zerg_cmd_t cmd;
-    zerg_cmd_result_t result = ERROR;
+//    zerg_cmd_result_t result = ERROR;
     if (read_from_commander(&cmd, sizeof(cmd)) < 0) {
         log("Error reading from command pipe");
         current_state_ = ZERG_SERVER_EXIT;
@@ -46,11 +46,14 @@ void ZergCommandServer::handle_command() {
         std::cout << "Read command " << cmd << std::endl;
         ZergCommand *zergCommand = ZergCommand::create(cmd, *this);
         if (zergCommand) {
-            result = zergCommand->execute();
+//            result = zergCommand->execute();
+            zergCommand->execute();
             delete zergCommand;
         }
     }
-    write_to_commander((const char *) &result, sizeof(result));
+//    if(write_to_commander(&result, sizeof(result)) <= 0) {
+//        std::cout << "Error writing to commander: " << strerror(errno) << std::endl;
+//    }
 }
 
 void ZergCommandServer::start() {
@@ -81,8 +84,17 @@ void ZergCommandServer::log(const std::string &msg) {
 }
 
 int ZergCommandServer::write_to_commander(const void *msg, size_t size) {
+    std::cout << "Writing to commander" << std::endl;
+    std::string msg_str((char *) msg);
+    std::cout << "Msg: " << msg_str << std::endl;
+
     int result = write(cmd_w_fd, msg, size);
-    fsync(cmd_w_fd);
+    if (result < 0) {
+        std::cout << "Write failed: " << strerror(errno) << std::endl;
+    }
+    if (fsync(cmd_w_fd) < 0) {
+        std::cout << "Error syncing pipe: " << strerror(errno) << std::endl;
+    }
     return result;
 }
 
@@ -108,4 +120,23 @@ void ZergCommandServer::handle_executor_msg() {
     log(ss.str());
     write_to_commander((char *) &msg, sizeof(msg));
     set_state(ZERG_SERVER_WAIT_FOR_CMD);
+}
+
+const std::string ZergCommandServer::get_state_string() {
+    switch (get_state()) {
+        case ZERG_SERVER_START:
+            return std::string("ZERG_SERVER_START");
+        case ZERG_SERVER_WAIT_FOR_TARGET:
+            return std::string("ZERG_SERVER_WAIT_FOR_TARGET");
+        case ZERG_SERVER_WAIT_FOR_CMD:
+            return std::string("ZERG_SERVER_WAIT_FOR_CMD");
+        case ZERG_SERVER_FUZZING:
+            return std::string("ZERG_SERVER_FUZZING");
+        case ZERG_SERVER_EXECUTING:
+            return std::string("ZERG_SERVER_EXECUTING");
+        case ZERG_SERVER_EXIT:
+            return std::string("ZERG_SERVER_EXIT");
+        default:
+            return std::string("UNKNOWN");
+    }
 }

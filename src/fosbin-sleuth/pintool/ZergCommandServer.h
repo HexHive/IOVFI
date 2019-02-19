@@ -40,6 +40,8 @@ public:
 
     int read_from_executor(void *buf, size_t size);
 
+    const std::string get_state_string();
+
 protected:
     zerg_server_state_t current_state_;
 

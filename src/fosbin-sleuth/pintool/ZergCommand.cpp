@@ -10,6 +10,7 @@ const zerg_cmd_t InvalidCommand::COMMAND_ID = 2;
 const zerg_cmd_t ExitCommand::COMMAND_ID = 3;
 const zerg_cmd_t FuzzCommand::COMMAND_ID = 4;
 const zerg_cmd_t ExecuteCommand::COMMAND_ID = 5;
+const zerg_cmd_t GetServerStateCommand::COMMAND_ID = 6;
 
 ZergCommand::ZergCommand(zerg_cmd_t type, ZergCommandServer &server) :
         server_(server),
@@ -27,6 +28,8 @@ ZergCommand *ZergCommand::create(zerg_cmd_t type, ZergCommandServer &server) {
             return new FuzzCommand(server);
         case ExecuteCommand::COMMAND_ID:
             return new ExecuteCommand(server);
+        case GetServerStateCommand::COMMAND_ID:
+            return new GetServerStateCommand(server);
         default:
             return new InvalidCommand(server);
     }
@@ -141,6 +144,19 @@ zerg_cmd_result_t ExecuteCommand::execute() {
         return ERROR;
     }
     server_.set_state(ZERG_SERVER_EXECUTING);
+
+    return OK;
+}
+
+GetServerStateCommand::GetServerStateCommand(ZergCommandServer &server) :
+        ZergCommand(GetServerStateCommand::COMMAND_ID, server) {}
+
+zerg_cmd_result_t GetServerStateCommand::execute() {
+    const std::string name = server_.get_state_string();
+    std::cout << "Writing " << name << " to commander" << std::endl;
+    if (server_.write_to_commander(name.c_str(), name.size() + 1) <= 0) {
+        std::cout << "Error writing server state to commander" << std::endl;
+    }
 
     return OK;
 }

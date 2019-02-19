@@ -7,7 +7,7 @@
 
 typedef int zerg_cmd_t;
 typedef enum zerg_cmd_result_t_ {
-    OK,
+    OK = 1,
     ERROR,
     NOT_FOUND,
     INTERRUPTED,
@@ -79,6 +79,15 @@ public:
     virtual zerg_cmd_result_t execute();
 
     ExecuteCommand(ZergCommandServer &server);
+
+    const static zerg_cmd_t COMMAND_ID;
+};
+
+class GetServerStateCommand : public ZergCommand {
+public:
+    virtual zerg_cmd_result_t execute();
+
+    GetServerStateCommand(ZergCommandServer &server);
 
     const static zerg_cmd_t COMMAND_ID;
 };

@@ -113,7 +113,7 @@ int read_from_cmd_server(void *buf, size_t size) {
 }
 
 int write_to_cmd_server(void *buf, size_t size) {
-    return write(internal_pipe_out[1], &buf, size);
+    return write(internal_pipe_out[1], buf, size);
 }
 
 INS INS_FindByAddress(ADDRINT addr) {
@@ -1141,7 +1141,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 
 void report_success() {
     zerg_cmd_result_t success = OK;
-    log_message("write_to_cmd 7");
+    log_message("write_to_cmd 8");
     if (write_to_cmd_server(&success, sizeof(success)) < 0) {
         log_message("Could not write success to command server");
     }
