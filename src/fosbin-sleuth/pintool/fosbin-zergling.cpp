@@ -67,6 +67,8 @@ fd_set exe_fd_set_out;
 
 void wait_to_start();
 
+void report_failure(zerg_cmd_result_t reason);
+
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
     std::cerr << KNOB_BASE::StringKnobSummary() << std::endl;
@@ -108,12 +110,20 @@ VOID log_error(const char *message) {
     log_error(ss);
 }
 
-int read_from_cmd_server(void *buf, size_t size) {
-    return read(internal_pipe_in[0], buf, size);
+ZergMessage *read_from_cmd_server() {
+    ZergMessage *result = new ZergMessage();
+    if (result->read_from_fd(internal_pipe_in[0]) == 0) {
+        log_message("Could not read from command pipe");
+    }
+    return result;
 }
 
-int write_to_cmd_server(void *buf, size_t size) {
-    return write(internal_pipe_out[1], buf, size);
+int write_to_cmd_server(ZergMessage &msg) {
+    size_t written = msg.write_to_fd(internal_pipe_out[1]);
+    if (written == 0) {
+        log_message("Could not write to command pipe");
+    }
+    return written;
 }
 
 INS INS_FindByAddress(ADDRINT addr) {
@@ -405,9 +415,6 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
                             ADDRINT rdi, ADDRINT rsi, ADDRINT rip, ADDRINT rbp
 ) {
     if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
-        zerg_cmd_result_t failure = INTERRUPTED;
-        log_message("write_to_cmd 2");
-        write_to_cmd_server(&failure, sizeof(failure));
         wait_to_start();
     }
 //    std::cout << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
@@ -419,9 +426,8 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
 //    std::cout << std::dec << diff << std::endl;
     if (fuzzing_run.size() > MaxInstructions.Value()) {
-        zerg_cmd_result_t failure = TOO_MANY_INS;
+        report_failure(TOO_MANY_INS);
         log_message("write_to_cmd 3");
-        write_to_cmd_server(&failure, sizeof(failure));
         wait_to_start();
     }
 }
@@ -706,14 +712,12 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 ////    currentContext.prettyPrint();
 
     if (!fuzzed_input) {
-        zerg_cmd_result_t failure = FAILED_CTX;
         log_message("write_to_cmd 4");
-        write_to_cmd_server(&failure, sizeof(failure));
+        report_failure(FAILED_CTX);
         wait_to_start();
     } else if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
-        zerg_cmd_result_t failure = ERROR;
         log_message("write_to_cmd 5");
-        write_to_cmd_server(&failure, sizeof(failure));
+        report_failure(ERROR);
         wait_to_start();
     }
 
@@ -921,17 +925,15 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 //                reset_to_preexecution(ctx);
 //                fuzz_registers(ctx);
 //                goto finish;
-                zerg_cmd_result_t failure = ERROR;
                 log_message("write_to_cmd 6");
-                write_to_cmd_server(&failure, sizeof(failure));
+                report_failure(ERROR);
                 wait_to_start();
             }
         } else {
             log_message("Taint analysis failed for the following context: ");
             displayCurrentContext(ctx);
-            zerg_cmd_result_t failure = ERROR;
             log_message("write_to_cmd 7");
-            write_to_cmd_server(&failure, sizeof(failure));
+            report_failure(ERROR);
             wait_to_start();
         }
 
@@ -1139,14 +1141,22 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 //    log_message(ss);
 //}
 
-void report_success() {
-    zerg_cmd_result_t success = OK;
+void report_success(CONTEXT *ctx, THREADID tid) {
+    currentContext << ctx;
+
     log_message("write_to_cmd 8");
-    if (write_to_cmd_server(&success, sizeof(success)) < 0) {
-        log_message("Could not write success to command server");
-    }
+    ZergMessage msg(ZMSG_OK);
+    write_to_cmd_server(msg);
 
     wait_to_start();
+}
+
+void report_failure(zerg_cmd_result_t reason) {
+    char *buf = strdup(ZergCommand::result_to_str(reason));
+    size_t len = strlen(buf) + 1;
+    ZergMessage msg(ZMSG_FAIL, len, buf);
+    write_to_cmd_server(msg);
+    free(buf);
 }
 
 void start_cmd_server(void *v) {
@@ -1155,12 +1165,9 @@ void start_cmd_server(void *v) {
     PIN_ExitApplication(0);
 }
 
-zerg_cmd_result_t handle_set_target() {
+zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
     uintptr_t new_target_addr;
-    if (read_from_cmd_server(&new_target_addr, sizeof(new_target_addr)) <= 0) {
-        log_message("Could not read new target from command server");
-        return ERROR;
-    }
+    memcpy(&new_target_addr, zmsg.data(), sizeof(new_target_addr));
 
     std::stringstream msg;
     msg << "Setting new target to 0x" << std::hex << new_target_addr;
@@ -1214,28 +1221,33 @@ zerg_cmd_result_t handle_execute_cmd() {
 }
 
 zerg_cmd_result_t handle_cmd() {
-    zerg_cmd_t cmd;
-    std::stringstream msg;
-    if (read_from_cmd_server(&cmd, sizeof(cmd)) <= 0) {
+    ZergMessage *msg = nullptr;
+    std::stringstream log_msg;
+    msg = read_from_cmd_server();
+    if (!msg) {
         log_message("Could not read command from server");
         return ERROR;
     }
 
-    switch (cmd) {
-        case SetTargetCommand::COMMAND_ID:
+    zerg_cmd_result_t result;
+    switch (msg->type()) {
+        case ZMSG_SET_TGT:
             log_message("Received SetTargetCommand");
-            return handle_set_target();
-        case FuzzCommand::COMMAND_ID:
+            result = handle_set_target(*msg);
+        case ZMSG_FUZZ:
             log_message("Received FuzzCommand");
-            return handle_fuzz_cmd();
-        case ExecuteCommand::COMMAND_ID:
+            result = handle_fuzz_cmd();
+        case ZMSG_EXECUTE:
             log_message("Received ExecuteCommand");
-            return handle_execute_cmd();
+            result = handle_execute_cmd();
         default:
-            msg << "Unknown command: " << cmd;
-            log_message(msg);
-            return ERROR;
+            log_msg << "Unknown command: " << log_msg;
+            log_message(log_msg);
+            result = ERROR;
     }
+
+    delete msg;
+    return result;
 }
 
 void begin_execution(CONTEXT *ctx) {
@@ -1252,8 +1264,17 @@ void wait_to_start() {
         if (select(FD_SETSIZE, &exe_fd_set_in, nullptr, nullptr, nullptr) > 0) {
             if (FD_ISSET(internal_pipe_in[0], &exe_fd_set_in)) {
                 zerg_cmd_result_t result = handle_cmd();
-                log_message(ZergCommand::result_to_str(result));
-                write_to_cmd_server(&result, sizeof(result));
+                log_message("cmd server 9");
+                if (result == OK) {
+                    ZergMessage msg(ZMSG_OK);
+                    write_to_cmd_server(msg);
+                } else {
+                    char *buf = strdup(ZergCommand::result_to_str(result));
+                    size_t len = strlen(buf) + 1;
+                    ZergMessage msg(ZMSG_FAIL, len, buf);
+                    write_to_cmd_server(msg);
+                    delete buf;
+                }
             }
         } else {
             PIN_ExitApplication(0);

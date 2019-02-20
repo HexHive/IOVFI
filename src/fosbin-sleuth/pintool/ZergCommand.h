@@ -5,7 +5,43 @@
 #ifndef FOSBIN_ZERGCOMMAND_H
 #define FOSBIN_ZERGCOMMAND_H
 
-typedef int zerg_cmd_t;
+typedef enum zerg_message_type {
+    ZMSG_FAIL = -1,
+    ZMSG_OK,
+    ZMSG_SET_TGT,
+    ZMSG_EXIT,
+    ZMSG_FUZZ,
+    ZMSG_EXECUTE,
+    ZMSG_SET_CTX,
+    ZMSG_RESET
+} zerg_message_t;
+
+class ZergMessage {
+protected:
+    zerg_message_t _message_type;
+    size_t _length;
+    void *_data;
+    bool _self_allocated_data;
+public:
+    ZergMessage(zerg_message_t type, size_t length, void *data);
+
+    ZergMessage(zerg_message_t type = ZMSG_FAIL);
+
+    ZergMessage(const ZergMessage &msg);
+
+    ~ZergMessage();
+
+    size_t read_from_fd(int fd);
+
+    size_t write_to_fd(int fd) const;
+
+    size_t size();
+
+    zerg_message_t type();
+
+    void *data();
+};
+
 typedef enum zerg_cmd_result_t_ {
     OK = 1,
     ERROR,
@@ -19,77 +55,42 @@ class ZergCommandServer;
 
 class ZergCommand {
 public:
-    virtual zerg_cmd_result_t execute() = 0;
+    virtual zerg_cmd_result_t execute();
 
-    static ZergCommand *create(zerg_cmd_t type, ZergCommandServer &server);
+    static ZergCommand *create(ZergMessage &msg, ZergCommandServer &server);
 
     static const char *result_to_str(zerg_cmd_result_t result);
 
     virtual ~ZergCommand();
 
 protected:
-    ZergCommand(zerg_cmd_t type, ZergCommandServer &server);
+    ZergCommand(ZergMessage &msg, ZergCommandServer &server);
 
     ZergCommandServer &server_;
-    zerg_cmd_t type_;
+    ZergMessage &msg_;
 
     void log(std::stringstream &msg);
-};
-
-class SetTargetCommand : public ZergCommand {
-public:
-    virtual zerg_cmd_result_t execute();
-
-    SetTargetCommand(ZergCommandServer &server);
-
-    const static zerg_cmd_t COMMAND_ID;
-protected:
-    uintptr_t new_target_;
 };
 
 class InvalidCommand : public ZergCommand {
 public:
     virtual zerg_cmd_result_t execute();
 
-    InvalidCommand(ZergCommandServer &server);
-
-    const static zerg_cmd_t COMMAND_ID;
+    InvalidCommand(ZergMessage &msg, ZergCommandServer &server);
 };
 
 class ExitCommand : public ZergCommand {
 public:
     virtual zerg_cmd_result_t execute();
 
-    ExitCommand(ZergCommandServer &server);
-
-    const static zerg_cmd_t COMMAND_ID;
+    ExitCommand(ZergMessage &msg, ZergCommandServer &server);
 };
 
-class FuzzCommand : public ZergCommand {
+class ResetCommand : public ZergCommand {
 public:
     virtual zerg_cmd_result_t execute();
 
-    FuzzCommand(ZergCommandServer &server);
-
-    const static zerg_cmd_t COMMAND_ID;
-};
-
-class ExecuteCommand : public ZergCommand {
-public:
-    virtual zerg_cmd_result_t execute();
-
-    ExecuteCommand(ZergCommandServer &server);
-
-    const static zerg_cmd_t COMMAND_ID;
-};
-
-class GetServerStateCommand : public ZergCommand {
-public:
-    virtual zerg_cmd_result_t execute();
-
-    GetServerStateCommand(ZergCommandServer &server);
-
-    const static zerg_cmd_t COMMAND_ID;
+    ResetCommand(ZergMessage &msg, ZergCommandServer &server);
 };
 
 #include "ZergCommand.cpp"

@@ -5,33 +5,28 @@
 #include "ZergCommand.h"
 #include "ZergCommandServer.h"
 
-const zerg_cmd_t SetTargetCommand::COMMAND_ID = 1;
-const zerg_cmd_t InvalidCommand::COMMAND_ID = 2;
-const zerg_cmd_t ExitCommand::COMMAND_ID = 3;
-const zerg_cmd_t FuzzCommand::COMMAND_ID = 4;
-const zerg_cmd_t ExecuteCommand::COMMAND_ID = 5;
-const zerg_cmd_t GetServerStateCommand::COMMAND_ID = 6;
-
-ZergCommand::ZergCommand(zerg_cmd_t type, ZergCommandServer &server) :
+ZergCommand::ZergCommand(ZergMessage &msg, ZergCommandServer &server) :
         server_(server),
-        type_(type) {}
+        msg_(msg) {}
 
 ZergCommand::~ZergCommand() {}
 
-ZergCommand *ZergCommand::create(zerg_cmd_t type, ZergCommandServer &server) {
-    switch (type) {
-        case SetTargetCommand::COMMAND_ID:
-            return new SetTargetCommand(server);
-        case ExitCommand::COMMAND_ID:
-            return new ExitCommand(server);
-        case FuzzCommand::COMMAND_ID:
-            return new FuzzCommand(server);
-        case ExecuteCommand::COMMAND_ID:
-            return new ExecuteCommand(server);
-        case GetServerStateCommand::COMMAND_ID:
-            return new GetServerStateCommand(server);
+ZergCommand *ZergCommand::create(ZergMessage &msg, ZergCommandServer &server) {
+    switch (msg.type()) {
+        case ZMSG_SET_TGT:
+            return new ZergCommand(msg, server);
+        case ZMSG_EXIT:
+            return new ExitCommand(msg, server);
+        case ZMSG_FUZZ:
+            return new ZergCommand(msg, server);
+        case ZMSG_EXECUTE:
+            return new ZergCommand(msg, server);
+        case ZMSG_SET_CTX:
+            return new ZergCommand(msg, server);
+        case ZMSG_RESET:
+            return new ResetCommand(msg, server);
         default:
-            return new InvalidCommand(server);
+            return new InvalidCommand(msg, server);
     }
 }
 
@@ -57,52 +52,24 @@ const char *ZergCommand::result_to_str(zerg_cmd_result_t result) {
 };
 
 void ZergCommand::log(std::stringstream &msg) {
-    std::cout << msg << std::endl;
+    std::cout << msg.str() << std::endl;
     msg.str(std::string());
 }
 
-SetTargetCommand::SetTargetCommand(ZergCommandServer &server) :
-        ZergCommand(SetTargetCommand::COMMAND_ID, server),
-        new_target_(0) {
-    std::stringstream msg;
-    if (server.read_from_commander((char *) &new_target_, sizeof(new_target_)) < 0) {
-        msg << "Error reading new target" << std::endl;
-        log(msg);
-        return;
-    }
-    msg << "Read in new target 0x" << std::hex << new_target_;
-    log(msg);
-}
-
-zerg_cmd_result_t SetTargetCommand::execute() {
-    if (new_target_ == 0 || server_.get_state() != ZERG_SERVER_WAIT_FOR_TARGET) {
+zerg_cmd_result_t ZergCommand::execute() {
+    if (server_.write_to_executor(msg_) == 0) {
         return ERROR;
     }
-
-    server_.write_to_executor((char *) &SetTargetCommand::COMMAND_ID, sizeof(SetTargetCommand::COMMAND_ID));
-    server_.write_to_executor((char *) &new_target_, sizeof(new_target_));
-
-    zerg_cmd_result_t result;
-    server_.read_from_executor(&result, sizeof(result));
-    if (result == OK) {
-        server_.set_state(ZERG_SERVER_WAIT_FOR_CMD);
-    } else {
-        std::cout << "CommandServer received " << ZergCommand::result_to_str(result) << std::endl;
-    }
-
-    return result;
+    return OK;
 }
-
-InvalidCommand::InvalidCommand(ZergCommandServer &server) :
-        ZergCommand(InvalidCommand::COMMAND_ID, server) {}
 
 zerg_cmd_result_t InvalidCommand::execute() {
     std::cout << "InvalidCommand executed" << std::endl;
     return ERROR;
 }
 
-ExitCommand::ExitCommand(ZergCommandServer &server) :
-        ZergCommand(ExitCommand::COMMAND_ID, server) {}
+InvalidCommand::InvalidCommand(ZergMessage &msg, ZergCommandServer &server) :
+        ZergCommand(msg, server) {}
 
 zerg_cmd_result_t ExitCommand::execute() {
     std::cout << "Stopping server" << std::endl;
@@ -110,52 +77,119 @@ zerg_cmd_result_t ExitCommand::execute() {
     return OK;
 }
 
-FuzzCommand::FuzzCommand(ZergCommandServer &server) :
-        ZergCommand(FuzzCommand::COMMAND_ID, server) {}
+ExitCommand::ExitCommand(ZergMessage &msg, ZergCommandServer &server) :
+        ZergCommand(msg, server) {}
 
-zerg_cmd_result_t FuzzCommand::execute() {
-    if (server_.get_state() != ZERG_SERVER_WAIT_FOR_CMD) {
-        std::cout << "Invalid state" << std::endl;
+zerg_cmd_result_t ResetCommand::execute() {
+    if (!server_.set_state(ZERG_SERVER_WAIT_FOR_CMD)) {
         return ERROR;
     }
-
-    zerg_cmd_result_t result;
-    if (server_.write_to_executor(&type_, sizeof(type_)) <= 0) {
-        return ERROR;
-    }
-    server_.set_state(ZERG_SERVER_FUZZING);
-    if (server_.read_from_executor(&result, sizeof(result)) <= 0) {
-        return ERROR;
-    }
-    server_.set_state(ZERG_SERVER_WAIT_FOR_CMD);
-
-    return result;
-}
-
-ExecuteCommand::ExecuteCommand(ZergCommandServer &server) :
-        ZergCommand(ExecuteCommand::COMMAND_ID, server) {}
-
-zerg_cmd_result_t ExecuteCommand::execute() {
-    if (server_.get_state() != ZERG_SERVER_WAIT_FOR_CMD) {
-        return ERROR;
-    }
-
-    if (server_.write_to_executor(&type_, sizeof(type_)) <= 0) {
-        return ERROR;
-    }
-    server_.set_state(ZERG_SERVER_EXECUTING);
-
     return OK;
 }
 
-GetServerStateCommand::GetServerStateCommand(ZergCommandServer &server) :
-        ZergCommand(GetServerStateCommand::COMMAND_ID, server) {}
+ResetCommand::ResetCommand(ZergMessage &msg, ZergCommandServer &server) :
+        ZergCommand(msg, server) {}
 
-zerg_cmd_result_t GetServerStateCommand::execute() {
-    const std::string name = server_.get_state_string();
-    if (server_.write_to_commander(name.c_str(), name.size() + 1) <= 0) {
-        std::cout << "Error writing server state to commander" << std::endl;
+ZergMessage::ZergMessage(zerg_message_t type) :
+        _message_type(type), _length(0), _data(nullptr), _self_allocated_data(false) {}
+
+ZergMessage::ZergMessage(zerg_message_t type, size_t length, void *data) :
+        _message_type(type), _length(length), _data(data), _self_allocated_data(false) {}
+
+ZergMessage::ZergMessage(const ZergMessage &msg) {
+    _message_type = msg._message_type;
+    _length = msg._length;
+    if (_self_allocated_data) {
+        delete (char *) _data;
     }
 
-    return OK;
+    if (msg._length > 0) {
+        _self_allocated_data = true;
+        _data = malloc(msg._length);
+        memcpy(_data, msg._data, _length);
+    } else {
+        _data = nullptr;
+        _self_allocated_data = false;
+    }
+}
+
+ZergMessage::~ZergMessage() {
+    if (_self_allocated_data) {
+        free(_data);
+    }
+}
+
+size_t ZergMessage::size() { return _length; }
+
+zerg_message_t ZergMessage::type() { return _message_type; }
+
+void *ZergMessage::data() { return _data; }
+
+size_t ZergMessage::write_to_fd(int fd) const {
+    size_t written = 0;
+    int tmp = write(fd, &_message_type, sizeof(_message_type));
+    if (tmp <= 0) {
+        return 0;
+    }
+
+    written += tmp;
+    tmp = write(fd, &_length, sizeof(_length));
+    if (tmp <= 0) {
+        return 0;
+    }
+
+    written += tmp;
+    if (_length > 0) {
+        tmp = write(fd, _data, _length);
+        if (tmp <= 0) {
+            return 0;
+        }
+        written += tmp;
+    }
+
+    return written;
+}
+
+size_t ZergMessage::read_from_fd(int fd) {
+    size_t read_bytes = 0;
+    zerg_message_t msg_type;
+    size_t length;
+    void *data = nullptr;
+
+    int tmp = read(fd, &msg_type, sizeof(msg_type));
+    if (tmp <= 0) {
+        return 0;
+    }
+    read_bytes += tmp;
+
+    tmp = read(fd, &length, sizeof(length));
+    if (tmp <= 0) {
+        return 0;
+    }
+    read_bytes += tmp;
+
+    if (length > 0) {
+        data = malloc(length);
+        if (!data) {
+            return 0;
+        }
+
+        tmp = read(fd, data, length);
+        if (read <= 0) {
+            free(data);
+            return 0;
+        }
+        read_bytes += tmp;
+    }
+
+    _message_type = msg_type;
+    _length = length;
+    if (data) {
+        _data = data;
+        _self_allocated_data = true;
+    } else {
+        _self_allocated_data = false;
+    }
+
+    return read_bytes;
 }
