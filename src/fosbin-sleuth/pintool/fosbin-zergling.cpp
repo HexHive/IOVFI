@@ -1264,16 +1264,13 @@ void wait_to_start() {
         if (select(FD_SETSIZE, &exe_fd_set_in, nullptr, nullptr, nullptr) > 0) {
             if (FD_ISSET(internal_pipe_in[0], &exe_fd_set_in)) {
                 zerg_cmd_result_t result = handle_cmd();
-                log_message("cmd server 9");
                 if (result == OK) {
+                    log_message("cmd server 9");
                     ZergMessage msg(ZMSG_OK);
                     write_to_cmd_server(msg);
                 } else {
-                    char *buf = strdup(ZergCommand::result_to_str(result));
-                    size_t len = strlen(buf) + 1;
-                    ZergMessage msg(ZMSG_FAIL, len, buf);
-                    write_to_cmd_server(msg);
-                    delete buf;
+                    log_message("cmd server 10");
+                    report_failure(result);
                 }
             }
         } else {

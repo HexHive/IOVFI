@@ -35,11 +35,11 @@ public:
 
     size_t write_to_fd(int fd) const;
 
-    size_t size();
+    size_t size() const;
 
-    zerg_message_t type();
+    zerg_message_t type() const;
 
-    void *data();
+    void *data() const;
 };
 
 typedef enum zerg_cmd_result_t_ {
@@ -67,7 +67,7 @@ protected:
     ZergCommand(ZergMessage &msg, ZergCommandServer &server);
 
     ZergCommandServer &server_;
-    ZergMessage &msg_;
+    ZergMessage msg_;
 
     void log(std::stringstream &msg);
 };

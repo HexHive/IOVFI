@@ -7,7 +7,8 @@
 
 ZergCommand::ZergCommand(ZergMessage &msg, ZergCommandServer &server) :
         server_(server),
-        msg_(msg) {}
+        msg_(msg) {
+}
 
 ZergCommand::~ZergCommand() {}
 
@@ -57,6 +58,7 @@ void ZergCommand::log(std::stringstream &msg) {
 }
 
 zerg_cmd_result_t ZergCommand::execute() {
+    std::cout << "ZergCommand execute msg type = " << msg_.type() << std::endl;
     if (server_.write_to_executor(msg_) == 0) {
         return ERROR;
     }
@@ -99,9 +101,6 @@ ZergMessage::ZergMessage(zerg_message_t type, size_t length, void *data) :
 ZergMessage::ZergMessage(const ZergMessage &msg) {
     _message_type = msg._message_type;
     _length = msg._length;
-    if (_self_allocated_data) {
-        delete (char *) _data;
-    }
 
     if (msg._length > 0) {
         _self_allocated_data = true;
@@ -114,16 +113,17 @@ ZergMessage::ZergMessage(const ZergMessage &msg) {
 }
 
 ZergMessage::~ZergMessage() {
+    std::cout << "ZergMessage destructor called" << std::endl;
     if (_self_allocated_data) {
         free(_data);
     }
 }
 
-size_t ZergMessage::size() { return _length; }
+size_t ZergMessage::size() const { return _length; }
 
-zerg_message_t ZergMessage::type() { return _message_type; }
+zerg_message_t ZergMessage::type() const { return _message_type; }
 
-void *ZergMessage::data() { return _data; }
+void *ZergMessage::data() const { return _data; }
 
 size_t ZergMessage::write_to_fd(int fd) const {
     size_t written = 0;

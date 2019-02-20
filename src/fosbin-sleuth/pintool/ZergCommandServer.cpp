@@ -150,7 +150,7 @@ void ZergCommandServer::start() {
         FD_ZERO(&fd_r_set_);
         FD_SET(cmd_r_fd, &fd_r_set_);
         FD_SET(internal_r_fd, &fd_r_set_);
-        std::cout << "ZergCommandServer waiting for command" << std::endl;
+        std::cout << "ZergCommandServer waiting for command. Current State: " << get_state_string(current_state_) << std::endl;
         if (select(FD_SETSIZE, &fd_r_set_, nullptr, nullptr, nullptr) > 0) {
             if (FD_ISSET(cmd_r_fd, &fd_r_set_)) {
                 handle_command();
@@ -182,6 +182,7 @@ size_t ZergCommandServer::write_to_commander(const ZergMessage &msg) {
 }
 
 size_t ZergCommandServer::write_to_executor(const ZergMessage &msg) {
+    std::cout << "Writing " << msg.type() << " to executor" << std::endl;
     size_t result = msg.write_to_fd(internal_w_fd);
     return result;
 }
@@ -193,6 +194,7 @@ ZergMessage *ZergCommandServer::read_from_commander() {
         stop();
         PIN_ExitApplication(1);
     }
+    std::cout << "Zerg Message Type: " << result->type() << std::endl;
     return result;
 }
 
