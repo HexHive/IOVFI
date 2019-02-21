@@ -58,7 +58,6 @@ void ZergCommand::log(std::stringstream &msg) {
 }
 
 zerg_cmd_result_t ZergCommand::execute() {
-    std::cout << "ZergCommand execute msg type = " << msg_.type() << std::endl;
     if (server_.write_to_executor(msg_) == 0) {
         return ERROR;
     }
@@ -113,7 +112,6 @@ ZergMessage::ZergMessage(const ZergMessage &msg) {
 }
 
 ZergMessage::~ZergMessage() {
-    std::cout << "ZergMessage destructor called" << std::endl;
     if (_self_allocated_data) {
         free(_data);
     }

@@ -37,7 +37,7 @@ KNOB <uint32_t> PrintToScreen(KNOB_MODE_WRITEONCE, "pintool", "print", "1",
                               "Print log messages to screen along with file");
 KNOB <uint32_t> WatchDogTimeout(KNOB_MODE_WRITEONCE, "pintool", "watchdog", "20000", "Watchdog timeout in "
                                                                                      "milliseconds");
-KNOB<bool> OnlyOutputContexts(KNOB_MODE_WRITEONCE, "pintool", "only-output", "false", "Only output contexts and exit");
+//KNOB<bool> OnlyOutputContexts(KNOB_MODE_WRITEONCE, "pintool", "only-output", "false", "Only output contexts and exit");
 KNOB <std::string> KnobContextOutFile(KNOB_MODE_WRITEONCE, "pintool", "ctx-out", "",
                                       "Filename of which to output accepted contexts");
 KNOB <std::string> KnobInPipe(KNOB_MODE_WRITEONCE, "pintool", "in-pipe", "", "Filename of in pipe");
@@ -1234,16 +1234,20 @@ zerg_cmd_result_t handle_cmd() {
         case ZMSG_SET_TGT:
             log_message("Received SetTargetCommand");
             result = handle_set_target(*msg);
+            break;
         case ZMSG_FUZZ:
             log_message("Received FuzzCommand");
             result = handle_fuzz_cmd();
+            break;
         case ZMSG_EXECUTE:
             log_message("Received ExecuteCommand");
             result = handle_execute_cmd();
+            break;
         default:
             log_msg << "Unknown command: " << log_msg;
             log_message(log_msg);
             result = ERROR;
+            break;
     }
 
     delete msg;

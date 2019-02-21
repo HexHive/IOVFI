@@ -182,7 +182,6 @@ size_t ZergCommandServer::write_to_commander(const ZergMessage &msg) {
 }
 
 size_t ZergCommandServer::write_to_executor(const ZergMessage &msg) {
-    std::cout << "Writing " << msg.type() << " to executor" << std::endl;
     size_t result = msg.write_to_fd(internal_w_fd);
     return result;
 }
@@ -194,7 +193,6 @@ ZergMessage *ZergCommandServer::read_from_commander() {
         stop();
         PIN_ExitApplication(1);
     }
-    std::cout << "Zerg Message Type: " << result->type() << std::endl;
     return result;
 }
 
