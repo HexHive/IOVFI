@@ -40,15 +40,17 @@ public:
     zerg_message_t type() const;
 
     void *data() const;
+
+    const char *str();
 };
 
 typedef enum zerg_cmd_result_t_ {
-    OK = 1,
-    ERROR,
-    NOT_FOUND,
-    INTERRUPTED,
-    TOO_MANY_INS,
-    FAILED_CTX
+    ZCMD_OK = 1,
+    ZCMD_ERROR,
+    ZCMD_NOT_FOUND,
+    ZCMD_INTERRUPTED,
+    ZCMD_TOO_MANY_INS,
+    ZCMD_FAILED_CTX
 } zerg_cmd_result_t;
 
 class ZergCommandServer;
@@ -93,6 +95,21 @@ public:
     ResetCommand(ZergMessage &msg, ZergCommandServer &server);
 };
 
+class FuzzCommand : public ZergCommand {
+public:
+    virtual zerg_cmd_result_t execute();
+
+    FuzzCommand(ZergMessage &msg, ZergCommandServer &server);
+};
+
+class ExecuteCommand : public ZergCommand {
+public:
+    virtual zerg_cmd_result_t execute();
+
+    ExecuteCommand(ZergMessage &msg, ZergCommandServer &server);
+};
+
 #include "ZergCommand.cpp"
+#include "ZergMessage.cpp"
 
 #endif //FOSBIN_ZERGCOMMAND_H

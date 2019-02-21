@@ -105,6 +105,12 @@ ZergCommand *ZergCommandServer::read_commander_command() {
     ZergMessage *msg = read_from_commander();
     ZergCommand *result;
     if (!is_valid_message_for_state(msg)) {
+        if (msg) {
+            std::cout << "Invalid message for state " << get_state_string(current_state_) << ": " << msg->str() <<
+                      std::endl;
+        } else {
+            std::cout << "Null message" << std::endl;
+        }
         result = new InvalidCommand(*msg, *this);
     } else {
         result = ZergCommand::create(*msg, *this);
@@ -115,14 +121,14 @@ ZergCommand *ZergCommandServer::read_commander_command() {
 }
 
 void ZergCommandServer::handle_command() {
-    zerg_cmd_result_t result = ERROR;
+    zerg_cmd_result_t result = ZCMD_ERROR;
     ZergCommand *zergCommand = read_commander_command();
     if (zergCommand) {
         result = zergCommand->execute();
         delete zergCommand;
     }
 
-    if (result == ERROR) {
+    if (result == ZCMD_ERROR) {
         ZergMessage msg(ZMSG_FAIL);
         write_to_commander(msg);
     } else {
@@ -210,6 +216,7 @@ void ZergCommandServer::handle_executor_msg() {
     ZergMessage *msg = read_from_executor();
     zerg_server_state_t next_state = ZERG_SERVER_INVALID;
     if (msg->type() == ZMSG_OK) {
+        log("Received OK from executor");
         switch (current_state_) {
             case ZERG_SERVER_WAIT_FOR_TARGET:
                 next_state = ZERG_SERVER_WAIT_FOR_CMD;
@@ -226,6 +233,7 @@ void ZergCommandServer::handle_executor_msg() {
                 break;
         }
     } else if (msg->type() == ZMSG_FAIL) {
+        log("Received FAIL from executor");
         switch (current_state_) {
             case ZERG_SERVER_WAIT_FOR_TARGET:
                 next_state = ZERG_SERVER_WAIT_FOR_TARGET;

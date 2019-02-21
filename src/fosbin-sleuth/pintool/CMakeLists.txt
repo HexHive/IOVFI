@@ -12,6 +12,7 @@ set(PINTOOL_SOURCES
         ZergCommandServer.h
         ZergCommand.h
         ZergCommand.cpp
+        ZergMessage.cpp
         makefile.rules.in
         makefile.in
         )
