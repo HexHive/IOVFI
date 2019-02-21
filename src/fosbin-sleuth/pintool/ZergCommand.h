@@ -8,6 +8,7 @@
 typedef enum zerg_message_type {
     ZMSG_FAIL = -1,
     ZMSG_OK,
+    ZMSG_ACK,
     ZMSG_SET_TGT,
     ZMSG_EXIT,
     ZMSG_FUZZ,
@@ -42,6 +43,8 @@ public:
     void *data() const;
 
     const char *str();
+
+    size_t add_contexts(const FBZergContext &pre, const FBZergContext &post);
 };
 
 typedef enum zerg_cmd_result_t_ {

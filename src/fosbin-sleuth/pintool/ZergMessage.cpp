@@ -3,19 +3,28 @@
 //
 #include "ZergCommand.h"
 
+/* This value gives each GP register up to 5 allocated areas
+ * and enough room for their values along with RAX
+ */
+#define ZMSG_MAX_DATA_LEN   6 * 5 * DEFAULT_ALLOCATION_SIZE + 7 * sizeof(uintptr_t)
+
 ZergMessage::ZergMessage(zerg_message_t type) :
         _message_type(type), _length(0), _data(nullptr), _self_allocated_data(false) {}
 
 ZergMessage::ZergMessage(zerg_message_t type, size_t length, void *data) :
-        _message_type(type), _length(length), _data(data), _self_allocated_data(false) {}
+        _message_type(type), _length(length), _data(data), _self_allocated_data(false) {
+    if (_length > ZMSG_MAX_DATA_LEN) {
+        _length = ZMSG_MAX_DATA_LEN;
+    }
+}
 
 ZergMessage::ZergMessage(const ZergMessage &msg) {
     _message_type = msg._message_type;
     _length = msg._length;
 
-    if (msg._length > 0) {
+    if (_length > 0) {
         _self_allocated_data = true;
-        _data = malloc(msg._length);
+        _data = malloc(_length);
         memcpy(_data, msg._data, _length);
     } else {
         _data = nullptr;
@@ -53,6 +62,8 @@ const char *ZergMessage::str() {
             return "ZMSG_SET_CTX";
         case ZMSG_RESET:
             return "ZMSG_RESET";
+        case ZMSG_ACK:
+            return "ZMSG_ACK";
         default:
             return "UNKNOWN MESSAGE";
     }
@@ -103,6 +114,10 @@ size_t ZergMessage::read_from_fd(int fd) {
     read_bytes += tmp;
 
     if (length > 0) {
+        if (length > ZMSG_MAX_DATA_LEN) {
+            length = ZMSG_MAX_DATA_LEN;
+        }
+
         data = malloc(length);
         if (!data) {
             return 0;
@@ -126,4 +141,28 @@ size_t ZergMessage::read_from_fd(int fd) {
     }
 
     return read_bytes;
+}
+
+size_t ZergMessage::add_contexts(const FBZergContext &pre, const FBZergContext &post) {
+    /* Do not overwrite data if there is already some */
+    if (_length > 0) {
+        return 0;
+    }
+
+    std::stringstream data(std::ios::in | std::ios::out | std::ios::binary);
+    data << pre;
+    data << post;
+
+    if (data.str().size() > ZMSG_MAX_DATA_LEN) {
+        return 0;
+    }
+
+    _data = malloc(data.str().size());
+    if (!_data) {
+        return 0;
+    }
+
+    _length = data.str().size();
+    memcpy(_data, data.str().c_str(), _length);
+    return _length;
 }

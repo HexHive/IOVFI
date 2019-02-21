@@ -132,7 +132,7 @@ void ZergCommandServer::handle_command() {
         ZergMessage msg(ZMSG_FAIL);
         write_to_commander(msg);
     } else {
-        ZergMessage msg(ZMSG_OK);
+        ZergMessage msg(ZMSG_ACK);
         write_to_commander(msg);
     }
 }
@@ -217,6 +217,7 @@ void ZergCommandServer::handle_executor_msg() {
     zerg_server_state_t next_state = ZERG_SERVER_INVALID;
     if (msg->type() == ZMSG_OK) {
         log("Received OK from executor");
+        write_to_commander(*msg);
         switch (current_state_) {
             case ZERG_SERVER_WAIT_FOR_TARGET:
                 next_state = ZERG_SERVER_WAIT_FOR_CMD;
@@ -234,6 +235,7 @@ void ZergCommandServer::handle_executor_msg() {
         }
     } else if (msg->type() == ZMSG_FAIL) {
         log("Received FAIL from executor");
+        write_to_executor(*msg);
         switch (current_state_) {
             case ZERG_SERVER_WAIT_FOR_TARGET:
                 next_state = ZERG_SERVER_WAIT_FOR_TARGET;

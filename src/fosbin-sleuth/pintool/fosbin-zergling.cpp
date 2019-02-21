@@ -1147,6 +1147,7 @@ void report_success(CONTEXT *ctx, THREADID tid) {
 
     log_message("write_to_cmd 8");
     ZergMessage msg(ZMSG_OK);
+    msg.add_contexts(preContext, currentContext);
     write_to_cmd_server(msg);
 
     wait_to_start();
