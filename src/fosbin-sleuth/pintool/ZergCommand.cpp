@@ -15,7 +15,7 @@ ZergCommand::~ZergCommand() {}
 ZergCommand *ZergCommand::create(ZergMessage &msg, ZergCommandServer &server) {
     switch (msg.type()) {
         case ZMSG_SET_TGT:
-            return new ZergCommand(msg, server);
+            return new SetTargetCommand(msg, server);
         case ZMSG_EXIT:
             return new ExitCommand(msg, server);
         case ZMSG_FUZZ:
@@ -23,7 +23,7 @@ ZergCommand *ZergCommand::create(ZergMessage &msg, ZergCommandServer &server) {
         case ZMSG_EXECUTE:
             return new ExecuteCommand(msg, server);
         case ZMSG_SET_CTX:
-            return new ZergCommand(msg, server);
+            return new SetContextCommand(msg, server);
         case ZMSG_RESET:
             return new ResetCommand(msg, server);
         default:
@@ -118,4 +118,32 @@ zerg_cmd_result_t ExecuteCommand::execute() {
 }
 
 ExecuteCommand::ExecuteCommand(ZergMessage &msg, ZergCommandServer &server) :
+        ZergCommand(msg, server) {}
+
+zerg_cmd_result_t SetTargetCommand::execute() {
+    if (!server_.set_state(ZERG_SERVER_WAIT_FOR_CMD)) {
+        return ZCMD_ERROR;
+    }
+
+    if (server_.write_to_executor(msg_) == 0) {
+        return ZCMD_ERROR;
+    }
+    return ZCMD_OK;
+}
+
+SetTargetCommand::SetTargetCommand(ZergMessage &msg, ZergCommandServer &server) :
+        ZergCommand(msg, server) {}
+
+zerg_cmd_result_t SetContextCommand::execute() {
+    if (!server_.set_state(ZERG_SERVER_WAIT_FOR_CMD)) {
+        return ZCMD_ERROR;
+    }
+
+    if (server_.write_to_executor(msg_) == 0) {
+        return ZCMD_ERROR;
+    }
+    return ZCMD_OK;
+}
+
+SetContextCommand::SetContextCommand(ZergMessage &msg, ZergCommandServer &server) :
         ZergCommand(msg, server) {}

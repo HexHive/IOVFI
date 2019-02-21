@@ -42,7 +42,7 @@ public:
 
     void *data() const;
 
-    const char *str();
+    const char *str() const;
 
     size_t add_contexts(const FBZergContext &pre, const FBZergContext &post);
 };
@@ -60,7 +60,7 @@ class ZergCommandServer;
 
 class ZergCommand {
 public:
-    virtual zerg_cmd_result_t execute();
+    virtual zerg_cmd_result_t execute() = 0;
 
     static ZergCommand *create(ZergMessage &msg, ZergCommandServer &server);
 
@@ -110,6 +110,20 @@ public:
     virtual zerg_cmd_result_t execute();
 
     ExecuteCommand(ZergMessage &msg, ZergCommandServer &server);
+};
+
+class SetTargetCommand : public ZergCommand {
+public:
+    virtual zerg_cmd_result_t execute();
+
+    SetTargetCommand(ZergMessage &msg, ZergCommandServer &server);
+};
+
+class SetContextCommand : public ZergCommand {
+public:
+    virtual zerg_cmd_result_t execute();
+
+    SetContextCommand(ZergMessage &msg, ZergCommandServer &server);
 };
 
 #include "ZergCommand.cpp"

@@ -44,7 +44,7 @@ zerg_message_t ZergMessage::type() const { return _message_type; }
 
 void *ZergMessage::data() const { return _data; }
 
-const char *ZergMessage::str() {
+const char *ZergMessage::str() const {
     switch (_message_type) {
         case ZMSG_FAIL:
             return "ZMSG_FAIL";
@@ -91,7 +91,6 @@ size_t ZergMessage::write_to_fd(int fd) const {
         written += tmp;
     }
 
-    fsync(fd);
     return written;
 }
 

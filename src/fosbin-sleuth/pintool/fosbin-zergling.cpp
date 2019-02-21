@@ -1256,7 +1256,7 @@ zerg_cmd_result_t handle_cmd() {
             result = handle_execute_cmd();
             break;
         default:
-            log_msg << "Unknown command: " << log_msg;
+            log_msg << "Unknown command: " << msg->str();
             log_message(log_msg);
             result = ZCMD_ERROR;
             break;
@@ -1278,6 +1278,7 @@ void begin_execution(CONTEXT *ctx) {
 void wait_to_start() {
     while (true) {
         log_message("Executor waiting for command");
+        FD_SET(internal_pipe_in[0], &exe_fd_set_in);
         if (select(FD_SETSIZE, &exe_fd_set_in, nullptr, nullptr, nullptr) > 0) {
             if (FD_ISSET(internal_pipe_in[0], &exe_fd_set_in)) {
                 zerg_cmd_result_t result = handle_cmd();
@@ -1288,6 +1289,7 @@ void wait_to_start() {
                 } else {
                     log_message("cmd server 10");
                     report_failure(result);
+//                    PIN_ExitApplication(1);
                 }
             }
         } else {
