@@ -17,14 +17,9 @@ class PinRun:
         if loader_loc is not None:
             self.loader_loc = os.path.abspath(loader_loc)
 
-        self.in_contexts = None
-        self.out_contexts = None
-        self.watchdog = None
-        self.fuzz_count = None
+        self.fuzz_count = 0
         self.log_loc = None
-        self.completed_proc = None
-        self.process_timedout = None
-        self.total_time = None
+        self.accepted_contexts = list()
 
     def _check_state(self):
         if self.pin_loc is None:
@@ -41,21 +36,9 @@ class PinRun:
     def generate_cmd(self):
         cmd = [self.pin_loc, "-t", self.pintool_loc]
 
-        if self.fuzz_count is not None:
-            cmd.append("-fuzz-count")
-            cmd.append(str(self.fuzz_count))
-
-        if self.watchdog is not None:
-            cmd.append("-watchdog")
-            cmd.append(str(self.watchdog))
-
         if self.log_loc is not None:
             cmd.append("-out")
             cmd.append(os.path.abspath(self.log_loc))
-
-        if self.in_contexts is not None:
-            cmd.append("-contexts")
-            cmd.append(self.in_contexts)
 
         if self.out_contexts is not None:
             cmd.append("-ctx-out")

@@ -23,8 +23,8 @@ CONTEXT snapshot;
 //KNOB <uint32_t> FuzzCount(KNOB_MODE_WRITEONCE, "pintool", "fuzz-count", "4", "The number of times to fuzz a target");
 //KNOB <uint32_t> FuzzTime(KNOB_MODE_WRITEONCE, "pintool", "fuzz-time", "0",
 //                         "The number of minutes to fuzz. Ignores fuzz-count if greater than 0.");
-KNOB <uint64_t> MaxInstructions(KNOB_MODE_WRITEONCE, "pintool", "ins", "1000000",
-                                "The max number of instructions to run per fuzzing round");
+//KNOB <uint64_t> MaxInstructions(KNOB_MODE_WRITEONCE, "pintool", "ins", "1000000",
+//                                "The max number of instructions to run per fuzzing round");
 //KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.log",
 //                               "The name of the file to write "
 //                               "logging output");
@@ -33,28 +33,27 @@ KNOB <uint64_t> MaxInstructions(KNOB_MODE_WRITEONCE, "pintool", "ins", "1000000"
 //                              "The most fuzzing rounds regardless of time or segfaults. For debug purposes.");
 //KNOB <std::string> SharedLibraryFunc(KNOB_MODE_WRITEONCE, "pintool", "shared-func", "",
 //                                     "Shared library function to fuzz.");
-KNOB <uint32_t> PrintToScreen(KNOB_MODE_WRITEONCE, "pintool", "print", "1",
-                              "Print log messages to screen along with file");
-KNOB <uint32_t> WatchDogTimeout(KNOB_MODE_WRITEONCE, "pintool", "watchdog", "20000", "Watchdog timeout in "
-                                                                                     "milliseconds");
+//KNOB <uint32_t> PrintToScreen(KNOB_MODE_WRITEONCE, "pintool", "print", "1",
+//                              "Print log messages to screen along with file");
+//KNOB <uint32_t> WatchDogTimeout(KNOB_MODE_WRITEONCE, "pintool", "watchdog", "20000", "Watchdog timeout in "
+//                                                                                     "milliseconds");
 //KNOB<bool> OnlyOutputContexts(KNOB_MODE_WRITEONCE, "pintool", "only-output", "false", "Only output contexts and exit");
-KNOB <std::string> KnobContextOutFile(KNOB_MODE_WRITEONCE, "pintool", "ctx-out", "",
-                                      "Filename of which to output accepted contexts");
+//KNOB <std::string> KnobContextOutFile(KNOB_MODE_WRITEONCE, "pintool", "ctx-out", "",
+//                                      "Filename of which to output accepted contexts");
 KNOB <std::string> KnobInPipe(KNOB_MODE_WRITEONCE, "pintool", "in-pipe", "", "Filename of in pipe");
 KNOB <std::string> KnobOutPipe(KNOB_MODE_WRITEONCE, "pintool", "out-pipe", "", "Filename of out pipe");
 
 
 RTN target = RTN_Invalid();
-TLS_KEY log_key;
 FBZergContext preContext;
 FBZergContext currentContext;
 FBZergContext expectedContext;
 
 std::string shared_library_name;
 
-std::ofstream infofile;
-std::ifstream contextFile;
 std::vector<struct X86Context> fuzzing_run;
+std::ostream &log_out = std::cout;
+uint64_t max_instructions = 1000000;
 bool fuzzed_input = false;
 
 ZergCommandServer *cmd_server;
@@ -79,23 +78,15 @@ VOID log_message(std::stringstream &message) {
     if (message.str().empty()) {
         return;
     }
-    if (infofile.is_open()) {
-        infofile << message.str() << std::endl;
-    }
-    if (PrintToScreen.Value()) {
-        std::cout << message.str() << std::endl;
-    }
+
+    log_out << message.str() << std::endl;
+
     message.str(std::string());
 }
 
 VOID log_error(std::stringstream &message) {
-    if (infofile.is_open()) {
-        infofile << message.str() << std::endl;
-    }
-    if (PrintToScreen.Value()) {
-        std::cout << message.str() << std::endl;
-    }
-    PIN_WriteErrorMessage(message.str().c_str(), USER_MSG_TYPE, PIN_ERR_FATAL, 0);
+    log_message(message);
+    PIN_ExitApplication(1);
 }
 
 VOID log_message(const char *message) {
@@ -380,12 +371,7 @@ VOID fuzz_registers() {
             aa->fuzz();
         }
     }
-}
-
-void output_context(const FBZergContext &ctx) {
-    std::vector < AllocatedArea * > allocs;
-    PinLogger &logger = *(static_cast<PinLogger *>(PIN_GetThreadData(log_key, PIN_ThreadId())));
-    logger << ctx;
+    fuzzed_input = true;
 }
 
 //VOID start_fuzz_round(CONTEXT *ctx) {
@@ -426,7 +412,7 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 //    tmp.prettyPrint(std::cout);
 //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
 //    std::cout << std::dec << diff << std::endl;
-    if (fuzzing_run.size() > MaxInstructions.Value()) {
+    if (fuzzing_run.size() > max_instructions) {
         report_failure(ZCMD_TOO_MANY_INS);
         log_message("write_to_cmd 3");
         wait_to_start();
