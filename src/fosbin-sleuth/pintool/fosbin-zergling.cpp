@@ -42,6 +42,7 @@ CONTEXT snapshot;
 //                                      "Filename of which to output accepted contexts");
 KNOB <std::string> KnobInPipe(KNOB_MODE_WRITEONCE, "pintool", "in-pipe", "", "Filename of in pipe");
 KNOB <std::string> KnobOutPipe(KNOB_MODE_WRITEONCE, "pintool", "out-pipe", "", "Filename of out pipe");
+KNOB <std::string> KnobLogFile(KNOB_MODE_WRITEONCE, "pintool", "log", "", "/path/to/log");
 
 
 RTN target = RTN_Invalid();
@@ -52,7 +53,7 @@ FBZergContext expectedContext;
 std::string shared_library_name;
 
 std::vector<struct X86Context> fuzzing_run;
-std::ostream &log_out = std::cout;
+std::ofstream log_out;
 uint64_t max_instructions = 1000000;
 bool fuzzed_input = false;
 
@@ -79,7 +80,11 @@ VOID log_message(std::stringstream &message) {
         return;
     }
 
-    log_out << message.str() << std::endl;
+    if (log_out && log_out.is_open()) {
+        log_out << message.str() << std::endl;
+    } else {
+        std::cout << message.str() << std::endl;
+    }
 
     message.str(std::string());
 }
@@ -1132,9 +1137,15 @@ void report_success(CONTEXT *ctx, THREADID tid) {
     currentContext << ctx;
 
     log_message("write_to_cmd 8");
-    ZergMessage msg(ZMSG_OK);
-    msg.add_contexts(preContext, currentContext);
-    write_to_cmd_server(msg);
+    if (fuzzed_input) {
+        ZergMessage msg(ZMSG_OK);
+        msg.add_contexts(preContext, currentContext);
+        write_to_cmd_server(msg);
+    } else {
+        zerg_message_t response = ((currentContext == expectedContext) ? ZMSG_OK : ZMSG_FAIL);
+        ZergMessage msg(response);
+        write_to_cmd_server(msg);
+    }
 
     wait_to_start();
 }
@@ -1309,6 +1320,13 @@ int main(int argc, char **argv) {
     PIN_InitSymbols();
     if (PIN_Init(argc, argv)) {
         return usage();
+    }
+    if (!KnobLogFile.Value().empty()) {
+        log_out.open(KnobLogFile.Value().c_str());
+        if (!log_out) {
+            std::cerr << "Could not open log at " << KnobLogFile.Value() << std::endl;
+            PIN_ExitApplication(1);
+        }
     }
 
     std::stringstream ss;

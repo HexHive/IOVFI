@@ -9,7 +9,7 @@ class X86Context:
     def __init__(self, file):
         self.register_values = list()
         for i in range(0, 7):
-            reg_val = struct.unpack_from('Q', file.read(8))[0]
+            reg_val = struct.unpack_from('Q', file.read(struct.calcsize("Q")))[0]
             self.register_values.append(reg_val)
         self.allocated_areas = list()
         for idx in range(0, len(self.register_values)):
@@ -20,7 +20,7 @@ class X86Context:
     def hash(self):
         md5sum = hashlib.md5()
         for reg in self.register_values:
-            md5sum.update(reg.to_bytes(8, sys.byteorder))
+            md5sum.update(reg.to_bytes(struct.calcsize("Q"), sys.byteorder))
         for subarea in self.allocated_areas:
             sub_hash = hash(subarea)
             md5sum.update(str(sub_hash).encode("utf-8"))

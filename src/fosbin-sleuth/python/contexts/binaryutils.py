@@ -33,29 +33,3 @@ def find_funcs(binary, target=None, ignored_funcs=None):
             if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
                 location_map[loc] = name
     return location_map
-
-
-def fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=None, cwd=os.getcwd(), fuzz_count=None,
-                  out_contexts=None, total_time=None, watchdog=None, log_loc=None, loader_loc=None):
-    logger.debug("Fuzzing binary {}".format(binary))
-    pin_run = PinRun(pin_loc, pintool_loc, binary, target, loader_loc)
-    pin_run.watchdog = watchdog
-    pin_run.fuzz_count = fuzz_count
-    pin_run.total_time = total_time
-
-    if in_contexts is not None:
-        pin_run.in_contexts = os.path.abspath(in_contexts)
-
-    if log_loc is None:
-        pin_run.log_loc = os.path.abspath(os.path.join(cwd, "{}.{}.log".format(os.path.basename(binary), target)))
-    else:
-        pin_run.log_loc = os.path.abspath(log_loc)
-
-    if out_contexts is not None:
-        pin_run.out_contexts = out_contexts
-    else:
-        pin_run.out_contexts = \
-            os.path.abspath(os.path.join(cwd, "{}.{}.ctx".format(os.path.basename(binary), target)))
-
-    pin_run.execute_cmd(cwd)
-    return pin_run

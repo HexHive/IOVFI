@@ -1,16 +1,17 @@
 #!/usr/bin/python3.7
 
 import os
-import subprocess
 import argparse
 from contexts import binaryutils
+from contexts.PinRun import PinRun, PinMessage
+from contexts.IOVec import IOVec
 import multiprocessing
 import threading
 from concurrent import futures
 from contexts.FBLogging import logger
 import logging
 
-fuzz_count = "5"
+fuzz_count = 5
 watchdog = 5 * 1000
 work_dir = "contexts"
 
@@ -25,6 +26,8 @@ pin_loc = None
 pintool_loc = None
 loader_loc = None
 
+contexts = dict()
+
 
 def fuzz_one_function(args):
     global failed_count, success_count, binary, target, pin_loc, pintool_loc, loader_loc
@@ -33,39 +36,49 @@ def fuzz_one_function(args):
     if os.path.splitext(binary)[1] == ".so":
         target = func_name
 
+    run_name = "{}.{}".format(os.path.basename(binary), func_name)
+    pipe_in = run_name + ".in"
+    pipe_out = run_name + ".out"
+    log_out = run_name + ".log"
+    successful_runs = 0
+
+    successful_contexts = list()
+
+    pin_run = PinRun(pin_loc, pintool_loc, binary, target, loader_loc, pipe_in=pipe_in, pipe_out=pipe_out,
+                     log_loc=log_out, cwd=work_dir)
     logger.debug("target = {} func_name = {}".format(target, func_name))
-    out_contexts = os.path.join(work_dir, "{}.{}.ctx".format(os.path.basename(binary), func_name))
 
     try:
-        pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, cwd=work_dir, watchdog=watchdog,
-                                            total_time=watchdog / 1000 + 1,
-                                            log_loc=os.path.abspath(os.path.join(work_dir,
-                                                                    "{}.{}.fuzz.log".format(os.path.basename(binary),
-                                                                                            func_name))),
-                                            loader_loc=loader_loc,
-                                            out_contexts=out_contexts)
+        pin_run.start()
+        if pin_run.send_set_target_cmd(target).type != PinMessage.ZMSG_OK:
+            raise RuntimeError("Could not set target {}".format(target))
 
-        logger.debug("{} pin_run.returncode = {}".format(out_contexts, pin_run.returncode()))
-        if pin_run.returncode() != 0 and (os.path.exists(os.path.join(work_dir, out_contexts)) and os.path.getsize(
-                os.path.join(work_dir, out_contexts)) == 0):
-            logger.debug("{} failed".format(out_contexts))
-            fail_lock.acquire()
-            failed_count += 1
-            fail_lock.release()
+        for x in range(fuzz_count):
+            if pin_run.send_fuzz_cmd().type != PinMessage.ZMSG_OK:
+                continue
+
+            if pin_run.send_execute_cmd().type != PinMessage.ZMSG_OK:
+                continue
+
+            result = PinRun.read_response()
+            if result.type == PinMessage.ZMSG_OK:
+                successful_runs += 1
+                successful_contexts.append(IOVec(result.data))
+
+            pin_run.send_reset_cmd()
+
+        if successful_runs == 0:
+            raise AssertionError("No successful runs")
         else:
-            logger.debug("{} succeeded".format(out_contexts))
             success_lock.acquire()
             success_count += 1
+            global contexts
+            contexts[run_name] = successful_contexts
             success_lock.release()
-    except subprocess.TimeoutExpired:
-        logger.debug("{} failed".format(out_contexts))
-        fail_lock.acquire()
-        failed_count += 1
-        fail_lock.release()
+
     except Exception as e:
-        logger.debug("{} failed".format(out_contexts))
         fail_lock.acquire()
-        logger.error("Error for {}.{}: {}".format(os.path.basename(binary), func_name, e))
+        logger.error("Error for {}: {}".format(run_name, e))
         failed_count += 1
         fail_lock.release()
         raise e
