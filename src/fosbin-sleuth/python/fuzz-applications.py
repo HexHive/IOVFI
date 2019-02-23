@@ -10,6 +10,7 @@ import threading
 from concurrent import futures
 from contexts.FBLogging import logger
 import logging
+import pickle
 
 fuzz_count = 5
 watchdog = 5 * 1000
@@ -30,7 +31,7 @@ contexts = dict()
 
 
 def fuzz_one_function(args):
-    global failed_count, success_count, binary, target, pin_loc, pintool_loc, loader_loc
+    global failed_count, success_count, binary, target, pin_loc, pintool_loc, loader_loc, contexts
     target = args[0]
     func_name = args[1]
     if os.path.splitext(binary)[1] == ".so":
@@ -42,7 +43,10 @@ def fuzz_one_function(args):
     log_out = run_name + ".log"
     successful_runs = 0
 
-    successful_contexts = list()
+    if run_name in contexts:
+        successful_contexts = contexts[run_name]
+    else:
+        successful_contexts = set()
 
     pin_run = PinRun(pin_loc, pintool_loc, binary, target, loader_loc, pipe_in=pipe_in, pipe_out=pipe_out,
                      log_loc=log_out, cwd=work_dir)
@@ -63,7 +67,7 @@ def fuzz_one_function(args):
             result = PinRun.read_response()
             if result.type == PinMessage.ZMSG_OK:
                 successful_runs += 1
-                successful_contexts.append(IOVec(result.data))
+                successful_contexts.add(IOVec(result.data))
 
             pin_run.send_reset_cmd()
 
@@ -72,10 +76,8 @@ def fuzz_one_function(args):
         else:
             success_lock.acquire()
             success_count += 1
-            global contexts
             contexts[run_name] = successful_contexts
             success_lock.release()
-
     except Exception as e:
         fail_lock.acquire()
         logger.error("Error for {}: {}".format(run_name, e))
@@ -84,6 +86,10 @@ def fuzz_one_function(args):
         raise e
     finally:
         logger.info("Finished {}".format(func_name))
+        if os.path.exists(pipe_in):
+            os.unlink(pipe_in)
+        if os.path.exists(pipe_out):
+            os.unlink(pipe_out)
 
 
 def main():
@@ -97,13 +103,14 @@ def main():
     parser.add_argument("-log", help="/path/to/log/file")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
+    parser.add_argument("-ctx", help="File to output generated contexts", default="fuzz.ctx")
 
     results = parser.parse_args()
     if os.path.splitext(results.bin)[1] == ".so" and (results.ld is None or results.ld == ""):
         parser.print_help()
         exit(1)
 
-    global loader_loc, binary, pintool_loc, pin_loc
+    global loader_loc, binary, pintool_loc, pin_loc, contexts
     loader_loc = results.ld
     binary = results.bin
     pintool_loc = results.tool
@@ -135,6 +142,10 @@ def main():
     else:
         location_map = binaryutils.find_funcs(results.bin)
 
+    if os.path.exists(results.ctx):
+        with open(results.ctx, "rb") as file:
+            contexts = pickle.load(file)
+
     args = list()
     for location, func_name in location_map.items():
         func_name = func_name.strip()
@@ -156,6 +167,9 @@ def main():
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(success_count))
+        with open(results.ctx, "wb") as file:
+            pickle.dump(contexts, file)
+
         if failed_count + success_count > 0:
             logger.info("Failed functions: {} ({})".format(failed_count, failed_count / (failed_count + success_count)))
     else:
