@@ -64,7 +64,7 @@ def fuzz_one_function(args):
             if pin_run.send_execute_cmd().type != PinMessage.ZMSG_OK:
                 continue
 
-            result = PinRun.read_response()
+            result = pin_run.read_response()
             if result.type == PinMessage.ZMSG_OK:
                 successful_runs += 1
                 successful_contexts.add(IOVec(result.data))
