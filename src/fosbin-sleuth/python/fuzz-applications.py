@@ -40,7 +40,9 @@ def fuzz_one_function(args):
     run_name = "{}.{}".format(os.path.basename(binary), func_name)
     pipe_in = run_name + ".in"
     pipe_out = run_name + ".out"
-    log_out = run_name + ".log"
+    log_out = os.path.join("logs", run_name + ".log")
+    if not os.path.exists(os.path.dirname(log_out)):
+        os.makedirs(os.path.dirname(log_out), exist_ok=True)
     successful_runs = 0
 
     if run_name in contexts:
@@ -62,7 +64,7 @@ def fuzz_one_function(args):
             if pin_run.send_fuzz_cmd().type != PinMessage.ZMSG_OK:
                 continue
 
-            if pin_run.send_execute_cmd().type != PinMessage.ZMSG_OK:
+            if pin_run.send_execute_cmd().type != PinMessage.ZMSG_ACK:
                 continue
 
             result = pin_run.read_response()

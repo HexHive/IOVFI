@@ -65,6 +65,8 @@ protected:
 
     int internal_w_fd, internal_r_fd, cmd_w_fd, cmd_r_fd;
     fd_set fd_w_set_, fd_r_set_;
+
+    std::ofstream logger_;
 };
 
 #include "ZergCommandServer.cpp"

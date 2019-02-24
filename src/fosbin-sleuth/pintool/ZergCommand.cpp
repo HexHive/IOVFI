@@ -73,7 +73,6 @@ InvalidCommand::InvalidCommand(ZergMessage &msg, ZergCommandServer &server) :
         ZergCommand(msg, server) {}
 
 zerg_cmd_result_t ExitCommand::execute() {
-    std::cout << "Stopping server" << std::endl;
     server_.stop();
     return ZCMD_OK;
 }

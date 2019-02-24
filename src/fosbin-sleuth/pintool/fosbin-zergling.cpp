@@ -115,7 +115,9 @@ ZergMessage *read_from_cmd_server() {
 }
 
 int write_to_cmd_server(ZergMessage &msg) {
-    std::cout << "Writing " << msg.str() << " to server" << std::endl;
+    std::stringstream logmsg;
+    logmsg << "Writing " << msg.str() << " to server" << std::endl;
+    log_message(logmsg);
     size_t written = msg.write_to_fd(internal_pipe_out[1]);
     if (written == 0) {
         log_message("Could not write to command pipe");
@@ -1219,13 +1221,13 @@ zerg_cmd_result_t handle_execute_cmd() {
     currentContext = preContext;
     currentContext >> &snapshot;
     PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
-    std::cout << "About to start executing at "
-              << std::hex << RTN_Address(target) << "(" << RTN_Name(target) << ")"
-              << std::dec << " with the following context" << std::endl;
-    displayCurrentContext(&snapshot);
+    std::stringstream msg;
+    msg << "About to start executing at "
+        << std::hex << RTN_Address(target) << "(" << RTN_Name(target) << ")";
+    log_message(msg);
 
     PIN_ExecuteAt(&snapshot);
-    std::cout << "PIN_ExecuteAt returned magically" << std::endl;
+    log_message("PIN_ExecuteAt returned magically");
     return ZCMD_ERROR;
 }
 

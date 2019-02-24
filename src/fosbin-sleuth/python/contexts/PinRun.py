@@ -4,6 +4,7 @@ import stat
 import threading
 import struct
 import io
+import random
 from .IOVec import IOVec
 from .FBLogging import logger
 
@@ -11,17 +12,19 @@ from .FBLogging import logger
 class PinMessage:
     ZMSG_FAIL = -1
     ZMSG_OK = 0
-    ZMSG_SET_TGT = 1
-    ZMSG_EXIT = 2
-    ZMSG_FUZZ = 3
-    ZMSG_EXECUTE = 4
-    ZMSG_SET_CTX = 5
-    ZMSG_RESET = 6
+    ZMSG_ACK = 1
+    ZMSG_SET_TGT = 2
+    ZMSG_EXIT = 3
+    ZMSG_FUZZ = 4
+    ZMSG_EXECUTE = 5
+    ZMSG_SET_CTX = 6
+    ZMSG_RESET = 7
     HEADER_FORMAT = "=iQ"
 
     names = {
         ZMSG_FAIL: "ZMSG_FAIL",
         ZMSG_OK: "ZMSG_OK",
+        ZMSG_ACK: "ZMSG_ACK",
         ZMSG_SET_TGT: "ZMSG_SET_TGT",
         ZMSG_EXIT: "ZMSG_EXIT",
         ZMSG_FUZZ: "ZMSG_FUZZ",
@@ -30,46 +33,46 @@ class PinMessage:
         ZMSG_RESET: "ZMSG_RESET"
     }
 
-    def __init__(self, type, data):
-        if type not in PinMessage.names:
-            raise ValueError("Invalid message type: {}".format(type))
-        self.type = type
+    def __init__(self, msgtype, data):
+        if msgtype not in PinMessage.names:
+            raise ValueError("Invalid message type: {}".format(msgtype))
+
+        self.msgtype = msgtype
         if data is None:
-            self.len = 0
+            self.msglen = 0
             self.data = None
         else:
-            self.len = len(data)
+            self.msglen = len(data)
             self.data = data
+        logger.debug("Created {} msg with {} bytes of data".format(PinMessage.names[self.msgtype], self.msglen))
 
     def write_to_pipe(self, pipe):
-        pipe.write(struct.pack(PinMessage.HEADER_FORMAT, self.type, self.len))
-        if self.len > 0:
+        logger.debug("Writing {} msg with {} bytes of data".format(self.msgtype, self.msglen))
+        pipe.write(struct.pack(PinMessage.HEADER_FORMAT, self.msgtype, self.msglen))
+        if self.msglen > 0:
             pipe.write(self.data)
 
     @staticmethod
     def read_from_pipe(pipe):
-        header_data = struct.unpack_from(PinMessage.HEADER_FORMAT,
-                                         os.read(pipe, struct.calcsize(PinMessage.HEADER_FORMAT)))
-        type = header_data[0]
-        len = header_data[1]
+        logger.debug("Reading from {}".format(pipe))
+        pipe_data = os.read(pipe, struct.calcsize(PinMessage.HEADER_FORMAT))
+        logger.debug("pipe returned {} bytes: {}".format(len(pipe_data), pipe_data))
+        header_data = struct.unpack_from(PinMessage.HEADER_FORMAT, pipe_data)
+        msgtype = header_data[0]
+        msglen = header_data[1]
 
-        if len > 0:
-            data = os.read(pipe, len)
+        if msglen > 0:
+            data = os.read(pipe, msglen)
         else:
             data = None
 
-        return PinMessage(type, data)
+        return PinMessage(msgtype, data)
 
 
 class PinRun:
-    def __init__(self, pin_loc, pintool_loc, binary_loc, target, loader_loc=None, pipe_in=None, pipe_out=None,
+    def __init__(self, pin_loc, pintool_loc, binary_loc, loader_loc=None, pipe_in=None, pipe_out=None,
                  log_loc=None, cwd=os.getcwd()):
         self.binary_loc = os.path.abspath(binary_loc)
-
-        try:
-            self.target = hex(int(target, 16))
-        except Exception:
-            self.target = target
 
         self.pin_loc = os.path.abspath(pin_loc)
         self.pintool_loc = os.path.abspath(pintool_loc)
@@ -83,7 +86,7 @@ class PinRun:
             self.log_loc = None
 
         if pipe_in is None:
-            self.pipe_in_loc = os.path.join(cwd, "{}.{}.in".format(os.path.basename(self.binary_loc), target))
+            self.pipe_in_loc = os.path.join(cwd, "{}.{}.in".format(os.path.basename(self.binary_loc), random.randint()))
         else:
             self.pipe_in_loc = os.path.abspath(pipe_in)
 
@@ -93,7 +96,8 @@ class PinRun:
             raise AssertionError("{} is not a pipe".format(self.pipe_in_loc))
 
         if pipe_out is None:
-            self.pipe_out_loc = os.path.join(cwd, "{}.{}.out".format(os.path.basename(self.binary_loc), target))
+            self.pipe_out_loc = os.path.join(cwd, "{}.{}.out".format(os.path.basename(self.binary_loc),
+                                                                     random.randint()))
         else:
             self.pipe_out_loc = os.path.abspath(pipe_out)
 
@@ -116,17 +120,15 @@ class PinRun:
             raise ValueError("pintool_loc is None")
         if self.binary_loc is None:
             raise ValueError("binary_loc is None")
-        if self.target is None:
-            raise ValueError("function is None")
         if os.path.splitext(self.binary_loc)[1] == ".so" and self.loader_loc is None:
             raise ValueError("loader_loc is None")
-        if not stat.S_ISFIFO(os.stat(self.pipe_in).st_mode):
-            raise AssertionError("{} is not a pipe".format(self.pipe_in))
-        if not stat.S_ISFIFO(os.stat(self.pipe_out).st_mode):
-            raise AssertionError("{} is not a pipe".format(self.pipe_out))
+        if not stat.S_ISFIFO(os.stat(self.pipe_in_loc).st_mode):
+            raise AssertionError("{} is not a pipe".format(self.pipe_in_loc))
+        if not stat.S_ISFIFO(os.stat(self.pipe_out_loc).st_mode):
+            raise AssertionError("{} is not a pipe".format(self.pipe_out_loc))
 
     def generate_cmd(self):
-        cmd = [self.pin_loc, "-t", self.pintool_loc, "-in-pipe", self.pipe_in, "-out-pipe", self.pipe_out]
+        cmd = [self.pin_loc, "-t", self.pintool_loc, "-in-pipe", self.pipe_in_loc, "-out-pipe", self.pipe_out_loc]
 
         if self.log_loc is not None:
             cmd.append("-log")
@@ -149,6 +151,7 @@ class PinRun:
         logger.info("Running {}".format(" ".join(cmd)))
 
         self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd)
+        self.pin_proc.wait()
 
     def is_running(self):
         return self.pipe_in is not None and self.pipe_out is not None and self.pin_thread.is_alive()
@@ -157,6 +160,7 @@ class PinRun:
         if not self.is_running():
             raise AssertionError("Process not started")
 
+        logger.debug("Writing {} msg".format(PinMessage.names[cmd]))
         fuzz_cmd = PinMessage(cmd, data)
         fuzz_cmd.write_to_pipe(self.pipe_in)
 
@@ -167,12 +171,12 @@ class PinRun:
         if self.is_running():
             raise AssertionError("Already started")
 
+        self.pin_thread.start()
+
         logger.debug("Opening pipe_in {}".format(self.pipe_in_loc))
         self.pipe_in = open(self.pipe_in_loc, "wb", buffering=0)
         logger.debug("Opening pipe_out {}".format(self.pipe_out_loc))
         self.pipe_out = os.open(self.pipe_out_loc, os.O_RDONLY)
-
-        self.pin_thread.start()
 
     def stop(self):
         if not self.is_running():
@@ -210,7 +214,7 @@ class PinRun:
 
         data = io.BytesIO()
         io_vec.write_bin(data)
-        if len(data) == 0:
+        if len(data.getbuffer()) == 0:
             raise AssertionError("IOVec is empty")
 
         return self._send_cmd(PinMessage.ZMSG_SET_CTX, data)

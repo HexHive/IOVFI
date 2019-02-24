@@ -14,9 +14,12 @@ ZergCommandServer::ZergCommandServer(int internal_w, int internal_r, std::string
         current_state_(ZERG_SERVER_START),
         cmd_in_name_(cmd_in_name), cmd_out_name_(cmd_out_name),
         internal_w_fd(internal_w), internal_r_fd(internal_r),
-        cmd_w_fd(-1), cmd_r_fd(-1) {
+        cmd_w_fd(-1), cmd_r_fd(-1), logger_() {
     FD_ZERO(&fd_w_set_);
     FD_ZERO(&fd_r_set_);
+    std::stringstream logger_name;
+    logger_name << PIN_GetPid() << ".cmd.log";
+    logger_.open(logger_name.str().c_str());
 }
 
 ZergCommandServer::~ZergCommandServer() {
@@ -106,10 +109,10 @@ ZergCommand *ZergCommandServer::read_commander_command() {
     ZergCommand *result;
     if (!is_valid_message_for_state(msg)) {
         if (msg) {
-            std::cout << "Invalid message for state " << get_state_string(current_state_) << ": " << msg->str() <<
-                      std::endl;
+            logger_ << "Invalid message for state " << get_state_string(current_state_) << ": " << msg->str() <<
+                    std::endl;
         } else {
-            std::cout << "Null message" << std::endl;
+            logger_ << "Null message" << std::endl;
         }
         result = new InvalidCommand(*msg, *this);
     } else {
@@ -140,23 +143,24 @@ void ZergCommandServer::handle_command() {
 void ZergCommandServer::start() {
     cmd_r_fd = open(cmd_in_name_.c_str(), O_RDONLY);
     if (cmd_r_fd <= 0) {
-        std::cout << "Command Server could not open " << cmd_in_name_ << std::endl;
+        logger_ << "Command Server could not open " << cmd_in_name_ << std::endl;
         return;
     }
     cmd_w_fd = open(cmd_out_name_.c_str(), O_WRONLY);
     if (cmd_w_fd <= 0) {
-        std::cout << "Command Server could not open " << cmd_out_name_ << std::endl;
+        logger_ << "Command Server could not open " << cmd_out_name_ << std::endl;
         return;
     }
 
-    std::cout << "Starting ZergCommandServer" << std::endl;
+    log("Starting ZergCommandServer");
 
     current_state_ = ZERG_SERVER_WAIT_FOR_TARGET;
     while (current_state_ != ZERG_SERVER_EXIT) {
         FD_ZERO(&fd_r_set_);
         FD_SET(cmd_r_fd, &fd_r_set_);
         FD_SET(internal_r_fd, &fd_r_set_);
-        std::cout << "ZergCommandServer waiting for command. Current State: " << get_state_string(current_state_) << std::endl;
+        logger_ << "ZergCommandServer waiting for command. Current State: " << get_state_string(current_state_)
+                << std::endl;
         if (select(FD_SETSIZE, &fd_r_set_, nullptr, nullptr, nullptr) > 0) {
             if (FD_ISSET(cmd_r_fd, &fd_r_set_)) {
                 handle_command();
@@ -166,17 +170,18 @@ void ZergCommandServer::start() {
             }
         } else if (errno == EINTR) {
             current_state_ = ZERG_SERVER_EXIT;
-            std::cout << "Command Server Detected Interrupt" << std::endl;
+            logger_ << "Command Server Detected Interrupt" << std::endl;
         }
     }
 }
 
 void ZergCommandServer::stop() {
+    log("Stopping server");
     set_state(ZERG_SERVER_EXIT);
 }
 
 void ZergCommandServer::log(const std::string &msg) {
-    std::cout << msg << std::endl;
+    logger_ << msg << std::endl;
 }
 
 size_t ZergCommandServer::write_to_commander(const ZergMessage &msg) {
