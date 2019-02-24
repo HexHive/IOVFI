@@ -158,7 +158,7 @@ class PinRun:
 
     def _send_cmd(self, cmd, data):
         if not self.is_running():
-            raise AssertionError("Process not started")
+            raise AssertionError("Process not running")
 
         logger.debug("Writing {} msg".format(PinMessage.names[cmd]))
         fuzz_cmd = PinMessage(cmd, data)
@@ -180,7 +180,7 @@ class PinRun:
 
     def stop(self):
         if not self.is_running():
-            raise AssertionError("Process not started")
+            raise AssertionError("Process not running")
 
         exit_msg = PinMessage(PinMessage.ZMSG_EXIT, None)
         exit_msg.write_to_pipe(self.pipe_in)
@@ -201,6 +201,8 @@ class PinRun:
         return self._send_cmd(PinMessage.ZMSG_RESET, None)
 
     def read_response(self):
+        if not self.is_running():
+            raise AssertionError("Process not running")
         return PinMessage.read_from_pipe(self.pipe_out)
 
     def send_set_target_cmd(self, target):

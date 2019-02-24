@@ -51,7 +51,7 @@ def fuzz_one_function(args):
         successful_contexts = set()
 
     logger.debug("Creating PinRun for {}".format(run_name))
-    pin_run = PinRun(pin_loc, pintool_loc, binary, target, loader_loc, pipe_in=pipe_in, pipe_out=pipe_out,
+    pin_run = PinRun(pin_loc, pintool_loc, binary, loader_loc, pipe_in=pipe_in, pipe_out=pipe_out,
                      log_loc=log_out, cwd=work_dir)
     logger.debug("Done")
     try:
@@ -84,7 +84,8 @@ def fuzz_one_function(args):
     except Exception as e:
         fail_lock.acquire()
         logger.error("Error for {}: {}".format(run_name, e))
-        failed_count += 1
+        if success_count == 0:
+            failed_count += 1
         fail_lock.release()
         raise e
     finally:
