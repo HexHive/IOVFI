@@ -167,7 +167,9 @@ class PinRun:
         if self.is_running():
             raise AssertionError("Already started")
 
+        logger.debug("Opening pipe_in {}".format(self.pipe_in_loc))
         self.pipe_in = open(self.pipe_in_loc, "wb", buffering=0)
+        logger.debug("Opening pipe_out {}".format(self.pipe_out_loc))
         self.pipe_out = os.open(self.pipe_out_loc, os.O_RDONLY)
 
         self.pin_thread.start()

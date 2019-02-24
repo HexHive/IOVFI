@@ -48,11 +48,12 @@ def fuzz_one_function(args):
     else:
         successful_contexts = set()
 
+    logger.debug("Creating PinRun for {}".format(run_name))
     pin_run = PinRun(pin_loc, pintool_loc, binary, target, loader_loc, pipe_in=pipe_in, pipe_out=pipe_out,
                      log_loc=log_out, cwd=work_dir)
-    logger.debug("target = {} func_name = {}".format(target, func_name))
-
+    logger.debug("Done")
     try:
+        logger.debug("Starting PinRun for {}".format(run_name))
         pin_run.start()
         if pin_run.send_set_target_cmd(target).type != PinMessage.ZMSG_OK:
             raise RuntimeError("Could not set target {}".format(target))
@@ -101,7 +102,7 @@ def main():
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
     parser.add_argument("-log", help="/path/to/log/file")
-    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
+    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.DEBUG)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
     parser.add_argument("-ctx", help="File to output generated contexts", default="fuzz.ctx")
 
@@ -118,6 +119,8 @@ def main():
 
     logger.setLevel(results.loglevel)
     if results.log is not None:
+        if not os.path.exists(os.path.dirname(results.log)):
+            os.makedirs(os.path.dirname(results.log), exist_ok=True)
         logger.addHandler(logging.FileHandler(results.log, mode="w"))
 
     func_count = 0
@@ -126,11 +129,14 @@ def main():
         os.mkdir(work_dir)
 
     if results.ignore is not None:
+        logger.debug("Reading ignored functions")
         with open(results.ignore) as f:
             for line in f.readlines():
                 line = line.strip()
                 ignored_funcs.add(line)
+        logger.debug("done")
 
+    logger.debug("Reading functions to fuzz")
     if results.funcs is not None:
         location_map = dict()
         with open(results.funcs, "r") as f:
@@ -141,12 +147,19 @@ def main():
                     location_map[loc] = name
     else:
         location_map = binaryutils.find_funcs(results.bin)
+    logger.debug("done")
 
     if os.path.exists(results.ctx):
+        logger.debug("Reading previous contexts")
         with open(results.ctx, "rb") as file:
             contexts = pickle.load(file)
+        logger.debug("done")
+    else:
+        if not os.path.exists(os.path.dirname(results.ctx)):
+            os.makedirs(results.ctx, exist_ok=True)
 
     args = list()
+    logger.debug("Building fuzz target list")
     for location, func_name in location_map.items():
         func_name = func_name.strip()
         func_count += 1
@@ -157,6 +170,8 @@ def main():
             continue
 
         args.append([location, func_name])
+    logger.debug("done")
+    logger.info("Fuzzing {} targets".format(len(args)))
 
     if len(args) > 0:
         with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
