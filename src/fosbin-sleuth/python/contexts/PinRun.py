@@ -1,12 +1,14 @@
-import os
-import subprocess
-import stat
-import threading
-import struct
 import io
+import os
 import random
-from .IOVec import IOVec
+import stat
+import struct
+import subprocess
+import threading
+import select
+
 from .FBLogging import logger
+from .IOVec import IOVec
 
 
 class PinMessage:
@@ -19,7 +21,8 @@ class PinMessage:
     ZMSG_EXECUTE = 5
     ZMSG_SET_CTX = 6
     ZMSG_RESET = 7
-    HEADER_FORMAT = "=iQ"
+    ZMSG_READY = 8
+    HEADER_FORMAT = "iQ"
 
     names = {
         ZMSG_FAIL: "ZMSG_FAIL",
@@ -30,7 +33,8 @@ class PinMessage:
         ZMSG_FUZZ: "ZMSG_FUZZ",
         ZMSG_EXECUTE: "ZMSG_EXECUTE",
         ZMSG_SET_CTX: "ZMSG_SET_CTX",
-        ZMSG_RESET: "ZMSG_RESET"
+        ZMSG_RESET: "ZMSG_RESET",
+        ZMSG_READY: "ZMSG_READY"
     }
 
     def __init__(self, msgtype, data):
@@ -43,20 +47,22 @@ class PinMessage:
             self.data = None
         else:
             self.msglen = len(data)
-            self.data = data
+            self.data = io.BytesIO(data)
         logger.debug("Created {} msg with {} bytes of data".format(PinMessage.names[self.msgtype], self.msglen))
 
     def write_to_pipe(self, pipe):
         logger.debug("Writing {} msg with {} bytes of data".format(PinMessage.names[self.msgtype], self.msglen))
         pipe.write(struct.pack(PinMessage.HEADER_FORMAT, self.msgtype, self.msglen))
         if self.msglen > 0:
-            pipe.write(self.data)
+            pipe.write(self.data.read())
 
     @staticmethod
     def read_from_pipe(pipe):
-        logger.debug("Reading from {}".format(pipe))
-        pipe_data = os.read(pipe, struct.calcsize(PinMessage.HEADER_FORMAT))
-        logger.debug("pipe returned {} bytes: {}".format(len(pipe_data), pipe_data))
+        pipe_data = []
+        while len(pipe_data) == 0:
+            select.select([pipe], [], [])
+            pipe_data = os.read(pipe, struct.calcsize(PinMessage.HEADER_FORMAT))
+
         header_data = struct.unpack_from(PinMessage.HEADER_FORMAT, pipe_data)
         msgtype = header_data[0]
         msglen = header_data[1]
@@ -160,11 +166,11 @@ class PinRun:
         if not self.is_running():
             raise AssertionError("Process not running")
 
-        logger.debug("Writing {} msg".format(PinMessage.names[cmd]))
         fuzz_cmd = PinMessage(cmd, data)
         fuzz_cmd.write_to_pipe(self.pipe_in)
 
         response = PinMessage.read_from_pipe(self.pipe_out)
+        logger.debug("Received {} msg with {} bytes back".format(PinMessage.names[response.msgtype], response.msglen))
         return response
 
     def start(self):
@@ -177,6 +183,10 @@ class PinRun:
         self.pipe_in = open(self.pipe_in_loc, "wb", buffering=0)
         logger.debug("Opening pipe_out {}".format(self.pipe_out_loc))
         self.pipe_out = os.open(self.pipe_out_loc, os.O_RDONLY)
+
+        readymsg = self.read_response()
+        if readymsg.msgtype != PinMessage.ZMSG_READY:
+            raise AssertionError("Error reading ready message from server")
 
     def stop(self):
         logger.debug("Stopping PinRun")
@@ -211,7 +221,7 @@ class PinRun:
                 logger.debug("Closing pipe_out")
                 os.close(self.pipe_out)
                 self.pipe_out = None
-            logger.debug("PinRun stopped")
+            logger.info("PinRun stopped")
 
     def send_fuzz_cmd(self):
         return self._send_cmd(PinMessage.ZMSG_FUZZ, None)
@@ -225,10 +235,11 @@ class PinRun:
     def read_response(self):
         if not self.is_running():
             raise AssertionError("Process not running")
-        return PinMessage.read_from_pipe(self.pipe_out)
+        result = PinMessage.read_from_pipe(self.pipe_out)
+        return result
 
     def send_set_target_cmd(self, target):
-        return self._send_cmd(PinMessage.ZMSG_SET_TGT, struct.pack("=Q", target))
+        return self._send_cmd(PinMessage.ZMSG_SET_TGT, struct.pack("Q", target))
 
     def send_set_ctx_cmd(self, io_vec):
         if io_vec is None:

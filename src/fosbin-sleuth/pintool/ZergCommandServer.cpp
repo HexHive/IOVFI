@@ -9,7 +9,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-ZergCommandServer::ZergCommandServer(int internal_w, int internal_r, std::string cmd_in_name, std::string cmd_out_name)
+ZergCommandServer::ZergCommandServer(int internal_w, int internal_r, std::string cmd_in_name, std::string
+cmd_out_name, const std::string &log_name)
         :
         current_state_(ZERG_SERVER_START),
         cmd_in_name_(cmd_in_name), cmd_out_name_(cmd_out_name),
@@ -17,9 +18,13 @@ ZergCommandServer::ZergCommandServer(int internal_w, int internal_r, std::string
         cmd_w_fd(-1), cmd_r_fd(-1), logger_() {
     FD_ZERO(&fd_w_set_);
     FD_ZERO(&fd_r_set_);
-    std::stringstream logger_name;
-    logger_name << PIN_GetPid() << ".cmd.log";
-    logger_.open(logger_name.str().c_str());
+    std::string logger_name = log_name;
+    if (log_name.empty()) {
+        std::stringstream tmp;
+        tmp << PIN_GetPid() << ".cmd.log";
+        logger_name = tmp.str();
+    }
+    logger_.open(logger_name.c_str());
 }
 
 ZergCommandServer::~ZergCommandServer() {
@@ -144,15 +149,27 @@ void ZergCommandServer::start() {
     cmd_r_fd = open(cmd_in_name_.c_str(), O_RDONLY);
     if (cmd_r_fd <= 0) {
         logger_ << "Command Server could not open " << cmd_in_name_ << std::endl;
+        current_state_ = ZERG_SERVER_INVALID;
         return;
     }
     cmd_w_fd = open(cmd_out_name_.c_str(), O_WRONLY);
     if (cmd_w_fd <= 0) {
         logger_ << "Command Server could not open " << cmd_out_name_ << std::endl;
+        current_state_ = ZERG_SERVER_INVALID;
         return;
     }
 
     log("Starting ZergCommandServer");
+    ZergMessage *ready = read_from_executor();
+    if (ready && ready->type() == ZMSG_READY) {
+        write_to_commander(*ready);
+        delete ready;
+    } else {
+        log("Invalid ready message from executor");
+        current_state_ = ZERG_SERVER_INVALID;
+        return;
+    }
+    log("Ready msg sent");
 
     current_state_ = ZERG_SERVER_WAIT_FOR_TARGET;
     while (current_state_ != ZERG_SERVER_EXIT) {
@@ -187,7 +204,11 @@ void ZergCommandServer::log(const std::string &msg) {
 size_t ZergCommandServer::write_to_commander(const ZergMessage &msg) {
     size_t written = msg.write_to_fd(cmd_w_fd);
     if (written == 0) {
-        log("Writting to commander failed");
+        log("Writing to commander failed");
+    } else {
+        std::stringstream logmsg;
+        logmsg << "Wrote " << written << " bytes to commander in " << msg.str() << " msg";
+        log(logmsg.str());
     }
     return written;
 }
@@ -203,6 +224,10 @@ ZergMessage *ZergCommandServer::read_from_commander() {
         log("Error reading from command pipe");
         stop();
         PIN_ExitApplication(1);
+    } else {
+        std::stringstream msg;
+        msg << "Read " << result->str() << " msg with " << result->size() << " bytes from commander";
+        log(msg.str());
     }
     return result;
 }
@@ -213,6 +238,10 @@ ZergMessage *ZergCommandServer::read_from_executor() {
         log("Error reading from executor pipe");
         stop();
         PIN_ExitApplication(1);
+    } else {
+        std::stringstream msg;
+        msg << "Read " << result->str() << " msg with " << result->size() << " bytes from executor";
+        log(msg.str());
     }
     return result;
 }

@@ -6,10 +6,10 @@
 /* This value gives each GP register up to 5 allocated areas
  * and enough room for their values along with RAX
  */
-#define ZMSG_MAX_DATA_LEN   6 * 5 * DEFAULT_ALLOCATION_SIZE + 7 * sizeof(uintptr_t)
+#define ZMSG_MAX_DATA_LEN   (6 * 5 * DEFAULT_ALLOCATION_SIZE + 7 * sizeof(uintptr_t))
 
 ZergMessage::ZergMessage(zerg_message_t type) :
-        _message_type(type), _length(0), _data(nullptr), _self_allocated_data(false) {}
+        _message_type(type), _length(0ULL), _data(nullptr), _self_allocated_data(false) {}
 
 ZergMessage::ZergMessage(zerg_message_t type, size_t length, void *data) :
         _message_type(type), _length(length), _data(data), _self_allocated_data(false) {
@@ -64,20 +64,24 @@ const char *ZergMessage::str() const {
             return "ZMSG_RESET";
         case ZMSG_ACK:
             return "ZMSG_ACK";
+        case ZMSG_READY:
+            return "ZMSG_READY";
         default:
             return "UNKNOWN MESSAGE";
     }
 }
 
 size_t ZergMessage::write_to_fd(int fd) const {
-    size_t written = 0;
-    int tmp = write(fd, &_message_type, sizeof(_message_type));
-    if (tmp <= 0) {
-        return 0;
-    }
+    struct header {
+        zerg_message_t type;
+        size_t len;
+    } header1;
+    memset(&header1, 0, sizeof(struct header));
+    header1.type = _message_type;
+    header1.len = _length;
 
-    written += tmp;
-    tmp = write(fd, &_length, sizeof(_length));
+    size_t written = 0;
+    int tmp = write(fd, &header1, sizeof(struct header));
     if (tmp <= 0) {
         return 0;
     }
@@ -96,33 +100,31 @@ size_t ZergMessage::write_to_fd(int fd) const {
 
 size_t ZergMessage::read_from_fd(int fd) {
     size_t read_bytes = 0;
-    zerg_message_t msg_type;
-    size_t length;
+    struct header {
+        zerg_message_t type;
+        size_t len;
+    } header1;
+    memset(&header1, 0, sizeof(struct header));
+
     void *data = nullptr;
 
-    int tmp = read(fd, &msg_type, sizeof(msg_type));
+    int tmp = read(fd, &header1, sizeof(struct header));
     if (tmp <= 0) {
         return 0;
     }
     read_bytes += tmp;
 
-    tmp = read(fd, &length, sizeof(length));
-    if (tmp <= 0) {
-        return 0;
-    }
-    read_bytes += tmp;
-
-    if (length > 0) {
-        if (length > ZMSG_MAX_DATA_LEN) {
-            length = ZMSG_MAX_DATA_LEN;
+    if (header1.len > 0) {
+        if (header1.len > ZMSG_MAX_DATA_LEN) {
+            header1.len = ZMSG_MAX_DATA_LEN;
         }
 
-        data = malloc(length);
+        data = malloc(header1.len);
         if (!data) {
             return 0;
         }
 
-        tmp = read(fd, data, length);
+        tmp = read(fd, data, header1.len);
         if (read <= 0) {
             free(data);
             return 0;
@@ -130,8 +132,8 @@ size_t ZergMessage::read_from_fd(int fd) {
         read_bytes += tmp;
     }
 
-    _message_type = msg_type;
-    _length = length;
+    _message_type = header1.type;
+    _length = header1.len;
     if (data) {
         _data = data;
         _self_allocated_data = true;

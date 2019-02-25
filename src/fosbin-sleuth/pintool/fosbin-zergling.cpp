@@ -116,7 +116,7 @@ ZergMessage *read_from_cmd_server() {
 
 int write_to_cmd_server(ZergMessage &msg) {
     std::stringstream logmsg;
-    logmsg << "Writing " << msg.str() << " to server" << std::endl;
+    logmsg << "Writing " << msg.str() << " and " << msg.size() << " bytes to server" << std::endl;
     log_message(logmsg);
     size_t written = msg.write_to_fd(internal_pipe_out[1]);
     if (written == 0) {
@@ -1271,6 +1271,8 @@ void begin_execution(CONTEXT *ctx) {
         preContext.add(reg, (ADDRINT) 0);
     }
 
+    ZergMessage ready(ZMSG_READY);
+    write_to_cmd_server(ready);
     wait_to_start();
 }
 
@@ -1364,8 +1366,12 @@ int main(int argc, char **argv) {
     log_message("done opening command pipes");
 
     log_message("Creating command server");
+    std::string cmd_log = KnobLogFile.Value();
+    if (!cmd_log.empty()) {
+        cmd_log += ".cmd";
+    }
     cmd_server = new ZergCommandServer(internal_pipe_in[1], internal_pipe_out[0], KnobInPipe.Value(),
-                                       KnobOutPipe.Value());
+                                       KnobOutPipe.Value(), cmd_log);
     log_message("done");
 
     IMG_AddInstrumentFunction(FindMain, nullptr);

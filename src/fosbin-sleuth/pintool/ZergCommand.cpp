@@ -65,7 +65,7 @@ zerg_cmd_result_t ZergCommand::execute() {
 }
 
 zerg_cmd_result_t InvalidCommand::execute() {
-    std::cout << "InvalidCommand executed" << std::endl;
+    server_.log("InvalidCommand executed");
     return ZCMD_ERROR;
 }
 

@@ -11,7 +11,6 @@ from concurrent import futures
 from contexts.FBLogging import logger
 import logging
 import pickle
-import time
 
 fuzz_count = 5
 watchdog = 5 * 1000
@@ -58,22 +57,24 @@ def fuzz_one_function(args):
     try:
         logger.debug("Starting PinRun for {}".format(run_name))
         pin_run.start()
-        if pin_run.send_set_target_cmd(target).type != PinMessage.ZMSG_OK:
+        if pin_run.send_set_target_cmd(target).msgtype != PinMessage.ZMSG_ACK or pin_run.read_response().msgtype != \
+                PinMessage.ZMSG_OK:
             raise RuntimeError("Could not set target {}".format(target))
 
         for x in range(fuzz_count):
-            if pin_run.send_fuzz_cmd().type != PinMessage.ZMSG_OK:
+            pin_run.send_reset_cmd()
+
+            if pin_run.send_fuzz_cmd().msgtype != PinMessage.ZMSG_ACK or pin_run.read_response().msgtype != \
+                    PinMessage.ZMSG_OK:
                 continue
 
-            if pin_run.send_execute_cmd().type != PinMessage.ZMSG_ACK:
+            if pin_run.send_execute_cmd().msgtype != PinMessage.ZMSG_ACK:
                 continue
 
             result = pin_run.read_response()
-            if result.type == PinMessage.ZMSG_OK:
+            if result.msgtype == PinMessage.ZMSG_OK:
                 successful_runs += 1
                 successful_contexts.add(IOVec(result.data))
-
-            pin_run.send_reset_cmd()
 
         if successful_runs == 0:
             raise AssertionError("No successful runs")
@@ -94,10 +95,8 @@ def fuzz_one_function(args):
         if pin_run.is_running():
             pin_run.stop()
         if os.path.exists(pipe_in):
-            logger.debug("Unlinking {}".format(pipe_in))
             os.unlink(pipe_in)
         if os.path.exists(pipe_out):
-            logger.debug("Unlinking {}".format(pipe_out))
             os.unlink(pipe_out)
 
 
@@ -184,18 +183,13 @@ def main():
     logger.info("Fuzzing {} targets".format(len(args)))
 
     if len(args) > 0:
-        with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-            try:
-                pool.map(fuzz_one_function, args)
-            except KeyboardInterrupt:
-                exit(0)
-        # try:
-        #     for arg in args:
-        #         fuzz_one_function(arg)
-        # except Exception as e:
-        #     logger.debug("Returned to main")
-        #     time.sleep(60)
-        #     raise e
+        # with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
+        #     try:
+        #         pool.map(fuzz_one_function, args)
+        #     except KeyboardInterrupt:
+        #         exit(0)
+        for arg in args:
+            fuzz_one_function(arg)
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(success_count))

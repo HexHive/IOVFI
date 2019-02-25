@@ -24,7 +24,8 @@ typedef enum zerg_server_state {
 
 class ZergCommandServer {
 public:
-    ZergCommandServer(int internal_w, int internal_r, std::string cmd_in_name, std::string cmd_out_name);
+    ZergCommandServer(int internal_w, int internal_r, std::string cmd_in_name, std::string cmd_out_name, const
+    std::string &log_name);
 
     ~ZergCommandServer();
 
