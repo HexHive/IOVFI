@@ -183,13 +183,13 @@ def main():
     logger.info("Fuzzing {} targets".format(len(args)))
 
     if len(args) > 0:
-        # with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-        #     try:
-        #         pool.map(fuzz_one_function, args)
-        #     except KeyboardInterrupt:
-        #         exit(0)
-        for arg in args:
-            fuzz_one_function(arg)
+        with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
+            try:
+                pool.map(fuzz_one_function, args)
+            except KeyboardInterrupt:
+                exit(0)
+        # for arg in args:
+        #     fuzz_one_function(arg)
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(success_count))

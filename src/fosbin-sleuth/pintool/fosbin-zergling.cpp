@@ -521,6 +521,7 @@ EXCEPT_HANDLING_RESULT globalSegfaultHandler(THREADID tid, EXCEPTION_INFO *excep
     std::stringstream ss;
     if (cmd_server) {
         cmd_server->stop();
+        log_message("delete 3");
         delete cmd_server;
     }
     ss << "Global segfault handler called: " << PIN_ExceptionToString(exceptionInfo);
@@ -662,7 +663,7 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
             if (!aa->fix_pointer(faulting_address)) {
                 std::stringstream ss;
                 ss << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
-                log_error(ss);
+                return false;
             }
             AllocatedArea *tmp = preContext.find_allocated_area(to.reg);
             aa->reset_non_ptrs(*tmp);
@@ -1184,11 +1185,13 @@ void report_failure(zerg_cmd_result_t reason) {
     size_t len = strlen(buf) + 1;
     ZergMessage msg(ZMSG_FAIL, len, buf);
     write_to_cmd_server(msg);
+    log_message("free 1");
     free(buf);
 }
 
 void start_cmd_server(void *v) {
     cmd_server->start();
+    log_message("delete 1");
     delete cmd_server;
     PIN_ExitApplication(0);
 }
@@ -1288,6 +1291,7 @@ zerg_cmd_result_t handle_cmd() {
             break;
     }
 
+    log_message("delete 2");
     delete msg;
     return result;
 }
