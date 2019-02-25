@@ -47,7 +47,7 @@ class PinMessage:
         logger.debug("Created {} msg with {} bytes of data".format(PinMessage.names[self.msgtype], self.msglen))
 
     def write_to_pipe(self, pipe):
-        logger.debug("Writing {} msg with {} bytes of data".format(self.msgtype, self.msglen))
+        logger.debug("Writing {} msg with {} bytes of data".format(PinMessage.names[self.msgtype], self.msglen))
         pipe.write(struct.pack(PinMessage.HEADER_FORMAT, self.msgtype, self.msglen))
         if self.msglen > 0:
             pipe.write(self.data)
@@ -150,7 +150,7 @@ class PinRun:
 
         logger.info("Running {}".format(" ".join(cmd)))
 
-        self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd)
+        self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True)
         self.pin_proc.wait()
 
     def is_running(self):
@@ -179,17 +179,39 @@ class PinRun:
         self.pipe_out = os.open(self.pipe_out_loc, os.O_RDONLY)
 
     def stop(self):
-        if not self.is_running():
-            raise AssertionError("Process not running")
+        logger.debug("Stopping PinRun")
+        try:
+            if self.is_running():
+                self._send_cmd(PinMessage.ZMSG_EXIT, None)
+        except BrokenPipeError:
+            logger.debug("Error sending {}".format(PinMessage.names[PinMessage.ZMSG_EXIT]))
+            pass
+        finally:
+            self.pin_thread.join(timeout=0.1)
+            if self.pin_thread.is_alive():
+                if self.pin_proc is not None:
+                    self.pin_proc.kill()
+                    if self.pin_proc.stdout is not None:
+                        logger.debug("Closing pin_proc.stdout")
+                        self.pin_proc.stdout.close()
+                    if self.pin_proc.stderr is not None:
+                        logger.debug("Closing pin_proc.stderr")
+                        self.pin_proc.stderr.close()
+                    if self.pin_proc.stdin is not None:
+                        logger.debug("Closing pin_proc.stdin")
+                        self.pin_proc.stdin.close()
+                    self.pin_proc = None
 
-        exit_msg = PinMessage(PinMessage.ZMSG_EXIT, None)
-        exit_msg.write_to_pipe(self.pipe_in)
-        self.pipe_in.close()
-        os.close(self.pipe_out)
+            if self.pipe_in is not None:
+                logger.debug("Closing pipe_in")
+                self.pipe_in.close()
+                self.pipe_in = None
 
-        self.pin_thread.join(timeout=0.1)
-        if self.pin_thread.is_alive():
-            self.pin_proc.kill()
+            if self.pipe_out is not None:
+                logger.debug("Closing pipe_out")
+                os.close(self.pipe_out)
+                self.pipe_out = None
+            logger.debug("PinRun stopped")
 
     def send_fuzz_cmd(self):
         return self._send_cmd(PinMessage.ZMSG_FUZZ, None)

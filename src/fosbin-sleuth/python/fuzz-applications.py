@@ -11,6 +11,7 @@ from concurrent import futures
 from contexts.FBLogging import logger
 import logging
 import pickle
+import time
 
 fuzz_count = 5
 watchdog = 5 * 1000
@@ -90,9 +91,13 @@ def fuzz_one_function(args):
         raise e
     finally:
         logger.info("Finished {}".format(func_name))
+        if pin_run.is_running():
+            pin_run.stop()
         if os.path.exists(pipe_in):
+            logger.debug("Unlinking {}".format(pipe_in))
             os.unlink(pipe_in)
         if os.path.exists(pipe_out):
+            logger.debug("Unlinking {}".format(pipe_out))
             os.unlink(pipe_out)
 
 
@@ -121,10 +126,11 @@ def main():
     pin_loc = os.path.join(results.pindir, "pin")
 
     logger.setLevel(results.loglevel)
-    if results.log is not None:
-        if not os.path.exists(os.path.dirname(results.log)):
-            os.makedirs(os.path.dirname(results.log), exist_ok=True)
-        logger.addHandler(logging.FileHandler(results.log, mode="w"))
+    logfile = os.path.abspath(results.log)
+    if logfile is not None:
+        if not os.path.exists(os.path.dirname(logfile)):
+            os.makedirs(os.path.dirname(logfile), exist_ok=True)
+        logger.addHandler(logging.FileHandler(logfile, mode="w"))
 
     func_count = 0
     ignored_funcs = set()
@@ -152,14 +158,15 @@ def main():
         location_map = binaryutils.find_funcs(results.bin)
     logger.debug("done")
 
-    if os.path.exists(results.ctx):
+    context_file = os.path.abspath(results.ctx)
+    if os.path.exists(context_file):
         logger.debug("Reading previous contexts")
-        with open(results.ctx, "rb") as file:
+        with open(context_file, "rb") as file:
             contexts = pickle.load(file)
         logger.debug("done")
     else:
-        if not os.path.exists(os.path.dirname(results.ctx)):
-            os.makedirs(results.ctx, exist_ok=True)
+        if not os.path.exists(os.path.dirname(context_file)):
+            os.makedirs(os.path.dirname(context_file), exist_ok=True)
 
     args = list()
     logger.debug("Building fuzz target list")
@@ -182,10 +189,17 @@ def main():
                 pool.map(fuzz_one_function, args)
             except KeyboardInterrupt:
                 exit(0)
+        # try:
+        #     for arg in args:
+        #         fuzz_one_function(arg)
+        # except Exception as e:
+        #     logger.debug("Returned to main")
+        #     time.sleep(60)
+        #     raise e
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(success_count))
-        with open(results.ctx, "wb") as file:
+        with open(context_file, "wb") as file:
             pickle.dump(contexts, file)
 
         if failed_count + success_count > 0:
