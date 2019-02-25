@@ -46,6 +46,7 @@ KNOB <std::string> KnobLogFile(KNOB_MODE_WRITEONCE, "pintool", "log", "", "/path
 
 
 RTN target = RTN_Invalid();
+INS first_ins = INS_Invalid();
 FBZergContext preContext;
 FBZergContext currentContext;
 FBZergContext expectedContext;
@@ -104,6 +105,18 @@ VOID log_error(const char *message) {
     std::stringstream ss;
     ss << message;
     log_error(ss);
+}
+
+void log_message(const std::string &message) {
+    std::stringstream msg;
+    msg << message;
+    log_message(msg);
+}
+
+void log_error(const std::string &message) {
+    std::stringstream msg;
+    msg << message;
+    log_error(msg);
 }
 
 ZergMessage *read_from_cmd_server() {
@@ -506,14 +519,16 @@ VOID trace_execution(TRACE trace, VOID *v) {
 EXCEPT_HANDLING_RESULT globalSegfaultHandler(THREADID tid, EXCEPTION_INFO *exceptionInfo, PHYSICAL_CONTEXT
 *physContext, VOID *v) {
     std::stringstream ss;
+    if (cmd_server) {
+        cmd_server->stop();
+        delete cmd_server;
+    }
     ss << "Global segfault handler called: " << PIN_ExceptionToString(exceptionInfo);
     log_error(ss);
-    PIN_SetExceptionAddress(exceptionInfo, RTN_Address(target));
-    PIN_RaiseException(&snapshot, tid, exceptionInfo);
-    return EHR_HANDLED;
+    return EHR_UNHANDLED;
 }
 
-VOID displayCurrentContext(const CONTEXT *ctx, UINT32 sig) {
+const std::string getCurrentContext(const CONTEXT *ctx, UINT32 sig) {
     std::stringstream ss;
     ss << "[" << (sig != SIGSEGV ? "CONTEXT" : "SIGSEGV")
        << "]=----------------------------------------------------------" << std::endl;
@@ -528,7 +543,11 @@ VOID displayCurrentContext(const CONTEXT *ctx, UINT32 sig) {
        << "RSP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSP) << " "
        << "RIP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << std::endl;
     ss << "+-------------------------------------------------------------------" << std::endl;
-    log_message(ss);
+    return ss.str();
+}
+
+VOID displayCurrentContext(const CONTEXT *ctx, UINT32 sig) {
+    log_message(getCurrentContext(ctx, sig).c_str());
 }
 
 ADDRINT compute_effective_address(REG base, REG idx, UINT32 scale, ADDRDELTA displacement, struct X86Context &ctx) {
@@ -699,6 +718,12 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 //    return true;
 //}
 
+void redirect_control_to_main(CONTEXT *ctx) {
+    if (INS_Valid(first_ins)) {
+        PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, INS_Address(first_ins));
+    }
+}
+
 BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
 ////    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
 ////    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() << std::endl;
@@ -708,11 +733,13 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
     if (!fuzzed_input) {
         log_message("write_to_cmd 4");
         report_failure(ZCMD_FAILED_CTX);
-        wait_to_start();
+        redirect_control_to_main(ctx);
+        return false;
     } else if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
         log_message("write_to_cmd 5");
         report_failure(ZCMD_ERROR);
-        wait_to_start();
+        redirect_control_to_main(ctx);
+        return false;
     }
 
 //
@@ -921,14 +948,14 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 //                goto finish;
                 log_message("write_to_cmd 6");
                 report_failure(ZCMD_ERROR);
-                wait_to_start();
+                redirect_control_to_main(ctx);
             }
         } else {
             log_message("Taint analysis failed for the following context: ");
-            displayCurrentContext(ctx);
+            log_message(getCurrentContext(ctx, 0));
             log_message("write_to_cmd 7");
             report_failure(ZCMD_ERROR);
-            wait_to_start();
+            redirect_control_to_main(ctx);
         }
 
 //        reset_to_preexecution(ctx);
@@ -1307,6 +1334,7 @@ VOID FindMain(IMG img, VOID *v) {
     RTN main = RTN_FindByName(img, "main");
     if (RTN_Valid(main)) {
         RTN_Open(main);
+        first_ins = RTN_InsHead(main);
         std::stringstream msg;
         msg << "Adding call to wait_to_start to " << RTN_Name(main) << "(0x" << std::hex << RTN_Address(main)
             << ")";
@@ -1379,6 +1407,7 @@ int main(int argc, char **argv) {
     PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, nullptr);
 
     PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
+    PIN_AddInternalExceptionHandler(globalSegfaultHandler, nullptr);
 
     log_message("Starting");
     PIN_StartProgram();

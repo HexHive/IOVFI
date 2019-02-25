@@ -47,10 +47,10 @@ public:
 
     const std::string get_state_string(zerg_server_state_t state);
 
+    void log(const std::string &msg);
+
 protected:
     zerg_server_state_t current_state_;
-
-    void log(const std::string &msg);
 
     void handle_command();
 
