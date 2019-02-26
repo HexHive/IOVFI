@@ -158,7 +158,11 @@ class PinRun:
         fuzz_cmd.write_to_pipe(self.pipe_in)
 
         response = self.read_response(timeout)
-        logger.debug("Received {} msg with {} bytes back".format(PinMessage.names[response.msgtype], response.msglen))
+        if response is not None:
+            logger.debug(
+                "Received {} msg with {} bytes back".format(PinMessage.names[response.msgtype], response.msglen))
+        else:
+            logger.debug("Received No message back")
         return response
 
     def start(self):
@@ -196,7 +200,7 @@ class PinRun:
         logger.debug("Stopping PinRun")
         try:
             if self.is_running():
-                self._send_cmd(PinMessage.ZMSG_EXIT, None)
+                self._send_cmd(PinMessage.ZMSG_EXIT, None, 0.1)
         except BrokenPipeError:
             logger.debug("Error sending {}".format(PinMessage.names[PinMessage.ZMSG_EXIT]))
             pass

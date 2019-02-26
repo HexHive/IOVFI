@@ -11,13 +11,14 @@ from concurrent import futures
 from contexts.FBLogging import logger
 import logging
 import pickle
+import math
 
 fuzz_count = 5
 watchdog = 5.0
 work_dir = "contexts"
 
-failed_count = 0
 fail_lock = threading.RLock()
+failed_runs = list()
 
 success_count = 0
 success_lock = threading.RLock()
@@ -31,7 +32,7 @@ contexts = dict()
 
 
 def fuzz_one_function(args):
-    global failed_count, success_count, binary, target, pin_loc, pintool_loc, loader_loc, contexts
+    global success_count, binary, target, pin_loc, pintool_loc, loader_loc, contexts, failed_runs
     target = args[0]
     func_name = args[1]
     if os.path.splitext(binary)[1] == ".so":
@@ -90,7 +91,7 @@ def fuzz_one_function(args):
         fail_lock.acquire()
         logger.error("Error for {}: {}".format(run_name, e))
         if success_count == 0:
-            failed_count += 1
+            failed_runs.append(run_name)
         fail_lock.release()
         raise e
     finally:
@@ -121,7 +122,7 @@ def main():
         parser.print_help()
         exit(1)
 
-    global loader_loc, binary, pintool_loc, pin_loc, contexts
+    global loader_loc, binary, pintool_loc, pin_loc, contexts, failed_runs
     loader_loc = results.ld
     binary = results.bin
     pintool_loc = results.tool
@@ -186,24 +187,31 @@ def main():
     logger.info("Fuzzing {} targets".format(len(args)))
 
     if len(args) > 0:
-        # with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-        #     try:
-        #         pool.map(fuzz_one_function, args)
-        #     except KeyboardInterrupt:
-        #         exit(0)
-        for arg in args:
+        with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
             try:
-                fuzz_one_function(arg)
-            except Exception:
-                continue
+                pool.map(fuzz_one_function, args)
+            except KeyboardInterrupt:
+                exit(0)
+        # for arg in args:
+        #     try:
+        #         fuzz_one_function(arg)
+        #     except Exception:
+        #         continue
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(success_count))
         with open(context_file, "wb") as file:
             pickle.dump(contexts, file)
 
+        failed_count = len(failed_runs)
         if failed_count + success_count > 0:
             logger.info("Failed functions: {} ({})".format(failed_count, failed_count / (failed_count + success_count)))
+        if failed_count > 0:
+            logger.info("Failed run selection:")
+            for run in failed_runs[0:min(5, len(failed_runs))]:
+                logger.info("\t{}".format(run))
+
+
     else:
         logger.fatal("Could not find any functions to fuzz")
 
