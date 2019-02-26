@@ -57,6 +57,7 @@ std::vector<struct X86Context> fuzzing_run;
 std::ofstream log_out;
 uint64_t max_instructions = 1000000;
 bool fuzzed_input = false;
+bool sent_initial_ready = false;
 
 ZergCommandServer *cmd_server;
 int internal_pipe_in[2];
@@ -1193,7 +1194,7 @@ void start_cmd_server(void *v) {
     cmd_server->start();
     log_message("delete 1");
     delete cmd_server;
-    PIN_ExitApplication(0);
+//    PIN_ExitApplication(0);
 }
 
 zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
@@ -1297,13 +1298,16 @@ zerg_cmd_result_t handle_cmd() {
 }
 
 void begin_execution(CONTEXT *ctx) {
-    PIN_SaveContext(ctx, &snapshot);
-    for (REG reg : FBZergContext::argument_regs) {
-        preContext.add(reg, (ADDRINT) 0);
-    }
+    if (!sent_initial_ready) {
+        PIN_SaveContext(ctx, &snapshot);
+        for (REG reg : FBZergContext::argument_regs) {
+            preContext.add(reg, (ADDRINT) 0);
+        }
 
-    ZergMessage ready(ZMSG_READY);
-    write_to_cmd_server(ready);
+        ZergMessage ready(ZMSG_READY);
+        write_to_cmd_server(ready);
+        sent_initial_ready = true;
+    }
     wait_to_start();
 }
 

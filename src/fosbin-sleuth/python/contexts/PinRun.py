@@ -56,24 +56,6 @@ class PinMessage:
         if self.msglen > 0:
             pipe.write(self.data.read())
 
-    @staticmethod
-    def read_from_pipe(pipe):
-        pipe_data = []
-        while len(pipe_data) == 0:
-            select.select([pipe], [], [])
-            pipe_data = os.read(pipe, struct.calcsize(PinMessage.HEADER_FORMAT))
-
-        header_data = struct.unpack_from(PinMessage.HEADER_FORMAT, pipe_data)
-        msgtype = header_data[0]
-        msglen = header_data[1]
-
-        if msglen > 0:
-            data = os.read(pipe, msglen)
-        else:
-            data = None
-
-        return PinMessage(msgtype, data)
-
 
 class PinRun:
     def __init__(self, pin_loc, pintool_loc, binary_loc, loader_loc=None, pipe_in=None, pipe_out=None,
@@ -118,6 +100,7 @@ class PinRun:
         self.pin_proc = None
         self.pipe_in = None
         self.pipe_out = None
+        self.thr_r, self.thr_w = os.pipe()
 
     def _check_state(self):
         if self.pin_loc is None:
@@ -158,18 +141,23 @@ class PinRun:
 
         self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True)
         self.pin_proc.wait()
+        logger.debug("Pin process ended")
+        if self.thr_w is not None:
+            os.write(self.thr_w, struct.pack("i", PinMessage.ZMSG_EXIT))
+            os.close(self.thr_w)
+            self.thr_w = None
 
     def is_running(self):
         return self.pipe_in is not None and self.pipe_out is not None and self.pin_thread.is_alive()
 
-    def _send_cmd(self, cmd, data):
+    def _send_cmd(self, cmd, data, timeout=None):
         if not self.is_running():
             raise AssertionError("Process not running")
 
         fuzz_cmd = PinMessage(cmd, data)
         fuzz_cmd.write_to_pipe(self.pipe_in)
 
-        response = PinMessage.read_from_pipe(self.pipe_out)
+        response = self.read_response(timeout)
         logger.debug("Received {} msg with {} bytes back".format(PinMessage.names[response.msgtype], response.msglen))
         return response
 
@@ -184,9 +172,25 @@ class PinRun:
         logger.debug("Opening pipe_out {}".format(self.pipe_out_loc))
         self.pipe_out = os.open(self.pipe_out_loc, os.O_RDONLY)
 
-        readymsg = self.read_response()
-        if readymsg.msgtype != PinMessage.ZMSG_READY:
-            raise AssertionError("Error reading ready message from server")
+        self.wait_for_ready()
+
+    def wait_for_ready(self):
+        byte_data = []
+        while len(byte_data) == 0:
+            ready_pipes = select.select([self.thr_r, self.pipe_out], [], [])
+            if self.thr_r in ready_pipes[0]:
+                raise AssertionError("Pin process exited while waiting for ready")
+            if self.pipe_out in ready_pipes[0]:
+                byte_data = os.read(self.pipe_out, struct.calcsize(PinMessage.HEADER_FORMAT))
+
+        header_data = struct.unpack_from(PinMessage.HEADER_FORMAT, byte_data)
+        msgtype = header_data[0]
+        msglen = header_data[1]
+
+        if msgtype != PinMessage.ZMSG_READY:
+            raise AssertionError("Server did not issue a {} msg: {} (len = {})".format(
+                PinMessage.names[PinMessage.ZMSG_READY],
+                PinMessage.names[msgtype], msglen))
 
     def stop(self):
         logger.debug("Stopping PinRun")
@@ -197,6 +201,13 @@ class PinRun:
             logger.debug("Error sending {}".format(PinMessage.names[PinMessage.ZMSG_EXIT]))
             pass
         finally:
+            if self.thr_r is not None:
+                os.close(self.thr_r)
+                self.thr_r = None
+            if self.thr_w is not None:
+                os.close(self.thr_w)
+                self.thr_w = None
+
             self.pin_thread.join(timeout=0.1)
             if self.pin_thread.is_alive():
                 if self.pin_proc is not None:
@@ -232,10 +243,30 @@ class PinRun:
     def send_reset_cmd(self):
         return self._send_cmd(PinMessage.ZMSG_RESET, None)
 
-    def read_response(self):
-        if not self.is_running():
-            raise AssertionError("Process not running")
-        result = PinMessage.read_from_pipe(self.pipe_out)
+    def read_response(self, timeout=None):
+        result = None
+        while result is None:
+            if not self.is_running():
+                raise AssertionError("Process not running")
+            ready_pipes = select.select([self.thr_r, self.pipe_out], [], [], timeout)
+            if len(ready_pipes[0]) == 0:
+                break
+
+            if self.thr_r in ready_pipes[0]:
+                raise AssertionError("Pin process exited prematurely")
+            if self.pipe_out in ready_pipes[0]:
+                pipe_data = os.read(self.pipe_out, struct.calcsize(PinMessage.HEADER_FORMAT))
+                if len(pipe_data) == 0:
+                    continue
+                header_data = struct.unpack_from(PinMessage.HEADER_FORMAT, pipe_data)
+                msgtype = header_data[0]
+                msglen = header_data[1]
+
+                if msglen > 0:
+                    data = os.read(self.pipe_out, msglen)
+                else:
+                    data = None
+                result = PinMessage(msgtype, data)
         return result
 
     def send_set_target_cmd(self, target):
