@@ -57,15 +57,10 @@ void ZergCommand::log(std::stringstream &msg) {
     msg.str(std::string());
 }
 
-zerg_cmd_result_t ZergCommand::execute() {
-    if (server_.write_to_executor(msg_) == 0) {
-        return ZCMD_ERROR;
-    }
-    return ZCMD_OK;
-}
-
 zerg_cmd_result_t InvalidCommand::execute() {
     server_.log("InvalidCommand executed");
+    ZergMessage fail(ZMSG_FAIL);
+    server_.write_to_commander(fail);
     return ZCMD_ERROR;
 }
 
@@ -81,7 +76,7 @@ ExitCommand::ExitCommand(ZergMessage &msg, ZergCommandServer &server) :
         ZergCommand(msg, server) {}
 
 zerg_cmd_result_t ResetCommand::execute() {
-    if (!server_.set_state(ZERG_SERVER_WAIT_FOR_CMD)) {
+    if (!server_.set_state(ZERG_SERVER_WAIT_FOR_CMD) || server_.write_to_executor(msg_) == 0) {
         return ZCMD_ERROR;
     }
     return ZCMD_OK;
@@ -98,7 +93,6 @@ zerg_cmd_result_t FuzzCommand::execute() {
     if (server_.write_to_executor(msg_) == 0) {
         return ZCMD_ERROR;
     }
-
     return ZCMD_OK;
 }
 

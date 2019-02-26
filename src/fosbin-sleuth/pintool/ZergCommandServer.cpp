@@ -124,25 +124,19 @@ ZergCommand *ZergCommandServer::read_commander_command() {
         result = ZergCommand::create(*msg, *this);
     }
 
-    log("delete 4");
     delete msg;
     return result;
 }
 
 void ZergCommandServer::handle_command() {
-    zerg_cmd_result_t result = ZCMD_ERROR;
     ZergCommand *zergCommand = read_commander_command();
     if (zergCommand) {
-        result = zergCommand->execute();
-        log("delete 5");
-        delete zergCommand;
-    }
-
-    if (result == ZCMD_ERROR) {
-        ZergMessage msg(ZMSG_FAIL);
-        write_to_commander(msg);
-    } else {
         ZergMessage msg(ZMSG_ACK);
+        write_to_commander(msg);
+        zergCommand->execute();
+        delete zergCommand;
+    } else {
+        ZergMessage msg(ZMSG_FAIL);
         write_to_commander(msg);
     }
 }
@@ -165,13 +159,11 @@ void ZergCommandServer::start() {
     ZergMessage *ready = read_from_executor();
     if (ready && ready->type() == ZMSG_READY) {
         write_to_commander(*ready);
-        log("delete 6");
         delete ready;
     } else {
         log("Invalid ready message from executor");
         current_state_ = ZERG_SERVER_INVALID;
         if (ready) {
-            log("delete 7");
             delete ready;
         }
         return;

@@ -34,7 +34,6 @@ ZergMessage::ZergMessage(const ZergMessage &msg) {
 
 ZergMessage::~ZergMessage() {
     if (_self_allocated_data) {
-        std::cout << "free 4" << std::endl;
         free(_data);
     }
 }
@@ -127,7 +126,6 @@ size_t ZergMessage::read_from_fd(int fd) {
 
         tmp = read(fd, data, header1.len);
         if (read <= 0) {
-            std::cout << "free 5" << std::endl;
             free(data);
             return 0;
         }

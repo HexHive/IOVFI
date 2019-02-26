@@ -522,7 +522,6 @@ EXCEPT_HANDLING_RESULT globalSegfaultHandler(THREADID tid, EXCEPTION_INFO *excep
     std::stringstream ss;
     if (cmd_server) {
         cmd_server->stop();
-        log_message("delete 3");
         delete cmd_server;
     }
     ss << "Global segfault handler called: " << PIN_ExceptionToString(exceptionInfo);
@@ -1186,13 +1185,11 @@ void report_failure(zerg_cmd_result_t reason) {
     size_t len = strlen(buf) + 1;
     ZergMessage msg(ZMSG_FAIL, len, buf);
     write_to_cmd_server(msg);
-    log_message("free 1");
     free(buf);
 }
 
 void start_cmd_server(void *v) {
     cmd_server->start();
-    log_message("delete 1");
     delete cmd_server;
 //    PIN_ExitApplication(0);
 }
@@ -1262,6 +1259,10 @@ zerg_cmd_result_t handle_execute_cmd() {
     return ZCMD_ERROR;
 }
 
+zerg_cmd_result_t handle_reset_cmd() {
+    return ZCMD_OK;
+}
+
 zerg_cmd_result_t handle_cmd() {
     ZergMessage *msg = nullptr;
     std::stringstream log_msg;
@@ -1285,6 +1286,10 @@ zerg_cmd_result_t handle_cmd() {
             log_message("Received ExecuteCommand");
             result = handle_execute_cmd();
             break;
+        case ZMSG_RESET:
+            log_message("Received ResetCommand");
+            result = handle_reset_cmd();
+            break;
         default:
             log_msg << "Unknown command: " << msg->str();
             log_message(log_msg);
@@ -1292,7 +1297,6 @@ zerg_cmd_result_t handle_cmd() {
             break;
     }
 
-    log_message("delete 2");
     delete msg;
     return result;
 }
