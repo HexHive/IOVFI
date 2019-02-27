@@ -26,7 +26,7 @@ pintool_loc = None
 loader_loc = None
 
 
-def signal_handler(signal_id, frame):
+def signal_handler(signal_id):
     save_desc_for_later()
     sys.exit(signal_id)
 
@@ -107,6 +107,7 @@ def consolidate_one_function(arg):
         pin_run.stop()
     del pin_run
     logger.info("Finished {}".format(run_name))
+
 
 def main():
     global desc_file_path, desc_map, pin_loc, pintool_loc, loader_loc, watchdog
