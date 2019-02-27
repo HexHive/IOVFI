@@ -6,7 +6,7 @@ import argparse
 import pickle
 from concurrent import futures
 import multiprocessing
-import signal
+import datetime
 import threading
 from contexts import FBLogging
 from contexts.PinRun import PinRun, PinMessage
@@ -75,8 +75,7 @@ def consolidate_one_function(func_id):
                      os.path.abspath(WORK_DIR))
     logger.debug("Created pin run for {}".format(run_name))
     for context in all_ctxs:
-        logger.debug("{}: {}".format(func_id, context.hexdigest()))
-        if context in existing_ctxs:
+        if context in existing_ctxs or func_id in desc_map[hash(context)]:
             logger.debug("Context {} skipped".format(context.hexdigest()))
             desc_map[hash(context)].add(func_id)
             continue
@@ -127,9 +126,9 @@ def consolidate_one_function(func_id):
                 desc_map[hash(context)].add(func_id)
                 desc_lock.release()
                 lock_held = False
-                logger.info("{} accepts {}".format(run_name, hash(context)))
+                logger.info("{} accepts {}".format(run_name, context.hexdigest()))
             else:
-                logger.info("{} rejects {}".format(run_name, hash(context)))
+                logger.info("{} rejects {}".format(run_name, context.hexdigest()))
         except AssertionError as e:
             if lock_held:
                 desc_lock.release()
@@ -165,8 +164,8 @@ def main():
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-target", help="Address to target single function")
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
-    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.DEBUG)
-    parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
+    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
+    parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count() * 4)
     parser.add_argument("-timeout", help="Number of ms to wait for each context to finish completing", type=int,
                         default=watchdog)
 
@@ -225,30 +224,28 @@ def main():
 
     logger.info("Number of unique IOVecs: {}".format(len(all_ctxs)))
     logger.info("Number of functions to test: {}".format(len(args)))
+
     if len(args) > 0:
-        jobs = list()
+        logger.info("Starting at {}".format(datetime.datetime.today()))
         with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-            for arg in args:
-                try:
-                    jobs.append(pool.submit(consolidate_one_function, arg))
-                except KeyboardInterrupt as e:
-                    logger.exception("Pool canceled")
-                    break
-                except Exception as e:
-                    logger.exception(str(e))
-                    continue
+            try:
+                pool.map(consolidate_one_function, args)
+            except KeyboardInterrupt as e:
+                logger.exception("Pool canceled")
+            except Exception as e:
+                logger.exception(str(e))
+            finally:
+                save_desc_for_later()
         # for arg in args:
         #     consolidate_one_function(arg)
 
         logger.debug("pool exited")
-        save_desc_for_later()
         for hash_sum, funcs in desc_map.items():
             func_str = ""
             for func in funcs:
                 func_str += str(func) + " "
             logger.info("{}: {}".format(hash_sum, func_str))
-
-        logger.info("Consolidation complete")
+        logger.info("Consolidation complete at {}".format(datetime.datetime.today()))
 
 
 if __name__ == "__main__":

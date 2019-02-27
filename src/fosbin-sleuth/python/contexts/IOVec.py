@@ -1,4 +1,5 @@
 import hashlib
+import sys
 from .X86Context import X86Context
 
 
@@ -18,7 +19,7 @@ class IOVec:
 
     def _get_hash_obj(self):
         hash_sum = hashlib.md5()
-        hash_sum.update(hash(self))
+        hash_sum.update(hash(self).to_bytes(8, sys.byteorder, signed=True))
         return hash_sum
 
     def write_bin(self, file):

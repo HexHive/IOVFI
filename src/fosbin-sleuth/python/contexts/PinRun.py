@@ -93,7 +93,7 @@ class PinRun:
             raise AssertionError("{} is not a pipe".format(self.pipe_out_loc))
 
         self.accepted_contexts = list()
-        self.pin_thread = threading.Thread(target=self._run)
+        self.pin_thread = None
         self.pin_proc = None
         self.pipe_in = None
         self.pipe_out = None
@@ -178,6 +178,7 @@ class PinRun:
             raise AssertionError("Already started")
 
         self.thr_r, self.thr_w = os.pipe()
+        self.pin_thread = threading.Thread(target=self._run)
         self.pin_thread.start()
 
         logger.debug("Opening pipe_in {}".format(self.pipe_in_loc))
