@@ -133,6 +133,7 @@ def hash_contexts(run_name):
         contexts_hashes[hashsum] = ctx
         hash_lock.release()
 
+
 def main():
     parser = argparse.ArgumentParser(description="Generate input/output vectors")
     parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
