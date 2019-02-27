@@ -1259,7 +1259,9 @@ zerg_cmd_result_t handle_execute_cmd() {
     PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
     std::stringstream msg;
     msg << "About to start executing at "
-        << std::hex << RTN_Address(target) << "(" << RTN_Name(target) << ")";
+        << std::hex << RTN_Address(target) << "(" << RTN_Name(target) << ")"
+        << " with context " << std::endl;
+    preContext.prettyPrint(msg);
     log_message(msg);
 
     PIN_ExecuteAt(&snapshot);

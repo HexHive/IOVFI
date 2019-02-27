@@ -128,7 +128,7 @@ SetTargetCommand::SetTargetCommand(ZergMessage &msg, ZergCommandServer &server) 
         ZergCommand(msg, server) {}
 
 zerg_cmd_result_t SetContextCommand::execute() {
-    if (!server_.set_state(ZERG_SERVER_WAIT_FOR_CMD)) {
+    if (!server_.set_state(ZERG_SERVER_SETTING_CTX)) {
         return ZCMD_ERROR;
     }
 

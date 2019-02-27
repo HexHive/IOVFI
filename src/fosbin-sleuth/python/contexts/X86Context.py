@@ -1,8 +1,5 @@
-import hashlib
 import struct
-import sys
 from .AllocatedArea import AllocatedArea, AllocatedAreaMagic
-from .FBLogging import logger
 
 
 class X86Context:
@@ -17,19 +14,19 @@ class X86Context:
             if reg == AllocatedAreaMagic and idx < len(self.register_values) - 1:
                 self.allocated_areas.append(AllocatedArea(file))
 
-    def hash(self):
-        md5sum = hashlib.md5()
-        for reg in self.register_values:
-            md5sum.update(reg.to_bytes(struct.calcsize("Q"), sys.byteorder))
-        for subarea in self.allocated_areas:
-            sub_hash = hash(subarea)
-            md5sum.update(str(sub_hash).encode("utf-8"))
-
-        result = hash(md5sum)
-        return result
-
     def __hash__(self):
-        return self.hash()
+        hash_sum = 0
+
+        for reg in self.register_values:
+            hash_sum = hash((hash_sum, reg))
+
+        for area in self.allocated_areas:
+            hash_sum = hash((hash_sum, area))
+
+        return hash_sum
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
 
     def write_bin(self, file):
         for reg in self.register_values:

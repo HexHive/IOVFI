@@ -1,7 +1,4 @@
 import struct
-import sys
-import hashlib
-from .FBLogging import logger
 
 AllocatedAreaMagic = 0xA110CA3D
 
@@ -34,24 +31,19 @@ class AllocatedArea:
             for x in range(0, subareasToRead):
                 self.subareas.append(AllocatedArea(file))
 
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
     def __hash__(self):
-        return self.hash()
+        hash_sum = 0
 
-    def hash(self):
-        i = 0
-        curr_subarea = 0
-        hash_sum = hashlib.md5()
-        while i < self.size:
-            if self.mem_map[i]:
-                sub_hash = hash(self.subareas[curr_subarea])
-                hash_sum.update(str(sub_hash).encode("utf-8"))
-                curr_subarea += 1
-                i += 8
-            else:
-                hash_sum.update(struct.pack("B", self.data[i]))
-                i += 1
+        for i in range(0, self.size):
+            hash_sum = hash((hash_sum, self.data[i]))
 
-        return hash(hash_sum)
+        for area in self.subareas:
+            hash_sum = hash((hash_sum, area))
+
+        return hash_sum
 
     def write_bin(self, file):
         file.write(struct.pack("Q", self.size))

@@ -308,7 +308,7 @@ class PinRun:
         if len(data.getbuffer()) == 0:
             raise AssertionError("IOVec is empty")
 
-        return self._send_cmd(PinMessage.ZMSG_SET_CTX, data, timeout)
+        return self._send_cmd(PinMessage.ZMSG_SET_CTX, data.getbuffer(), timeout)
 
     def returncode(self):
         if not self.pin_thread.is_alive() and self.pin_proc is not None:

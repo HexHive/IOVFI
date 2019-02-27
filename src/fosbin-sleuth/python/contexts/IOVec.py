@@ -1,5 +1,4 @@
 import hashlib
-import os
 from .X86Context import X86Context
 
 
@@ -9,15 +8,23 @@ class IOVec:
         self.output = X86Context(file)
 
     def __hash__(self):
-        return self.hash()
+        return hash((self.input, self.output))
 
-    def hash(self):
+    def __str__(self):
+        return self.hexdigest()
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def _get_hash_obj(self):
         hash_sum = hashlib.md5()
-        hash_sum.update(str(self.input.hash()).encode('utf-8'))
-        hash_sum.update(str(self.output.hash()).encode('utf-8'))
-
-        return hash(hash_sum)
+        hash_sum.update(hash(self))
+        return hash_sum
 
     def write_bin(self, file):
         self.input.write_bin(file)
         self.output.write_bin(file)
+
+    def hexdigest(self):
+        hash_sum = self._get_hash_obj()
+        return hash_sum.hexdigest()
