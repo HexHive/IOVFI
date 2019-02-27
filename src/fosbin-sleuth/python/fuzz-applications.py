@@ -5,13 +5,13 @@ import argparse
 from contexts import binaryutils
 from contexts.PinRun import PinRun, PinMessage
 from contexts.IOVec import IOVec
+from contexts.FunctionDescriptor import FunctionDescriptor
 import multiprocessing
 import threading
 from concurrent import futures
 from contexts.FBLogging import logger
 import logging
 import pickle
-import random
 
 fuzz_count = 5
 watchdog = 5.0
@@ -33,6 +33,7 @@ contexts_hashes = dict()
 hash_lock = threading.RLock()
 
 current_jobs = set()
+
 
 def fuzz_one_function(args):
     global success_count, binary, pin_loc, pintool_loc, loader_loc, contexts, failed_runs, current_jobs
@@ -105,7 +106,8 @@ def fuzz_one_function(args):
         else:
             success_lock.acquire()
             success_count += 1
-            contexts[run_name] = successful_contexts
+            func_desc = FunctionDescriptor(binary, func_name, target)
+            contexts[func_desc] = successful_contexts
             success_lock.release()
     except Exception as e:
         fail_lock.acquire()

@@ -761,7 +761,10 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
             INS faulty_ins = INS_FindByAddress(fuzzing_run.back().rip);
             msg << "Could not find faulty address for instruction at 0x" << std::hex << INS_Address(faulty_ins)
                 << " (" << INS_Disassemble(faulty_ins) << ")";
-            log_error(msg);
+            log_message(msg);
+            report_failure(ZCMD_ERROR);
+            redirect_control_to_main(ctx);
+            return false;
         } else {
 //            std::stringstream msg;
 //            currentContext.prettyPrint();
@@ -780,7 +783,10 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
             INS ins = INS_FindByAddress(c.rip);
             if (!INS_Valid(ins)) {
                 log << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
-                log_error(log);
+                log_message(log);
+                report_failure(ZCMD_ERROR);
+                redirect_control_to_main(ctx);
+                return false;
             }
 
 //            log << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
@@ -813,7 +819,10 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
                 if (!REG_valid(taint_source)) {
                     std::stringstream ss;
                     ss << "Could not find valid base register for instruction: " << INS_Disassemble(ins);
-                    log_error(ss);
+                    log_message(ss);
+                    redirect_control_to_main(ctx);
+                    report_failure(ZCMD_ERROR);
+                    return false;
                 }
                 add_taint(taint_source, taintedObjs);
                 continue;
@@ -1191,7 +1200,6 @@ void report_failure(zerg_cmd_result_t reason) {
 void start_cmd_server(void *v) {
     cmd_server->start();
     delete cmd_server;
-//    PIN_ExitApplication(0);
 }
 
 zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
@@ -1263,6 +1271,18 @@ zerg_cmd_result_t handle_reset_cmd() {
     return ZCMD_OK;
 }
 
+zerg_cmd_result_t handle_set_ctx_cmd(ZergMessage &msg) {
+    std::stringstream all_ctxs(std::ios::in | std::ios::out | std::ios::binary);
+    for (size_t i = 0; i < msg.size(); i++) {
+        all_ctxs << ((char *) msg.data())[i];
+    }
+
+    all_ctxs >> preContext;
+    all_ctxs >> expectedContext;
+    fuzzed_input = false;
+    return ZCMD_OK;
+}
+
 zerg_cmd_result_t handle_cmd() {
     ZergMessage *msg = nullptr;
     std::stringstream log_msg;
@@ -1289,6 +1309,10 @@ zerg_cmd_result_t handle_cmd() {
         case ZMSG_RESET:
             log_message("Received ResetCommand");
             result = handle_reset_cmd();
+            break;
+        case ZMSG_SET_CTX:
+            log_message("Received SetContextCommand");
+            result = handle_set_ctx_cmd(*msg);
             break;
         default:
             log_msg << "Unknown command: " << msg->str();

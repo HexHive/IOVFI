@@ -17,7 +17,7 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
     ctx.values.clear();
     for (REG reg : FBZergContext::argument_regs) {
         in.read((char *) &tmp, sizeof(tmp));
-        if (!in || in.eof()) {
+        if (in.eof()) {
             log_error("Could not read all context bytes");
         }
 //        std::cout << in.gcount() << std::endl;

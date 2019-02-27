@@ -1,145 +1,121 @@
 #!/usr/bin/python3.7
 
-import os
 import sys
+import os
 import argparse
 import pickle
-import threading
 from concurrent import futures
 import multiprocessing
 import signal
-import struct
-from contexts import IOVec, binaryutils, FBLogging
-from contexts import FunctionDescriptor as FD
+import threading
+from contexts import FBLogging
+from contexts.PinRun import PinRun, PinMessage
 import logging
 
 logger = FBLogging.logger
 
-FIFO_PIPE_NAME = "fifo-pipe"
 WORK_DIR = "_work"
 watchdog = 100
-total_time = None
 
 desc_map = dict()
-desc_file = None
+desc_file_path = None
 desc_lock = threading.RLock()
-
-hash_map = dict()
-hash_file = None
-hash_lock = threading.RLock()
-
-contexts = set()
-contexts_lock = threading.RLock()
 
 pin_loc = None
 pintool_loc = None
 loader_loc = None
 
 
-def add_contexts(context_file):
-    global contexts
-
-    context_file = context_file.strip()
-    io_vecs = read_contexts(context_file)
-    contexts_lock.acquire()
-    for vec in io_vecs:
-        contexts.add(vec)
-    contexts_lock.release()
-
-
-def read_contexts(context_file):
-    results = list()
-    context_file = context_file.strip()
-    with open(context_file, 'rb') as f:
-        logger.info("Reading {}".format(context_file))
-        try:
-            while f.tell() < os.fstat(f.fileno()).st_size:
-                io_vec = IOVec.IOVec(f)
-                results.append(io_vec)
-        except IndexError as e:
-            logger.error("IndexError")
-        except struct.error as e:
-            logger.error("Struct error")
-        except MemoryError as e:
-            logger.error("MemoryError")
-        except OverflowError:
-            logger.error("OverflowError")
-        except ValueError:
-            logger.error("ValueError")
-        except Exception as e:
-            logger.error("General Exception: {}".format(e))
-
-    return results
-
-
-def signal_handler(signal, frame):
+def signal_handler(signal_id, frame):
     save_desc_for_later()
-    sys.exit(signal)
+    sys.exit(signal_id)
 
 
 def save_desc_for_later():
-    global desc_map, desc_file, hash_map, hash_file
-    if desc_file is not None:
-        logger.info("Outputting desc_map to {}".format(os.path.abspath(desc_file.name)))
-        pickle.dump(desc_map, desc_file)
-        desc_file.close()
-        desc_file = None
-
-    if hash_file is not None:
-        logger.info("Outputting hash_map to {}".format(os.path.abspath(hash_file.name)))
-        pickle.dump(hash_map, hash_file)
-        hash_file.close()
-        hash_file = None
+    global desc_map, desc_file_path
+    if desc_file_path is not None:
+        logger.info("Outputting desc_map to {}".format(desc_file_path))
+        with open(desc_file_path, "wb") as file:
+            desc_lock.acquire()
+            pickle.dump(desc_map, file)
+            desc_lock.release()
 
 
-def attempt_ctx(args):
-    global pin_loc, pintool_loc, loader_loc, desc_map, hash_map, watchdog, total_time
-    binary = args[0]
-    target = args[1]
-    func_name = args[2]
-    name = "{}.{}".format(os.path.basename(binary), target)
-    in_contexts = os.path.join(WORK_DIR, FIFO_PIPE_NAME)
-    out_contexts = os.path.join(WORK_DIR, "{}.all.ctx".format(name))
-    cwd = os.path.abspath("combined-contexts")
-    if not os.path.exists(cwd):
-        os.mkdir(cwd)
+def consolidate_one_function(arg):
+    global desc_map, pin_loc, pintool_loc, loader_loc, watchdog
+    func_id = arg[0]
+    contexts = arg[1]
+    run_name = os.path.basename(func_id.binary) + "." + func_id.name + "." + str(func_id.location)
+    pipe_in = os.path.abspath(os.path.join(WORK_DIR, run_name + ".in"))
+    pipe_out = os.path.abspath(os.path.join(WORK_DIR, run_name + ".out"))
+    log_loc = os.path.abspath(os.path.join("logs", run_name + ".log"))
 
-    try:
-        pin_run = binaryutils.fuzz_function(binary, target, pin_loc, pintool_loc, in_contexts=in_contexts, cwd=cwd,
-                                            out_contexts=out_contexts, loader_loc=loader_loc, fuzz_count=0,
-                                            watchdog=watchdog, total_time=total_time)
-        if pin_run is not None:
-            func_desc = FD.FunctionDescriptor(binary, func_name, target)
-            for io_vec in read_contexts(out_contexts):
-                hash_sum = io_vec.hash()
+    pin_run = PinRun(pin_loc, pintool_loc, func_id.binary, loader_loc, pipe_in, pipe_out, log_loc,
+                     os.path.abspath(WORK_DIR))
+    logger.debug("Created pin run for {}").format(run_name)
+    for context in contexts:
+        try:
+            if not pin_run.is_running():
+                pin_run.start(timeout=watchdog)
+                ack_msg = pin_run.send_set_target_cmd(func_id.location, timeout=watchdog)
+                if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                    logger.error("Set target ACK not received for {}".format(run_name))
+                    break
+                resp_msg = pin_run.read_response(timeout=watchdog)
+                if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                    logger.error("Could not set target for {}".format(run_name))
+                    break
+
+            ack_msg = pin_run.send_reset_cmd(timeout=watchdog)
+            if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                logger.error("Reset ACK not received for {}".format(run_name))
+                continue
+            resp_msg = pin_run.read_response(timeout=watchdog)
+            if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                logger.error("Could not reset for {}".format(run_name))
+                continue
+
+            ack_msg = pin_run.send_set_ctx_cmd(context, timeout=watchdog)
+            if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                logger.error("Set Context ACK not received for {}".format(run_name))
+                continue
+            resp_msg = pin_run.read_response(timeout=watchdog)
+            if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                logger.error("Could not set context for {}".format(run_name))
+                continue
+
+            ack_msg = pin_run.send_execute_cmd(timeout=watchdog)
+            if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                logger.error("Set Context ACK not received for {}".format(run_name))
+                continue
+            resp_msg = pin_run.read_response(timeout=watchdog)
+            if resp_msg is not None and resp_msg.msgtype == PinMessage.ZMSG_OK:
                 desc_lock.acquire()
-                if hash_sum not in desc_map:
-                    desc_map[hash_sum] = list()
-                desc_map[hash_sum].append(func_desc)
+                desc_map[hash(context)].append(func_id)
                 desc_lock.release()
+                logger.info("{} accepts {}".format(run_name, hash(context)))
+            else:
+                logger.info("{} rejects {}".format(run_name, hash(context)))
+        except AssertionError as e:
+            logger.exception("Error for {}: {}".format(run_name, str(e)))
+            continue
+        except Exception as e:
+            logger.exception("Error for {}: {}".format(run_name, str(e)))
+            break
 
-                hash_lock.acquire()
-                hash_map[hash_sum] = io_vec
-                hash_lock.release()
-    except TimeoutError:
-        logger.error("{} timed out".format(name))
-    except Exception as e:
-        logger.error("Error categorizing {}: {}".format(name, e))
-    finally:
-        logger.info("Completed {}".format(name))
-
+    if pin_run.is_running():
+        pin_run.stop()
+    del pin_run
+    logger.info("Finished {}".format(run_name))
 
 def main():
-    global desc_file, desc_map, pin_loc, pintool_loc, loader_loc, contexts, hash_file, watchdog, total_time
+    global desc_file_path, desc_map, pin_loc, pintool_loc, loader_loc, watchdog
 
     parser = argparse.ArgumentParser(description="Consolidate")
-    parser.add_argument("-b", "--binaries", help="File containing paths to binaries to test", required=True)
-    parser.add_argument('-o', '--out', help="Output of which contexts execute with which functions", default="out.desc")
-    parser.add_argument('-m', '--map', help="Map of hashes and contexts", default="hash.map")
-    parser.add_argument("-c", "--contexts", help="File containing paths to contexts to use", required=True)
+    parser.add_argument('-o', '--out', help="/path/to/output/function/descriptions", default="out.desc")
+    parser.add_argument("-c", "--contexts", help="/path/to/existing/contexts", default="fuzz.ctx")
     parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
-    parser.add_argument("-ignore", help="/path/to/ignored/functions")
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-target", help="Address to target single function")
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
@@ -156,20 +132,6 @@ def main():
     if not os.path.exists(results.contexts):
         logger.fatal("Could not find {}".format(results.contexts))
         sys.exit(1)
-
-    if not os.path.exists(results.binaries):
-        logger.fatal("Could not find {}".format(results.binaries))
-        sys.exit(1)
-
-    if results.ignore is not None and not os.path.exists(results.ignore):
-        logger.fatal("Could not find {}".format(results.ignore))
-        sys.exit(1)
-
-    ignored = set()
-    if results.ignore is not None:
-        with open(results.ignore, "r") as ignored_funcs:
-            for ignored_func in ignored_funcs.readlines():
-                ignored.add(ignored_func.strip())
 
     watchdog = results.timeout
 
@@ -189,62 +151,47 @@ def main():
             logger.fatal("Could not find {}".format(loader_loc))
             sys.exit(1)
 
-    if os.path.exists(results.out):
-        desc_file = open(results.out, "rb")
-        if os.fstat(desc_file.fileno()).st_size > 0:
-            logger.info("Reading existing desc_file")
-            desc_map = pickle.load(desc_file)
-        desc_file.close()
+    desc_file_path = os.path.abspath(results.out)
 
-    desc_file = open(results.out, "wb")
-    hash_file = open(results.map, "wb")
+    if os.path.exists(desc_file_path):
+        with open(desc_file_path, "rb") as file:
+            if os.fstat(file.fileno()).st_size > 0:
+                logger.info("Reading existing function descriptors")
+                desc_map = pickle.load(file)
+                logger.info("done")
 
-    all_context_files = set()
-    with open(results.contexts, "r") as contexts_file:
-        for context_file in contexts_file:
-            all_context_files.add(context_file.strip())
-
-    with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-        pool.map(add_contexts, all_context_files)
-
-    logger.info("Unique Hashes: {}".format(len(contexts)))
-    # Add a second for initialization and other things
-    total_time = len(contexts) * watchdog / 1000 + 1
+    with open(results.contexts) as file:
+        logger.info("Reading existing contexts")
+        existing_ctxs = pickle.load(file)
+        logger.info("done")
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
-    if not os.path.exists(WORK_DIR):
-        os.mkdir(WORK_DIR)
-    ctx_path = os.path.join(WORK_DIR, FIFO_PIPE_NAME)
+    all_ctxs = set()
+    for func_id, ctxs in existing_ctxs.items():
+        for ctx in ctxs:
+            all_ctxs.add(ctx)
 
-    with open(ctx_path, "wb+") as ctxFile:
-        logger.info("Writting contexts to {}".format(ctxFile))
-        for io_vec in contexts:
-            io_vec.write_bin(ctxFile)
-        logger.info("done")
+    logger.info("Unique contexts: {}".format(len(all_ctxs)))
 
-    with open(results.binaries, "r") as binaries:
-        for binary in binaries.readlines():
-            binary = os.path.abspath(binary.strip())
+    args = list()
+    for func_id, ctxs in existing_ctxs.items():
+        ctxs_to_test = set()
+        for ctx in all_ctxs:
+            if hash(ctx) not in desc_map:
+                desc_map[hash(ctx)] = list()
 
-            msg = "Reading function locations for {}...".format(binary)
-            location_map = binaryutils.find_funcs(binary, results.target, ignored)
-            logger.info(msg + "done")
+            if ctx not in ctxs:
+                ctxs_to_test.add(ctx)
+            else:
+                desc_map[hash(ctx)].append(func_id)
 
-            args = list()
-            for loc, name in location_map.items():
-                args.append([binary, loc, name])
+        if results.target is None or func_id.name == results.target:
+            args.append([func_id, ctxs_to_test])
 
-            if len(args) > 0:
-                # for arg in args:
-                #     attempt_ctx(arg)
-                with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-                    try:
-                        pool.map(attempt_ctx, args)
-                    except futures.TimeoutError:
-                        print("Too long")
-                        pass
+    with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
+        pool.map(consolidate_one_function, args)
 
     save_desc_for_later()
     for hash_sum, funcs in desc_map.items():

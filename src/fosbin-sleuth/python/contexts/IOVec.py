@@ -1,6 +1,7 @@
 import hashlib
+import os
 from .X86Context import X86Context
-from .FBLogging import logger
+
 
 class IOVec:
     def __init__(self, file):
