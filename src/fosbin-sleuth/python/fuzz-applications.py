@@ -110,7 +110,7 @@ def fuzz_one_function(args):
     except Exception as e:
         fail_lock.acquire()
         logger.exception("Error for {}: {}".format(run_name, e))
-        if success_count == 0:
+        if successful_runs == 0:
             failed_runs.append(run_name)
         fail_lock.release()
     finally:
