@@ -14,9 +14,9 @@ import logging
 
 logger = FBLogging.logger
 
-WORK_DIR = "_work"
-LOG_DIR = "logs"
-watchdog = 5.0
+WORK_DIR = os.path.join("_work", "consolidate")
+LOG_DIR = os.path.join("logs", "consolidate")
+watchdog = 0.5
 
 desc_map = dict()
 desc_file_path = None
@@ -28,11 +28,6 @@ loader_loc = None
 
 all_ctxs = set()
 fuzzed_ctxs = None
-
-
-def signal_handler(signal_id, _):
-    save_desc_for_later()
-    sys.exit(signal_id)
 
 
 def save_desc_for_later():
@@ -62,6 +57,7 @@ def consolidate_one_function(func_id):
     pipe_in = os.path.abspath(os.path.join(WORK_DIR, run_name + ".in"))
     pipe_out = os.path.abspath(os.path.join(WORK_DIR, run_name + ".out"))
     log_loc = os.path.abspath(os.path.join(LOG_DIR, run_name + ".consol.log"))
+    cmd_log_loc = os.path.abspath(os.path.join(LOG_DIR, run_name + ".consol.cmd.log"))
 
     if not os.path.exists(WORK_DIR):
         os.makedirs(WORK_DIR, exist_ok=True)
@@ -72,7 +68,7 @@ def consolidate_one_function(func_id):
     lock_held = False
 
     pin_run = PinRun(pin_loc, pintool_loc, func_id.binary, loader_loc, pipe_in, pipe_out, log_loc,
-                     os.path.abspath(WORK_DIR))
+                     os.path.abspath(WORK_DIR), cmd_log_loc)
     logger.debug("Created pin run for {}".format(run_name))
     for context in all_ctxs:
         if context in existing_ctxs or func_id in desc_map[hash(context)]:
@@ -134,6 +130,8 @@ def consolidate_one_function(func_id):
                 desc_lock.release()
                 lock_held = False
             logger.exception("Error for {}: {}".format(run_name, str(e)))
+            logger.info("{} rejects {}".format(run_name, context.hexdigest()))
+            pin_run.stop()
             continue
         except Exception as e:
             if lock_held:
@@ -164,10 +162,11 @@ def main():
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-target", help="Address to target single function")
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
-    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
+    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.DEBUG)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count() * 4)
     parser.add_argument("-timeout", help="Number of ms to wait for each context to finish completing", type=int,
                         default=watchdog)
+    parser.add_argument("-singlectx")
 
     results = parser.parse_args()
     logger.setLevel(results.loglevel)
@@ -217,7 +216,8 @@ def main():
             hash_sum = hash(ctx)
             if hash_sum not in desc_map:
                 desc_map[hash_sum] = set()
-            all_ctxs.add(ctx)
+            if results.singlectx is None or ctx.hexdigest() == results.singlectx:
+                all_ctxs.add(ctx)
 
         if results.target is None or func_id.name == results.target:
             args.append(func_id)
@@ -234,17 +234,18 @@ def main():
                 logger.exception("Pool canceled")
             except Exception as e:
                 logger.exception(str(e))
-            finally:
-                save_desc_for_later()
+
+        save_desc_for_later()
         # for arg in args:
         #     consolidate_one_function(arg)
 
         logger.debug("pool exited")
-        for hash_sum, funcs in desc_map.items():
-            func_str = ""
-            for func in funcs:
-                func_str += str(func) + " "
-            logger.info("{}: {}".format(hash_sum, func_str))
+        if results.singlectx is None:
+            for hash_sum, funcs in desc_map.items():
+                func_str = ""
+                for func in funcs:
+                    func_str += str(func) + " "
+                logger.info("{}: {}".format(hash_sum, func_str))
         logger.info("Consolidation complete at {}".format(datetime.datetime.today()))
 
 

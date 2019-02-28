@@ -24,7 +24,7 @@ cmd_out_name, const std::string &log_name)
         tmp << PIN_GetPid() << ".cmd.log";
         logger_name = tmp.str();
     }
-    logger_.open(logger_name.c_str());
+    logger_.open(logger_name.c_str(), std::ios::app);
 }
 
 ZergCommandServer::~ZergCommandServer() {

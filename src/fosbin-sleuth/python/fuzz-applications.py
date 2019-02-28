@@ -15,7 +15,7 @@ import pickle
 
 fuzz_count = 5
 watchdog = 5.0
-work_dir = "contexts"
+work_dir = os.path.join("_work", "fuzz")
 
 fail_lock = threading.RLock()
 failed_runs = list()
@@ -45,9 +45,10 @@ def fuzz_one_function(args):
     run_name = "{}.{}.{}".format(os.path.basename(binary), func_name, target)
     logger.debug("{} target is {}".format(run_name, hex(target)))
     current_jobs.add(run_name)
-    pipe_in = run_name + ".in"
-    pipe_out = run_name + ".out"
-    log_out = os.path.join("logs", run_name + ".log")
+    pipe_in = os.path.join(work_dir, run_name + ".in")
+    pipe_out = os.path.join(work_dir, run_name + ".out")
+    log_out = os.path.join("logs", "fuzz", run_name + ".log")
+    cmd_log = os.path.join("logs", "fuzz", run_name + ".cmd.log")
     if not os.path.exists(os.path.dirname(log_out)):
         os.makedirs(os.path.dirname(log_out), exist_ok=True)
     successful_runs = 0
@@ -59,21 +60,22 @@ def fuzz_one_function(args):
 
     logger.debug("Creating PinRun for {}".format(run_name))
     pin_run = PinRun(pin_loc, pintool_loc, binary, loader_loc, pipe_in=pipe_in, pipe_out=pipe_out,
-                     log_loc=log_out, cwd=work_dir)
+                     log_loc=log_out, cwd=work_dir, cmd_log_loc=cmd_log)
     logger.debug("Done")
     try:
-        logger.debug("Starting PinRun for {}".format(run_name))
-        pin_run.start()
-        ack_msg = pin_run.send_set_target_cmd(target, watchdog)
-        if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
-            raise RuntimeError("Could not set target {}".format(target))
-
-        resp_msg = pin_run.read_response(timeout=watchdog)
-        if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
-            raise RuntimeError("Could not set target {}".format(target))
-
         for x in range(fuzz_count):
             try:
+                if not pin_run.is_running():
+                    logger.debug("Starting PinRun for {}".format(run_name))
+                    pin_run.start()
+                    ack_msg = pin_run.send_set_target_cmd(target, watchdog)
+                    if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                        raise RuntimeError("Could not set target {}".format(target))
+
+                    resp_msg = pin_run.read_response(timeout=watchdog)
+                    if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                        raise RuntimeError("Could not set target {}".format(target))
+
                 ack_msg = pin_run.send_reset_cmd(timeout=watchdog)
                 if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
                     continue
@@ -99,6 +101,10 @@ def fuzz_one_function(args):
                     successful_runs += 1
                     successful_contexts.add(IOVec(result.data))
             except TimeoutError:
+                logger.exception(str(e))
+                continue
+            except AssertionError as e:
+                logger.exception(str(e))
                 continue
 
         if successful_runs == 0:
@@ -171,7 +177,7 @@ def main():
     func_count = 0
     ignored_funcs = set()
     if not os.path.exists(work_dir):
-        os.mkdir(work_dir)
+        os.makedirs(work_dir, exist_ok=True)
 
     if results.ignore is not None:
         logger.debug("Reading ignored functions")

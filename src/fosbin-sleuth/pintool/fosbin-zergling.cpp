@@ -43,6 +43,7 @@ CONTEXT snapshot;
 KNOB <std::string> KnobInPipe(KNOB_MODE_WRITEONCE, "pintool", "in-pipe", "", "Filename of in pipe");
 KNOB <std::string> KnobOutPipe(KNOB_MODE_WRITEONCE, "pintool", "out-pipe", "", "Filename of out pipe");
 KNOB <std::string> KnobLogFile(KNOB_MODE_WRITEONCE, "pintool", "log", "", "/path/to/log");
+KNOB <std::string> KnobCmdLogFile(KNOB_MODE_WRITEONCE, "pintool", "cmdlog", "", "/path/to/cmd/log");
 
 
 RTN target = RTN_Invalid();
@@ -1359,6 +1360,7 @@ void wait_to_start() {
                 }
             }
         } else {
+            log_message("Select <= 0");
             PIN_ExitApplication(0);
         }
     }
@@ -1392,7 +1394,7 @@ int main(int argc, char **argv) {
         return usage();
     }
     if (!KnobLogFile.Value().empty()) {
-        log_out.open(KnobLogFile.Value().c_str());
+        log_out.open(KnobLogFile.Value().c_str(), std::ios::app);
         if (!log_out) {
             std::cerr << "Could not open log at " << KnobLogFile.Value() << std::endl;
             PIN_ExitApplication(1);
@@ -1432,10 +1434,8 @@ int main(int argc, char **argv) {
     log_message("done opening command pipes");
 
     log_message("Creating command server");
-    std::string cmd_log = KnobLogFile.Value();
-    if (!cmd_log.empty()) {
-        cmd_log += ".cmd";
-    }
+    std::string cmd_log = KnobCmdLogFile.Value();
+
     cmd_server = new ZergCommandServer(internal_pipe_in[1], internal_pipe_out[0], KnobInPipe.Value(),
                                        KnobOutPipe.Value(), cmd_log);
     log_message("done");

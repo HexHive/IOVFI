@@ -57,7 +57,7 @@ class PinMessage:
 
 class PinRun:
     def __init__(self, pin_loc, pintool_loc, binary_loc, loader_loc=None, pipe_in=None, pipe_out=None,
-                 log_loc=None, cwd=os.getcwd()):
+                 log_loc=None, cwd=os.getcwd(), cmd_log_loc=None):
         self.binary_loc = os.path.abspath(binary_loc)
 
         self.pin_loc = os.path.abspath(pin_loc)
@@ -68,16 +68,26 @@ class PinRun:
 
         if log_loc is not None:
             self.log_loc = os.path.abspath(log_loc)
+            if os.path.exists(self.log_loc):
+                os.unlink(self.log_loc)
         else:
             self.log_loc = None
+
+        if cmd_log_loc is not None:
+            self.cmd_log_loc = os.path.abspath(cmd_log_loc)
+            if os.path.exists(self.cmd_log_loc):
+                os.unlink(self.cmd_log_loc)
+        else:
+            self.cmd_log_loc = None
 
         if pipe_in is None:
             self.pipe_in_loc = os.path.join(cwd, "{}.{}.in".format(os.path.basename(self.binary_loc), random.randint()))
         else:
             self.pipe_in_loc = os.path.abspath(pipe_in)
 
+        self.create_pipe_in = False
         if not os.path.exists(self.pipe_in_loc):
-            os.mkfifo(self.pipe_in_loc)
+            self.create_pipe_in = True
         elif not stat.S_ISFIFO(os.stat(self.pipe_in_loc).st_mode):
             raise AssertionError("{} is not a pipe".format(self.pipe_in_loc))
 
@@ -87,8 +97,9 @@ class PinRun:
         else:
             self.pipe_out_loc = os.path.abspath(pipe_out)
 
+        self.create_pipe_out = False
         if not os.path.exists(self.pipe_out_loc):
-            os.mkfifo(self.pipe_out_loc)
+            self.create_pipe_out = True
         elif not stat.S_ISFIFO(os.stat(self.pipe_out_loc).st_mode):
             raise AssertionError("{} is not a pipe".format(self.pipe_out_loc))
 
@@ -99,6 +110,7 @@ class PinRun:
         self.pipe_out = None
         self.thr_r = None
         self.thr_w = None
+        self.log = None
 
     def _check_state(self):
         if self.pin_loc is None:
@@ -130,6 +142,9 @@ class PinRun:
         if self.log_loc is not None:
             cmd.append("-log")
             cmd.append(self.log_loc)
+        if self.cmd_log_loc is not None:
+            cmd.append("-cmdlog")
+            cmd.append(self.cmd_log_loc)
 
         cmd.append("--")
 
@@ -146,19 +161,29 @@ class PinRun:
         cmd = self.generate_cmd()
 
         logger.info("Running {}".format(" ".join(cmd)))
+        self.log = open(self.log_loc, "a+")
 
-        self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True)
+        self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True, stdout=self.log, stderr=self.log)
+        # self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True)
         pid = self.pin_proc.pid
         logger.debug("{} spawned process {}".format(os.path.basename(self.pipe_in_loc), pid))
         self.pin_proc.wait()
         logger.debug("Pin process {} ended".format(pid))
+        if self.log is not None:
+            self.log.close()
+        self.log = None
         if self.thr_w is not None:
             os.write(self.thr_w, struct.pack("i", PinMessage.ZMSG_EXIT))
-            os.close(self.thr_w)
-            self.thr_w = None
 
     def is_running(self):
-        return self.pipe_in is not None and self.pipe_out is not None and self.pin_thread.is_alive()
+        # logger.debug("pipe_in: {}".format(self.pipe_in is not None))
+        # logger.debug("pipe_out: {}".format(self.pipe_out is not None))
+        # logger.debug("pin_thread: {}".format(self.pin_thread is not None))
+        # if self.pin_thread is not None:
+        #     logger.debug("pin_thread.is_alive: {}".format(self.pin_thread.is_alive()))
+
+        return self.pipe_in is not None and self.pipe_out is not None and self.pin_thread is \
+               not None and self.pin_thread.is_alive()
 
     def _send_cmd(self, cmd, data, timeout=None):
         if not self.is_running():
@@ -177,6 +202,12 @@ class PinRun:
         if self.is_running():
             raise AssertionError("Already started")
 
+        if self.create_pipe_in:
+            os.mkfifo(self.pipe_in_loc)
+
+        if self.create_pipe_out:
+            os.mkfifo(self.pipe_out_loc)
+
         self.thr_r, self.thr_w = os.pipe()
         self.pin_thread = threading.Thread(target=self._run)
         self.pin_thread.start()
@@ -187,6 +218,61 @@ class PinRun:
         self.pipe_out = os.open(self.pipe_out_loc, os.O_RDONLY)
 
         self.wait_for_ready(timeout)
+
+    def stop(self):
+        logger.debug("Stopping PinRun for {}".format(os.path.basename(self.pipe_in_loc)))
+        try:
+            if self.is_running():
+                self._send_cmd(PinMessage.ZMSG_EXIT, None, 0.1)
+        except BrokenPipeError:
+            logger.debug("Error sending {} for {}".format(PinMessage.names[PinMessage.ZMSG_EXIT],
+                                                          os.path.basename(self.pipe_in_loc)))
+            pass
+        finally:
+            self.pin_thread.join(timeout=0.1)
+            if self.pin_thread.is_alive():
+                if self.pin_proc is not None:
+                    self.pin_proc.kill()
+                    if self.pin_proc.stdout is not None:
+                        logger.debug("Closing pin_proc.stdout for {}".format(os.path.basename(self.pipe_in_loc)))
+                        self.pin_proc.stdout.close()
+                    if self.pin_proc.stderr is not None:
+                        logger.debug("Closing pin_proc.stderr for {}".format(os.path.basename(self.pipe_in_loc)))
+                        self.pin_proc.stderr.close()
+                    if self.pin_proc.stdin is not None:
+                        logger.debug("Closing pin_proc.stdin for {}".format(os.path.basename(self.pipe_in_loc)))
+                        self.pin_proc.stdin.close()
+                    self.pin_proc = None
+
+            if self.thr_r is not None:
+                os.close(self.thr_r)
+                self.thr_r = None
+            if self.thr_w is not None:
+                os.close(self.thr_w)
+                self.thr_w = None
+
+            if self.log is not None:
+                if not self.log.closed:
+                    self.log.close()
+                self.log = None
+
+            if self.pipe_in is not None:
+                logger.debug("Closing pipe_in for {}".format(os.path.basename(self.pipe_in_loc)))
+                self.pipe_in.close()
+                self.pipe_in = None
+
+            if self.create_pipe_in:
+                os.unlink(self.pipe_in_loc)
+
+            if self.pipe_out is not None:
+                logger.debug("Closing pipe_out for {}".format(os.path.basename(self.pipe_in_loc)))
+                os.close(self.pipe_out)
+                self.pipe_out = None
+
+            if self.create_pipe_out:
+                os.unlink(self.pipe_out_loc)
+
+            logger.info("PinRun stopped for {}".format(os.path.basename(self.pipe_in_loc)))
 
     def wait_for_ready(self, timeout=None):
         byte_data = []
@@ -207,49 +293,6 @@ class PinRun:
             raise AssertionError("Server did not issue a {} msg: {} (len = {})".format(
                 PinMessage.names[PinMessage.ZMSG_READY],
                 PinMessage.names[msgtype], msglen))
-
-    def stop(self):
-        logger.debug("Stopping PinRun for {}".format(os.path.basename(self.pipe_in_loc)))
-        try:
-            if self.is_running():
-                self._send_cmd(PinMessage.ZMSG_EXIT, None, 0.1)
-        except BrokenPipeError:
-            logger.debug("Error sending {} for {}".format(PinMessage.names[PinMessage.ZMSG_EXIT],
-                                                          os.path.basename(self.pipe_in_loc)))
-            pass
-        finally:
-            if self.thr_r is not None:
-                os.close(self.thr_r)
-                self.thr_r = None
-            if self.thr_w is not None:
-                os.close(self.thr_w)
-                self.thr_w = None
-
-            self.pin_thread.join(timeout=0.1)
-            if self.pin_thread.is_alive():
-                if self.pin_proc is not None:
-                    self.pin_proc.kill()
-                    if self.pin_proc.stdout is not None:
-                        logger.debug("Closing pin_proc.stdout for {}".format(os.path.basename(self.pipe_in_loc)))
-                        self.pin_proc.stdout.close()
-                    if self.pin_proc.stderr is not None:
-                        logger.debug("Closing pin_proc.stderr for {}".format(os.path.basename(self.pipe_in_loc)))
-                        self.pin_proc.stderr.close()
-                    if self.pin_proc.stdin is not None:
-                        logger.debug("Closing pin_proc.stdin for {}".format(os.path.basename(self.pipe_in_loc)))
-                        self.pin_proc.stdin.close()
-                    self.pin_proc = None
-
-            if self.pipe_in is not None:
-                logger.debug("Closing pipe_in for {}".format(os.path.basename(self.pipe_in_loc)))
-                self.pipe_in.close()
-                self.pipe_in = None
-
-            if self.pipe_out is not None:
-                logger.debug("Closing pipe_out for {}".format(os.path.basename(self.pipe_in_loc)))
-                os.close(self.pipe_out)
-                self.pipe_out = None
-            logger.info("PinRun stopped for {}".format(os.path.basename(self.pipe_in_loc)))
 
     def send_fuzz_cmd(self, timeout=None):
         return self._send_cmd(PinMessage.ZMSG_FUZZ, None, timeout)
