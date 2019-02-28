@@ -102,9 +102,11 @@ def fuzz_one_function(args):
                     successful_contexts.add(IOVec(result.data))
             except TimeoutError:
                 logger.exception(str(e))
+                pin_run.stop()
                 continue
             except AssertionError as e:
                 logger.exception(str(e))
+                pin_run.stop()
                 continue
 
         if successful_runs == 0:

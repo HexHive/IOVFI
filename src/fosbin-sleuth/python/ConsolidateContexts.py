@@ -48,9 +48,6 @@ def consolidate_one_function(func_id):
     global desc_map, pin_loc, pintool_loc, loader_loc, watchdog, all_ctxs, fuzzed_ctxs
 
     existing_ctxs = fuzzed_ctxs[func_id]
-    logger.debug("{} has {} contexts".format(func_id, len(existing_ctxs)))
-    for ctx in existing_ctxs:
-        logger.debug("{}: {}".format(func_id, ctx.hexdigest()))
 
     run_name = os.path.basename(func_id.binary) + "." + func_id.name + "." + str(func_id.location)
     logger.info("{} starting".format(run_name))
@@ -212,7 +209,6 @@ def main():
     args = list()
     for func_id, ctxs in fuzzed_ctxs.items():
         for ctx in ctxs:
-            logger.debug("{}: {}".format(func_id, ctx.hexdigest()))
             hash_sum = hash(ctx)
             if hash_sum not in desc_map:
                 desc_map[hash_sum] = set()
