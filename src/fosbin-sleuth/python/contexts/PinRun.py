@@ -174,7 +174,8 @@ class PinRun:
         cmd = self.generate_cmd()
 
         logger.info("Running {}".format(" ".join(cmd)))
-        self.log = open(self.log_loc, "a+")
+        if self.log_loc is not None:
+            self.log = open(self.log_loc, "a+")
 
         self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True, stdout=self.log, stderr=self.log)
         # self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True)
