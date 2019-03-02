@@ -216,9 +216,13 @@ class PinRun:
             raise AssertionError("Already started")
 
         if self.create_pipe_in:
+            if not os.path.exists(os.path.dirname(self.pipe_in_loc)):
+                os.makedirs(os.path.dirname(self.pipe_in_loc), exist_ok=True)
             os.mkfifo(self.pipe_in_loc)
 
         if self.create_pipe_out:
+            if not os.path.exists(os.path.dirname(self.pipe_out_loc)):
+                os.makedirs(os.path.dirname(self.pipe_out_loc), exist_ok=True)
             os.mkfifo(self.pipe_out_loc)
 
         self.thr_r, self.thr_w = os.pipe()
