@@ -46,6 +46,13 @@ class FBDecisionTree:
         elif not pin_run.is_running():
             raise AssertionError("pin_run is not running")
 
+        ack_msg = pin_run.send_reset_cmd(watchdog)
+        if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+            raise AssertionError("Received no ack for set context cmd")
+        resp_msg = pin_run.read_response(watchdog)
+        if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+            raise AssertionError("Set context command failed")
+
         ack_msg = pin_run.send_set_ctx_cmd(iovec, watchdog)
         if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
             raise AssertionError("Received no ack for set context cmd")
@@ -104,8 +111,8 @@ class FBDecisionTree:
 
         return equiv_classes
 
-    def _confirm_leaf(self, location, name, index, pin_run):
-        self._log("Confirming {}({}) is {}".format(name, hex(location),
+    def _confirm_leaf(self, func_desc, index, pin_run):
+        self._log("Confirming {}({}) is {}".format(func_desc.name, hex(func_desc.location),
                                                    self.get_equiv_classes(index)))
         if not self._is_leaf(index):
             raise AssertionError("{} is not a leaf".format(index))
@@ -134,8 +141,9 @@ class FBDecisionTree:
                 available_hashes.remove(used_hash)
 
         if len(available_hashes) == 0:
-            raise AssertionError("There are no available hashes to confirm {}({}) is {}".format(hex(location),
-                                                                                                name, possible_equivs))
+            raise AssertionError("There are no available hashes to confirm {}({}) is {}".format(hex(func_desc.location),
+                                                                                                func_desc.name,
+                                                                                                possible_equivs))
         hash_sum = available_hashes[0]
         iovec = hashMap[hash_sum]
         return self._attempt_ctx(iovec, pin_run)
@@ -170,7 +178,7 @@ class FBDecisionTree:
 
                 if self._is_leaf(idx):
                     try:
-                        if self._confirm_leaf(func_desc.location, idx):
+                        if self._confirm_leaf(func_desc, idx, pin_run):
                             pin_run.stop()
                             return idx
                         break
