@@ -6,6 +6,7 @@ import struct
 import subprocess
 import threading
 import select
+import sys
 
 from .FBLogging import logger
 from .IOVec import IOVec
@@ -94,7 +95,9 @@ class PinRun:
             self.cmd_log_loc = None
 
         if pipe_in is None:
-            self.pipe_in_loc = os.path.join(cwd, "{}.{}.in".format(os.path.basename(self.binary_loc), random.randint()))
+            self.pipe_in_loc = os.path.join(cwd,
+                    "{}.{}.in".format(os.path.basename(self.binary_loc),
+                        random.randint(0, sys.maxsize)))
         else:
             self.pipe_in_loc = os.path.abspath(pipe_in)
 
@@ -106,7 +109,8 @@ class PinRun:
 
         if pipe_out is None:
             self.pipe_out_loc = os.path.join(cwd, "{}.{}.out".format(os.path.basename(self.binary_loc),
-                                                                     random.randint()))
+                                                                     random.randint(0,
+                                                                         sys.maxsize)))
         else:
             self.pipe_out_loc = os.path.abspath(pipe_out)
 

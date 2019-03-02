@@ -32,15 +32,16 @@ WORK_DIR = os.path.abspath(os.path.join("_work", "identifying"))
 
 
 def check_inputs(argparser):
+    global pinLoc, pintoolLoc, binaryLoc, guessLoc
     if not os.path.exists(argparser.tree):
         logger.fatal("Could not find {}".format(argparser.tree))
         exit(1)
 
-    if not os.path.exists(argparser.binaries):
-        logger.fatal("Could not find {}".format(argparser.binaries))
+    if not os.path.exists(argparser.binary):
+        logger.fatal("Could not find {}".format(argparser.binary))
         exit(1)
+    binaryLoc = os.path.abspath(argparser.binary)
 
-    global pinLoc, pintoolLoc, binaryLoc, guessLoc
     pinLoc = os.path.abspath(os.path.join(argparser.pindir, "pin"))
     pintoolLoc = os.path.abspath(argparser.tool)
 
@@ -50,10 +51,6 @@ def check_inputs(argparser):
 
     if not os.path.exists(pintoolLoc):
         logger.fatal("Could not find {}".format(pintoolLoc))
-        exit(1)
-    binaryLoc = os.path.abspath(argparser.binary)
-    if not os.path.exists(binaryLoc):
-        logger.error("Could not find {}".format(binaryLoc))
         exit(1)
 
     guessLoc = os.path.abspath(argparser.guesses)
@@ -70,7 +67,7 @@ def single_test(func_desc):
     except Exception as e:
         error_lock.acquire()
         error_msgs.append(str(e))
-        logger.error("Error: {}".format(e))
+        logger.exception("Error: {}".format(e))
         error_lock.release()
         guess_lock.acquire()
         guesses[func_desc] = FBDecisionTree.UNKNOWN_FUNC
@@ -78,7 +75,7 @@ def single_test(func_desc):
 
 
 def main():
-    global fbDtree, guessLoc, binaryLoc
+    global fbDtree, guessLoc, binaryLoc, guesses
 
     parser = argparse.ArgumentParser(description="IdentifyFunction")
     parser.add_argument('-t', '--tree', help="/path/to/decision/tree", default="tree.bin")
