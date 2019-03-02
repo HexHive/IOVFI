@@ -117,6 +117,9 @@ def consolidate_one_function(func_id):
                 desc_lock.acquire()
                 lock_held = True
                 desc_map[hash(context)].add(func_id)
+                with open(desc_file_path, "wb") as desc_file:
+                    pickle.dump(desc_map, desc_file)
+
                 desc_lock.release()
                 lock_held = False
                 logger.info("{} accepts {}".format(run_name, context.hexdigest()))
@@ -138,6 +141,8 @@ def consolidate_one_function(func_id):
             error_occurred = True
             break
 
+    if lock_held:
+        desc_lock.release()
     pin_run.stop()
     del pin_run
     if os.path.exists(pipe_in):
@@ -159,7 +164,7 @@ def main():
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-target", help="Address to target single function")
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
-    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.DEBUG)
+    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count() * 4)
     parser.add_argument("-timeout", help="Number of ms to wait for each context to finish completing", type=int,
                         default=watchdog)
