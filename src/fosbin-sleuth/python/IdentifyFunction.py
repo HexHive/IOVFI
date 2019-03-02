@@ -153,7 +153,7 @@ def main():
             indicator = "?"
         else:
             for func in guess_names:
-                if func.find(func_desc.name) >= 0:
+                if func.name.find(func_desc.name) >= 0:
                     indicator = "!"
                     break
         logger.info("[{}] {}: {}".format(indicator, func_desc.name, guess_names))
