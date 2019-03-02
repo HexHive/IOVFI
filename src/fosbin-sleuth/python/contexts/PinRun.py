@@ -59,12 +59,25 @@ class PinRun:
     def __init__(self, pin_loc, pintool_loc, binary_loc, loader_loc=None, pipe_in=None, pipe_out=None,
                  log_loc=None, cwd=os.getcwd(), cmd_log_loc=None):
         self.binary_loc = os.path.abspath(binary_loc)
+        if not os.path.exists(self.binary_loc):
+            raise FileNotFoundError("{} does not exist".format(self.binary_loc))
 
         self.pin_loc = os.path.abspath(pin_loc)
+        if not os.path.exists(self.pin_loc):
+            raise FileNotFoundError("{} does not exist".format(self.pin_loc))
+
         self.pintool_loc = os.path.abspath(pintool_loc)
+        if not os.path.exists(self.pintool_loc):
+            raise FileNotFoundError("{} does not exist".format(self.pintool_loc))
+
         self.cwd = os.path.abspath(cwd)
+        if not os.path.exists(self.cwd):
+            os.makedirs(self.cwd, exist_ok=True)
+
         if loader_loc is not None:
             self.loader_loc = os.path.abspath(loader_loc)
+            if not os.path.exists(self.loader_loc):
+                raise FileNotFoundError("{} does not exist".format(self.loader_loc))
 
         if log_loc is not None:
             self.log_loc = os.path.abspath(log_loc)
@@ -353,9 +366,3 @@ class PinRun:
             raise AssertionError("IOVec is empty")
 
         return self._send_cmd(PinMessage.ZMSG_SET_CTX, data.getbuffer(), timeout)
-
-    def returncode(self):
-        if not self.pin_thread.is_alive() and self.pin_proc is not None:
-            return self.pin_proc.returncode
-
-        return None

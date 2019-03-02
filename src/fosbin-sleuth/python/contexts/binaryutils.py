@@ -1,11 +1,6 @@
 import subprocess
 import os
-from .PinRun import PinRun
-from .FBLogging import logger
-
-WORK_DIR = "_work"
-CTX_FILENAME = "tmp.ctx"
-WATCHDOG_TIMEOUT = 1000 * 60
+from .FunctionDescriptor import FunctionDescriptor
 
 
 def find_funcs(binary, target=None, ignored_funcs=None):
@@ -31,5 +26,5 @@ def find_funcs(binary, target=None, ignored_funcs=None):
             if ignored_funcs is not None and (name in ignored_funcs or loc in ignored_funcs):
                 continue
             if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
-                location_map[loc] = name
+                location_map[loc] = FunctionDescriptor(binary, name, loc)
     return location_map

@@ -1,18 +1,15 @@
 import os
 import pickle
-import sys
 from sklearn import tree, preprocessing
 import numpy
-import subprocess
-from contexts import binaryutils
-import random
 import logging
 from .FBLogging import logger
+from .PinRun import PinMessage, PinRun
 
 
 class FBDecisionTree:
     UNKNOWN_FUNC = -1
-    WATCHDOG_MS = 5000
+    WATCHDOG = 1.0
 
     def _log(self, msg, level=logging.INFO):
         logger.log(level, msg)
@@ -41,50 +38,28 @@ class FBDecisionTree:
 
         return self._left_child(index) == self._right_child(index)
 
-    def _attempt_ctx(self, iovec, pindir, tool, loc, name, binary, hash_sum, watchdog=WATCHDOG_MS):
+    def _attempt_ctx(self, iovec, pin_run, watchdog=WATCHDOG):
         if iovec is None:
             raise AssertionError("No iovec provided")
+        elif pin_run is None:
+            raise AssertionError("pin_run cannot be None")
+        elif not pin_run.is_running():
+            raise AssertionError("pin_run is not running")
 
-        fullPath = os.path.abspath(os.path.join(binaryutils.WORK_DIR, str(random.randint(0, sys.maxsize)) + "." +
-                                                binaryutils.CTX_FILENAME))
-        if not os.path.exists(binaryutils.WORK_DIR):
-            os.mkdir(binaryutils.WORK_DIR)
+        ack_msg = pin_run.send_set_ctx_cmd(iovec, watchdog)
+        if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+            raise AssertionError("Received no ack for set context cmd")
+        resp_msg = pin_run.read_response(watchdog)
+        if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+            raise AssertionError("Set context command failed")
 
-        ctx_file = open(fullPath, "wb+")
-        iovec.write_bin(ctx_file)
-        ctx_file.close()
-        cmd = [os.path.abspath(os.path.join(pindir, "pin")), "-t", os.path.abspath(tool), "-fuzz-count", "0",
-               "-target", hex(loc), "-out", os.path.basename(binary) + "." + name + ".log", "-watchdog", str(watchdog),
-               "-contexts", fullPath, "--", os.path.abspath(binary)]
-
-        accepted = False
-        devnull = open(os.devnull, "w")
-        msg = "Testing {}.{} ({}) with hash {}...".format(os.path.basename(binary), name, hex(loc), hash_sum)
-        try:
-            fuzz_cmd = subprocess.run(cmd, stdout=devnull, stderr=subprocess.STDOUT, timeout=watchdog / 1000 + 1, \
-                                      cwd=os.path.abspath(binaryutils.WORK_DIR))
-            accepted = (fuzz_cmd.returncode == 0)
-
-            if accepted:
-                return True
-            else:
-                return False
-        except subprocess.TimeoutExpired:
-            msg += "Timeout..."
-            return False
-        except Exception as e:
-            msg += "General exception: {}...".format(e)
-            return False
-        finally:
-            if not accepted:
-                msg += "failed"
-            else:
-                msg += "accepted!"
-
-            self._log(msg)
-
-            if os.path.exists(fullPath):
-                os.unlink(fullPath)
+        ack_msg = pin_run.send_execute_cmd(watchdog)
+        if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+            raise AssertionError("Received no ack for execute cmd")
+        resp_msg = pin_run.read_response(watchdog)
+        if resp_msg is None:
+            raise AssertionError("Execute command did not return")
+        return resp_msg.msgtype == PinMessage.ZMSG_OK
 
     def _child(self, index, right_child):
         if index < 0:
@@ -129,7 +104,7 @@ class FBDecisionTree:
 
         return equiv_classes
 
-    def _confirm_leaf(self, location, pindir, tool, binary, name, index, verbose=False):
+    def _confirm_leaf(self, location, name, index, pin_run):
         self._log("Confirming {}({}) is {}".format(name, hex(location),
                                                    self.get_equiv_classes(index)))
         if not self._is_leaf(index):
@@ -163,7 +138,7 @@ class FBDecisionTree:
                                                                                                 name, possible_equivs))
         hash_sum = available_hashes[0]
         iovec = hashMap[hash_sum]
-        return self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash_sum)
+        return self._attempt_ctx(iovec, pin_run)
 
     def _get_hash(self, index):
         base_dtree_index = self._find_dtree_idx(index)
@@ -177,25 +152,49 @@ class FBDecisionTree:
         base_dtree_index = self._find_dtree_idx(index)
         return self.hashMaps[base_dtree_index][hash]
 
-    def identify(self, location, pindir, tool, binary, name=None):
-        if name is None:
-            name = hex(location)
+    def identify(self, func_desc, pin_loc, pintool_loc, loader_loc=None, cwd=os.getcwd()):
+        pin_run = PinRun(pin_loc, pintool_loc, func_desc.binary, loader_loc, cwd=cwd)
 
         idx = 0
-        while idx < self.size():
-            if self._is_leaf(idx):
-                if self._confirm_leaf(location, pindir, tool, binary, name, idx):
-                    return idx
-                break
+        try:
+            while idx < self.size():
+                if not pin_run.is_running():
+                    pin_run.stop()
+                    pin_run.start(timeout=FBDecisionTree.WATCHDOG)
+                    ack_msg = pin_run.send_set_target_cmd(func_desc.location, FBDecisionTree.WATCHDOG)
+                    if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                        raise AssertionError("Could not set target for {}".format(str(func_desc)))
+                    resp_msg = pin_run.read_response(FBDecisionTree.WATCHDOG)
+                    if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                        raise AssertionError("Could not set target for {}".format(str(func_desc)))
 
-            hash = self._get_hash(idx)
-            iovec = self._get_iovec(idx)
-            if self._attempt_ctx(iovec, pindir, tool, location, name, binary, hash):
-                idx = self._right_child(idx)
-            else:
-                idx = self._left_child(idx)
+                if self._is_leaf(idx):
+                    try:
+                        if self._confirm_leaf(func_desc.location, idx):
+                            pin_run.stop()
+                            return idx
+                        break
+                    except Exception as e:
+                        logger.exception("Error confirming leaf for {}: {}".format(func_desc, e))
+                        break
 
-        return self.UNKNOWN_FUNC
+                iovec = self._get_iovec(idx)
+                iovec_accepted = False
+                try:
+                    iovec_accepted = self._attempt_ctx(iovec, pin_run)
+                except Exception as e:
+                    logger.exception("Error testing iovec for {}: {}".format(str(func_desc), e))
+
+                if iovec_accepted:
+                    idx = self._right_child(idx)
+                else:
+                    idx = self._left_child(idx)
+
+            pin_run.stop()
+            return self.UNKNOWN_FUNC
+        except Exception as e:
+            pin_run.stop()
+            raise e
 
     def size(self):
         size = 0
