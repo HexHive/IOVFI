@@ -78,6 +78,8 @@ def single_test(func_desc):
 
 
 def main():
+    global fbDtree, guessLoc, binaryLoc
+
     parser = argparse.ArgumentParser(description="IdentifyFunction")
     parser.add_argument('-t', '--tree', help="/path/to/decision/tree", default="tree.bin")
     parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
@@ -90,6 +92,10 @@ def main():
     parser.add_argument("-guesses", help="/path/to/guesses", default="guesses.bin")
     results = parser.parse_args()
 
+    logger.info("Checking inputs...")
+    check_inputs(results)
+    logger.info("done!")
+
     logpath = os.path.abspath(os.path.join("logs", "identifying", results.logprefix))
     if not os.path.exists(logpath):
         os.makedirs(logpath, exist_ok=True)
@@ -97,11 +103,6 @@ def main():
     logger.addHandler(loghandler)
     logger.setLevel(results.loglevel)
 
-    logger.info("Checking inputs...")
-    check_inputs(results)
-    logger.info("done!")
-
-    global fbDtree, guessLoc, binaryLoc
 
     logger.info("Parsing tree at {}...".format(os.path.abspath(results.tree)))
     with open(results.tree, "rb") as treeFile:

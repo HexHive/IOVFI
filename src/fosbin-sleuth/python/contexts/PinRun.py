@@ -242,20 +242,21 @@ class PinRun:
                                                           os.path.basename(self.pipe_in_loc)))
             pass
         finally:
-            self.pin_thread.join(timeout=0.1)
-            if self.pin_thread.is_alive():
-                if self.pin_proc is not None:
-                    self.pin_proc.kill()
-                    if self.pin_proc.stdout is not None:
-                        logger.debug("Closing pin_proc.stdout for {}".format(os.path.basename(self.pipe_in_loc)))
-                        self.pin_proc.stdout.close()
-                    if self.pin_proc.stderr is not None:
-                        logger.debug("Closing pin_proc.stderr for {}".format(os.path.basename(self.pipe_in_loc)))
-                        self.pin_proc.stderr.close()
-                    if self.pin_proc.stdin is not None:
-                        logger.debug("Closing pin_proc.stdin for {}".format(os.path.basename(self.pipe_in_loc)))
-                        self.pin_proc.stdin.close()
-                    self.pin_proc = None
+            if self.pin_thread is not None:
+                self.pin_thread.join(timeout=0.1)
+                if self.pin_thread.is_alive():
+                    if self.pin_proc is not None:
+                        self.pin_proc.kill()
+                        if self.pin_proc.stdout is not None:
+                            logger.debug("Closing pin_proc.stdout for {}".format(os.path.basename(self.pipe_in_loc)))
+                            self.pin_proc.stdout.close()
+                        if self.pin_proc.stderr is not None:
+                            logger.debug("Closing pin_proc.stderr for {}".format(os.path.basename(self.pipe_in_loc)))
+                            self.pin_proc.stderr.close()
+                        if self.pin_proc.stdin is not None:
+                            logger.debug("Closing pin_proc.stdin for {}".format(os.path.basename(self.pipe_in_loc)))
+                            self.pin_proc.stdin.close()
+                        self.pin_proc = None
 
             if self.thr_r is not None:
                 os.close(self.thr_r)
