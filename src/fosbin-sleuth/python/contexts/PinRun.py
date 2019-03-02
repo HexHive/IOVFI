@@ -279,7 +279,7 @@ class PinRun:
                 self.pipe_in.close()
                 self.pipe_in = None
 
-            if self.create_pipe_in:
+            if self.create_pipe_in and os.path.exists(self.pipe_in_loc):
                 os.unlink(self.pipe_in_loc)
 
             if self.pipe_out is not None:
@@ -287,7 +287,7 @@ class PinRun:
                 os.close(self.pipe_out)
                 self.pipe_out = None
 
-            if self.create_pipe_out:
+            if self.create_pipe_out and os.path.exists(self.pipe_out_loc):
                 os.unlink(self.pipe_out_loc)
 
             logger.info("PinRun stopped for {}".format(os.path.basename(self.pipe_in_loc)))
