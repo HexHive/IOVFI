@@ -147,16 +147,20 @@ def main():
     logger.info("++++++++++++++++++++++++++++++++++++++++++++")
     for func_desc, guess in guesses.items():
         indicator = "X"
-        guess_names = fbDtree.get_equiv_classes(guess)
+        guess_descs = fbDtree.get_equiv_classes(guess)
 
         if FBDecisionTree.UNKNOWN_FUNC == guess:
             indicator = "?"
         else:
-            for func in guess_names:
+            for func in guess_descs:
                 if func.name.find(func_desc.name) >= 0:
                     indicator = "!"
                     break
-        logger.info("[{}] {}: {}".format(indicator, func_desc.name, guess_names))
+
+        guess_list = list()
+        for tmp in guess_descs:
+            guess_list.append(str(tmp))
+        logger.info("[{}] {}: {}".format(indicator, func_desc.name, " ".join(guess_list)))
 
 
 if __name__ == "__main__":
