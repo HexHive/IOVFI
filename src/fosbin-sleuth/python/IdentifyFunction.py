@@ -103,7 +103,6 @@ def main():
     logger.addHandler(loghandler)
     logger.setLevel(results.loglevel)
 
-
     logger.info("Parsing tree at {}...".format(os.path.abspath(results.tree)))
     with open(results.tree, "rb") as treeFile:
         fbDtree = pickle.load(treeFile)
