@@ -75,14 +75,6 @@ def single_test(func_desc):
         guess_lock.acquire()
         guesses[func_desc] = FBDecisionTree.UNKNOWN_FUNC
         guess_lock.release()
-    except AssertionError as e:
-        error_lock.acquire()
-        error_msgs.append(str(e))
-        logger.error("Error: {}".format(e))
-        error_lock.release()
-        guess_lock.acquire()
-        guesses[func_desc] = FBDecisionTree.UNKNOWN_FUNC
-        guess_lock.release()
 
 
 def main():
