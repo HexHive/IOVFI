@@ -1,11 +1,7 @@
 #!/usr/bin/python3
 
-import os
 import pickle
 import argparse
-from pathlib import Path
-from contexts.FBDecisionTree import FBDecisionTree
-import contexts.FBLogging.logger as logger
 
 
 def main():
