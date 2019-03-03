@@ -93,6 +93,13 @@ class FBDecisionTree:
         dtree = self.dtrees[treeidx]
         tree.export_graphviz(dtree, out_file=outfile, filled=True, rounded=True, special_characters=True)
 
+    def get_func_descs(self):
+        results = set()
+        for hashsum, func_desc in self.funcDescs.items():
+            results.add(func_desc)
+
+        return results
+
     def get_equiv_classes(self, index):
         if index == self.UNKNOWN_FUNC:
             return None

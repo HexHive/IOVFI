@@ -26,7 +26,7 @@ def main():
         equiv_classes = dtree.get_equiv_classes(guess)
         if equiv_classes is None:
             found = False
-            for pres_func_desc in dtree.funcDescs:
+            for pres_func_desc in dtree.get_func_descs():
                 if pres_func_desc.name == func_desc:
                     found = True
                     break
