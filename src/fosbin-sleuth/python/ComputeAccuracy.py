@@ -23,7 +23,7 @@ def main():
     false_neg = list()
 
     for func_desc, guess in guesses.items():
-        equiv_classes = dtree.get_equiv_class(guess)
+        equiv_classes = dtree.get_equiv_classes(guess)
         if equiv_classes is None:
             found = False
             for pres_func_desc in dtree.funcDescs:
