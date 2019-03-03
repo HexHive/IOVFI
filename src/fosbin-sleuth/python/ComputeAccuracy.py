@@ -7,7 +7,7 @@ import argparse
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
-    parser.add_argument("-g", dest="guesses", action="append", nargs="+", help="/path/to/guess/dir")
+    parser.add_argument("-g", dest="guesses", help="/path/to/guess/dir", default="guesses.bin")
 
     args = parser.parse_args()
 
