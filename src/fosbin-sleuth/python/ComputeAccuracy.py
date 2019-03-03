@@ -10,57 +10,58 @@ import contexts.FBLogging.logger as logger
 
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
-    parser.add_argument("-prefix", default="", help="Guess entry prefix")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
     parser.add_argument("-g", dest="guesses", action="append", nargs="+", help="/path/to/guess/dir")
 
     args = parser.parse_args()
 
     with open(args.tree, "rb") as treefile:
-        tree = pickle.load(treefile)
+        dtree = pickle.load(treefile)
 
-    successful_guesses = list()
-    failed_guesses = list()
-    unknown_guesses = list()
-    failed_set = dict()
+    with open(args.guesses, "rb") as guessFile:
+        guesses = pickle.load(guessFile)
 
-    for guess_path_list in args.guesses:
-        for guess_path in guess_path_list:
-            pathlist = Path(guess_path).glob("**/*.bin")
-            for path in pathlist:
-                path = os.path.abspath(path)
-                logger.info("Reading {}".format(path))
-                with open(path, "rb") as guessfile:
-                    guessmap = pickle.load(guessfile)
-                    for key, guess_idx in guessmap.items():
-                        if guess_idx == FBDecisionTree.UNKNOWN_FUNC:
-                            unknown_guesses.append(key)
-                            continue
+    true_pos = list()
+    true_neg = list()
+    false_pos = list()
+    false_neg = list()
 
-                        guesses = tree.get_equiv_classes(guess_idx)
-                        found = False
-                        for guess in guesses:
-                            guess = guess[len(args.prefix):]
-                            if key.find(guess) >= 0:
-                                successful_guesses.append(key)
-                                found = True
-                                break
+    for func_desc, guess in guesses.items():
+        equiv_classes = dtree.get_equiv_class(guess)
+        if equiv_classes is None:
+            found = False
+            for pres_func_desc in dtree.funcDescs:
+                if pres_func_desc.name == func_desc:
+                    found = True
+                    break
+            if found:
+                false_neg.append(func_desc)
+            else:
+                true_neg.append(func_desc)
+        else:
+            found = False
+            for equiv_class in equiv_classes:
+                if equiv_class.name == func_desc.name:
+                    found = True
+                    break
 
-                        if not found:
-                            failed_guesses.append(key)
-                            if key not in failed_set:
-                                failed_set[key] = set()
-                            for guess in guesses:
-                                failed_set[key].add(guess)
+            if found:
+                true_pos.append(func_desc)
+            else:
+                false_pos.append(func_desc)
 
-    for key, failed_guess in failed_set.items():
-        logger.info("{}: {}".format(key, failed_guess))
+    print("True pos:  {}".format(len(true_pos)))
+    print("True neg:  {}".format(len(true_neg)))
+    print("False pos: {}".format(len(false_pos)))
+    print("False neg: {}".format(len(false_neg)))
 
-    logger.info("Successful guesses:  {} ({})".format(len(successful_guesses), len(successful_guesses) / (
-                len(successful_guesses) + len(failed_guesses))))
-    logger.info("Failed guesses:      {} ({})".format(len(failed_guesses),
-                                                      len(failed_guesses) / (len(successful_guesses) + len(failed_guesses))))
-    logger.info("Unknown guesses:     {}".format(len(unknown_guesses)))
+    precision = len(true_pos) / (len(true_pos) + len(false_pos))
+    recall = len(true_pos) / (len(true_pos) + len(false_neg))
+    fscore = 2 * precision * recall / (precision + recall)
+
+    print("Precision: {}".format(precision))
+    print("Recall:    {}".format(recall))
+    print("FScore:    {}".format(fscore))
 
 
 if __name__ == "__main__":

@@ -95,7 +95,7 @@ class FBDecisionTree:
 
     def get_equiv_classes(self, index):
         if index == self.UNKNOWN_FUNC:
-            return {"UNKNOWN"}
+            return None
 
         if not self._is_leaf(index):
             raise ValueError("Node {} is not a leaf".format(index))
