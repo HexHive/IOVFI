@@ -44,6 +44,10 @@ def main():
             if found:
                 true_pos.append(func_desc)
             else:
+                bad_guesses = set()
+                for equiv_class in equiv_classes:
+                    bad_guesses.add(str(equiv_class))
+                print("{}: {}\n".format(func_desc.name, " ".join(bad_guesses)))
                 false_pos.append(func_desc)
 
     print("True pos:  {}".format(len(true_pos)))
