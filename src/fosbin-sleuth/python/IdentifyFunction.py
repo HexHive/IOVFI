@@ -84,7 +84,7 @@ def main():
     parser.add_argument("-b", "--binary", help="/path/to/binary", required=True)
     parser.add_argument("-loglevel", help="Set log level", default=logging.DEBUG)
     parser.add_argument("-logprefix", help="Prefix to use before log files", default="")
-    parser.add_argument("-threads", help="Number of threads to use", default=multiprocessing.cpu_count(), type=int)
+    parser.add_argument("-threads", help="Number of threads to use", default=multiprocessing.cpu_count() * 5, type=int)
     parser.add_argument("-target", help="Location or function name to target")
     parser.add_argument("-guesses", help="/path/to/guesses", default="guesses.bin")
     results = parser.parse_args()
