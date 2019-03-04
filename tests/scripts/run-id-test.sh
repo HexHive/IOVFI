@@ -12,9 +12,9 @@ TESTS=$(realpath $4)
 ID_SCRIPT=$(realpath $(dirname $PINTOOL)/../../../src/fosbin-sleuth/python/IdentifyFunction.py)
 
 for test in $(find $TESTS -type f -executable); do
-	echo "mkdir $(basename $test)"
-	echo "cd $(basename $test)"
+	mkdir $(basename $test)
+	cd $(basename $test)
 	cmd="$ID_SCRIPT -t $DATA_DIR/tree.bin -pindir $PIN -tool $PINTOOL -b $test"
-	echo "$cmd"
-	echo "cd .."
+	$cmd
+	cd ..
 done
