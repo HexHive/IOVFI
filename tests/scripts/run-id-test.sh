@@ -14,6 +14,7 @@ ID_SCRIPT=$(realpath $(dirname $PINTOOL)/../../../src/fosbin-sleuth/python/Ident
 for test in $(find $TESTS -type f -executable); do
 	mkdir $(basename $test)
 	cd $(basename $test)
+	echo "Evaluating $test"
 	cmd="$ID_SCRIPT -t $DATA_DIR/tree.bin -pindir $PIN -tool $PINTOOL -b $test"
 	$cmd
 	cd ..
