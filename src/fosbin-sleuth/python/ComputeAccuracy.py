@@ -2,7 +2,7 @@
 
 import pickle
 import argparse
-
+import statistics
 
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
@@ -74,14 +74,12 @@ def main():
             false_positives[guessLine] = false_pos
             false_negatives[guessLine] = false_neg
 
-    avg_fscore = 0
-    test_count = 0
+    fscore_tmp = list()
     for guessLoc, fscore in fscores.items():
-        avg_fscore += fscore
-        test_count += 1
+        fscore_tmp.append(fscore)
 
-    avg_fscore /= test_count
-    print("Average F-score of {} tests: {}".format(test_count, avg_fscore))
+    print("Average F-score of {} tests: {} +- {}".format(len(fscore_tmp), statistics.mean(fscore_tmp),
+                                                         statistics.stdev(fscore_tmp)))
 
 
 if __name__ == "__main__":
