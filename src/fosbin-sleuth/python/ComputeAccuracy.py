@@ -26,6 +26,7 @@ def main():
     with open(args.guesses, "r") as guessList:
         for guessLine in guessList.readlines():
             guessLine = guessLine.strip()
+            print("Computing fscore for {}".format(guessLine))
             with open(guessLine, "rb") as guessFile:
                 guesses = pickle.load(guessFile)
 
