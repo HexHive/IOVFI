@@ -14,54 +14,73 @@ def main():
     with open(args.tree, "rb") as treefile:
         dtree = pickle.load(treefile)
 
-    with open(args.guesses, "rb") as guessFile:
-        guesses = pickle.load(guessFile)
+    precisions = dict()
+    recalls = dict()
+    fscores = dict()
 
-    true_pos = list()
-    true_neg = list()
-    false_pos = list()
-    false_neg = list()
+    true_positives = dict()
+    true_negatives = dict()
+    false_positives = dict()
+    false_negatives = dict()
 
-    for func_desc, guess in guesses.items():
-        equiv_classes = dtree.get_equiv_classes(guess)
-        if equiv_classes is None:
-            found = False
-            for pres_func_desc in dtree.get_func_descs():
-                if pres_func_desc.name == func_desc:
-                    found = True
-                    break
-            if found:
-                false_neg.append(func_desc)
-            else:
-                true_neg.append(func_desc)
-        else:
-            found = False
-            for equiv_class in equiv_classes:
-                if equiv_class.name == func_desc.name:
-                    found = True
-                    break
+    with open(args.guesses, "r") as guessList:
+        for guessLine in guessList.readlines():
+            guessLine = guessLine.strip()
+            with open(guessLine, "rb") as guessFile:
+                guesses = pickle.load(guessFile)
 
-            if found:
-                true_pos.append(func_desc)
-            else:
-                bad_guesses = set()
-                for equiv_class in equiv_classes:
-                    bad_guesses.add(str(equiv_class))
-                print("{}: {}\n".format(func_desc.name, " ".join(bad_guesses)))
-                false_pos.append(func_desc)
+            true_pos = list()
+            true_neg = list()
+            false_pos = list()
+            false_neg = list()
 
-    print("True pos:  {}".format(len(true_pos)))
-    print("True neg:  {}".format(len(true_neg)))
-    print("False pos: {}".format(len(false_pos)))
-    print("False neg: {}".format(len(false_neg)))
+            for func_desc, guess in guesses.items():
+                equiv_classes = dtree.get_equiv_classes(guess)
+                if equiv_classes is None:
+                    found = False
+                    for pres_func_desc in dtree.get_func_descs():
+                        if pres_func_desc.name == func_desc:
+                            found = True
+                            break
+                    if found:
+                        false_neg.append(func_desc)
+                    else:
+                        true_neg.append(func_desc)
+                else:
+                    found = False
+                    for equiv_class in equiv_classes:
+                        if equiv_class.name == func_desc.name:
+                            found = True
+                            break
 
-    precision = len(true_pos) / (len(true_pos) + len(false_pos))
-    recall = len(true_pos) / (len(true_pos) + len(false_neg))
-    fscore = 2 * precision * recall / (precision + recall)
+                    if found:
+                        true_pos.append(func_desc)
+                    else:
+                        bad_guesses = set()
+                        for equiv_class in equiv_classes:
+                            bad_guesses.add(str(equiv_class))
+                        print("{}: {}\n".format(func_desc.name, " ".join(bad_guesses)))
+                        false_pos.append(func_desc)
 
-    print("Precision: {}".format(precision))
-    print("Recall:    {}".format(recall))
-    print("FScore:    {}".format(fscore))
+            precision = len(true_pos) / (len(true_pos) + len(false_pos))
+            recall = len(true_pos) / (len(true_pos) + len(false_neg))
+            fscore = 2 * precision * recall / (precision + recall)
+            precisions[guessLine] = precision
+            recalls[guessLine] = recall
+            fscores[guessLine] = fscore
+            true_positives[guessLine] = true_pos
+            true_negatives[guessLine] = true_neg
+            false_positives[guessLine] = false_pos
+            false_negatives[guessLine] = false_neg
+
+    avg_fscore = 0
+    test_count = 0
+    for guessLoc, fscore in fscores.items():
+        avg_fscore += fscore
+        test_count += 1
+
+    avg_fscore /= test_count
+    print("Average F-score of {} tests: {}".format(test_count, avg_fscore))
 
 
 if __name__ == "__main__":
