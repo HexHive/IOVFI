@@ -4,6 +4,7 @@ import pickle
 import argparse
 import statistics
 
+
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
