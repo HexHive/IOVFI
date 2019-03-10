@@ -93,16 +93,16 @@ def main():
         recall_tmp.append(recall)
 
     for val in true_positives.values():
-        true_pos_tmp.append(val)
+        true_pos_tmp.append(len(val))
 
     for val in true_negatives.values():
-        true_neg_tmp.append(val)
+        true_neg_tmp.append(len(val))
 
     for val in false_positives.values():
-        false_pos_tmp.append(val)
+        false_pos_tmp.append(len(val))
 
     for val in false_negatives.values():
-        false_neg_tmp.append(val)
+        false_neg_tmp.append(len(val))
 
     print("Average F-score of {} tests: {} +- {}".format(len(fscore_tmp), statistics.mean(fscore_tmp),
                                                          statistics.stdev(fscore_tmp)))
