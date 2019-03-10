@@ -76,11 +76,25 @@ def main():
             false_negatives[guessLine] = false_neg
 
     fscore_tmp = list()
+    precision_tmp = list()
+    recall_tmp = list()
     for guessLoc, fscore in fscores.items():
         fscore_tmp.append(fscore)
 
+    for guessLoc, precision in precisions.items():
+        precision_tmp.append(precision)
+
+    for guessLoc, recall in recalls.items():
+        recall_tmp.append(recall)
+
     print("Average F-score of {} tests: {} +- {}".format(len(fscore_tmp), statistics.mean(fscore_tmp),
                                                          statistics.stdev(fscore_tmp)))
+    print("Average precision of {} tests: {} +- {}".format(len(precision_tmp),
+                                                        statistics.mean(precision_tmp),
+                                                         statistics.stdev(precision_tmp)))
+    print("Average recall of {} tests: {} +- {}".format(len(recall_tmp),
+        statistics.mean(recall_tmp),
+        statistics.stdev(recall_tmp)))
     print("Average true pos:  {} +- {}".format(statistics.mean(true_positives.values()),
                                                statistics.stdev(true_positives.values())))
     print("Average false pos: {} +- {}".format(statistics.mean(false_positives.values()),
@@ -89,7 +103,6 @@ def main():
                                                statistics.stdev(true_negatives.values())))
     print("Average false pos: {} +- {}".format(statistics.mean(false_negatives.values()),
                                                statistics.stdev(false_negatives.values())))
-
 
 
 if __name__ == "__main__":
