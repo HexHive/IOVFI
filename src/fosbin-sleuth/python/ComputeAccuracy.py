@@ -78,6 +78,7 @@ def main():
     fscore_tmp = list()
     precision_tmp = list()
     recall_tmp = list()
+
     for guessLoc, fscore in fscores.items():
         fscore_tmp.append(fscore)
 
@@ -95,14 +96,14 @@ def main():
     print("Average recall of {} tests: {} +- {}".format(len(recall_tmp),
         statistics.mean(recall_tmp),
         statistics.stdev(recall_tmp)))
-    print("Average true pos:  {} +- {}".format(statistics.mean(true_positives.values()),
-                                               statistics.stdev(true_positives.values())))
-    print("Average false pos: {} +- {}".format(statistics.mean(false_positives.values()),
-                                               statistics.stdev(false_positives.values())))
-    print("Average true neg:  {} +- {}".format(statistics.mean(true_negatives.values()),
-                                               statistics.stdev(true_negatives.values())))
-    print("Average false pos: {} +- {}".format(statistics.mean(false_negatives.values()),
-                                               statistics.stdev(false_negatives.values())))
+    print("Average true pos:  {} +- {}".format(statistics.mean(list(true_positives.values())),
+                                               statistics.stdev(list(true_positives.values()))))
+    print("Average false pos: {} +- {}".format(statistics.mean(list(false_positives.values())),
+                                               statistics.stdev(list(false_positives.values()))))
+    print("Average true neg:  {} +- {}".format(statistics.mean(list(true_negatives.values())),
+                                               statistics.stdev(list(true_negatives.values()))))
+    print("Average false pos: {} +- {}".format(statistics.mean(list(false_negatives.values())),
+                                               statistics.stdev(list(false_negatives.values()))))
 
 
 if __name__ == "__main__":
