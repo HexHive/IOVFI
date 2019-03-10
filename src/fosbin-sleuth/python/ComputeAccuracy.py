@@ -81,6 +81,15 @@ def main():
 
     print("Average F-score of {} tests: {} +- {}".format(len(fscore_tmp), statistics.mean(fscore_tmp),
                                                          statistics.stdev(fscore_tmp)))
+    print("Average true pos:  {} +- {}".format(statistics.mean(true_positives.values()),
+                                               statistics.stdev(true_positives.values())))
+    print("Average false pos: {} +- {}".format(statistics.mean(false_positives.values()),
+                                               statistics.stdev(false_positives.values())))
+    print("Average true neg:  {} +- {}".format(statistics.mean(true_negatives.values()),
+                                               statistics.stdev(true_negatives.values())))
+    print("Average false pos: {} +- {}".format(statistics.mean(false_negatives.values()),
+                                               statistics.stdev(false_negatives.values())))
+
 
 
 if __name__ == "__main__":
