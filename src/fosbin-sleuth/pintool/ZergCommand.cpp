@@ -26,6 +26,8 @@ ZergCommand *ZergCommand::create(ZergMessage &msg, ZergCommandServer &server) {
             return new SetContextCommand(msg, server);
         case ZMSG_RESET:
             return new ResetCommand(msg, server);
+        case ZMSG_SET_SO_TGT:
+            return new SetSharedTargetCommand(msg, server);
         default:
             return new InvalidCommand(msg, server);
     }

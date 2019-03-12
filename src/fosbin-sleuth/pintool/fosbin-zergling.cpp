@@ -1035,6 +1035,7 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
         uintptr_t new_target_addr;
         memcpy(&new_target_addr, zmsg.data(), sizeof(new_target_addr));
         msg << "Setting new target to 0x" << std::hex << new_target_addr;
+        log_message(msg);
         new_target = RTN_FindByAddress(new_target_addr);
     } else if (zmsg.type() == ZMSG_SET_SO_TGT) {
         if (!IMG_Valid(target_so)) {
@@ -1043,6 +1044,8 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
             PIN_UnlockClient();
             return ZCMD_ERROR;
         }
+        msg << "Setting new target to " << (const char *) zmsg.data() << " in SO target " << IMG_Name(target_so);
+        log_message(msg);
         new_target = RTN_FindByName(target_so, (const char *) zmsg.data());
     }
     if (!RTN_Valid(new_target)) {
@@ -1131,8 +1134,11 @@ zerg_cmd_result_t handle_cmd() {
     zerg_cmd_result_t result;
     switch (msg->type()) {
         case ZMSG_SET_TGT:
-        case ZMSG_SET_SO_TGT:
             log_message("Received SetTargetCommand");
+            result = handle_set_target(*msg);
+            break;
+        case ZMSG_SET_SO_TGT:
+            log_message("Received SetSharedTargetCommand");
             result = handle_set_target(*msg);
             break;
         case ZMSG_FUZZ:
