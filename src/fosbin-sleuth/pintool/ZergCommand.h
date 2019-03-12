@@ -15,7 +15,8 @@ typedef enum zerg_message_type {
     ZMSG_EXECUTE,
     ZMSG_SET_CTX,
     ZMSG_RESET,
-    ZMSG_READY
+    ZMSG_READY,
+    ZMSG_SET_SO_TGT
 } zerg_message_t;
 
 class ZergMessage {
@@ -125,6 +126,11 @@ public:
     virtual zerg_cmd_result_t execute();
 
     SetContextCommand(ZergMessage &msg, ZergCommandServer &server);
+};
+
+class SetSharedTargetCommand : public SetTargetCommand {
+public:
+    SetSharedTargetCommand(ZergMessage &msg, ZergCommandServer &server);
 };
 
 #include "ZergCommand.cpp"

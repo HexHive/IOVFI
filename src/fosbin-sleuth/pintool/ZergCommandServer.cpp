@@ -90,6 +90,7 @@ bool ZergCommandServer::is_valid_message_for_state(ZergMessage *msg) {
             return (msg->type() == ZMSG_SET_TGT);
         case ZERG_SERVER_WAIT_FOR_CMD:
             return (msg->type() == ZMSG_SET_TGT ||
+                    msg->type() == ZMSG_SET_SO_TGT ||
                     msg->type() == ZMSG_FUZZ ||
                     msg->type() == ZMSG_SET_CTX ||
                     msg->type() == ZMSG_RESET);

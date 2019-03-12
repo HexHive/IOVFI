@@ -66,6 +66,8 @@ const char *ZergMessage::str() const {
             return "ZMSG_ACK";
         case ZMSG_READY:
             return "ZMSG_READY";
+        case ZMSG_SET_SO_TGT:
+            return "ZMSG_SET_SO_TGT";
         default:
             return "UNKNOWN MESSAGE";
     }

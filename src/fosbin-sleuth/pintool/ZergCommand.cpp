@@ -140,3 +140,6 @@ zerg_cmd_result_t SetContextCommand::execute() {
 
 SetContextCommand::SetContextCommand(ZergMessage &msg, ZergCommandServer &server) :
         ZergCommand(msg, server) {}
+
+SetSharedTargetCommand::SetSharedTargetCommand(ZergMessage &msg, ZergCommandServer &server) :
+        SetTargetCommand(msg, server) {}

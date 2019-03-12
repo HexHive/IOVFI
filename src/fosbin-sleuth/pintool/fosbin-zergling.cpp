@@ -17,36 +17,14 @@
 #define USER_MSG_TYPE   1000
 
 CONTEXT snapshot;
-//CONTEXT preexecution;
 
-//KNOB <ADDRINT> KnobStart(KNOB_MODE_WRITEONCE, "pintool", "target", "0", "The target address of the fuzzing target");
-//KNOB <uint32_t> FuzzCount(KNOB_MODE_WRITEONCE, "pintool", "fuzz-count", "4", "The number of times to fuzz a target");
-//KNOB <uint32_t> FuzzTime(KNOB_MODE_WRITEONCE, "pintool", "fuzz-time", "0",
-//                         "The number of minutes to fuzz. Ignores fuzz-count if greater than 0.");
-//KNOB <uint64_t> MaxInstructions(KNOB_MODE_WRITEONCE, "pintool", "ins", "1000000",
-//                                "The max number of instructions to run per fuzzing round");
-//KNOB <std::string> KnobOutName(KNOB_MODE_WRITEONCE, "pintool", "out", "fosbin-fuzz.log",
-//                               "The name of the file to write "
-//                               "logging output");
-//KNOB <std::string> ContextsToUse(KNOB_MODE_APPEND, "pintool", "contexts", "", "Contexts to use for fuzzing");
-//KNOB <uint32_t> HardFuzzCount(KNOB_MODE_WRITEONCE, "pintool", "hard-limit", "0",
-//                              "The most fuzzing rounds regardless of time or segfaults. For debug purposes.");
-//KNOB <std::string> SharedLibraryFunc(KNOB_MODE_WRITEONCE, "pintool", "shared-func", "",
-//                                     "Shared library function to fuzz.");
-//KNOB <uint32_t> PrintToScreen(KNOB_MODE_WRITEONCE, "pintool", "print", "1",
-//                              "Print log messages to screen along with file");
-//KNOB <uint32_t> WatchDogTimeout(KNOB_MODE_WRITEONCE, "pintool", "watchdog", "20000", "Watchdog timeout in "
-//                                                                                     "milliseconds");
-//KNOB<bool> OnlyOutputContexts(KNOB_MODE_WRITEONCE, "pintool", "only-output", "false", "Only output contexts and exit");
-//KNOB <std::string> KnobContextOutFile(KNOB_MODE_WRITEONCE, "pintool", "ctx-out", "",
-//                                      "Filename of which to output accepted contexts");
 KNOB <std::string> KnobInPipe(KNOB_MODE_WRITEONCE, "pintool", "in-pipe", "", "Filename of in pipe");
 KNOB <std::string> KnobOutPipe(KNOB_MODE_WRITEONCE, "pintool", "out-pipe", "", "Filename of out pipe");
 KNOB <std::string> KnobLogFile(KNOB_MODE_WRITEONCE, "pintool", "log", "", "/path/to/log");
 KNOB <std::string> KnobCmdLogFile(KNOB_MODE_WRITEONCE, "pintool", "cmdlog", "", "/path/to/cmd/log");
 
-
 RTN target = RTN_Invalid();
+IMG target_so = IMG_Invalid();
 INS first_ins = INS_Invalid();
 FBZergContext preContext;
 FBZergContext currentContext;
@@ -121,6 +99,11 @@ void log_error(const std::string &message) {
     log_error(msg);
 }
 
+bool is_executable_fbloader(IMG img) {
+    const std::string &name = IMG_Name(img);
+    return name.find("fb-load") != std::string::npos;
+}
+
 ZergMessage *read_from_cmd_server() {
     ZergMessage *result = new ZergMessage();
     if (result->read_from_fd(internal_pipe_in[0]) == 0) {
@@ -159,94 +142,6 @@ INS INS_FindByAddress(ADDRINT addr) {
     PIN_UnlockClient();
     return ret;
 }
-
-//VOID read_new_context() {
-//    if (contextFile && contextFile.is_open() && contextFile.peek() == EOF) {
-////        std::cout << "Closing contextFile" << std::endl;
-//        contextFile.close();
-////        std::cout << "contextFile closed" << std::endl;
-//        curr_context_file_num++;
-//    }
-//
-//    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
-//        if (FuzzCount.Value() == 0 && totalInputContextsFailed > 0) {
-//            log_message("Context Test Failed");
-//            PIN_ExitApplication(1);
-//        } else if (FuzzCount.Value() == 0 && totalInputContextsFailed == 0) {
-//            log_message("Context Test Success");
-//            PIN_ExitApplication(0);
-//        }
-//        return;
-//    }
-//
-////    std::cout << "Reading new context" << std::endl;
-//    if ((!contextFile || !contextFile.is_open()) && curr_context_file_num < ContextsToUse.NumberOfValues()) {
-//        std::stringstream ss;
-//        ss << "Opening " << ContextsToUse.Value(curr_context_file_num);
-//        log_message(ss);
-//        contextFile.open(ContextsToUse.Value(curr_context_file_num).c_str(), ios::in | ios::binary);
-//        inputContextFailed = 0;
-//        inputContextPassed = 0;
-//    }
-//
-//    contextFile >> preContext;
-////    log_message("preContext:");
-////    preContext.prettyPrint();
-////    std::cout << "Read precontext" << std::endl;
-//    contextFile >> expectedContext;
-////    log_message("expectedContext:");
-////    expectedContext.prettyPrint();
-////    std::cout << "Read expectedcontext" << std::endl;
-////    std::cout << "Done reading context" << std::endl;
-//}
-
-//VOID reset_to_context(CONTEXT *ctx, bool readNewContext) {
-////    fuzz_count++;
-////    std::cout << "fuzz_count = " << std::dec << fuzz_count << " orig_fuzz_count = " << orig_fuzz_count << std::endl;
-//
-//    if (HardFuzzCount.Value() > 0 && hard_count++ >= HardFuzzCount.Value()) {
-//        std::stringstream ss;
-//        ss << "Hit hard limit of " << std::dec << hard_count - 1 << std::endl;
-//        log_message(ss);
-//        PIN_ExitApplication(0);
-//    }
-//
-//    if (curr_context_file_num < ContextsToUse.NumberOfValues() && readNewContext) {
-//        read_new_context();
-//    }
-//
-//    if (!timed_fuzz()) {
-////        std::cout << "curr_context_file_num: " << std::dec << curr_context_file_num << std::endl;
-////        std::cout << "orig_fuzz_count: " << orig_fuzz_count << std::endl;
-//        if (curr_context_file_num >= ContextsToUse.NumberOfValues() && orig_fuzz_count >= FuzzCount.Value()) {
-//            std::stringstream ss;
-//            ss << "Stopping fuzzing at " << std::dec << orig_fuzz_count << " of " << FuzzCount.Value()
-//               << std::endl;
-//            log_message(ss);
-//            PIN_ExitApplication(0);
-//        }
-//    } else {
-//        if (time(NULL) >= fuzz_end_time) {
-//            std::stringstream ss;
-//            ss << "Stopping fuzzing after " << std::dec << FuzzTime.Value() << " minute"
-//               << (FuzzTime.Value() > 1 ? "s" : "") << std::endl;
-//            ss << "Total fuzzing iterations: " << std::dec << fuzz_count - 1 << std::endl;
-//            log_message(ss);
-//            PIN_ExitApplication(0);
-//        }
-//    }
-//
-//    PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
-//    fuzzing_run.clear();
-//}
-
-//VOID reset_context(CONTEXT *ctx) {
-//    reset_to_context(ctx, true);
-//}
-//
-//VOID reset_to_preexecution(CONTEXT *ctx) {
-//    reset_to_context(ctx, false);
-//}
 
 uint64_t gen_random() {
     return ((((ADDRINT) rand() << 0) & 0x000000000000FFFFull) |
@@ -396,28 +291,6 @@ VOID fuzz_registers() {
     fuzzed_input = true;
 }
 
-//VOID start_fuzz_round(CONTEXT *ctx) {
-//    reset_context(ctx);
-//    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
-//        fuzz_registers(ctx);
-//    }
-//    currentContext = preContext;
-////    std::cout << "==========================" << std::endl;
-////    preContext.prettyPrint();
-////    std::cout << "==========================" << std::endl;
-////    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-////    currentContext.prettyPrint();
-////    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-//    currentContext >> ctx;
-////    currentContext.prettyPrint();
-////    displayCurrentContext(ctx);
-//    std::stringstream ss;
-//    ss << "Starting round " << std::dec << (++fuzz_count) << std::endl;
-//    log_message(ss);
-//    PIN_SpawnInternalThread(watch_dog, &watchdogtime, 0, nullptr);
-//    PIN_ExecuteAt(ctx);
-//}
-
 VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
                             ADDRINT r8, ADDRINT r9, ADDRINT r10, ADDRINT r11,
                             ADDRINT r12, ADDRINT r13, ADDRINT r14, ADDRINT r15,
@@ -467,56 +340,6 @@ VOID trace_execution(TRACE trace, VOID *v) {
         }
     }
 }
-
-//VOID end_fuzzing_round(CONTEXT *ctx, THREADID tid) {
-//    if (!fuzzing_started) {
-//        return;
-//    }
-//
-//    std::stringstream ss;
-//    ss << "Ending fuzzing round after executing " << std::dec << fuzzing_run.size() << " instructions";
-//    log_message(ss);
-////    std::cout << "Post Execution Current Context addr = 0x" << std::hex << currentContext.find_allocated_area(FBZergContext::argument_regs[0])->getAddr() << std::endl;
-//
-////    std::cout << "Outputting precontext" << std::endl;
-////    preContext.prettyPrint();
-//    output_context(preContext);
-////    std::cout << "currentContext:" << std::endl;
-////    displayCurrentContext(ctx);
-//    currentContext << ctx;
-////    std::cout << "Outputting currentContext" << std::endl;
-////    currentContext.prettyPrint();
-//    output_context(currentContext);
-//
-//    if (contextFile && contextFile.is_open()) {
-//        if (currentContext == expectedContext) {
-//            inputContextPassed++;
-//            totalInputContextsPassed++;
-//        } else {
-//            inputContextFailed++;
-//            totalInputContextsFailed++;
-//        }
-//    }
-//
-////    fuzz_count++;
-//    if (curr_context_file_num >= ContextsToUse.NumberOfValues()) {
-//        orig_fuzz_count++;
-//    }
-//    start_fuzz_round(ctx);
-//}
-
-//VOID begin_fuzzing(CONTEXT *ctx, THREADID tid) {
-//    std::stringstream ss;
-//    ss << "Beginning to fuzz thread " << tid << std::endl;
-//    curr_app_thread = tid;
-//    log_message(ss);
-//    fuzzing_started = true;
-//    PIN_SaveContext(ctx, &snapshot);
-//    for (REG reg : FBZergContext::argument_regs) {
-//        preContext.add(reg, (ADDRINT) 0);
-//    }
-//    start_fuzz_round(ctx);
-//}
 
 EXCEPT_HANDLING_RESULT globalSegfaultHandler(THREADID tid, EXCEPTION_INFO *exceptionInfo, PHYSICAL_CONTEXT
 *physContext, VOID *v) {
@@ -1176,7 +999,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 void report_success(CONTEXT *ctx, THREADID tid) {
     currentContext << ctx;
 
-    log_message("write_to_cmd 8");
+//    log_message("write_to_cmd 8");
     if (fuzzed_input) {
         ZergMessage msg(ZMSG_OK);
         msg.add_contexts(preContext, currentContext);
@@ -1204,14 +1027,24 @@ void start_cmd_server(void *v) {
 }
 
 zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
-    uintptr_t new_target_addr;
-    memcpy(&new_target_addr, zmsg.data(), sizeof(new_target_addr));
-
     std::stringstream msg;
-    msg << "Setting new target to 0x" << std::hex << new_target_addr;
     log_message(msg);
     PIN_LockClient();
-    RTN new_target = RTN_FindByAddress(new_target_addr);
+    RTN new_target = RTN_Invalid();
+    if (zmsg.type() == ZMSG_SET_TGT) {
+        uintptr_t new_target_addr;
+        memcpy(&new_target_addr, zmsg.data(), sizeof(new_target_addr));
+        msg << "Setting new target to 0x" << std::hex << new_target_addr;
+        new_target = RTN_FindByAddress(new_target_addr);
+    } else if (zmsg.type() == ZMSG_SET_SO_TGT) {
+        if (!IMG_Valid(target_so)) {
+            msg << "Target shared object is invalid";
+            log_message(msg);
+            PIN_UnlockClient();
+            return ZCMD_ERROR;
+        }
+        new_target = RTN_FindByName(target_so, (const char *) zmsg.data());
+    }
     if (!RTN_Valid(new_target)) {
         msg << "Could not find valid target";
         log_message(msg);
@@ -1298,6 +1131,7 @@ zerg_cmd_result_t handle_cmd() {
     zerg_cmd_result_t result;
     switch (msg->type()) {
         case ZMSG_SET_TGT:
+        case ZMSG_SET_SO_TGT:
             log_message("Received SetTargetCommand");
             result = handle_set_target(*msg);
             break;
@@ -1350,11 +1184,11 @@ void wait_to_start() {
             if (FD_ISSET(internal_pipe_in[0], &exe_fd_set_in)) {
                 zerg_cmd_result_t result = handle_cmd();
                 if (result == ZCMD_OK) {
-                    log_message("cmd server 9");
+//                    log_message("cmd server 9");
                     ZergMessage msg(ZMSG_OK);
                     write_to_cmd_server(msg);
                 } else {
-                    log_message("cmd server 10");
+//                    log_message("cmd server 10");
                     report_failure(result);
 //                    PIN_ExitApplication(1);
                 }
@@ -1373,13 +1207,24 @@ VOID FindMain(IMG img, VOID *v) {
 
     RTN main = RTN_FindByName(img, "main");
     if (RTN_Valid(main)) {
+        if (is_executable_fbloader(img)) {
+            const char *shared_so_cname = (const char *) v;
+            std::string shared_so_name(shared_so_cname);
+            target_so = IMG_Open(shared_so_name);
+            if (!IMG_Valid(target_so)) {
+                std::stringstream ss;
+                ss << "Could not open shared object " << shared_so_name;
+                log_error(ss);
+            }
+        }
+
         RTN_Open(main);
         first_ins = RTN_InsHead(main);
         std::stringstream msg;
         msg << "Adding call to wait_to_start to " << RTN_Name(main) << "(0x" << std::hex << RTN_Address(main)
             << ")";
         log_message(msg);
-        INS_InsertCall(RTN_InsHead(main), IPOINT_BEFORE, (AFUNPTR) begin_execution, IARG_CONTEXT, IARG_END);
+        INS_InsertCall(first_ins, IPOINT_BEFORE, (AFUNPTR) begin_execution, IARG_CONTEXT, IARG_END);
         RTN_Close(main);
     } else {
         std::stringstream ss;
@@ -1440,7 +1285,7 @@ int main(int argc, char **argv) {
                                        KnobOutPipe.Value(), cmd_log);
     log_message("done");
 
-    IMG_AddInstrumentFunction(FindMain, nullptr);
+    IMG_AddInstrumentFunction(FindMain, argv[argc - 1]);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
     PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, nullptr);
 
