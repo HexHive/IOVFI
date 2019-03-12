@@ -70,6 +70,7 @@ InvalidCommand::InvalidCommand(ZergMessage &msg, ZergCommandServer &server) :
         ZergCommand(msg, server) {}
 
 zerg_cmd_result_t ExitCommand::execute() {
+    server_.write_to_executor(msg_);
     server_.stop();
     return ZCMD_OK;
 }

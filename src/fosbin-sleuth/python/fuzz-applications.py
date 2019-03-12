@@ -23,7 +23,6 @@ failed_runs = list()
 success_count = 0
 success_lock = threading.RLock()
 
-binary = None
 pin_loc = None
 pintool_loc = None
 loader_loc = None
@@ -35,10 +34,12 @@ hash_lock = threading.RLock()
 current_jobs = set()
 
 
-def fuzz_one_function(args):
-    global success_count, binary, pin_loc, pintool_loc, loader_loc, contexts, failed_runs, current_jobs
-    target = args[0]
-    func_name = args[1]
+def fuzz_one_function(func_desc):
+    global success_count, pin_loc, pintool_loc, loader_loc, contexts, failed_runs, current_jobs
+    func_name = func_desc.name
+    target = func_desc.location
+    binary = func_desc.binary
+
     if os.path.splitext(binary)[1] == ".so":
         target = func_name
 
@@ -162,16 +163,6 @@ def main():
     parser.add_argument("-map", help="/path/to/context/map", default="hash.map")
 
     results = parser.parse_args()
-    if os.path.splitext(results.bin)[1] == ".so" and (results.ld is None or results.ld == ""):
-        parser.print_help()
-        exit(1)
-
-    global loader_loc, binary, pintool_loc, pin_loc, contexts, failed_runs, current_jobs, contexts_hashes
-    loader_loc = results.ld
-    binary = results.bin
-    pintool_loc = results.tool
-    pin_loc = os.path.join(results.pindir, "pin")
-
     logger.setLevel(results.loglevel)
     logfile = os.path.abspath(results.log)
     if logfile is not None:
@@ -179,7 +170,30 @@ def main():
             os.makedirs(os.path.dirname(logfile), exist_ok=True)
         logger.addHandler(logging.FileHandler(logfile, mode="w"))
 
-    func_count = 0
+    if not os.path.exists(results.bin):
+        logger.fatal("Could not find {}".format(results.bin))
+        exit(1)
+
+    if os.path.splitext(results.bin)[1] == ".so" and (results.ld is None or results.ld == ""):
+        logger.fatal("Loader location is necessary")
+        parser.print_help()
+        exit(1)
+
+    if not os.path.exists(results.ld):
+        logger.fatal("Could not find loader {}".format(results.ld))
+        exit(1)
+    elif not os.path.exists(results.tool):
+        logger.fatal("Could not find pintool {}".format(results.tool))
+        exit(1)
+    elif not os.path.exists(results.pindir):
+        logger.fatal("Could not find pindir {}".format(results.pindir))
+        exit(1)
+
+    global loader_loc, pintool_loc, pin_loc, contexts, failed_runs, current_jobs, contexts_hashes
+    loader_loc = os.path.abspath(results.ld)
+    pintool_loc = os.path.abspath(results.tool)
+    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
+
     ignored_funcs = set()
     if not os.path.exists(work_dir):
         os.makedirs(work_dir, exist_ok=True)
@@ -193,16 +207,17 @@ def main():
         logger.debug("done")
 
     if results.funcs is not None:
+        logger.info("Finding specified functions")
         location_map = dict()
         with open(results.funcs, "r") as f:
             for line in f.readlines():
                 line = line.strip()
-                temp = binaryutils.find_funcs(results.bin, line)
-                for loc, name in temp.items():
-                    location_map[loc] = name
+                temp = binaryutils.find_funcs(results.bin, line, ignored_funcs)
+                for loc, func_desc in temp.items():
+                    location_map[loc] = func_desc
     else:
         logger.debug("Reading functions to fuzz")
-        location_map = binaryutils.find_funcs(results.bin)
+        location_map = binaryutils.find_funcs(results.bin, ignored_funcs=ignored_funcs)
     logger.debug("done")
 
     hash_file = os.path.abspath(results.map)
@@ -224,16 +239,9 @@ def main():
 
     args = list()
     logger.debug("Building fuzz target list")
-    for location, func_name in location_map.items():
-        func_name = func_name.strip()
-        func_count += 1
-        if '@' in func_name:
-            func_name = func_name[:func_name.find("@")]
-
-        if func_name in ignored_funcs:
-            continue
-
-        args.append([location, func_name])
+    func_count = len(location_map)
+    for location, func_desc in location_map.items():
+        args.append(func_desc)
     logger.debug("done")
     logger.info("Fuzzing {} targets".format(len(args)))
 

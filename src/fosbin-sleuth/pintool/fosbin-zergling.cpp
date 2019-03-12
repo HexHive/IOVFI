@@ -26,6 +26,7 @@ KNOB <std::string> KnobCmdLogFile(KNOB_MODE_WRITEONCE, "pintool", "cmdlog", "", 
 RTN target = RTN_Invalid();
 IMG target_so = IMG_Invalid();
 INS first_ins = INS_Invalid();
+uintptr_t first_ins_addr = (uintptr_t) - 1;
 FBZergContext preContext;
 FBZergContext currentContext;
 FBZergContext expectedContext;
@@ -50,6 +51,15 @@ void wait_to_start();
 
 void report_failure(zerg_cmd_result_t reason);
 
+void cleanup(int exitcode) {
+    PIN_RemoveInstrumentation();
+    if (cmd_server) {
+        cmd_server->stop();
+        delete cmd_server;
+    }
+    PIN_ExitApplication(exitcode);
+}
+
 INT32 usage() {
     std::cerr << "FOSBin Zergling -- Causing Havoc in small places" << std::endl;
     std::cerr << KNOB_BASE::StringKnobSummary() << std::endl;
@@ -72,7 +82,7 @@ VOID log_message(std::stringstream &message) {
 
 VOID log_error(std::stringstream &message) {
     log_message(message);
-    PIN_ExitApplication(1);
+    cleanup(1);
 }
 
 VOID log_message(const char *message) {
@@ -309,7 +319,7 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 //    std::cout << std::dec << diff << std::endl;
     if (fuzzing_run.size() > max_instructions) {
         report_failure(ZCMD_TOO_MANY_INS);
-        log_message("write_to_cmd 3");
+//        log_message("write_to_cmd 3");
         wait_to_start();
     }
 }
@@ -545,7 +555,12 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 
 void redirect_control_to_main(CONTEXT *ctx) {
     if (INS_Valid(first_ins)) {
-        PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, INS_Address(first_ins));
+        std::stringstream msg;
+        msg << "Thread " << PIN_ThreadId() << " redirecting control to 0x" << std::hex << first_ins_addr;
+        log_message(msg);
+        PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, first_ins_addr);
+    } else {
+        log_message("Could not redirect control");
     }
 }
 
@@ -556,12 +571,12 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 ////    currentContext.prettyPrint();
 
     if (!fuzzed_input) {
-        log_message("write_to_cmd 4");
+//        log_message("write_to_cmd 4");
         report_failure(ZCMD_FAILED_CTX);
         redirect_control_to_main(ctx);
         return false;
     } else if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
-        log_message("write_to_cmd 5");
+//        log_message("write_to_cmd 5");
         report_failure(ZCMD_ERROR);
         redirect_control_to_main(ctx);
         return false;
@@ -780,14 +795,18 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 //                reset_to_preexecution(ctx);
 //                fuzz_registers(ctx);
 //                goto finish;
-                log_message("write_to_cmd 6");
+//                log_message("write_to_cmd 6");
                 report_failure(ZCMD_ERROR);
                 redirect_control_to_main(ctx);
             }
         } else {
             log_message("Taint analysis failed for the following context: ");
             log_message(getCurrentContext(ctx, 0));
-            log_message("write_to_cmd 7");
+            std::stringstream msg;
+            msg << "Faulting instruction (0x" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
+                << "): " << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
+            log_message(msg);
+//            log_message("write_to_cmd 7");
             report_failure(ZCMD_ERROR);
             redirect_control_to_main(ctx);
         }
@@ -1131,7 +1150,7 @@ zerg_cmd_result_t handle_cmd() {
         return ZCMD_ERROR;
     }
 
-    zerg_cmd_result_t result;
+    zerg_cmd_result_t result = ZCMD_ERROR;
     switch (msg->type()) {
         case ZMSG_SET_TGT:
             log_message("Received SetTargetCommand");
@@ -1157,6 +1176,10 @@ zerg_cmd_result_t handle_cmd() {
             log_message("Received SetContextCommand");
             result = handle_set_ctx_cmd(*msg);
             break;
+        case ZMSG_EXIT:
+            log_message("Received ExitCommand");
+            cleanup(0);
+            break;
         default:
             log_msg << "Unknown command: " << msg->str();
             log_message(log_msg);
@@ -1174,6 +1197,8 @@ void begin_execution(CONTEXT *ctx) {
         for (REG reg : FBZergContext::argument_regs) {
             preContext.add(reg, (ADDRINT) 0);
         }
+        log_message("Starting execution with snapshot ");
+        log_message(getCurrentContext(&snapshot, 0));
 
         ZergMessage ready(ZMSG_READY);
         write_to_cmd_server(ready);
@@ -1201,7 +1226,7 @@ void wait_to_start() {
             }
         } else {
             log_message("Select <= 0");
-            PIN_ExitApplication(0);
+            cleanup(0);
         }
     }
 }
@@ -1213,6 +1238,7 @@ VOID FindMain(IMG img, VOID *v) {
 
     RTN main = RTN_FindByName(img, "main");
     if (RTN_Valid(main)) {
+        RTN_Open(main);
         if (is_executable_fbloader(img)) {
             const char *shared_so_cname = (const char *) v;
             std::string shared_so_name(shared_so_cname);
@@ -1222,11 +1248,17 @@ VOID FindMain(IMG img, VOID *v) {
                 ss << "Could not open shared object " << shared_so_name;
                 log_error(ss);
             }
+            first_ins = RTN_InsTail(main);
+            first_ins_addr = INS_Address(first_ins);
+        } else {
+            first_ins = RTN_InsHead(main);
+            first_ins_addr = INS_Address(first_ins);
         }
 
-        RTN_Open(main);
-        first_ins = RTN_InsHead(main);
         std::stringstream msg;
+        msg << "Address of first_ins = 0x" << std::hex << first_ins_addr;
+        log_message(msg);
+
         msg << "Adding call to wait_to_start to " << RTN_Name(main) << "(0x" << std::hex << RTN_Address(main)
             << ")";
         log_message(msg);
