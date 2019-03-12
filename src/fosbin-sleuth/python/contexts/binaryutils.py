@@ -1,5 +1,4 @@
 import subprocess
-import os
 from .FunctionDescriptor import FunctionDescriptor
 
 

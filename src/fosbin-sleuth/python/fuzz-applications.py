@@ -43,7 +43,10 @@ def fuzz_one_function(args):
         target = func_name
 
     run_name = "{}.{}.{}".format(os.path.basename(binary), func_name, target)
-    logger.debug("{} target is {}".format(run_name, hex(target)))
+    if loader_loc is None:
+        logger.debug("{} target is {}".format(run_name, hex(target)))
+    else:
+        logger.debug("{} target is {}".format(run_name, target))
     current_jobs.add(run_name)
     pipe_in = os.path.join(work_dir, run_name + ".in")
     pipe_out = os.path.join(work_dir, run_name + ".out")
@@ -100,7 +103,7 @@ def fuzz_one_function(args):
                 if result is not None and result.msgtype == PinMessage.ZMSG_OK:
                     successful_runs += 1
                     successful_contexts.add(IOVec(result.data))
-            except TimeoutError:
+            except TimeoutError as e:
                 logger.exception(str(e))
                 pin_run.stop()
                 continue
@@ -264,8 +267,6 @@ def main():
             logger.info("Failed run selection:")
             for run in failed_runs[0:min(5, len(failed_runs))]:
                 logger.info("\t{}".format(run))
-
-
     else:
         logger.fatal("Could not find any functions to fuzz")
 

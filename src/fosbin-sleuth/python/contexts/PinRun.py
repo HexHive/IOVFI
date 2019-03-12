@@ -23,6 +23,7 @@ class PinMessage:
     ZMSG_SET_CTX = 6
     ZMSG_RESET = 7
     ZMSG_READY = 8
+    ZMSG_SET_SO_TGT = 9
     HEADER_FORMAT = "iQ"
 
     names = {
@@ -35,7 +36,8 @@ class PinMessage:
         ZMSG_EXECUTE: "ZMSG_EXECUTE",
         ZMSG_SET_CTX: "ZMSG_SET_CTX",
         ZMSG_RESET: "ZMSG_RESET",
-        ZMSG_READY: "ZMSG_READY"
+        ZMSG_READY: "ZMSG_READY",
+        ZMSG_SET_SO_TGT: "ZMSG_SET_SO_TGT"
     }
 
     def __init__(self, msgtype, data):
@@ -361,8 +363,13 @@ class PinRun:
         return result
 
     def send_set_target_cmd(self, target, timeout=None):
-        logger.debug("Setting target to {} for {}".format(hex(target), os.path.basename(self.pipe_out_loc)))
-        return self._send_cmd(PinMessage.ZMSG_SET_TGT, struct.pack("Q", target), timeout)
+        if self.loader_loc is None:
+            logger.debug("Setting target to {} for {}".format(hex(target), os.path.basename(self.pipe_out_loc)))
+            return self._send_cmd(PinMessage.ZMSG_SET_TGT, struct.pack("Q", target), timeout)
+        else:
+            logger.debug("Setting target to {} for {}".format(target, os.path.basename(self.pipe_out_loc)))
+            tgt = target + '\x00'
+            return self._send_cmd(PinMessage.ZMSG_SET_SO_TGT, tgt.encode('ascii'))
 
     def send_set_ctx_cmd(self, io_vec, timeout=None):
         if io_vec is None:
