@@ -146,17 +146,17 @@ def main():
         indicator = "X"
         guess_descs = fbDtree.get_equiv_classes(guess)
 
-        if FBDecisionTree.UNKNOWN_FUNC == guess:
+        guess_list = list()
+        if guess_descs is None:
             indicator = "?"
         else:
             for func in guess_descs:
                 if func.name.find(func_desc.name) >= 0:
                     indicator = "!"
                     break
+            for func in guess_descs:
+                guess_list.append(str(func))
 
-        guess_list = list()
-        for tmp in guess_descs:
-            guess_list.append(str(tmp))
         logger.info("[{}] {}: {}".format(indicator, func_desc.name, " ".join(guess_list)))
 
 

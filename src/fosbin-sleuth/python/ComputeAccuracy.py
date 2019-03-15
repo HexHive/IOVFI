@@ -46,6 +46,7 @@ def main():
                             break
                     if found:
                         false_neg.append(func_desc)
+                        false_pos.append(func_desc)
                     else:
                         true_neg.append(func_desc)
                 else:

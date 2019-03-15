@@ -81,6 +81,8 @@ class PinRun:
             self.loader_loc = os.path.abspath(loader_loc)
             if not os.path.exists(self.loader_loc):
                 raise FileNotFoundError("{} does not exist".format(self.loader_loc))
+        else:
+            self.loader_loc = None
 
         if log_loc is not None:
             self.log_loc = os.path.abspath(log_loc)
@@ -225,11 +227,15 @@ class PinRun:
         if self.create_pipe_in:
             if not os.path.exists(os.path.dirname(self.pipe_in_loc)):
                 os.makedirs(os.path.dirname(self.pipe_in_loc), exist_ok=True)
+            elif os.path.exists(self.pipe_in_loc):
+                os.unlink(self.pipe_in_loc)
             os.mkfifo(self.pipe_in_loc)
 
         if self.create_pipe_out:
             if not os.path.exists(os.path.dirname(self.pipe_out_loc)):
                 os.makedirs(os.path.dirname(self.pipe_out_loc), exist_ok=True)
+            elif os.path.exists(self.pipe_out_loc):
+                os.unlink(self.pipe_out_loc)
             os.mkfifo(self.pipe_out_loc)
 
         self.thr_r, self.thr_w = os.pipe()
