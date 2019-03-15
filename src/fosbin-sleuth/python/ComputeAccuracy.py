@@ -63,6 +63,7 @@ def main():
                             bad_guesses.add(str(equiv_class))
                         # print("{}: {}\n".format(func_desc.name, " ".join(bad_guesses)))
                         false_pos.append(func_desc)
+                        false_neg.append(func_desc)
 
             precision = len(true_pos) / (len(true_pos) + len(false_pos))
             recall = len(true_pos) / (len(true_pos) + len(false_neg))
