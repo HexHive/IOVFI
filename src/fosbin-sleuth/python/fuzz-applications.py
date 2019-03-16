@@ -156,7 +156,7 @@ def main():
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
-    parser.add_argument("-log", help="/path/to/log/file")
+    parser.add_argument("-log", help="/path/to/log/file", default="fuzz.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.DEBUG)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
     parser.add_argument("-ctx", help="/path/to/generated/contexts", default="fuzz.ctx")
@@ -179,7 +179,7 @@ def main():
         parser.print_help()
         exit(1)
 
-    if not os.path.exists(results.ld):
+    if results.ld is not None and not os.path.exists(results.ld):
         logger.fatal("Could not find loader {}".format(results.ld))
         exit(1)
     elif not os.path.exists(results.tool):
@@ -190,7 +190,9 @@ def main():
         exit(1)
 
     global loader_loc, pintool_loc, pin_loc, contexts, failed_runs, current_jobs, contexts_hashes
-    loader_loc = os.path.abspath(results.ld)
+    if results.ld is not None:
+        loader_loc = os.path.abspath(results.ld)
+
     pintool_loc = os.path.abspath(results.tool)
     pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
 
