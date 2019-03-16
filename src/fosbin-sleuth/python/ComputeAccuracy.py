@@ -3,7 +3,7 @@
 import pickle
 import argparse
 import statistics
-
+import sys
 
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
@@ -66,8 +66,20 @@ def main():
                         false_pos.append(func_desc)
                         false_neg.append(func_desc)
 
-            precision = len(true_pos) / (len(true_pos) + len(false_pos))
-            recall = len(true_pos) / (len(true_pos) + len(false_neg))
+            fscore = 0
+            precision = 0
+            recall = 0
+            if len(true_pos) != 0 and len(false_pos) != 0:
+                precision = len(true_pos) / (len(true_pos) + len(false_pos))
+            else:
+                print("Could not compute precision for {}".format(guessLine), file=sys.stderr)
+                continue
+            
+            if len(true_pos) != 0 and len(false_neg) != 0:
+                recall = len(true_pos) / (len(true_pos) + len(false_neg))
+            else:
+                print("Could not compute recall for {}".format(guessLine), file=sys.stderr)
+                continue
             fscore = 2 * precision * recall / (precision + recall)
             precisions[guessLine] = precision
             recalls[guessLine] = recall

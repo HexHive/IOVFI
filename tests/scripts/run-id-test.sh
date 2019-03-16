@@ -12,6 +12,9 @@ TESTS=$(realpath $4)
 ID_SCRIPT=$(realpath $(dirname $PINTOOL)/../../../src/fosbin-sleuth/python/IdentifyFunction.py)
 
 for test in $(find $TESTS -type f -executable); do
+	if [ -d "$(basename $test)" ]; then
+		continue
+	fi
 	mkdir $(basename $test)
 	cd $(basename $test)
 	echo "Evaluating $test"
