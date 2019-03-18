@@ -49,7 +49,7 @@ fd_set exe_fd_set_out;
 
 void wait_to_start();
 
-void report_failure(zerg_cmd_result_t reason);
+void report_failure(zerg_cmd_result_t reason, CONTEXT *ctx = nullptr);
 
 void cleanup(int exitcode) {
     PIN_RemoveInstrumentation();
@@ -572,12 +572,12 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 
     if (!fuzzed_input) {
 //        log_message("write_to_cmd 4");
-        report_failure(ZCMD_FAILED_CTX);
+        report_failure(ZCMD_FAILED_CTX, ctx);
         redirect_control_to_main(ctx);
         return false;
     } else if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
 //        log_message("write_to_cmd 5");
-        report_failure(ZCMD_ERROR);
+        report_failure(ZCMD_ERROR, ctx);
         redirect_control_to_main(ctx);
         return false;
     }
@@ -601,7 +601,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
             msg << "Could not find faulty address for instruction at 0x" << std::hex << INS_Address(faulty_ins)
                 << " (" << INS_Disassemble(faulty_ins) << ")";
             log_message(msg);
-            report_failure(ZCMD_ERROR);
+            report_failure(ZCMD_ERROR, ctx);
             redirect_control_to_main(ctx);
             return false;
         } else {
@@ -623,7 +623,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
             if (!INS_Valid(ins)) {
                 log << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
                 log_message(log);
-                report_failure(ZCMD_ERROR);
+                report_failure(ZCMD_ERROR, ctx);
                 redirect_control_to_main(ctx);
                 return false;
             }
@@ -660,7 +660,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
                     ss << "Could not find valid base register for instruction: " << INS_Disassemble(ins);
                     log_message(ss);
                     redirect_control_to_main(ctx);
-                    report_failure(ZCMD_ERROR);
+                    report_failure(ZCMD_ERROR, ctx);
                     return false;
                 }
                 add_taint(taint_source, taintedObjs);
@@ -796,7 +796,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 //                fuzz_registers(ctx);
 //                goto finish;
 //                log_message("write_to_cmd 6");
-                report_failure(ZCMD_ERROR);
+                report_failure(ZCMD_ERROR, ctx);
                 redirect_control_to_main(ctx);
             }
         } else {
@@ -807,7 +807,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
                 << "): " << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
             log_message(msg);
 //            log_message("write_to_cmd 7");
-            report_failure(ZCMD_ERROR);
+            report_failure(ZCMD_ERROR, ctx);
             redirect_control_to_main(ctx);
         }
 
@@ -1017,6 +1017,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 
 void report_success(CONTEXT *ctx, THREADID tid) {
     currentContext << ctx;
+//    currentContext.prettyPrint();
 
 //    log_message("write_to_cmd 8");
     if (fuzzed_input) {
@@ -1032,7 +1033,7 @@ void report_success(CONTEXT *ctx, THREADID tid) {
     wait_to_start();
 }
 
-void report_failure(zerg_cmd_result_t reason) {
+void report_failure(zerg_cmd_result_t reason, CONTEXT *ctx) {
     char *buf = strdup(ZergCommand::result_to_str(reason));
     size_t len = strlen(buf) + 1;
     ZergMessage msg(ZMSG_FAIL, len, buf);

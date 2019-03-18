@@ -40,7 +40,7 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
 //        ctx.pointer_registers[FBZergContext::return_reg] = aa;
 //        allocs.push_back(aa);
 //    } else {
-        ctx.values[FBZergContext::return_reg] = tmp;
+    ctx.values[FBZergContext::return_reg] = tmp;
 //    }
 
     for (auto aa : allocs) {
@@ -59,6 +59,10 @@ ADDRINT FBZergContext::get_value(REG reg) const {
     }
 
     return -1;
+}
+
+bool FBZergContext::return_is_ptr() const {
+    return get_value(FBZergContext::return_reg) == AllocatedArea::MAGIC_VALUE;
 }
 
 std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
@@ -99,8 +103,8 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
 bool FBZergContext::operator==(const FBZergContext &ctx) const {
     if (!(get_value(FBZergContext::return_reg) == ctx.get_value(FBZergContext::return_reg) ||
           (get_value(FBZergContext::return_reg) < 0 && ctx.get_value(FBZergContext::return_reg) < 0) ||
-          (get_value(FBZergContext::return_reg) > 0 && ctx.get_value(FBZergContext::return_reg) > 0)
-    )) {
+          (get_value(FBZergContext::return_reg) > 0 && ctx.get_value(FBZergContext::return_reg) > 0)) ||
+        (return_is_ptr() && !ctx.return_is_ptr()) || (!return_is_ptr() && ctx.return_is_ptr())) {
 //        log_message("Contexts return values mismatch:");
 //        std::cout << "This " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << get_value(FBZergContext::return_reg) << std::endl;
 //        std::cout << "That " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << ctx.get_value(FBZergContext::return_reg) << std::endl;

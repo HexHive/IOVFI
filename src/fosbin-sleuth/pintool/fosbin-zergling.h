@@ -124,6 +124,8 @@ public:
 
     void reset_non_ptrs(const FBZergContext &ctx);
 
+    bool return_is_ptr() const;
+
 protected:
     std::map <REG, ADDRINT> values;
     std::map<REG, AllocatedArea *> pointer_registers;
