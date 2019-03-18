@@ -8,7 +8,7 @@ import sys
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
-    parser.add_argument("-g", dest="guesses", help="/path/to/guess/dir", default="guesses.bin")
+    parser.add_argument("-g", dest="guesses", help="/path/to/guess/list", default="guesses.txt")
 
     args = parser.parse_args()
 
@@ -45,6 +45,7 @@ def main():
                             found = True
                             break
                     if found:
+                        print("{}: false_neg".format(func_desc.name))
                         false_neg.append(func_desc)
                         false_pos.append(func_desc)
                     else:
@@ -57,8 +58,10 @@ def main():
                             break
 
                     if found:
+                        print("{}: true pos".format(func_desc.name))
                         true_pos.append(func_desc)
                     else:
+                        print("{}: false_pos".format(func_desc.name))
                         bad_guesses = set()
                         for equiv_class in equiv_classes:
                             bad_guesses.add(str(equiv_class))
@@ -81,6 +84,7 @@ def main():
                 print("Could not compute recall for {}".format(guessLine), file=sys.stderr)
                 continue
             fscore = 2 * precision * recall / (precision + recall)
+            print(fscore)
             precisions[guessLine] = precision
             recalls[guessLine] = recall
             fscores[guessLine] = fscore
