@@ -62,7 +62,7 @@ ADDRINT FBZergContext::get_value(REG reg) const {
 }
 
 bool FBZergContext::return_is_ptr() const {
-    return get_value(FBZergContext::return_reg) == AllocatedArea::MAGIC_VALUE;
+    return pointer_registers.find(FBZergContext::return_reg) != pointer_registers.end();
 }
 
 std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {

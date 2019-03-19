@@ -310,7 +310,7 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
         wait_to_start();
     }
 //    std::cout << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
-//    std::cout << INS_Disassemble(INS_FindByAddress(rip)) << std::endl;
+    std::cout << "Func " << RTN_FindNameByAddress(rip) << ": " << INS_Disassemble(INS_FindByAddress(rip)) << std::endl;
 
     struct X86Context tmp = {rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip, rbp};
     fuzzing_run.push_back(tmp);
@@ -1025,7 +1025,24 @@ void report_success(CONTEXT *ctx, THREADID tid) {
         msg.add_contexts(preContext, currentContext);
         write_to_cmd_server(msg);
     } else {
-        zerg_message_t response = ((currentContext == expectedContext) ? ZMSG_OK : ZMSG_FAIL);
+        std::stringstream msg2;
+
+
+        bool contexts_equal = (currentContext == expectedContext);
+        if (!contexts_equal) {
+            std::stringstream msg;
+            msg << "Ending context does not match expected" << std::endl;
+            msg << "Expected context" << std::endl;
+            expectedContext.prettyPrint(msg);
+            msg << std::endl;
+            msg << "Current context" << std::endl;
+            currentContext.prettyPrint(msg);
+            msg << std::endl;
+
+            log_message(msg);
+
+        }
+        zerg_message_t response = (contexts_equal ? ZMSG_OK : ZMSG_FAIL);
         ZergMessage msg(response);
         write_to_cmd_server(msg);
     }

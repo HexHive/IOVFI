@@ -87,6 +87,7 @@ def main():
     parser.add_argument("-threads", help="Number of threads to use", default=multiprocessing.cpu_count() * 8, type=int)
     parser.add_argument("-target", help="Location or function name to target")
     parser.add_argument("-guesses", help="/path/to/guesses", default="guesses.bin")
+    parser.add_argument("-ignore", help="/path/to/ignored/functions")
     results = parser.parse_args()
 
     logger.info("Checking inputs...")
@@ -113,8 +114,17 @@ def main():
             guesses = pickle.load(guessFile)
         logger.info(msg + "done!")
 
+    ignored_funcs = set()
+    if results.ignore is not None:
+        logger.debug("Reading ignored functions")
+        with open(results.ignore) as f:
+            for line in f.readlines():
+                line = line.strip()
+                ignored_funcs.add(line)
+        logger.debug("done")
+
     msg = "Finding functions in {}...".format(binaryLoc)
-    location_map = binaryutils.find_funcs(binaryLoc, results.target)
+    location_map = binaryutils.find_funcs(binaryLoc, results.target, ignored_funcs)
     logger.info(msg + "done!")
     logger.info("Found {} functions".format(len(location_map)))
 

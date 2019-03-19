@@ -149,6 +149,8 @@ def hash_contexts(run_name):
 
 
 def main():
+    global loader_loc, pintool_loc, pin_loc, contexts, failed_runs, current_jobs, contexts_hashes, fuzz_count
+
     parser = argparse.ArgumentParser(description="Generate input/output vectors")
     parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
@@ -158,11 +160,13 @@ def main():
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
     parser.add_argument("-log", help="/path/to/log/file", default="fuzz.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.DEBUG)
-    parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count())
+    parser.add_argument("-threads", help="Number of threads to use", type=int, default=4 * multiprocessing.cpu_count())
     parser.add_argument("-ctx", help="/path/to/generated/contexts", default="fuzz.ctx")
     parser.add_argument("-map", help="/path/to/context/map", default="hash.map")
+    parser.add_argument("-count", help="Number of times to fuzz function", type=int, default=fuzz_count)
 
     results = parser.parse_args()
+
     logger.setLevel(results.loglevel)
     logfile = os.path.abspath(results.log)
     if logfile is not None:
@@ -189,7 +193,7 @@ def main():
         logger.fatal("Could not find pindir {}".format(results.pindir))
         exit(1)
 
-    global loader_loc, pintool_loc, pin_loc, contexts, failed_runs, current_jobs, contexts_hashes
+    fuzz_count = results.count
     if results.ld is not None:
         loader_loc = os.path.abspath(results.ld)
 

@@ -5,6 +5,7 @@ import argparse
 import statistics
 import sys
 
+
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
@@ -74,7 +75,7 @@ def main():
             else:
                 print("Could not compute precision for {}".format(guessLine), file=sys.stderr)
                 continue
-            
+
             if len(true_pos) != 0 and len(false_neg) != 0:
                 recall = len(true_pos) / (len(true_pos) + len(false_neg))
             else:
@@ -118,22 +119,51 @@ def main():
     for val in false_negatives.values():
         false_neg_tmp.append(len(val))
 
-    print("Average F-score of {} tests: {} +- {}".format(len(fscore_tmp), statistics.mean(fscore_tmp),
-                                                         statistics.stdev(fscore_tmp)))
-    print("Average precision of {} tests: {} +- {}".format(len(precision_tmp),
-                                                           statistics.mean(precision_tmp),
-                                                           statistics.stdev(precision_tmp)))
-    print("Average recall of {} tests: {} +- {}".format(len(recall_tmp),
-                                                        statistics.mean(recall_tmp),
-                                                        statistics.stdev(recall_tmp)))
-    print("Average true pos:  {} +- {}".format(statistics.mean(true_pos_tmp),
-                                               statistics.stdev(true_pos_tmp)))
-    print("Average false pos: {} +- {}".format(statistics.mean(false_pos_tmp),
-                                               statistics.stdev(false_pos_tmp)))
-    print("Average true neg:  {} +- {}".format(statistics.mean(true_neg_tmp),
-                                               statistics.stdev(true_neg_tmp)))
-    print("Average false neg: {} +- {}".format(statistics.mean(false_neg_tmp),
-                                               statistics.stdev(false_neg_tmp)))
+    if len(fscore_tmp) > 1:
+        print("Average F-score of {} tests: {} +- {}".format(len(fscore_tmp), statistics.mean(fscore_tmp),
+                                                             statistics.stdev(fscore_tmp)))
+    else:
+        print("Average F-score of {} tests: {} +- {}".format(len(fscore_tmp), statistics.mean(fscore_tmp), 0))
+
+    if len(precision_tmp) > 1:
+        print("Average precision of {} tests: {} +- {}".format(len(precision_tmp),
+                                                               statistics.mean(precision_tmp),
+                                                               statistics.stdev(precision_tmp)))
+    else:
+        print("Average precision of {} tests: {} +- {}".format(len(precision_tmp),
+                                                               statistics.mean(precision_tmp), 0))
+
+    if len(recall_tmp) > 1:
+        print("Average recall of {} tests: {} +- {}".format(len(recall_tmp),
+                                                            statistics.mean(recall_tmp),
+                                                            statistics.stdev(recall_tmp)))
+    else:
+        print("Average recall of {} tests: {} +- {}".format(len(recall_tmp),
+                                                            statistics.mean(recall_tmp), 0))
+
+    if len(true_pos_tmp) > 1:
+        print("Average true pos:  {} +- {}".format(statistics.mean(true_pos_tmp),
+                                                   statistics.stdev(true_pos_tmp)))
+    else:
+        print("Average true pos:  {} +- {}".format(statistics.mean(true_pos_tmp), 0))
+
+    if len(false_pos_tmp) > 1:
+        print("Average false pos: {} +- {}".format(statistics.mean(false_pos_tmp),
+                                                   statistics.stdev(false_pos_tmp)))
+    else:
+        print("Average false pos: {} +- {}".format(statistics.mean(false_pos_tmp), 0))
+
+    if len(true_neg_tmp) > 1:
+        print("Average true neg:  {} +- {}".format(statistics.mean(true_neg_tmp),
+                                                   statistics.stdev(true_neg_tmp)))
+    else:
+        print("Average true neg:  {} +- {}".format(statistics.mean(true_neg_tmp), 0))
+
+    if len(false_neg_tmp) > 1:
+        print("Average false neg: {} +- {}".format(statistics.mean(false_neg_tmp),
+                                                   statistics.stdev(false_neg_tmp)))
+    else:
+        print("Average false neg: {} +- {}".format(statistics.mean(false_neg_tmp), 0))
 
 
 if __name__ == "__main__":

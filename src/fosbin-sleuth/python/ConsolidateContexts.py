@@ -76,6 +76,7 @@ def consolidate_one_function(func_id):
         try:
             if not pin_run.is_running():
                 logger.debug("Starting pin_run for {}".format(run_name))
+                pin_run.stop()
                 pin_run.start(timeout=watchdog)
                 ack_msg = pin_run.send_set_target_cmd(func_id.location, timeout=watchdog)
                 if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
@@ -165,7 +166,7 @@ def main():
     parser.add_argument("-target", help="Address to target single function")
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
-    parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count() * 4)
+    parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count() * 8)
     parser.add_argument("-timeout", help="Number of ms to wait for each context to finish completing", type=int,
                         default=watchdog)
     parser.add_argument("-singlectx")

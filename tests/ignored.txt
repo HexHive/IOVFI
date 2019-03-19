@@ -1,3 +1,11 @@
+dup2
+pipe2
+__pipe
+mprotect
+unlink
+__lll_timedlock_wait
+__lll_lock_wait
+
 kill
 __kill
 _kill

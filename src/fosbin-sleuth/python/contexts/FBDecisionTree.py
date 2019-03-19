@@ -196,6 +196,7 @@ class FBDecisionTree:
                 iovec = self._get_iovec(idx)
                 iovec_accepted = False
                 try:
+                    logger.debug("Trying iovec {}".format(idx))
                     iovec_accepted = self._attempt_ctx(iovec, pin_run)
                 except Exception as e:
                     logger.exception("Error testing iovec for {}: {}".format(str(func_desc), e))
