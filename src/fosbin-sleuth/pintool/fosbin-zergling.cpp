@@ -27,6 +27,7 @@ RTN target = RTN_Invalid();
 IMG target_so = IMG_Invalid();
 INS first_ins = INS_Invalid();
 uintptr_t first_ins_addr = (uintptr_t) - 1;
+uintptr_t last_ins_addr = (uintptr_t) - 1;
 FBZergContext preContext;
 FBZergContext currentContext;
 FBZergContext expectedContext;
@@ -38,6 +39,7 @@ std::ofstream log_out;
 uint64_t max_instructions = 1000000;
 bool fuzzed_input = false;
 bool sent_initial_ready = false;
+bool adjusted_stack = false;
 
 ZergCommandServer *cmd_server;
 int internal_pipe_in[2];
@@ -1063,6 +1065,30 @@ void start_cmd_server(void *v) {
     delete cmd_server;
 }
 
+/* Add the last instruction address as a return address to allow for some optimizations */
+void adjust_stack_down(CONTEXT *ctx) {
+    if (!adjusted_stack) {
+        log_message("Adjusting stack down");
+        ADDRINT orig_rbp = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP);
+        ADDRINT orig_rsp = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSP);
+        std::stringstream msg;
+
+        log_message(msg);
+        EXCEPTION_INFO exception_info;
+        size_t bytes_copied = PIN_SafeCopyEx((void *) orig_rbp, &last_ins_addr, sizeof(last_ins_addr), &exception_info);
+        log_message(msg);
+        if (bytes_copied == 0) {
+            msg << PIN_ExceptionToString(&exception_info);
+            log_error(msg);
+        }
+        orig_rbp -= sizeof(last_ins_addr);
+        orig_rsp -= sizeof(last_ins_addr);
+        PIN_SetContextReg(ctx, LEVEL_BASE::REG_RBP, orig_rbp);
+        PIN_SetContextReg(ctx, LEVEL_BASE::REG_RSP, orig_rsp);
+        adjusted_stack = true;
+    }
+}
+
 zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
     std::stringstream msg;
     log_message(msg);
@@ -1101,6 +1127,7 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
     msg << "Instrumenting returns...";
     int instrument_sites = 0;
     RTN_Open(new_target);
+    INS_InsertCall(RTN_InsHead(new_target), IPOINT_BEFORE, (AFUNPTR) adjust_stack_down, IARG_CONTEXT, IARG_END);
     for (INS ins = RTN_InsHead(new_target); INS_Valid(ins); ins = INS_Next(ins)) {
         if (INS_IsRet(ins)) {
             instrument_sites++;
@@ -1110,6 +1137,8 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
     instrument_sites++;
     INS_InsertCall(RTN_InsTail(new_target), IPOINT_BEFORE, (AFUNPTR) report_success, IARG_CONTEXT,
                    IARG_THREAD_ID, IARG_END);
+
+    last_ins_addr = INS_Address(RTN_InsTail(new_target));
     RTN_Close(new_target);
     PIN_UnlockClient();
 
@@ -1128,9 +1157,11 @@ zerg_cmd_result_t handle_fuzz_cmd() {
 
 zerg_cmd_result_t handle_execute_cmd() {
     fuzzing_run.clear();
+    adjusted_stack = false;
     currentContext = preContext;
     currentContext >> &snapshot;
     PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
+    PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RBP, PIN_GetContextReg(&snapshot, LEVEL_BASE::REG_RSP));
     std::stringstream msg;
     msg << "About to start executing at "
         << std::hex << RTN_Address(target) << "(" << RTN_Name(target) << ")"
