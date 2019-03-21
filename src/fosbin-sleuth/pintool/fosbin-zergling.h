@@ -129,6 +129,9 @@ public:
 protected:
     std::map <REG, ADDRINT> values;
     std::map<REG, AllocatedArea *> pointer_registers;
+
+private:
+    bool return_values_equal(const FBZergContext &ctx) const;
 };
 
 struct TaintedObject {

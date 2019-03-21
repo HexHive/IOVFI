@@ -100,16 +100,47 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
     return out;
 }
 
+bool FBZergContext::return_values_equal(const FBZergContext &ctx) const {
+    if ((return_is_ptr() && !ctx.return_is_ptr()) ||
+        (!return_is_ptr() && ctx.return_is_ptr())) {
+        return false;
+    }
+
+    int64_t this_ret_val = (int64_t) get_value(FBZergContext::return_reg);
+    int64_t that_ret_val = (int64_t) ctx.get_value(FBZergContext::return_reg);
+
+    if (this_ret_val == that_ret_val) {
+        return true;
+    }
+
+    /* Force a sign extension as a heuristic for functions that return 32-bit values */
+    /* First check that the upper 4 bytes are all zero */
+    if ((this_ret_val >> 32) == 0) {
+        /* Get the int sign bit */
+        bool is_negative = (((this_ret_val & 0x00000000FFFFFFFF) >> 31) == 1);
+        /* Next extend the sign if needed */
+        if (is_negative) {
+            this_ret_val |= (0xFFFFFFFF00000000);
+        }
+    }
+
+    /* Repeat above */
+    if ((that_ret_val >> 32) == 0) {
+        bool is_negative = (((that_ret_val & 0x00000000FFFFFFFF) >> 31) == 1);
+        if (is_negative) {
+            that_ret_val |= (0xFFFFFFFF00000000);
+        }
+    }
+
+    if ((this_ret_val < 0 && that_ret_val < 0) || (this_ret_val > 0 && that_ret_val > 0)) {
+        return true;
+    }
+
+    return false;
+}
+
 bool FBZergContext::operator==(const FBZergContext &ctx) const {
-    int64_t ret_val = (int64_t)get_value(FBZergContext::return_reg);
-    int64_t ctx_ret_val = (int64_t)ctx.get_value(FBZergContext::return_reg);
-    std::stringstream msg;
-    msg << "This: " << ret_val << "\tThat: " << ctx_ret_val;
-    log_message(msg);
-    if (!(ret_val == ctx_ret_val ||
-          (ret_val < 0 && ctx_ret_val < 0) ||
-          (ret_val > 0 && ctx_ret_val > 0)) ||
-        (return_is_ptr() && !ctx.return_is_ptr()) || (!return_is_ptr() && ctx.return_is_ptr())) {
+    if (!return_values_equal(ctx)) {
 //        log_message("Contexts return values mismatch:");
 //        std::cout << "This " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << get_value(FBZergContext::return_reg) << std::endl;
 //        std::cout << "That " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << ctx.get_value(FBZergContext::return_reg) << std::endl;
