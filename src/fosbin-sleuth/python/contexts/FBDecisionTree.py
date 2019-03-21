@@ -120,8 +120,13 @@ class FBDecisionTree:
         return equiv_classes
 
     def _confirm_leaf(self, func_desc, index, pin_run):
+        possible_equivs = self.get_equiv_classes(index)
+        equiv_class_names = set()
+        for ec in possible_equivs:
+            equiv_class_names.add(ec.name)
+
         self._log("Confirming {}({}) is {}".format(func_desc.name, hex(func_desc.location),
-                                                   self.get_equiv_classes(index)))
+                                                   " ".join(equiv_class_names)))
         if not self._is_leaf(index):
             raise AssertionError("{} is not a leaf".format(index))
 
@@ -130,8 +135,6 @@ class FBDecisionTree:
         descMap = self.descMaps[dtree_base_idx]
         hashMap = self.hashMaps[dtree_base_idx]
         labels = self.labels[dtree_base_idx]
-
-        possible_equivs = self.get_equiv_classes(index)
 
         available_hashes = list()
         for hash_sum, accepting_funcs in descMap.items():
