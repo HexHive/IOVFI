@@ -42,7 +42,7 @@ def main():
                 if equiv_classes is None:
                     found = False
                     for pres_func_desc in dtree.get_func_descs():
-                        if pres_func_desc.name == func_desc:
+                        if pres_func_desc.name == func_desc.name:
                             found = True
                             break
                     if found:
@@ -56,14 +56,9 @@ def main():
                         if equiv_class.name == func_desc.name:
                             found = True
                             break
-
                     if found:
                         true_pos.append(func_desc)
                     else:
-                        bad_guesses = set()
-                        for equiv_class in equiv_classes:
-                            bad_guesses.add(str(equiv_class))
-                        # print("{}: {}\n".format(func_desc.name, " ".join(bad_guesses)))
                         false_pos.append(func_desc)
                         false_neg.append(func_desc)
 

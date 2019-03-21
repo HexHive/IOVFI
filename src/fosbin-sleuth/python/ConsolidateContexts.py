@@ -47,7 +47,7 @@ def save_desc_for_later():
 def consolidate_one_function(func_id):
     global desc_map, pin_loc, pintool_loc, loader_loc, watchdog, all_ctxs, fuzzed_ctxs
 
-    existing_ctxs = fuzzed_ctxs[func_id]
+    # existing_ctxs = fuzzed_ctxs[func_id]
 
     run_name = os.path.basename(func_id.binary) + "." + func_id.name + "." + str(func_id.location)
     logger.info("{} starting".format(run_name))
@@ -68,10 +68,10 @@ def consolidate_one_function(func_id):
                      os.path.abspath(WORK_DIR), cmd_log_loc)
     logger.debug("Created pin run for {}".format(run_name))
     for context in all_ctxs:
-        if context in existing_ctxs or func_id in desc_map[hash(context)]:
-            logger.debug("Context {} skipped".format(context.hexdigest()))
-            desc_map[hash(context)].add(func_id)
-            continue
+        # if context in existing_ctxs or func_id in desc_map[hash(context)]:
+        #     logger.debug("Context {} skipped".format(context.hexdigest()))
+        #     desc_map[hash(context)].add(func_id)
+        #     continue
 
         try:
             if not pin_run.is_running():
@@ -120,24 +120,23 @@ def consolidate_one_function(func_id):
                 desc_map[hash(context)].add(func_id)
                 with open(desc_file_path, "wb") as desc_file:
                     pickle.dump(desc_map, desc_file)
-
-                desc_lock.release()
                 lock_held = False
+                desc_lock.release()
                 logger.info("{} accepts {}".format(run_name, context.hexdigest()))
             else:
                 logger.info("{} rejects {}".format(run_name, context.hexdigest()))
         except AssertionError as e:
             if lock_held:
-                desc_lock.release()
                 lock_held = False
+                desc_lock.release()
             logger.exception("Error for {}: {}".format(run_name, str(e)))
             logger.info("{} rejects {}".format(run_name, context.hexdigest()))
             pin_run.stop()
             continue
         except Exception as e:
             if lock_held:
-                desc_lock.release()
                 lock_held = False
+                desc_lock.release()
             logger.exception("Error for {}: {}".format(run_name, str(e)))
             error_occurred = True
             break

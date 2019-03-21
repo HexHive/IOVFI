@@ -91,7 +91,8 @@ class FBDecisionTree:
 
     def export_graphviz(self, outfile, treeidx=0):
         dtree = self.dtrees[treeidx]
-        tree.export_graphviz(dtree, out_file=outfile, filled=True, rounded=True, special_characters=True)
+        tree.export_graphviz(dtree, out_file=outfile, filled=True, rounded=True, special_characters=True,
+                             node_ids=True, label='none')
 
     def get_func_descs(self):
         results = set()

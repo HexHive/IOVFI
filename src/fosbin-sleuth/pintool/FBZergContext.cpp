@@ -101,9 +101,14 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
 }
 
 bool FBZergContext::operator==(const FBZergContext &ctx) const {
-    if (!(get_value(FBZergContext::return_reg) == ctx.get_value(FBZergContext::return_reg) ||
-          (get_value(FBZergContext::return_reg) < 0 && ctx.get_value(FBZergContext::return_reg) < 0) ||
-          (get_value(FBZergContext::return_reg) > 0 && ctx.get_value(FBZergContext::return_reg) > 0)) ||
+    int64_t ret_val = (int64_t)get_value(FBZergContext::return_reg);
+    int64_t ctx_ret_val = (int64_t)ctx.get_value(FBZergContext::return_reg);
+    std::stringstream msg;
+    msg << "This: " << ret_val << "\tThat: " << ctx_ret_val;
+    log_message(msg);
+    if (!(ret_val == ctx_ret_val ||
+          (ret_val < 0 && ctx_ret_val < 0) ||
+          (ret_val > 0 && ctx_ret_val > 0)) ||
         (return_is_ptr() && !ctx.return_is_ptr()) || (!return_is_ptr() && ctx.return_is_ptr())) {
 //        log_message("Contexts return values mismatch:");
 //        std::cout << "This " << REG_StringShort(FBZergContext::return_reg) << " = " << std::hex << get_value(FBZergContext::return_reg) << std::endl;

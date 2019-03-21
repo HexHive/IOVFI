@@ -312,7 +312,7 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
         wait_to_start();
     }
 //    std::cout << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
-    std::cout << "Func " << RTN_FindNameByAddress(rip) << ": " << INS_Disassemble(INS_FindByAddress(rip)) << std::endl;
+//    std::cout << "Func " << RTN_FindNameByAddress(rip) << ": " << INS_Disassemble(INS_FindByAddress(rip)) << std::endl;
 
     struct X86Context tmp = {rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip, rbp};
     fuzzing_run.push_back(tmp);
@@ -1028,17 +1028,17 @@ void report_success(CONTEXT *ctx, THREADID tid) {
         write_to_cmd_server(msg);
     } else {
         std::stringstream msg2;
-
+        msg2 << "Expected context" << std::endl;
+        expectedContext.prettyPrint(msg2);
+        msg2 << std::endl;
+        msg2 << "Current context" << std::endl;
+        currentContext.prettyPrint(msg2);
+        log_message(msg2);
 
         bool contexts_equal = (currentContext == expectedContext);
         if (!contexts_equal) {
             std::stringstream msg;
             msg << "Ending context does not match expected" << std::endl;
-            msg << "Expected context" << std::endl;
-            expectedContext.prettyPrint(msg);
-            msg << std::endl;
-            msg << "Current context" << std::endl;
-            currentContext.prettyPrint(msg);
             msg << std::endl;
 
             log_message(msg);
