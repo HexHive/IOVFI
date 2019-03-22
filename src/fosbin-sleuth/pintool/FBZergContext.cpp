@@ -62,7 +62,8 @@ ADDRINT FBZergContext::get_value(REG reg) const {
 }
 
 bool FBZergContext::return_is_ptr() const {
-    return pointer_registers.find(FBZergContext::return_reg) != pointer_registers.end();
+    ADDRINT ret_val = get_value(FBZergContext::return_reg);
+    return PIN_CheckReadAccess((void *) ret_val);
 }
 
 std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
@@ -105,6 +106,7 @@ bool FBZergContext::return_values_equal(const FBZergContext &ctx) const {
         (!return_is_ptr() && ctx.return_is_ptr())) {
         return false;
     }
+//    std::cout << "return values are not pointers" << std::endl;
 
     int64_t this_ret_val = (int64_t) get_value(FBZergContext::return_reg);
     int64_t that_ret_val = (int64_t) ctx.get_value(FBZergContext::return_reg);
