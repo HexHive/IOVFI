@@ -63,7 +63,7 @@ ADDRINT FBZergContext::get_value(REG reg) const {
 
 bool FBZergContext::return_is_ptr() const {
     ADDRINT ret_val = get_value(FBZergContext::return_reg);
-    return PIN_CheckReadAccess((void *) ret_val);
+    return PIN_CheckReadAccess((void *) sign_extend(ret_val));
 }
 
 std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
@@ -101,6 +101,20 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
     return out;
 }
 
+int64_t FBZergContext::sign_extend(int64_t orig) const {
+    /* First check that the upper 4 bytes are all zero */
+    if ((orig >> 32) == 0) {
+        /* Get the int sign bit */
+        bool is_negative = (((orig & 0x00000000FFFFFFFF) >> 31) == 1);
+        /* Next extend the sign if needed */
+        if (is_negative) {
+            orig |= (0xFFFFFFFF00000000);
+        }
+    }
+
+    return orig;
+}
+
 bool FBZergContext::return_values_equal(const FBZergContext &ctx) const {
     if ((return_is_ptr() && !ctx.return_is_ptr()) ||
         (!return_is_ptr() && ctx.return_is_ptr())) {
@@ -116,23 +130,8 @@ bool FBZergContext::return_values_equal(const FBZergContext &ctx) const {
     }
 
     /* Force a sign extension as a heuristic for functions that return 32-bit values */
-    /* First check that the upper 4 bytes are all zero */
-    if ((this_ret_val >> 32) == 0) {
-        /* Get the int sign bit */
-        bool is_negative = (((this_ret_val & 0x00000000FFFFFFFF) >> 31) == 1);
-        /* Next extend the sign if needed */
-        if (is_negative) {
-            this_ret_val |= (0xFFFFFFFF00000000);
-        }
-    }
-
-    /* Repeat above */
-    if ((that_ret_val >> 32) == 0) {
-        bool is_negative = (((that_ret_val & 0x00000000FFFFFFFF) >> 31) == 1);
-        if (is_negative) {
-            that_ret_val |= (0xFFFFFFFF00000000);
-        }
-    }
+    this_ret_val = sign_extend(this_ret_val);
+    that_ret_val = sign_extend(that_ret_val);
 
     if ((this_ret_val < 0 && that_ret_val < 0) || (this_ret_val > 0 && that_ret_val > 0)) {
         return true;

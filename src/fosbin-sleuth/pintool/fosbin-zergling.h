@@ -132,6 +132,8 @@ protected:
 
 private:
     bool return_values_equal(const FBZergContext &ctx) const;
+
+    int64_t sign_extend(int64_t orig) const;
 };
 
 struct TaintedObject {
