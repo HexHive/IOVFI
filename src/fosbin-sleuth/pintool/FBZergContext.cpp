@@ -63,6 +63,17 @@ ADDRINT FBZergContext::get_value(REG reg) const {
 
 bool FBZergContext::return_is_ptr() const {
     ADDRINT ret_val = get_value(FBZergContext::return_reg);
+    if(ret_val == AllocatedArea::MAGIC_VALUE) {
+        std::cout << std::hex << ret_val << " is a pointer" << std::endl;
+        return true;
+    }
+
+    ret_val = sign_extend(ret_val);
+    std::cout << std::hex << ret_val << " is ";
+    if(!PIN_CheckReadAccess((void*)ret_val)) {
+        std::cout << "NOT ";
+    }
+    std::cout << "a pointer" << std::endl;
     return PIN_CheckReadAccess((void *) sign_extend(ret_val));
 }
 
