@@ -13,6 +13,7 @@
 #include "FuzzResults.h"
 #include "fosbin-zergling.h"
 #include <string.h>
+#include <csetjmp>
 
 #define USER_MSG_TYPE   1000
 
@@ -48,6 +49,9 @@ int cmd_out;
 int cmd_in;
 fd_set exe_fd_set_in;
 fd_set exe_fd_set_out;
+int ctx_count = 0;
+std::jmp_buf jump_buffer;
+bool setjmp_called = false;
 
 void wait_to_start();
 
@@ -1187,6 +1191,10 @@ zerg_cmd_result_t handle_set_ctx_cmd(ZergMessage &msg) {
     all_ctxs >> preContext;
     all_ctxs >> expectedContext;
     fuzzed_input = false;
+    ctx_count++;
+    std::stringstream logmsg;
+    logmsg << "Set context " << ctx_count;
+    log_message(logmsg);
     return ZCMD_OK;
 }
 

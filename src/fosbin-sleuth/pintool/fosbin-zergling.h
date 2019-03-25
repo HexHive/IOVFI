@@ -129,6 +129,7 @@ public:
 protected:
     std::map <REG, ADDRINT> values;
     std::map<REG, AllocatedArea *> pointer_registers;
+    char return_value;
 
 private:
     bool return_values_equal(const FBZergContext &ctx) const;

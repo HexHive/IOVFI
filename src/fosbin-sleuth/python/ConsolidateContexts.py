@@ -66,6 +66,7 @@ def consolidate_one_function(func_id):
 
     pin_run = PinRun(pin_loc, pintool_loc, func_id.binary, loader_loc, pipe_in, pipe_out, log_loc,
                      os.path.abspath(WORK_DIR), cmd_log_loc)
+    ctx_count = 0
     logger.debug("Created pin run for {}".format(run_name))
     for context in all_ctxs:
         # if context in existing_ctxs or func_id in desc_map[hash(context)]:
@@ -87,6 +88,8 @@ def consolidate_one_function(func_id):
                     logger.error("Could not set target for {}".format(run_name))
                     break
                 logger.debug("pin run started for {}".format(run_name))
+                ctx_count = 0
+            ctx_count += 1
 
             logger.debug("Sending reset command for {}".format(run_name))
             ack_msg = pin_run.send_reset_cmd(timeout=watchdog)
@@ -122,15 +125,15 @@ def consolidate_one_function(func_id):
                     pickle.dump(desc_map, desc_file)
                 lock_held = False
                 desc_lock.release()
-                logger.info("{} accepts {}".format(run_name, context.hexdigest()))
+                logger.info("{} accepts {} ({})".format(run_name, context.hexdigest(), ctx_count))
             else:
-                logger.info("{} rejects {}".format(run_name, context.hexdigest()))
+                logger.info("{} rejects {} ({})".format(run_name, context.hexdigest(), ctx_count))
         except AssertionError as e:
             if lock_held:
                 lock_held = False
                 desc_lock.release()
             logger.exception("Error for {}: {}".format(run_name, str(e)))
-            logger.info("{} rejects {}".format(run_name, context.hexdigest()))
+            logger.info("{} rejects {} ({})".format(run_name, context.hexdigest(), ctx_count))
             pin_run.stop()
             continue
         except Exception as e:

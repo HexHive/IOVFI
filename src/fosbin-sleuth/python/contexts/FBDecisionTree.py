@@ -152,9 +152,9 @@ class FBDecisionTree:
                 available_hashes.remove(used_hash)
 
         if len(available_hashes) == 0:
-            raise AssertionError("There are no available hashes to confirm {}({}) is {}".format(hex(func_desc.location),
-                                                                                                func_desc.name,
-                                                                                                possible_equivs))
+            raise RuntimeError("There are no available hashes to confirm {}({}) is {}".format(hex(func_desc.location),
+                                                                                              func_desc.name,
+                                                                                              possible_equivs))
         hash_sum = available_hashes[0]
         iovec = hashMap[hash_sum]
         return self._attempt_ctx(iovec, pin_run)
@@ -193,6 +193,11 @@ class FBDecisionTree:
                             pin_run.stop()
                             return idx
                         break
+                    except RuntimeError as e:
+                        # No available hashes, so just mark the identified leaf
+                        # as the identified leaf
+                        pin_run.stop()
+                        return idx
                     except Exception as e:
                         logger.exception("Error confirming leaf for {}: {}".format(func_desc, e))
                         break

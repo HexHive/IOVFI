@@ -104,6 +104,8 @@ def fuzz_one_function(func_desc):
                 if result is not None and result.msgtype == PinMessage.ZMSG_OK:
                     successful_runs += 1
                     successful_contexts.add(IOVec(result.data))
+                elif result is not None and len(result.data.getbuffer()) > 0:
+                    logger.info("Fuzzing run failed: {}".format(result.data.getvalue()))
             except TimeoutError as e:
                 logger.exception(str(e))
                 pin_run.stop()
