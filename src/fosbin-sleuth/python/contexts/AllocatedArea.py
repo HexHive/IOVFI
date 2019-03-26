@@ -1,13 +1,13 @@
 import struct
 
 AllocatedAreaMagic = 0xA110CA3D
-
+AllocatedAreaSize = 4096
 
 class AllocatedArea:
 
     def __init__(self, file):
         self.size = struct.unpack_from("Q", file.read(8))[0]
-        if self.size > 1024:
+        if self.size > AllocatedAreaSize:
             raise ValueError("{} ({})".format(self.size, hex(self.size)))
         self.mem_map = [None] * self.size
         for i in range(0, self.size):

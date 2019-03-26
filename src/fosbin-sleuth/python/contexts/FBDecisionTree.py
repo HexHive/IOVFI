@@ -157,6 +157,7 @@ class FBDecisionTree:
                                                                                               possible_equivs))
         hash_sum = available_hashes[0]
         iovec = hashMap[hash_sum]
+        print("Using iovec {}".format(hash(iovec)))
         return self._attempt_ctx(iovec, pin_run)
 
     def _get_hash(self, index):

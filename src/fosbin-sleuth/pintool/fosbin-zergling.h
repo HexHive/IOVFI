@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include "pin.H"
 
-#define DEFAULT_ALLOCATION_SIZE 256
+#define DEFAULT_ALLOCATION_SIZE 4096
 #define SHARED_LIBRARY_LOADER   "fb-load"
 
 struct X86Context {

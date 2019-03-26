@@ -50,8 +50,6 @@ int cmd_in;
 fd_set exe_fd_set_in;
 fd_set exe_fd_set_out;
 int ctx_count = 0;
-std::jmp_buf jump_buffer;
-bool setjmp_called = false;
 
 void wait_to_start();
 
@@ -324,8 +322,8 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
 //    std::cout << std::dec << diff << std::endl;
     if (fuzzing_run.size() > max_instructions) {
+        log_message("write_to_cmd 3");
         report_failure(ZCMD_TOO_MANY_INS);
-//        log_message("write_to_cmd 3");
         wait_to_start();
     }
 }
@@ -1179,6 +1177,13 @@ zerg_cmd_result_t handle_execute_cmd() {
 }
 
 zerg_cmd_result_t handle_reset_cmd() {
+//    if(setjmp_called) {
+//        log_message("Calling longjmp");
+//        std::longjmp(jump_buffer, 1);
+//    } else {
+//        log_message("longjmp not called");
+//    }
+//    redirect_control_to_main(&snapshot);
     return ZCMD_OK;
 }
 
@@ -1249,6 +1254,7 @@ zerg_cmd_result_t handle_cmd() {
 }
 
 void begin_execution(CONTEXT *ctx) {
+    std::stringstream log_msg;
     if (!sent_initial_ready) {
         PIN_SaveContext(ctx, &snapshot);
         for (REG reg : FBZergContext::argument_regs) {
@@ -1265,6 +1271,7 @@ void begin_execution(CONTEXT *ctx) {
 }
 
 void wait_to_start() {
+    std::stringstream log_msg;
     while (true) {
         log_message("Executor waiting for command");
         FD_SET(internal_pipe_in[0], &exe_fd_set_in);

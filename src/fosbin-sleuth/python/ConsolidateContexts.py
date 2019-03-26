@@ -99,6 +99,10 @@ def consolidate_one_function(func_id):
             resp_msg = pin_run.read_response(timeout=watchdog)
             if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
                 logger.error("Could not reset for {}".format(run_name))
+                if resp_msg is None:
+                    logger.error("Received no response back")
+                else:
+                    logger.error("Received {} message".format(PinMessage.names[resp_msg.msgtype]))
                 continue
 
             logger.debug("Sending set ctx command for {}".format(run_name))
