@@ -46,3 +46,35 @@ def get_incorrect(tree, guesses):
                 incorrect.add(fd.name)
 
     return incorrect
+
+
+def output_incorrect(tree, guesses):
+    incorrect = get_incorrect(tree, guesses)
+    tree_funcs = dict()
+    for idx in range(0, tree.size()):
+        if tree._is_leaf(idx):
+            equiv_classes = tree.get_equiv_classes(idx)
+            for ec in equiv_classes:
+                tree_funcs[ec.name] = idx
+
+    for fd, guess in guesses.items():
+        if fd.name in incorrect:
+            correct = list()
+            if fd.name in tree_funcs:
+                equiv_classes = tree.get_equiv_classes(tree_funcs[fd.name])
+                for ec in equiv_classes:
+                    correct.append(ec.name)
+                correct.sort()
+            else:
+                correct.append("UNKNOWN")
+
+            equiv_classes = tree.get_equiv_classes(guess)
+            if equiv_classes is not None:
+                names = list()
+                for ec in equiv_classes:
+                    names.append(ec.name)
+                names.sort()
+                print("{}: {} <--> {}".format(fd.name, " ".join(names), " ".join(correct)))
+            else:
+                print("{}: UNKNOWN <--> {}".format(fd.name, " ".join(correct)))
+            print()
