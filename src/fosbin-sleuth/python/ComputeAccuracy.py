@@ -63,7 +63,7 @@ def main():
                 if equiv_classes is None:
                     found = False
                     for pres_func_desc in dtree.get_func_descs():
-                        if lcs(pres_func_desc.name, func_desc.name) >= min(len(func_desc.name), args.lcs):
+                        if len(lcs(pres_func_desc.name, func_desc.name)) >= min(len(func_desc.name), args.lcs):
                             found = True
                             break
                     if found:
@@ -74,7 +74,7 @@ def main():
                 else:
                     found = False
                     for equiv_class in equiv_classes:
-                        if lcs(equiv_class.name, func_desc.name) >= min(len(func_desc.name), args.lcs):
+                        if len(lcs(equiv_class.name, func_desc.name)) >= min(len(func_desc.name), args.lcs):
                             found = True
                             break
                     if found:
