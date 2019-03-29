@@ -6,10 +6,31 @@ import statistics
 import sys
 
 
+def lcs(a, b):
+    # generate matrix of length of longest common subsequence for substrings of both words
+    lengths = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]
+    for i, x in enumerate(a):
+        for j, y in enumerate(b):
+            if x == y:
+                lengths[i + 1][j + 1] = lengths[i][j] + 1
+            else:
+                lengths[i + 1][j + 1] = max(lengths[i + 1][j], lengths[i][j + 1])
+
+    # read a substring from the matrix
+    result = ''
+    j = len(b)
+    for i in range(len(a) + 1):
+        if lengths[i][j] != lengths[i - 1][j]:
+            result += a[i - 1]
+
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
     parser.add_argument("-g", dest="guesses", help="/path/to/guess/list", default="guesses.txt")
+    parser.add_argument("-lcs", help="Longest common subsequence length", type=int, default=5)
 
     args = parser.parse_args()
 
@@ -42,7 +63,7 @@ def main():
                 if equiv_classes is None:
                     found = False
                     for pres_func_desc in dtree.get_func_descs():
-                        if pres_func_desc.name == func_desc.name:
+                        if lcs(pres_func_desc.name, func_desc.name) >= min(len(func_desc.name), args.lcs):
                             found = True
                             break
                     if found:
@@ -53,7 +74,7 @@ def main():
                 else:
                     found = False
                     for equiv_class in equiv_classes:
-                        if equiv_class.name == func_desc.name:
+                        if lcs(equiv_class.name, func_desc.name) >= min(len(func_desc.name), args.lcs):
                             found = True
                             break
                     if found:
