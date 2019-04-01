@@ -7,6 +7,44 @@ from .FunctionDescriptor import FunctionDescriptor
 from .IOVec import IOVec
 from .PinRun import PinMessage, PinRun
 
+WATCHDOG = 5.0
+
+
+class RunDesc:
+    def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog):
+        self.func_desc = func_desc
+        self.pin_loc = os.path.abspath(pin_loc)
+        self.pintool_loc = os.path.abspath(pintool_loc)
+        if loader_loc is not None:
+            self.loader_loc = os.path.abspath(loader_loc)
+        else:
+            self.loader_loc = None
+        self.work_dir = os.path.abspath(work_dir)
+        self.watchdog = watchdog
+
+
+class FuzzRunDesc(RunDesc):
+    def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog, fuzz_count):
+        RunDesc.__init__(func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog)
+        self.fuzz_count = fuzz_count
+
+
+class ConsolidationRunDesc(RunDesc):
+    def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog, contexts):
+        RunDesc.__init__(func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog)
+        self.contexts = contexts
+
+
+class FuzzRunResult:
+    def __init__(self, func_desc, io_vecs):
+        self.func_desc = func_desc
+        self.io_vecs = dict()
+        for io_vec in io_vecs:
+            self.io_vecs[hash(io_vec)] = io_vec
+
+    def __len__(self):
+        return len(self.io_vecs)
+
 
 def find_funcs(binary, target=None, ignored_funcs=None):
     target_is_name = True
@@ -33,31 +71,6 @@ def find_funcs(binary, target=None, ignored_funcs=None):
             if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
                 location_map[loc] = FunctionDescriptor(binary, name, loc)
     return location_map
-
-
-class FuzzRunDesc:
-    def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog, fuzz_count):
-        self.func_desc = func_desc
-        self.pin_loc = os.path.abspath(pin_loc)
-        self.pintool_loc = os.path.abspath(pintool_loc)
-        if loader_loc is not None:
-            self.loader_loc = os.path.abspath(loader_loc)
-        else:
-            self.loader_loc = None
-        self.work_dir = os.path.abspath(work_dir)
-        self.watchdog = watchdog
-        self.fuzz_count = fuzz_count
-
-
-class FuzzRunResult:
-    def __init__(self, func_desc, io_vecs):
-        self.func_desc = func_desc
-        self.io_vecs = dict()
-        for io_vec in io_vecs:
-            self.io_vecs[hash(io_vec)] = io_vec
-
-    def __len__(self):
-        return len(self.io_vecs)
 
 
 def fuzz_one_function(fuzz_desc):
@@ -146,7 +159,7 @@ def fuzz_one_function(fuzz_desc):
         return FuzzRunResult(fuzz_desc.func_desc, successful_contexts)
 
 
-def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, watchdog=5.0, fuzz_count=5,
+def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, watchdog=WATCHDOG, fuzz_count=5,
                    work_dir=os.path.abspath(os.path.join(os.curdir, "_work"))):
     fuzz_runs = list()
     io_vecs_dict = dict()
@@ -169,3 +182,128 @@ def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, wa
                 continue
 
     return io_vecs_dict
+
+
+def consolidate_one_function(consolidationRunDesc):
+    func_desc = consolidationRunDesc.func_desc
+
+    work_dir = os.path.join(consolidationRunDesc.work_dir, "consolidate")
+    log_dir = os.path.join("logs", "consolidate")
+
+    run_name = os.path.basename(func_desc.binary) + "." + func_desc.name + "." + str(func_desc.location)
+    logger.info("{} starting".format(run_name))
+    pipe_in = os.path.abspath(os.path.join(work_dir, run_name + ".in"))
+    pipe_out = os.path.abspath(os.path.join(work_dir, run_name + ".out"))
+    log_loc = os.path.abspath(os.path.join(work_dir, run_name + ".consol.log"))
+    cmd_log_loc = os.path.abspath(os.path.join(work_dir, run_name + ".consol.cmd.log"))
+
+    desc_map = dict()
+
+    if not os.path.exists(work_dir):
+        os.makedirs(work_dir, exist_ok=True)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+
+    pin_run = PinRun(consolidationRunDesc.pin_loc, consolidationRunDesc.pintool_loc, func_desc.binary,
+                     consolidationRunDesc.loader_loc, pipe_in, pipe_out, log_loc,
+                     os.path.abspath(work_dir), cmd_log_loc)
+    ctx_count = 0
+    logger.debug("Created pin run for {}".format(run_name))
+    for context in consolidationRunDesc.contexts:
+        try:
+            if not pin_run.is_running():
+                logger.debug("Starting pin_run for {}".format(run_name))
+                pin_run.stop()
+                pin_run.start(timeout=consolidationRunDesc.watchdog)
+                ack_msg = pin_run.send_set_target_cmd(func_desc.location, timeout=consolidationRunDesc.watchdog)
+                if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                    logger.error("Set target ACK not received for {}".format(run_name))
+                    break
+                resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
+                if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                    logger.error("Could not set target for {}".format(run_name))
+                    break
+                logger.debug("pin run started for {}".format(run_name))
+                ctx_count = 0
+            ctx_count += 1
+
+            logger.debug("Sending reset command for {}".format(run_name))
+            ack_msg = pin_run.send_reset_cmd(timeout=consolidationRunDesc.watchdog)
+            if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                logger.error("Reset ACK not received for {}".format(run_name))
+                continue
+            resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
+            if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                logger.error("Could not reset for {}".format(run_name))
+                if resp_msg is None:
+                    logger.error("Received no response back")
+                else:
+                    logger.error("Received {} message".format(PinMessage.names[resp_msg.msgtype]))
+                continue
+
+            logger.debug("Sending set ctx command for {}".format(run_name))
+            ack_msg = pin_run.send_set_ctx_cmd(context, timeout=consolidationRunDesc.watchdog)
+            if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                logger.error("Set Context ACK not received for {}".format(run_name))
+                continue
+            resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
+            if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                logger.error("Could not set context for {}".format(run_name))
+                continue
+
+            logger.debug("Sending execute command for {}".format(run_name))
+            ack_msg = pin_run.send_execute_cmd(timeout=consolidationRunDesc.watchdog)
+            if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                logger.error("Set Context ACK not received for {}".format(run_name))
+                continue
+            resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
+            if resp_msg is not None and resp_msg.msgtype == PinMessage.ZMSG_OK:
+                desc_map[hash(context)].add(func_desc)
+                logger.info("{} accepts {} ({})".format(run_name, context.hexdigest(), ctx_count))
+            else:
+                logger.info("{} rejects {} ({})".format(run_name, context.hexdigest(), ctx_count))
+        except AssertionError as e:
+            logger.exception("Error for {}: {}".format(run_name, str(e)))
+            logger.info("{} rejects {} ({})".format(run_name, context.hexdigest(), ctx_count))
+            pin_run.stop()
+            continue
+        except Exception as e:
+            logger.exception("Error for {}: {}".format(run_name, str(e)))
+            break
+
+    pin_run.stop()
+    del pin_run
+    if os.path.exists(pipe_in):
+        os.unlink(pipe_in)
+    if os.path.exists(pipe_out):
+        os.unlink(pipe_out)
+    logger.info("Finished {}".format(run_name))
+    return desc_map
+
+
+def consolidate_contexts(pin_loc, pintool_loc, loader_loc, num_threads, contexts_mapping, watchdog=WATCHDOG,
+                         work_dir=os.path.abspath(os.path.join(os.curdir, "_work"))):
+    desc_map = dict()
+
+    if not os.path.exists(work_dir):
+        os.makedirs(work_dir, exist_ok=True)
+
+    consolidation_runs = list()
+    for func_desc, contexts in contexts_mapping.items():
+        consolidation_runs.append(ConsolidationRunDesc(func_desc, pin_loc, pintool_loc, loader_loc, work_dir,
+                                                       watchdog, contexts))
+
+    with futures.ThreadPoolExecutor(max_workers=num_threads) as pool:
+        results = {pool.submit(fuzz_one_function, consolidation_run): consolidation_run for consolidation_run in
+                   consolidation_runs}
+        for result in futures.as_completed(results):
+            try:
+                consolidation_mapping = result.result()
+                for hash_sum, func_desc in consolidation_mapping.items():
+                    if hash_sum not in desc_map:
+                        desc_map[hash_sum] = list()
+                    desc_map[hash_sum].append(func_desc)
+            except Exception as e:
+                continue
+
+    return desc_map

@@ -27,6 +27,7 @@ def main():
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=4 * multiprocessing.cpu_count())
     parser.add_argument("-map", help="/path/to/context/map", default="hash.map")
     parser.add_argument("-count", help="Number of times to fuzz function", type=int, default=fuzz_count)
+    parser.add_argument('-o', '--out', help="/path/to/output/function/descriptions", default="out.desc")
 
     results = parser.parse_args()
 
@@ -92,6 +93,10 @@ def main():
     if not os.path.exists(os.path.dirname(hash_file)):
         os.makedirs(os.path.dirname(hash_file), exist_ok=True)
 
+    map_file = os.path.abspath(results.map)
+    if not os.path.exists(os.path.dirname(map_file)):
+        os.makedirs(os.path.dirname(map_file), exist_ok=True)
+
     args = list()
     logger.debug("Building fuzz target list")
     func_count = len(location_map)
@@ -108,12 +113,20 @@ def main():
         logger.info("Fuzzable functions: {}".format(len(fuzz_run_results)))
 
         context_hashes = dict()
+        desc_map = dict()
+
         for func_desc, fuzz_run_result in fuzz_run_results.items():
             for hash_sum, io_vec in fuzz_run_result.io_vecs.items():
                 context_hashes[hash_sum] = io_vec
+                if hash_sum not in desc_map:
+                    desc_map[hash_sum] = set()
+                desc_map[hash_sum].add(func_desc)
 
         with open(hash_file, "wb") as hashes_out:
             pickle.dump(context_hashes, hashes_out)
+
+        with open(map_file, "wb") as map_out:
+            pickle.dump(desc_map, map_out)
 
     else:
         logger.fatal("Could not find any functions to fuzz")
