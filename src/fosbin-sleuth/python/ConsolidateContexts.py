@@ -85,6 +85,7 @@ def main():
     for func_desc in consolidation_map.keys():
         all_func_descs.add(func_desc)
 
+    logger.info("Creating consolidation list")
     for hash_sum, io_vec in hash_map.items():
         consolidation_list = all_func_descs.copy()
         if hash_sum in desc_map:
@@ -93,6 +94,7 @@ def main():
 
         for func_desc in consolidation_list:
             consolidation_map[func_desc].add(io_vec)
+    logger.info("Done")
 
     logger.info("Number of unique IOVecs: {}".format(len(hash_map)))
     logger.info("Number of functions to test: {}".format(len(consolidation_map)))
