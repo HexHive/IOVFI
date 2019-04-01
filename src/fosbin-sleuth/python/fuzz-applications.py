@@ -5,31 +5,15 @@ import logging
 import multiprocessing
 import os
 import pickle
-import threading
-from concurrent import futures
 
 from contexts import binaryutils
 from contexts.FBLogging import logger
 
 fuzz_count = 5
 
-contexts = dict()
-contexts_hashes = dict()
-hash_lock = threading.RLock()
-
-
-def hash_contexts(run_name):
-    global contexts, contexts_hashes
-    run_ctxs = contexts[run_name]
-    for ctx in run_ctxs:
-        hashsum = hash(ctx)
-        hash_lock.acquire()
-        contexts_hashes[hashsum] = ctx
-        hash_lock.release()
-
 
 def main():
-    global fuzz_count, contexts, contexts_hashes
+    global fuzz_count
 
     parser = argparse.ArgumentParser(description="Generate input/output vectors")
     parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
@@ -41,7 +25,6 @@ def main():
     parser.add_argument("-log", help="/path/to/log/file", default="fuzz.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=4 * multiprocessing.cpu_count())
-    parser.add_argument("-ctx", help="/path/to/generated/contexts", default="fuzz.ctx")
     parser.add_argument("-map", help="/path/to/context/map", default="hash.map")
     parser.add_argument("-count", help="Number of times to fuzz function", type=int, default=fuzz_count)
 
@@ -106,15 +89,8 @@ def main():
     logger.debug("done")
 
     hash_file = os.path.abspath(results.map)
-    if os.path.exists(hash_file):
-        logger.debug("Reading context hashes")
-        with open(hash_file, "rb") as hashes:
-            contexts_hashes = pickle.load(hashes)
-        logger.debug("done")
-
-    context_file = os.path.abspath(results.ctx)
-    if not os.path.exists(os.path.dirname(context_file)):
-        os.makedirs(os.path.dirname(context_file), exist_ok=True)
+    if not os.path.exists(os.path.dirname(hash_file)):
+        os.makedirs(os.path.dirname(hash_file), exist_ok=True)
 
     args = list()
     logger.debug("Building fuzz target list")
@@ -125,20 +101,19 @@ def main():
     logger.info("Fuzzing {} targets".format(len(args)))
 
     if len(args) > 0:
-        contexts = binaryutils.fuzz_functions(args, pin_loc, pintool_loc, loader_loc, results.threads,
-                                              fuzz_count=results.count)
-
-        with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-            pool.map(hash_contexts, contexts.keys())
+        fuzz_run_results = binaryutils.fuzz_functions(args, pin_loc, pintool_loc, loader_loc, results.threads,
+                                                      fuzz_count=results.count)
 
         logger.info("{} has {} functions".format(results.bin, func_count))
-        logger.info("Fuzzable functions: {}".format(len(contexts)))
+        logger.info("Fuzzable functions: {}".format(len(fuzz_run_results)))
 
-        with open(context_file, "wb") as file:
-            pickle.dump(contexts, file)
+        context_hashes = dict()
+        for func_desc, fuzz_run_result in fuzz_run_results.items():
+            for hash_sum, io_vec in fuzz_run_result.io_vecs.items():
+                context_hashes[hash_sum] = io_vec
 
         with open(hash_file, "wb") as hashes_out:
-            pickle.dump(contexts_hashes, hashes_out)
+            pickle.dump(context_hashes, hashes_out)
 
     else:
         logger.fatal("Could not find any functions to fuzz")

@@ -40,10 +40,24 @@ class FuzzRunDesc:
         self.func_desc = func_desc
         self.pin_loc = os.path.abspath(pin_loc)
         self.pintool_loc = os.path.abspath(pintool_loc)
-        self.loader_loc = os.path.abspath(loader_loc)
+        if loader_loc is not None:
+            self.loader_loc = os.path.abspath(loader_loc)
+        else:
+            self.loader_loc = None
         self.work_dir = os.path.abspath(work_dir)
         self.watchdog = watchdog
         self.fuzz_count = fuzz_count
+
+
+class FuzzRunResult:
+    def __init__(self, func_desc, io_vecs):
+        self.func_desc = func_desc
+        self.io_vecs = dict()
+        for io_vec in io_vecs:
+            self.io_vecs[hash(io_vec)] = io_vec
+
+    def __len__(self):
+        return len(self.io_vecs)
 
 
 def fuzz_one_function(fuzz_desc):
@@ -129,7 +143,7 @@ def fuzz_one_function(fuzz_desc):
         if os.path.exists(pipe_out):
             os.unlink(pipe_out)
         del pin_run
-        return successful_contexts
+        return FuzzRunResult(fuzz_desc.func_desc, successful_contexts)
 
 
 def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, watchdog=5.0, fuzz_count=5,
@@ -148,9 +162,9 @@ def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, wa
         for result in futures.as_completed(results):
             fuzz_run = results[result]
             try:
-                io_vecs = result.result()
-                if len(io_vecs) > 0:
-                    io_vecs_dict[fuzz_run] = io_vecs
+                fuzz_run_result = result.result()
+                if len(fuzz_run_result) > 0:
+                    io_vecs_dict[fuzz_run.func_desc] = fuzz_run_result
             except Exception as e:
                 continue
 
