@@ -25,13 +25,15 @@ class RunDesc:
 
 class FuzzRunDesc(RunDesc):
     def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog, fuzz_count):
-        RunDesc.__init__(func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog)
+        RunDesc.__init__(self, func_desc=func_desc, pin_loc=pin_loc, pintool_loc=pintool_loc, loader_loc=loader_loc,
+                         work_dir=work_dir, watchdog=watchdog)
         self.fuzz_count = fuzz_count
 
 
 class ConsolidationRunDesc(RunDesc):
     def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog, contexts):
-        RunDesc.__init__(func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog)
+        RunDesc.__init__(self, func_desc=func_desc, pin_loc=pin_loc, pintool_loc=pintool_loc, loader_loc=loader_loc,
+                         work_dir=work_dir, watchdog=watchdog)
         self.contexts = contexts
 
 
