@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-import pickle
 import argparse
+import pickle
 import statistics
 import sys
 
@@ -30,7 +30,8 @@ def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
     parser.add_argument("-g", dest="guesses", help="/path/to/guess/list", default="guesses.txt")
-    parser.add_argument("-lcs", help="Longest common subsequence length", type=int, default=5)
+    parser.add_argument("-lcs", help="Longest common subsequence length",
+                        type=float, default=.9)
 
     args = parser.parse_args()
 
@@ -63,7 +64,7 @@ def main():
                 if equiv_classes is None:
                     found = False
                     for pres_func_desc in dtree.get_func_descs():
-                        if len(lcs(pres_func_desc.name, func_desc.name)) >= min(len(func_desc.name), args.lcs):
+                        if pres_func_desc.name == func_desc.name:
                             found = True
                             break
                     if found:
@@ -74,7 +75,9 @@ def main():
                 else:
                     found = False
                     for equiv_class in equiv_classes:
-                        if len(lcs(equiv_class.name, func_desc.name)) >= min(len(func_desc.name), args.lcs):
+                        subseq = lcs(equiv_class.name, func_desc.name)
+                        if float(len(subseq)) >= float(len(func_desc.name)) * args.lcs:
+                            print("{}, {}: {}".format(equiv_class.name, func_desc.name, subseq))
                             found = True
                             break
                     if found:

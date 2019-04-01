@@ -1,4 +1,5 @@
 import subprocess
+
 from .FunctionDescriptor import FunctionDescriptor
 
 
@@ -27,3 +28,4 @@ def find_funcs(binary, target=None, ignored_funcs=None):
             if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
                 location_map[loc] = FunctionDescriptor(binary, name, loc)
     return location_map
+
