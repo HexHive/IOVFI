@@ -79,7 +79,7 @@ def main():
     for hash_sum, func_descs in desc_map.items():
         for func_desc in func_descs:
             if func_desc not in consolidation_map:
-                consolidation_map[func_desc] = set()
+                consolidation_map[func_desc] = list()
 
     all_func_descs = set()
     for func_desc in consolidation_map.keys():
@@ -90,14 +90,10 @@ def main():
 
     logger.info("Creating consolidation list")
     for hash_sum, io_vec in hash_map.items():
-        logger.info("Processing {}".format(hash_sum))
-        consolidation_list = all_func_descs.copy()
         if hash_sum in desc_map:
-            for func_desc in desc_map[hash_sum]:
-                consolidation_list.discard(func_desc)
-
-        for func_desc in consolidation_list:
-            consolidation_map[func_desc].add(io_vec)
+            for func_desc in all_func_descs:
+                if func_desc not in desc_map[hash_sum]:
+                    consolidation_map[func_desc].append(io_vec)
     logger.info("Done")
 
     if len(consolidation_map) > 0:
