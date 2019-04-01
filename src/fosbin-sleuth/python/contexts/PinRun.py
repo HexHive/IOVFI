@@ -24,6 +24,7 @@ class PinMessage:
     ZMSG_RESET = 7
     ZMSG_READY = 8
     ZMSG_SET_SO_TGT = 9
+    ZMSG_GET_EXE_INFO = 10
     HEADER_FORMAT = "iQ"
 
     names = {
@@ -37,7 +38,8 @@ class PinMessage:
         ZMSG_SET_CTX: "ZMSG_SET_CTX",
         ZMSG_RESET: "ZMSG_RESET",
         ZMSG_READY: "ZMSG_READY",
-        ZMSG_SET_SO_TGT: "ZMSG_SET_SO_TGT"
+        ZMSG_SET_SO_TGT: "ZMSG_SET_SO_TGT",
+        ZMSG_GET_EXE_INFO: "ZMSG_GET_EXE_INFO"
     }
 
     def __init__(self, msgtype, data):
@@ -333,6 +335,9 @@ class PinRun:
 
     def send_reset_cmd(self, timeout=None):
         return self._send_cmd(PinMessage.ZMSG_RESET, None, timeout)
+
+    def send_get_exe_info_cmd(self, timeout=None):
+        return self._send_cmd(PinMessage.ZMSG_GET_EXE_INFO, None, timeout)
 
     def read_response(self, timeout=None):
         result = None

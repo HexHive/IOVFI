@@ -94,7 +94,8 @@ bool ZergCommandServer::is_valid_message_for_state(ZergMessage *msg) {
                     msg->type() == ZMSG_SET_SO_TGT ||
                     msg->type() == ZMSG_FUZZ ||
                     msg->type() == ZMSG_SET_CTX ||
-                    msg->type() == ZMSG_RESET);
+                    msg->type() == ZMSG_RESET ||
+                    msg->type() == ZMSG_GET_EXE_INFO);
         case ZERG_SERVER_FUZZING:
             return (msg->type() == ZMSG_RESET);
         case ZERG_SERVER_EXECUTING:
@@ -105,7 +106,8 @@ bool ZergCommandServer::is_valid_message_for_state(ZergMessage *msg) {
             return (msg->type() == ZMSG_RESET);
         case ZERG_SERVER_WAITING_TO_EXE:
             return (msg->type() == ZMSG_RESET ||
-                    msg->type() == ZMSG_EXECUTE);
+                    msg->type() == ZMSG_EXECUTE ||
+                    msg->type() == ZMSG_GET_EXE_INFO);
         default:
             return false;
     }

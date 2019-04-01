@@ -36,6 +36,22 @@ struct X86Context {
     ADDRINT get_reg_value(REG reg);
 };
 
+class ExecutionInfo {
+public:
+    ExecutionInfo();
+
+    ~ExecutionInfo();
+
+    friend std::ostream &operator<<(std::ostream &out, const ExecutionInfo &info);
+
+    void add_function(const std::string &name);
+
+    void reset();
+
+protected:
+    std::vector <std::string> called_functions;
+};
+
 class AllocatedArea {
 public:
     AllocatedArea();
@@ -182,6 +198,7 @@ void output_context(std::istream &in);
 #include "AllocatedArea.cpp"
 #include "FBZergContext.cpp"
 #include "ContextReader.cpp"
+#include "ExecutionInfo.cpp"
 
 #include "ZergCommand.h"
 #include "ZergCommandServer.h"

@@ -13,6 +13,7 @@ set(PINTOOL_SOURCES
         ZergCommand.h
         ZergCommand.cpp
         ZergMessage.cpp
+        ExecutionInfo.cpp
         makefile.rules.in
         makefile.in
         )

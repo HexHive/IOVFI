@@ -16,7 +16,8 @@ typedef enum zerg_message_type {
     ZMSG_SET_CTX,
     ZMSG_RESET,
     ZMSG_READY,
-    ZMSG_SET_SO_TGT
+    ZMSG_SET_SO_TGT,
+    ZMSG_GET_EXE_INFO
 } zerg_message_t;
 
 class ZergMessage {
@@ -47,6 +48,8 @@ public:
     const char *str() const;
 
     size_t add_contexts(const FBZergContext &pre, const FBZergContext &post);
+
+    size_t add_exe_info(const ExecutionInfo &info);
 };
 
 typedef enum zerg_cmd_result_t_ {
@@ -131,6 +134,13 @@ public:
 class SetSharedTargetCommand : public SetTargetCommand {
 public:
     SetSharedTargetCommand(ZergMessage &msg, ZergCommandServer &server);
+};
+
+class SendExecuteInfoCommand : public ZergCommand {
+public:
+    virtual zerg_cmd_result_t execute();
+
+    SendExecuteInfoCommand(ZergMessage &msg, ZergCommandServer &server);
 };
 
 #include "ZergCommand.cpp"

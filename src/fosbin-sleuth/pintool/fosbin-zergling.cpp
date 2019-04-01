@@ -34,6 +34,8 @@ FBZergContext currentContext;
 FBZergContext expectedContext;
 
 std::string shared_library_name;
+ExecutionInfo executionInfo;
+std::string current_function;
 
 std::vector<struct X86Context> fuzzing_run;
 std::ofstream log_out;
@@ -318,6 +320,12 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 
     struct X86Context tmp = {rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip, rbp};
     fuzzing_run.push_back(tmp);
+    std::string curr_name = RTN_FindNameByAddress(rip);
+    if (curr_name != current_function) {
+        current_function = curr_name;
+        executionInfo.add_function(current_function);
+    }
+
 //    tmp.prettyPrint(std::cout);
 //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
 //    std::cout << std::dec << diff << std::endl;
@@ -539,23 +547,6 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 //    preContext.prettyPrint();
     return true;
 }
-
-//BOOL catchOtherFault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo,
-//                     VOID *v) {
-//    if (curr_context_file_num < ContextsToUse.NumberOfValues()) {
-//        inputContextFailed++;
-//        totalInputContextsFailed++;
-//
-//        reset_context(ctx);
-//        currentContext = preContext;
-//        log_message("Input context failed...trying a new one");
-//        currentContext >> ctx;
-//
-//        return false;
-//    }
-//
-//    return true;
-//}
 
 void redirect_control_to_main(CONTEXT *ctx) {
     if (INS_Valid(first_ins)) {
@@ -1159,6 +1150,7 @@ zerg_cmd_result_t handle_fuzz_cmd() {
 
 zerg_cmd_result_t handle_execute_cmd() {
     fuzzing_run.clear();
+    executionInfo.reset();
     adjusted_stack = false;
     currentContext = preContext;
     currentContext >> &snapshot;
@@ -1177,14 +1169,17 @@ zerg_cmd_result_t handle_execute_cmd() {
 }
 
 zerg_cmd_result_t handle_reset_cmd() {
-//    if(setjmp_called) {
-//        log_message("Calling longjmp");
-//        std::longjmp(jump_buffer, 1);
-//    } else {
-//        log_message("longjmp not called");
-//    }
-//    redirect_control_to_main(&snapshot);
     return ZCMD_OK;
+}
+
+zerg_cmd_result_t handle_get_exe_info_cmd() {
+    ZergMessage msg(ZMSG_OK);
+    if (msg.add_exe_info(executionInfo) > 0) {
+        write_to_cmd_server(msg);
+        return ZCMD_OK;
+    } else {
+        return ZCMD_ERROR;
+    }
 }
 
 zerg_cmd_result_t handle_set_ctx_cmd(ZergMessage &msg) {
@@ -1241,6 +1236,10 @@ zerg_cmd_result_t handle_cmd() {
         case ZMSG_EXIT:
             log_message("Received ExitCommand");
             cleanup(0);
+            break;
+        case ZMSG_GET_EXE_INFO:
+            log_message("Received SendExecuteInfoCommand");
+            result = handle_get_exe_info_cmd();
             break;
         default:
             log_msg << "Unknown command: " << msg->str();
@@ -1340,6 +1339,8 @@ int main(int argc, char **argv) {
     if (PIN_Init(argc, argv)) {
         return usage();
     }
+
+    srand(time(NULL));
     if (!KnobLogFile.Value().empty()) {
         log_out.open(KnobLogFile.Value().c_str(), std::ios::app);
         if (!log_out) {
