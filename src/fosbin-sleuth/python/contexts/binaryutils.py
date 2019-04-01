@@ -296,7 +296,7 @@ def consolidate_contexts(pin_loc, pintool_loc, loader_loc, num_threads, contexts
                                                        watchdog, contexts))
 
     with futures.ThreadPoolExecutor(max_workers=num_threads) as pool:
-        results = {pool.submit(fuzz_one_function, consolidation_run): consolidation_run for consolidation_run in
+        results = {pool.submit(consolidate_one_function, consolidation_run): consolidation_run for consolidation_run in
                    consolidation_runs}
         for result in futures.as_completed(results):
             try:
