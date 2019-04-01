@@ -81,11 +81,15 @@ def main():
             if func_desc not in consolidation_map:
                 consolidation_map[func_desc] = set()
 
+    all_func_descs = set()
+    for func_desc in consolidation_map.keys():
+        all_func_descs.add(func_desc)
+
     for hash_sum, io_vec in hash_map.items():
-        consolidation_list = desc_map.keys()
+        consolidation_list = all_func_descs.copy()
         if hash_sum in desc_map:
             for func_desc in desc_map[hash_sum]:
-                consolidation_list.remove(func_desc)
+                consolidation_list.discard(func_desc)
 
         for func_desc in consolidation_list:
             consolidation_map[func_desc].add(io_vec)
