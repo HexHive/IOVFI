@@ -193,7 +193,6 @@ def consolidate_one_function(consolidationRunDesc):
     log_dir = os.path.join("logs", "consolidate")
 
     run_name = os.path.basename(func_desc.binary) + "." + func_desc.name + "." + str(func_desc.location)
-    logger.info("{} starting".format(run_name))
     pipe_in = os.path.abspath(os.path.join(work_dir, run_name + ".in"))
     pipe_out = os.path.abspath(os.path.join(work_dir, run_name + ".out"))
     log_loc = os.path.abspath(os.path.join(work_dir, run_name + ".consol.log"))
@@ -206,6 +205,7 @@ def consolidate_one_function(consolidationRunDesc):
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
 
+    logger.info("{} starting".format(run_name))
     pin_run = PinRun(consolidationRunDesc.pin_loc, consolidationRunDesc.pintool_loc, func_desc.binary,
                      consolidationRunDesc.loader_loc, pipe_in, pipe_out, log_loc,
                      os.path.abspath(work_dir), cmd_log_loc)
@@ -260,7 +260,7 @@ def consolidate_one_function(consolidationRunDesc):
                 continue
             resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
             if resp_msg is not None and resp_msg.msgtype == PinMessage.ZMSG_OK:
-                desc_map[hash(context)].add(func_desc)
+                desc_map[hash(context)] = func_desc
                 logger.info("{} accepts {} ({})".format(run_name, context.hexdigest(), ctx_count))
             else:
                 logger.info("{} rejects {} ({})".format(run_name, context.hexdigest(), ctx_count))
@@ -306,6 +306,7 @@ def consolidate_contexts(pin_loc, pintool_loc, loader_loc, num_threads, contexts
                         desc_map[hash_sum] = list()
                     desc_map[hash_sum].append(func_desc)
             except Exception as e:
+                logger.exception(e)
                 continue
 
     return desc_map
