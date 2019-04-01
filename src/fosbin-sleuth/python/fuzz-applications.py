@@ -93,7 +93,7 @@ def main():
     if not os.path.exists(os.path.dirname(hash_file)):
         os.makedirs(os.path.dirname(hash_file), exist_ok=True)
 
-    map_file = os.path.abspath(results.map)
+    map_file = os.path.abspath(results.out)
     if not os.path.exists(os.path.dirname(map_file)):
         os.makedirs(os.path.dirname(map_file), exist_ok=True)
 
