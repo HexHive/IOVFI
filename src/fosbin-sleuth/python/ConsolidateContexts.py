@@ -37,10 +37,6 @@ def main():
     if results.log is not None:
         logger.addHandler(logging.FileHandler(results.log, mode="w"))
 
-    if not os.path.exists(results.contexts):
-        logger.fatal("Could not find {}".format(results.contexts))
-        sys.exit(1)
-
     if not os.path.exists(results.map):
         logger.fatal("Could not find {}".format(results.map))
         sys.exit(1)

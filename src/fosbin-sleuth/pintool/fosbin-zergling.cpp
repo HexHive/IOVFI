@@ -187,7 +187,7 @@ size_t flip_bit_at_random_offset(uint8_t *buffer, size_t size) {
 }
 
 size_t set_interesting_byte_at_random_offset(uint8_t *buffer, size_t size) {
-    int8_t interestingvalues[] = {0, -1, 1, CHAR_MIN, CHAR_MAX};
+    int8_t interestingvalues[] = {0, -1, 1, CHAR_MIN, CHAR_MAX, 'A', 'a', '?', ' '};
 
     uint8_t *loc = find_byte_at_random_offset(buffer, size, sizeof(int8_t));
     int8_t value = interestingvalues[rand() % (sizeof(interestingvalues) / sizeof(int8_t))];
@@ -196,7 +196,7 @@ size_t set_interesting_byte_at_random_offset(uint8_t *buffer, size_t size) {
 }
 
 size_t set_interesting_word_at_random_offset(uint8_t *buffer, size_t size) {
-    int32_t interestingvalues[] = {0, -1, 1, INT_MIN, INT_MAX};
+    int32_t interestingvalues[] = {0, -1, 1, INT_MIN, INT_MAX, 'A', 'a', '?', ' '};
     if (size < sizeof(int32_t)) {
         return set_interesting_byte_at_random_offset(buffer, size);
     }
@@ -212,7 +212,7 @@ size_t set_interesting_dword_at_random_offset(uint8_t *buffer, size_t size) {
         return set_interesting_word_at_random_offset(buffer, size);
     }
 
-    int64_t interestingvalues[] = {0, -1, 1, LONG_MIN, LONG_MAX};
+    int64_t interestingvalues[] = {0, -1, 1, LONG_MIN, LONG_MAX, 'A', 'a', '?', ' '};
     int64_t value = interestingvalues[rand() % (sizeof(interestingvalues) / sizeof(int64_t))];
     int64_t *loc = (int64_t *) find_byte_at_random_offset(buffer, size, sizeof(int64_t));
     *loc = value;
