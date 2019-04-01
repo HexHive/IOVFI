@@ -87,6 +87,7 @@ def main():
 
     logger.info("Creating consolidation list")
     for hash_sum, io_vec in hash_map.items():
+        logger.info("Processing {}".format(hash_sum))
         consolidation_list = all_func_descs.copy()
         if hash_sum in desc_map:
             for func_desc in desc_map[hash_sum]:
