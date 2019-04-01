@@ -28,7 +28,7 @@ def main():
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count() * 8)
-    parser.add_argument("-timeout", help="Number of ms to wait for each context to finish completing", type=int,
+    parser.add_argument("-timeout", help="Number of ms to wait for each context to finish completing", type=float,
                         default=WATCHDOG)
     parser.add_argument("-singlectx")
 
