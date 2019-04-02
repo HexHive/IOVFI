@@ -15,7 +15,6 @@ class X86Context:
             if reg == AllocatedAreaMagic and idx < len(self.register_values) - 1:
                 self.allocated_areas.append(AllocatedArea(infile))
 
-
     def __hash__(self):
         hash_sum = 0
 
