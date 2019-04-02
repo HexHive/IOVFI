@@ -75,9 +75,10 @@ def main():
                 else:
                     found = False
                     for equiv_class in equiv_classes:
-                        subseq = lcs(equiv_class.name, func_desc.name)
-                        if float(len(subseq)) >= float(len(func_desc.name)) * args.lcs:
-                            print("{}, {}: {}".format(equiv_class.name, func_desc.name, subseq))
+                       # subseq = lcs(equiv_class.name, func_desc.name)
+                        if func_desc.name == equiv_class.name: 
+                       # if float(len(subseq)) >= float(len(func_desc.name)) * args.lcs:
+                       #     print("{}, {}: {}".format(equiv_class.name, func_desc.name, subseq))
                             found = True
                             break
                     if found:
