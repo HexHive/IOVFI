@@ -92,16 +92,20 @@ def main():
     for hash_sum, io_vec in hash_map.items():
         if hash_sum in desc_map:
             for func_desc in all_func_descs:
-                if func_desc not in desc_map[hash_sum]:
-                    consolidation_map[func_desc].append(io_vec)
+                consolidation_map[func_desc].append(io_vec)
+                # if func_desc not in desc_map[hash_sum]:
+                #     consolidation_map[func_desc].append(io_vec)
     logger.info("Done")
 
+    desc_map.clear()
     if len(consolidation_map) > 0:
         logger.info("Starting at {}".format(datetime.datetime.today()))
         new_desc_map = binaryutils.consolidate_contexts(pin_loc, pintool_loc, loader_loc, results.threads,
                                                         consolidation_map, watchdog=watchdog)
         for hash_sum, func_descs in new_desc_map.items():
             for func_desc in func_descs:
+                if hash_sum not in desc_map:
+                    desc_map[hash_sum] = set()
                 desc_map[hash_sum].add(func_desc)
 
         with open(desc_file_path, "wb") as file:
