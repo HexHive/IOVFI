@@ -1,3 +1,6 @@
+__nanosleep_nocancel
+__lll_lock_wait_private
+__lll_timedwait_tid
 dup2
 pipe2
 __pipe
@@ -5,7 +8,7 @@ mprotect
 unlink
 __lll_timedlock_wait
 __lll_lock_wait
-
+__pthread_cond_wait
 kill
 __kill
 _kill

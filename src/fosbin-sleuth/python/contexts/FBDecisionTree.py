@@ -1,8 +1,11 @@
+import logging
 import os
 import pickle
-from sklearn import tree, preprocessing
+import sys
+
 import numpy
-import logging
+from sklearn import tree, preprocessing
+
 from .FBLogging import logger
 from .PinRun import PinMessage, PinRun
 
@@ -136,29 +139,41 @@ class FBDecisionTree:
         hashMap = self.hashMaps[dtree_base_idx]
         labels = self.labels[dtree_base_idx]
 
-        available_hashes = list()
+        # available_hashes = list()
+        min_accepting = sys.maxsize
+        min_hashes = list()
         for hash_sum, accepting_funcs in descMap.items():
             for possible_equiv in possible_equivs:
                 if possible_equiv in accepting_funcs:
-                    available_hashes.append(hash_sum)
+                    if len(accepting_funcs) < min_accepting:
+                        # available_hashes.append(hash_sum)
+                        min_hashes.clear()
+                        min_accepting = len(accepting_funcs)
+                        min_hashes.append(hash_sum)
+                    elif len(accepting_funcs) == min_accepting:
+                        min_hashes.append(hash_sum)
 
-        used_labels = set()
-        for feature in dtree.tree_.feature:
-            if feature > 0:
-                used_labels.add(feature)
-        used_hashes = labels.inverse_transform(list(used_labels))
-        for used_hash in used_hashes:
-            if used_hash in available_hashes:
-                available_hashes.remove(used_hash)
+        # used_labels = set()
+        # for feature in dtree.tree_.feature:
+        #     if feature > 0:
+        #         used_labels.add(feature)
+        # used_hashes = labels.inverse_transform(list(used_labels))
+        # for used_hash in used_hashes:
+        #     if used_hash in available_hashes:
+        #         available_hashes.remove(used_hash)
+        #
+        # if len(available_hashes) == 0:
+        #     raise RuntimeError("There are no available hashes to confirm {}({}) is {}".format(hex(func_desc.location),
+        #                                                                                       func_desc.name,
+        #                                                                                       possible_equivs))
+        for hash_sum in min_hashes:
+            # hash_sum = available_hashes[0]
+            iovec = hashMap[hash_sum]
+            print("Using iovec {}".format(iovec.hexdigest()))
+            if not self._attempt_ctx(iovec, pin_run):
+                return False
 
-        if len(available_hashes) == 0:
-            raise RuntimeError("There are no available hashes to confirm {}({}) is {}".format(hex(func_desc.location),
-                                                                                              func_desc.name,
-                                                                                              possible_equivs))
-        hash_sum = available_hashes[0]
-        iovec = hashMap[hash_sum]
-        print("Using iovec {}".format(hash(iovec)))
-        return self._attempt_ctx(iovec, pin_run)
+        return True
 
     def _get_hash(self, index):
         base_dtree_index = self._find_dtree_idx(index)
@@ -206,7 +221,7 @@ class FBDecisionTree:
                 iovec = self._get_iovec(idx)
                 iovec_accepted = False
                 try:
-                    logger.debug("Trying iovec {}".format(idx))
+                    logger.debug("Trying iovec {} ({})".format(idx, iovec.hexdigest()))
                     iovec_accepted = self._attempt_ctx(iovec, pin_run)
                 except Exception as e:
                     logger.exception("Error testing iovec for {}: {}".format(str(func_desc), e))

@@ -12,24 +12,18 @@ from contexts import FBLogging, binaryutils
 
 logger = FBLogging.logger
 
-WATCHDOG = 0.5
-
 
 def main():
-    global WATCHDOG
-
     parser = argparse.ArgumentParser(description="Consolidate")
     parser.add_argument('-o', '--out', help="/path/to/output/function/descriptions", default="out.desc")
     parser.add_argument("-map", help="/path/to/context/map", default="hash.map")
     parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
     parser.add_argument("-ld", help="/path/to/fb-load")
-    parser.add_argument("-target", help="Address to target single function")
+    parser.add_argument("-target", help="Name of single function to target")
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count() * 8)
-    parser.add_argument("-timeout", help="Number of ms to wait for each context to finish completing", type=float,
-                        default=WATCHDOG)
     parser.add_argument("-singlectx")
 
     results = parser.parse_args()
@@ -40,8 +34,6 @@ def main():
     if not os.path.exists(results.map):
         logger.fatal("Could not find {}".format(results.map))
         sys.exit(1)
-
-    watchdog = results.timeout
 
     pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
     if not os.path.exists(pin_loc):
@@ -78,8 +70,9 @@ def main():
 
     for hash_sum, func_descs in desc_map.items():
         for func_desc in func_descs:
-            if func_desc not in consolidation_map:
-                consolidation_map[func_desc] = list()
+            if results.target is None or func_desc.name == results.target:
+                if func_desc not in consolidation_map:
+                    consolidation_map[func_desc] = list()
 
     all_func_descs = set()
     for func_desc in consolidation_map.keys():
@@ -97,11 +90,11 @@ def main():
                 #     consolidation_map[func_desc].append(io_vec)
     logger.info("Done")
 
-    desc_map.clear()
     if len(consolidation_map) > 0:
         logger.info("Starting at {}".format(datetime.datetime.today()))
         new_desc_map = binaryutils.consolidate_contexts(pin_loc, pintool_loc, loader_loc, results.threads,
-                                                        consolidation_map, watchdog=watchdog)
+                                                        consolidation_map)
+        desc_map.clear()
         for hash_sum, func_descs in new_desc_map.items():
             for func_desc in func_descs:
                 if hash_sum not in desc_map:

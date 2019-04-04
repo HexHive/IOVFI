@@ -48,6 +48,15 @@ def get_incorrect(tree, guesses):
     return incorrect
 
 
+def get_func_indices(tree):
+    tree_funcs = dict()
+    for idx in range(0, tree.size()):
+        if tree._is_leaf(idx):
+            for ec in tree.get_equiv_classes(idx):
+                tree_funcs[ec.name] = idx
+
+    return tree_funcs
+
 def output_incorrect(tree, guesses):
     incorrect = get_incorrect(tree, guesses)
     tree_funcs = dict()

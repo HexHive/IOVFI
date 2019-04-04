@@ -5,32 +5,26 @@
 ADDRINT AllocatedArea::MAGIC_VALUE = 0xA110CA3D;
 
 AllocatedArea::AllocatedArea() :
-        addr(0), malloc_addr(0) {
-//    std::cout << "AllocatedArea default constructor" << std::endl;
+        malloc_addr(0), lower_guard(0), upper_guard(0) {
     allocate_area(DEFAULT_ALLOCATION_SIZE);
-    std::memset((void *) addr, 0, DEFAULT_ALLOCATION_SIZE);
+    std::memset((void *) malloc_addr, 0, DEFAULT_ALLOCATION_SIZE);
 }
 
 AllocatedArea::AllocatedArea(const AllocatedArea &aa) :
-        addr(0), malloc_addr(0) {
-//    std::cout << "AllocatedArea copy constructor" << std::endl;
+        malloc_addr(0), lower_guard(0), upper_guard(0) {
     allocate_area(aa.size());
     copy_allocated_area(aa);
 }
 
 AllocatedArea::~AllocatedArea() {
-//    std::cout << "AllocatedArea destructor called. this = " << std::hex << (ADDRINT)this << std::endl;
-//    std::cout << "Freeing 0x" << std::hex << malloc_addr << std::endl;
     free((void *) malloc_addr);
-//    std::cout << "Freeing subareas" << std::endl;
     for (AllocatedArea *subarea : subareas) {
         delete subarea;
     }
-//    std::cout << "AllocatedArea destructor finished" << std::endl;
 }
 
 ADDRINT AllocatedArea::getAddr() const {
-    return malloc_addr;
+    return (ADDRINT) malloc_addr;
 }
 
 size_t AllocatedArea::size() const {
@@ -46,18 +40,14 @@ std::ostream &operator<<(std::ostream &out, class AllocatedArea *ctx) {
     char *c = (char *) ctx->malloc_addr;
     for (size_t i = 0; i < ctx->mem_map.size(); i++) {
         if (ctx->mem_map[i]) {
-//            std::cout << std::hex << AllocatedArea::MAGIC_VALUE << " ";
             out.write((const char *) &AllocatedArea::MAGIC_VALUE, sizeof(AllocatedArea::MAGIC_VALUE));
             i += sizeof(AllocatedArea::MAGIC_VALUE) - 1;
         } else {
-//            std::cout << std::setw(2) << ((int)c[i] & 0xff) << " ";
             out.write(&c[i], sizeof(char));
         }
     }
 
-//    std::cout << std::endl;
     for (AllocatedArea *subarea : ctx->subareas) {
-//        std::cout << "\t";
         out << subarea;
     }
 
@@ -65,7 +55,6 @@ std::ostream &operator<<(std::ostream &out, class AllocatedArea *ctx) {
 }
 
 std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
-//    std::cout << "AllocatedArea istream" << std::endl;
     for (AllocatedArea *subarea : ctx->subareas) {
         delete subarea;
     }
@@ -76,46 +65,37 @@ std::istream &operator>>(std::istream &in, class AllocatedArea *ctx) {
     uint64_t non_ptr_end = 0;
     size_t size;
     in.read((char *) &size, sizeof(size));
-//    std::cout << "Allocated Area size = " << std::dec << size << " bytes" << std::endl;
     ctx->allocate_area(size);
 
     for (size_t i = 0; i < size; i++) {
         char tmp;
         in.read((char *) &tmp, sizeof(tmp));
-//        std::cout << std::hex << ((int)tmp & 0xff);
         ctx->mem_map[i] = (tmp != 0);
         if (tmp == 0) {
             non_ptr_end++;
         } else {
             if (non_ptr_start != non_ptr_end) {
-//                std::cout << "Bytes " << std::dec << non_ptr_start << "-" << non_ptr_end - 1 << " are not pointers"
-//                          << std::endl;
             }
             non_ptr_start = i;
             non_ptr_end = non_ptr_start;
         }
     }
 
-//    std::cout << std::endl;
     char *c = (char *) ctx->malloc_addr;
     for (size_t i = 0; i < size; i++) {
         if (ctx->mem_map[i]) {
             ADDRINT magic;
             in.read((char *) &magic, sizeof(magic));
-//            std::cout << std::hex << magic << " ";
             if (magic != AllocatedArea::MAGIC_VALUE) {
                 log_error("Invalid AllocatedArea input!");
             }
             AllocatedArea *aa = new AllocatedArea();
             ctx->subareas.push_back(aa);
-//            std::cout << "Writing " << std::hex << (void*)aa->getAddr() << " to " << (void*)&c[i] << std::endl;
             i += sizeof(AllocatedArea::MAGIC_VALUE) - 1;
         } else {
             in.read(&c[i], sizeof(char));
-//            std::cout << std::hex << ((int)c[i] & 0xff) << " ";
         }
     }
-//    std::cout << std::endl;
 
     for (AllocatedArea *subarea : ctx->subareas) {
         in >> subarea;
@@ -177,18 +157,15 @@ void AllocatedArea::copy_allocated_area(const AllocatedArea &orig) {
             AllocatedArea *aa = new AllocatedArea(*orig.get_subarea(aa_num++));
             subareas.push_back(aa);
             ADDRINT *tmp = (ADDRINT * ) & this_ptr[i];
-//            std::cout << "copy_allocated_area setting " << std::hex << tmp << " to " << (void*)aa->getAddr() << std::endl;
             *tmp = (ADDRINT) aa->getAddr();
             i += sizeof(ADDRINT) - 1;
         } else {
-//            std::cout << "Byte " << std::dec << i << " is getting set to " << std::hex << ((int)that_ptr[i] & 0xff) << std::endl;
             this_ptr[i] = that_ptr[i];
         }
     }
 }
 
 AllocatedArea &AllocatedArea::operator=(const AllocatedArea &orig) {
-//    std::cout << "AllocatedArea copy" << std::endl;
     for (AllocatedArea *subarea : subareas) {
         delete subarea;
     }
@@ -199,17 +176,55 @@ AllocatedArea &AllocatedArea::operator=(const AllocatedArea &orig) {
     return *this;
 }
 
-void AllocatedArea::allocate_area(size_t size) {
-    if (malloc_addr) {
-        addr = (ADDRINT) realloc((void *) malloc_addr, size);
-    } else {
-        addr = (ADDRINT) malloc(size);
+void AllocatedArea::unmap_guard_pages() {
+    if (lower_guard > 0) {
+        munmap((void *) lower_guard, getpagesize());
     }
 
-    malloc_addr = addr;
-    mem_map.resize(size);
+    if (upper_guard > 0) {
+        munmap((void *) upper_guard, getpagesize());
+    }
+}
 
-//    std::cout << "Allocated " << std::dec << size << " bytes at " << std::hex << malloc_addr << std::endl;
+void AllocatedArea::allocate_area(size_t size) {
+    std::stringstream msg;
+    if (malloc_addr) {
+        unmap_guard_pages();
+        munmap((void *) malloc_addr, getpagesize());
+    }
+
+    if (size > getpagesize()) {
+        /* Too boku */
+        size = getpagesize();
+    }
+
+    lower_guard = (char *) mmap(nullptr, getpagesize(), PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (lower_guard < 0) {
+        msg << "lower_guard: " << strerror(errno);
+        log_message(msg);
+        goto error;
+    }
+    malloc_addr = (char *) mmap(lower_guard + getpagesize(), getpagesize(), PROT_READ | PROT_WRITE,
+                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (malloc_addr < 0) {
+        msg << "malloc_addr: " << strerror(errno);
+        log_message(msg);
+        goto error;
+    }
+    upper_guard = (char *) mmap(malloc_addr + getpagesize(), getpagesize(), PROT_NONE,
+                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (upper_guard < 0) {
+        msg << "upper_guard: " << strerror(errno);
+        log_message(msg);
+        goto error;
+    }
+
+    mem_map.resize(size);
+    return;
+
+    error:
+    unmap_guard_pages();
+    log_error("Could not memory map allocated area");
 }
 
 bool AllocatedArea::operator!=(const AllocatedArea &other) const {
@@ -272,7 +287,6 @@ void AllocatedArea::reset_non_ptrs(const AllocatedArea &aa) {
 }
 
 void AllocatedArea::setup_for_round(bool fuzz) {
-//    std::cout << "Resetting 0x" << std::hex << addr << " to " << (fuzz ? "random" : "zero") << std::endl;
     for (AllocatedArea *subarea : subareas) {
         subarea->setup_for_round(fuzz);
     }
@@ -287,21 +301,18 @@ void AllocatedArea::setup_for_round(bool fuzz) {
             write_size = 1;
             *curr = '\0';
         }
-//            std::cout << "Byte " << std::hex << (ADDRINT)curr << " set to " << ((int)*curr & 0xff) << std::endl;
         curr += write_size;
         i += write_size - 1;
     }
     for (size_t i = 0; i < mem_map.size(); i++) {
         if (mem_map[i]) {
             AllocatedArea *aa = subareas[pointer_count];
-//            std::cout << "Setting 0x" << (ADDRINT) curr << " to value 0x" << aa->getAddr() << std::endl;
             ADDRINT *ptr = (ADDRINT *) curr;
             *ptr = aa->getAddr();
             curr += sizeof(ADDRINT);
             i += sizeof(ADDRINT) - 1;
         }
     }
-//    std::cout << "Done" << std::endl;
 }
 
 void AllocatedArea::fuzz() {
@@ -309,7 +320,7 @@ void AllocatedArea::fuzz() {
 }
 
 bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
-    int64_t diff = faulting_addr - addr;
+    int64_t diff = faulting_addr - (ADDRINT) malloc_addr;
     std::stringstream ss;
 //    std::cout << "Faulting addr: 0x" << std::hex << faulting_addr << " diff = 0x" << diff << std::endl;
     if (diff > (int64_t) size()) {
@@ -330,23 +341,20 @@ bool AllocatedArea::fix_pointer(ADDRINT faulting_addr) {
         /* TODO: Implement resizing algorithm */
         return false;
     } else if (diff >= 0) {
-//        std::cout << "Current submember" << std::endl;
         /* Some memory address inside this area is a pointer, so add a
          * new AllocatedArea to this one's subareas
          */
         AllocatedArea *aa = new AllocatedArea();
         for (size_t i = 0; i < sizeof(ADDRINT); i++) {
-//            std::cout << "Byte " << std::dec << diff + i << " is marked a pointer" << std::endl;
             mem_map[diff + i] = true;
         }
         ADDRINT *addr_to_update = (ADDRINT * )((char *) malloc_addr + diff);
         *addr_to_update = aa->getAddr();
         subareas.push_back(aa);
-//        std::cout << "Fixed pointer" << std::endl;
         return true;
     } else {
         ss << "Something weird happened. faulting_addr = 0x" << std::hex << faulting_addr << " and addr = 0x"
-           << addr << std::endl;
+           << malloc_addr << std::endl;
         log_message(ss);
         return false;
     }

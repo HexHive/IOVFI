@@ -6,6 +6,7 @@
 #define FOSBIN_FOSBIN_ZERGLING_H
 
 #include <cstdlib>
+#include <sys/mman.h>
 #include "pin.H"
 
 #define DEFAULT_ALLOCATION_SIZE 4096
@@ -90,14 +91,15 @@ public:
     void prettyPrint(std::ostream &o, size_t depth) const;
 
 protected:
-    ADDRINT addr;
-    ADDRINT malloc_addr;
+    char *malloc_addr, *lower_guard, *upper_guard;
     std::vector<bool> mem_map;
     std::vector<AllocatedArea *> subareas;
 
     void copy_allocated_area(const AllocatedArea &orig);
 
     void allocate_area(size_t size);
+
+    void unmap_guard_pages();
 
     void setup_for_round(bool fuzz);
 };

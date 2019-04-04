@@ -8,6 +8,7 @@ from .IOVec import IOVec
 from .PinRun import PinMessage, PinRun
 
 WATCHDOG = 5.0
+MAX_RETRY_COUNT = 3
 
 
 class RunDesc:
@@ -136,20 +137,26 @@ def fuzz_one_function(fuzz_desc):
 
                 result = pin_run.read_response(timeout=fuzz_desc.watchdog)
                 if result is not None and result.msgtype == PinMessage.ZMSG_OK:
-                    successful_contexts.add(IOVec(result.data))
+                    io_vec = IOVec(result.data)
+                    logger.info("{} created {}".format(run_name, io_vec.hexdigest()))
+                    successful_contexts.add(io_vec)
                 elif result is not None and len(result.data.getbuffer()) > 0:
                     logger.info("Fuzzing run failed: {}".format(result.data.getvalue()))
             except TimeoutError as e:
-                logger.exception(str(e))
+                logger.debug(str(e))
                 pin_run.stop()
                 continue
             except AssertionError as e:
-                logger.exception(str(e))
+                logger.debug(str(e))
+                pin_run.stop()
+                continue
+            except KeyboardInterrupt:
+                logger.debug("{} received KeyboardInterrupt".format(run_name))
                 pin_run.stop()
                 continue
 
     except Exception as e:
-        logger.exception("Error for {}: {}".format(run_name, e))
+        logger.debug("Error for {}: {}".format(run_name, e))
     finally:
         logger.info("Finished {}".format(run_name))
         pin_run.stop()
@@ -210,8 +217,18 @@ def consolidate_one_function(consolidationRunDesc):
                      consolidationRunDesc.loader_loc, pipe_in, pipe_out, log_loc,
                      os.path.abspath(work_dir), cmd_log_loc)
     ctx_count = 0
+    retry_count = 0
+    idx = 0
     logger.debug("Created pin run for {}".format(run_name))
-    for context in consolidationRunDesc.contexts:
+    while idx < len(consolidationRunDesc.contexts):
+        context = consolidationRunDesc.contexts[idx]
+        if retry_count > MAX_RETRY_COUNT:
+            idx += 1
+            retry_count = 0
+            logger.error("{} failed to properly execute {}".format(run_name, context.hexdigest()))
+            continue
+
+        logger.info("{} testing {}".format(run_name, context.hexdigest()))
         try:
             if not pin_run.is_running():
                 logger.debug("Starting pin_run for {}".format(run_name))
@@ -232,45 +249,59 @@ def consolidate_one_function(consolidationRunDesc):
             logger.debug("Sending reset command for {}".format(run_name))
             ack_msg = pin_run.send_reset_cmd(timeout=consolidationRunDesc.watchdog)
             if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                pin_run.stop()
+                retry_count += 1
                 logger.error("Reset ACK not received for {}".format(run_name))
                 continue
             resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
             if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                pin_run.stop()
+                retry_count += 1
                 logger.error("Could not reset for {}".format(run_name))
                 if resp_msg is None:
-                    logger.error("Received no response back")
+                    logger.error("{} Received no response back".format(run_name))
                 else:
-                    logger.error("Received {} message".format(PinMessage.names[resp_msg.msgtype]))
+                    logger.error("{} Received {} message".format(run_name, PinMessage.names[resp_msg.msgtype]))
                 continue
 
             logger.debug("Sending set ctx command for {}".format(run_name))
             ack_msg = pin_run.send_set_ctx_cmd(context, timeout=consolidationRunDesc.watchdog)
             if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                pin_run.stop()
+                retry_count += 1
                 logger.error("Set Context ACK not received for {}".format(run_name))
                 continue
             resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
             if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                pin_run.stop()
+                retry_count += 1
                 logger.error("Could not set context for {}".format(run_name))
                 continue
 
             logger.debug("Sending execute command for {}".format(run_name))
             ack_msg = pin_run.send_execute_cmd(timeout=consolidationRunDesc.watchdog)
             if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                pin_run.stop()
+                retry_count += 1
                 logger.error("Set Context ACK not received for {}".format(run_name))
                 continue
+
             resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
             if resp_msg is not None and resp_msg.msgtype == PinMessage.ZMSG_OK:
                 desc_map[hash(context)] = func_desc
                 logger.info("{} accepts {} ({})".format(run_name, context.hexdigest(), ctx_count))
             else:
                 logger.info("{} rejects {} ({})".format(run_name, context.hexdigest(), ctx_count))
+            idx += 1
+            retry_count = 0
         except AssertionError as e:
-            logger.exception("Error for {}: {}".format(run_name, str(e)))
+            logger.debug("Error for {}: {}".format(run_name, str(e)))
             logger.info("{} rejects {} ({})".format(run_name, context.hexdigest(), ctx_count))
+            idx += 1
             pin_run.stop()
             continue
         except Exception as e:
-            logger.exception("Error for {}: {}".format(run_name, str(e)))
+            logger.debug("Error for {}: {}".format(run_name, str(e)))
             break
 
     pin_run.stop()
