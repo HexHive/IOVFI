@@ -298,7 +298,9 @@ VOID fuzz_registers() {
         AllocatedArea *aa = preContext.find_allocated_area(reg);
         if (aa == nullptr) {
             ADDRINT value = preContext.get_value(reg);
-            fuzz_strategy((uint8_t * ) & value, sizeof(value));
+            do {
+                fuzz_strategy((uint8_t * ) & value, sizeof(value));
+            } while (PIN_CheckReadAccess((void *) value) || PIN_CheckWriteAccess((void *) value));
             preContext.add(reg, value);
         } else {
             aa->fuzz();
@@ -319,6 +321,9 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 //    std::cout << "Func " << RTN_FindNameByAddress(rip) << ": " << INS_Disassemble(INS_FindByAddress(rip)) << std::endl;
 
     struct X86Context tmp = {rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip, rbp};
+    //std::cout << "RDI is " << (PIN_CheckReadAccess((void*)rdi) ? "" : "NOT ") << "readable. "
+    //    << "RDI is " << (PIN_CheckWriteAccess((void*)rdi) ? "" : "NOT ") << "writeable." << std::endl;
+    
     fuzzing_run.push_back(tmp);
     std::string curr_name = RTN_FindNameByAddress(rip);
     if (curr_name != current_function) {
@@ -326,11 +331,11 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
         executionInfo.add_function(current_function);
     }
 
-//    tmp.prettyPrint(std::cout);
+    //tmp.prettyPrint(std::cout);
 //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
 //    std::cout << std::dec << diff << std::endl;
     if (fuzzing_run.size() > max_instructions) {
-        log_message("write_to_cmd 3");
+//        log_message("write_to_cmd 3");
         report_failure(ZCMD_TOO_MANY_INS);
         wait_to_start();
     }
@@ -1190,6 +1195,7 @@ zerg_cmd_result_t handle_set_ctx_cmd(ZergMessage &msg) {
 
     all_ctxs >> preContext;
     all_ctxs >> expectedContext;
+
     fuzzed_input = false;
     ctx_count++;
     std::stringstream logmsg;

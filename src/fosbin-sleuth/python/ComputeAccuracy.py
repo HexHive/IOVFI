@@ -23,7 +23,7 @@ def lcs(a, b):
         if lengths[i][j] != lengths[i - 1][j]:
             result += a[i - 1]
 
-    return result
+    return result[1:]
 
 
 def main():
@@ -68,21 +68,27 @@ def main():
                             found = True
                             break
                     if found:
+                        print("Incorrect unknown: {}".format(func_desc.name))
+                        print()
                         false_neg.append(func_desc)
                         false_pos.append(func_desc)
                     else:
                         true_neg.append(func_desc)
                 else:
                     found = False
+                    names = list()
                     for equiv_class in equiv_classes:
-                        subseq = lcs(equiv_class.name, func_desc.name)
-                        if float(len(subseq)) >= float(len(func_desc.name)) * args.lcs:
+                        names.append(equiv_class.name)
+                        if func_desc.name in equiv_class.name:
                             # print("{}, {}: {}".format(equiv_class.name, func_desc.name, subseq))
                             found = True
                             break
+                    names.sort()
                 if found:
                     true_pos.append(func_desc)
                 else:
+                    print("Incorrect label: {} -> {}".format(func_desc.name, " ".join(names)))
+                    print()
                     false_pos.append(func_desc)
                     false_neg.append(func_desc)
 

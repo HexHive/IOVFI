@@ -1,7 +1,6 @@
 import logging
 import os
 import pickle
-import sys
 
 import numpy
 from sklearn import tree, preprocessing
@@ -13,6 +12,7 @@ from .PinRun import PinMessage, PinRun
 class FBDecisionTree:
     UNKNOWN_FUNC = -1
     WATCHDOG = 1.0
+    MAX_CONFIRM = 1
 
     def _log(self, msg, level=logging.INFO):
         logger.log(level, msg)
@@ -122,58 +122,66 @@ class FBDecisionTree:
 
         return equiv_classes
 
-    def _confirm_leaf(self, func_desc, index, pin_run):
+    def _confirm_leaf(self, func_desc, index, pin_run, max_iovecs=MAX_CONFIRM):
         possible_equivs = self.get_equiv_classes(index)
         equiv_class_names = set()
         for ec in possible_equivs:
             equiv_class_names.add(ec.name)
 
-        self._log("Confirming {}({}) is {}".format(func_desc.name, hex(func_desc.location),
-                                                   " ".join(equiv_class_names)))
-        if not self._is_leaf(index):
-            raise AssertionError("{} is not a leaf".format(index))
+        try:
+            self._log("Confirming {}({}) is {}".format(func_desc.name, hex(func_desc.location),
+                                                       " ".join(equiv_class_names)))
+            if not self._is_leaf(index):
+                raise AssertionError("{} is not a leaf".format(index))
 
-        dtree_base_idx = self._find_dtree_idx(index)
-        dtree = self.dtrees[dtree_base_idx]
-        descMap = self.descMaps[dtree_base_idx]
-        hashMap = self.hashMaps[dtree_base_idx]
-        labels = self.labels[dtree_base_idx]
+            dtree_base_idx = self._find_dtree_idx(index)
+            dtree = self.dtrees[dtree_base_idx]
+            descMap = self.descMaps[dtree_base_idx]
+            hashMap = self.hashMaps[dtree_base_idx]
+            labels = self.labels[dtree_base_idx]
 
-        # available_hashes = list()
-        min_accepting = sys.maxsize
-        min_hashes = list()
-        for hash_sum, accepting_funcs in descMap.items():
-            for possible_equiv in possible_equivs:
-                if possible_equiv in accepting_funcs:
-                    if len(accepting_funcs) < min_accepting:
-                        # available_hashes.append(hash_sum)
-                        min_hashes.clear()
-                        min_accepting = len(accepting_funcs)
-                        min_hashes.append(hash_sum)
-                    elif len(accepting_funcs) == min_accepting:
-                        min_hashes.append(hash_sum)
+            # available_hashes = list()
 
-        # used_labels = set()
-        # for feature in dtree.tree_.feature:
-        #     if feature > 0:
-        #         used_labels.add(feature)
-        # used_hashes = labels.inverse_transform(list(used_labels))
-        # for used_hash in used_hashes:
-        #     if used_hash in available_hashes:
-        #         available_hashes.remove(used_hash)
-        #
-        # if len(available_hashes) == 0:
-        #     raise RuntimeError("There are no available hashes to confirm {}({}) is {}".format(hex(func_desc.location),
-        #                                                                                       func_desc.name,
-        #                                                                                       possible_equivs))
-        for hash_sum in min_hashes:
-            # hash_sum = available_hashes[0]
-            iovec = hashMap[hash_sum]
-            print("Using iovec {}".format(iovec.hexdigest()))
-            if not self._attempt_ctx(iovec, pin_run):
-                return False
+            lengths = list()
+            for hash_sum, accepting_funcs in descMap.items():
+                for possible_equiv in possible_equivs:
+                    if possible_equiv in accepting_funcs:
+                        lengths.append((hash_sum, len(accepting_funcs)))
+                        continue
+                        # if len(accepting_funcs) < min_accepting:
+                        #     # available_hashes.append(hash_sum)
+                        #     min_hashes.clear()
+                        #     min_accepting = len(accepting_funcs)
+                        #     min_hashes.append(hash_sum)
+                        # elif len(accepting_funcs) == min_accepting:
+                        #     min_hashes.append(hash_sum)
 
-        return True
+            # used_labels = set()
+            # for feature in dtree.tree_.feature:
+            #     if feature > 0:
+            #         used_labels.add(feature)
+            # used_hashes = labels.inverse_transform(list(used_labels))
+            # for used_hash in used_hashes:
+            #     if used_hash in available_hashes:
+            #         available_hashes.remove(used_hash)
+            #
+            # if len(available_hashes) == 0:
+            #     raise RuntimeError("There are no available hashes to confirm {}({}) is {}".format(hex(func_desc.location),
+            #                                                                                       func_desc.name,
+            #                                                                                       possible_equivs))
+
+            sorted_iovecs = sorted(lengths, key=lambda length: length[1])
+            for hash_sum in sorted_iovecs[0:min(len(sorted_iovecs), max_iovecs)]:
+                # hash_sum = available_hashes[0]
+                iovec = hashMap[hash_sum[0]]
+                print("Using iovec {}".format(iovec.hexdigest()))
+                if not self._attempt_ctx(iovec, pin_run):
+                    return False
+
+            return True
+        except Exception as e:
+            logger.exception(e)
+            raise e
 
     def _get_hash(self, index):
         base_dtree_index = self._find_dtree_idx(index)
@@ -187,7 +195,7 @@ class FBDecisionTree:
         base_dtree_index = self._find_dtree_idx(index)
         return self.hashMaps[base_dtree_index][hash]
 
-    def identify(self, func_desc, pin_loc, pintool_loc, loader_loc=None, cwd=os.getcwd()):
+    def identify(self, func_desc, pin_loc, pintool_loc, loader_loc=None, cwd=os.getcwd(), max_confirm=MAX_CONFIRM):
         pin_run = PinRun(pin_loc, pintool_loc, func_desc.binary, loader_loc, cwd=cwd)
 
         idx = 0
@@ -205,7 +213,7 @@ class FBDecisionTree:
 
                 if self._is_leaf(idx):
                     try:
-                        if self._confirm_leaf(func_desc, idx, pin_run):
+                        if self._confirm_leaf(func_desc, idx, pin_run, max_confirm):
                             pin_run.stop()
                             return idx
                         break

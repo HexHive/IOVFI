@@ -193,7 +193,7 @@ void AllocatedArea::allocate_area(size_t size) {
         munmap((void *) malloc_addr, getpagesize());
     }
 
-    if (size > getpagesize()) {
+    if (size > (size_t) getpagesize()) {
         /* Too boku */
         size = getpagesize();
     }
@@ -219,6 +219,10 @@ void AllocatedArea::allocate_area(size_t size) {
         goto error;
     }
 
+    msg << "lower_guard: " << std::hex << lower_guard
+        << "malloc_addr: " << std::hex << malloc_addr
+        << "upper_guard: " << std::hex << upper_guard;
+    log_message(msg);
     mem_map.resize(size);
     return;
 

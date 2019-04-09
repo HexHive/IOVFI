@@ -340,9 +340,9 @@ class PinRun:
         return self._send_cmd(PinMessage.ZMSG_GET_EXE_INFO, None, timeout)
 
     def clear_response_pipe(self):
-        resp = self.read_response(1)
+        resp = self.read_response(0.1)
         while resp is not None:
-            resp = self.read_response(1)
+            resp = self.read_response(0.1)
 
     def get_executed_functions(self, timeout=None):
         self.clear_response_pipe()

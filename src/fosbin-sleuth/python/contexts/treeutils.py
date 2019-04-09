@@ -24,28 +24,34 @@ def diff_two_guess_sets(guesses0, guesses1):
     return missing_in_0, missing_in_1, differing
 
 
-def get_incorrect(tree, guesses):
-    incorrect = set()
+def get_evaluation(tree, guesses):
     func_names = set()
+    true_pos = set()
+    true_neg = set()
+    incorrect = set()
     for fd in tree.get_func_descs():
         func_names.add(fd.name)
 
-    for fd, idx in guesses.items():
+    for func_desc, idx in guesses.items():
         equiv_class = tree.get_equiv_classes(idx)
-
         if equiv_class is not None:
             found = False
             for ec in equiv_class:
-                if ec.name == fd.name:
+                if ec.name == func_desc.name:
                     found = True
                     break
-            if not found:
-                incorrect.add(fd.name)
-        else:
-            if fd.name in func_names:
-                incorrect.add(fd.name)
 
-    return incorrect
+            if found:
+                true_pos.add(func_desc.name)
+            else:
+                incorrect.add(func_desc.name)
+        else:
+            if func_desc.name in func_names:
+                incorrect.add(func_desc.name)
+            else:
+                true_neg.add(func_desc.name)
+
+    return true_pos, true_neg, incorrect
 
 
 def get_func_indices(tree):
@@ -57,8 +63,9 @@ def get_func_indices(tree):
 
     return tree_funcs
 
+
 def output_incorrect(tree, guesses):
-    incorrect = get_incorrect(tree, guesses)
+    true_pos, true_neg, incorrect = get_evaluation(tree, guesses)
     tree_funcs = dict()
     for idx in range(0, tree.size()):
         if tree._is_leaf(idx):

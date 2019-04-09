@@ -24,6 +24,7 @@ def main():
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count() * 8)
+    parser.add_argument("-ignore", help="/path/to/ignored/functions")
     parser.add_argument("-singlectx")
 
     results = parser.parse_args()
@@ -68,11 +69,30 @@ def main():
 
     consolidation_map = dict()
 
+    binaries = set()
     for hash_sum, func_descs in desc_map.items():
         for func_desc in func_descs:
+            binaries.add(func_desc.binary)
             if results.target is None or func_desc.name == results.target:
                 if func_desc not in consolidation_map:
                     consolidation_map[func_desc] = list()
+
+    ignored_funcs = set()
+    if results.ignore is not None:
+        logger.debug("Reading ignored functions")
+        with open(results.ignore) as f:
+            for line in f.readlines():
+                line = line.strip()
+                ignored_funcs.add(line)
+        logger.debug("done")
+
+    for binary in binaries:
+        logger.info("Finding functions in {}".format(binary))
+        location_map = binaryutils.find_funcs(binary, ignored_funcs=ignored_funcs)
+        for loc, func_desc in location_map.items():
+            if func_desc not in consolidation_map:
+                logger.info("Adding {}".format(func_desc.name))
+                consolidation_map[func_desc] = list()
 
     all_func_descs = set()
     for func_desc in consolidation_map.keys():
@@ -84,10 +104,13 @@ def main():
     logger.info("Creating consolidation list")
     for hash_sum, io_vec in hash_map.items():
         if hash_sum in desc_map:
-            for func_desc in all_func_descs:
+            if results.singlectx is None:
+                for func_desc in all_func_descs:
+                    consolidation_map[func_desc].append(io_vec)
+                    # if func_desc not in desc_map[hash_sum]:
+                    #     consolidation_map[func_desc].append(io_vec)
+            elif results.singlectx is not None and results.singlectx == io_vec.hexdigest():
                 consolidation_map[func_desc].append(io_vec)
-                # if func_desc not in desc_map[hash_sum]:
-                #     consolidation_map[func_desc].append(io_vec)
     logger.info("Done")
 
     if len(consolidation_map) > 0:

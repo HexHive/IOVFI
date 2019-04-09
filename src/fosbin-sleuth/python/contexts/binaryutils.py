@@ -9,6 +9,7 @@ from .PinRun import PinMessage, PinRun
 
 WATCHDOG = 5.0
 MAX_RETRY_COUNT = 3
+MAX_ATTEMPTS = 100
 
 
 class RunDesc:
@@ -25,10 +26,12 @@ class RunDesc:
 
 
 class FuzzRunDesc(RunDesc):
-    def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog, fuzz_count):
+    def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog, fuzz_count,
+                 attempt_count=MAX_ATTEMPTS):
         RunDesc.__init__(self, func_desc=func_desc, pin_loc=pin_loc, pintool_loc=pintool_loc, loader_loc=loader_loc,
                          work_dir=work_dir, watchdog=watchdog)
         self.fuzz_count = fuzz_count
+        self.attempt_count = attempt_count
 
 
 class ConsolidationRunDesc(RunDesc):
@@ -101,8 +104,14 @@ def fuzz_one_function(fuzz_desc):
     pin_run = PinRun(fuzz_desc.pin_loc, fuzz_desc.pintool_loc, binary, fuzz_desc.loader_loc, pipe_in=pipe_in,
                      pipe_out=pipe_out, log_loc=log_out, cwd=fuzz_desc.work_dir, cmd_log_loc=cmd_log)
     logger.debug("Done")
+    fuzz_count = 0
+    attempts = 0
     try:
-        for x in range(fuzz_desc.fuzz_count):
+        while fuzz_count < fuzz_desc.fuzz_count:
+            attempts += 1
+            if attempts > fuzz_desc.attempt_count:
+                raise RuntimeError("Too many attempts for {}".format(run_name))
+
             try:
                 if not pin_run.is_running():
                     logger.debug("Starting PinRun for {}".format(run_name))
@@ -138,8 +147,10 @@ def fuzz_one_function(fuzz_desc):
                 result = pin_run.read_response(timeout=fuzz_desc.watchdog)
                 if result is not None and result.msgtype == PinMessage.ZMSG_OK:
                     io_vec = IOVec(result.data)
-                    logger.info("{} created {}".format(run_name, io_vec.hexdigest()))
                     successful_contexts.add(io_vec)
+                    fuzz_count += 1
+                    logger.info("{} created {} ({} of {})".format(run_name, io_vec.hexdigest(), fuzz_count,
+                                                                  fuzz_desc.fuzz_count))
                 elif result is not None and len(result.data.getbuffer()) > 0:
                     logger.info("Fuzzing run failed: {}".format(result.data.getvalue()))
             except TimeoutError as e:
