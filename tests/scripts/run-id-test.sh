@@ -5,6 +5,9 @@ if [[ $# != 4 ]]; then
 	exit
 fi
 
+echo "$0 $1 $2 $3 $4" > cmd.txt
+echo "Starting at `date`" >> cmd.txt
+
 DATA_DIR=$(realpath $1)
 PIN=$(realpath $2)
 PINTOOL=$(realpath $3)
@@ -22,3 +25,5 @@ for test in $(find $TESTS -type f -executable); do
 	$cmd
 	cd ..
 done
+
+echo "Ended at `date`" >> cmd.txt
