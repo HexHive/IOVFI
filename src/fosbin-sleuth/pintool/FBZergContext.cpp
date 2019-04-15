@@ -42,6 +42,7 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
 
     size_t syscall_count = 0;
     in.read((char *) &syscall_count, sizeof(syscall_count));
+    ctx.system_calls.clear();
     while (syscall_count > 0) {
         ADDRINT syscall;
         in.read((char *) &syscall, sizeof(syscall));
