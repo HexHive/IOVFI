@@ -30,7 +30,7 @@ def main():
                     mislabels[mislabel] = 0
                 mislabels[mislabel] += 1
 
-    sorted_list = sorted(mislabels.items(), key=lambda item: item[1])
+    sorted_list = sorted(mislabels.items(), key=lambda item: item[1], reverse=True)
     for idx in range(0, min(len(sorted_list), args.out_count)):
         print("{}: {}".format(sorted_list[idx][0], sorted_list[idx][1]))
 
