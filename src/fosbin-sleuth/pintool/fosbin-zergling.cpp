@@ -36,6 +36,7 @@ FBZergContext expectedContext;
 std::string shared_library_name;
 ExecutionInfo executionInfo;
 std::string current_function;
+std::set <ADDRINT> syscalls;
 
 std::vector<struct X86Context> fuzzing_run;
 std::ofstream log_out;
@@ -1017,6 +1018,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 
 void report_success(CONTEXT *ctx, THREADID tid) {
     currentContext << ctx;
+    currentContext.set_syscalls(syscalls);
 //    currentContext.prettyPrint();
 
 //    log_message("write_to_cmd 8");
@@ -1340,6 +1342,10 @@ VOID FindMain(IMG img, VOID *v) {
     }
 }
 
+void track_syscalls(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, void *v) {
+    syscalls.insert(PIN_GetSyscallNumber(ctx, std));
+}
+
 int main(int argc, char **argv) {
     PIN_InitSymbols();
     if (PIN_Init(argc, argv)) {
@@ -1396,6 +1402,7 @@ int main(int argc, char **argv) {
 
     IMG_AddInstrumentFunction(FindMain, argv[argc - 1]);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
+    PIN_AddSyscallEntryFunction(track_syscalls, nullptr);
     PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, nullptr);
 
     PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);

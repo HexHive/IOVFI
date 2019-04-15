@@ -15,6 +15,11 @@ class X86Context:
             if reg == AllocatedAreaMagic and idx < len(self.register_values) - 1:
                 self.allocated_areas.append(AllocatedArea(infile))
 
+        syscall_count = struct.unpack_from('N', infile.read(struct.calcsize('N')))[0]
+        self.syscalls = set()
+        for idx in range(0, syscall_count):
+            self.syscalls.add(struct.unpack_from('Q', infile.read(struct.calcsize('Q')))[0])
+
     def __hash__(self):
         hash_sum = 0
 
@@ -23,6 +28,8 @@ class X86Context:
 
         for area in self.allocated_areas:
             hash_sum = hash((hash_sum, area))
+
+        hash_sum = hash((hash_sum, self.syscalls))
 
         return hash_sum
 
@@ -36,3 +43,7 @@ class X86Context:
 
         for subarea in self.allocated_areas:
             subarea.write_bin(infile)
+
+        infile.write(struct.pack("N", len(self.syscalls)))
+        for syscall_number in self.syscalls:
+            infile.write(struct.pack('Q', syscall_number))

@@ -40,6 +40,15 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
         ctx.values[aa.first] = (ADDRINT) aa.second->getAddr();
     }
 
+    size_t syscall_count = 0;
+    in.read((char *) &syscall_count, sizeof(syscall_count));
+    while (syscall_count > 0) {
+        ADDRINT syscall;
+        in.read((char *) &syscall, sizeof(syscall));
+        ctx.system_calls.insert(syscall);
+        syscall_count--;
+    }
+
     return in;
 }
 
@@ -87,6 +96,12 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
 
     for (AllocatedArea *aa : allocs) {
         out << aa;
+    }
+
+    size_t syscall_size = ctx.system_calls.size();
+    out.write((const char *) &syscall_size, sizeof(syscall_size));
+    for (ADDRINT i : ctx.system_calls) {
+        out.write((const char *) &i, sizeof(ADDRINT));
     }
 
     return out;
@@ -139,6 +154,12 @@ bool FBZergContext::operator==(const FBZergContext &ctx) const {
         return false;
     }
 
+    for (ADDRINT i : system_calls) {
+        if (ctx.system_calls.find(i) == ctx.system_calls.end()) {
+            return false;
+        }
+    }
+
     for (auto it : pointer_registers) {
         AllocatedArea *aa = ctx.find_allocated_area(it.first);
         if (aa == nullptr) {
@@ -166,6 +187,7 @@ FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
     pointer_registers.clear();
     values.clear();
     return_value = orig.return_value;
+    system_calls = orig.system_calls;
 
     for (auto it : orig.values) {
         AllocatedArea *aa = orig.find_allocated_area(it.first);
@@ -262,4 +284,12 @@ FBZergContext::~FBZergContext() {
     for (auto it : pointer_registers) {
         delete it.second;
     }
+}
+
+const std::set <ADDRINT> FBZergContext::get_syscalls() const {
+    return system_calls;
+}
+
+void FBZergContext::set_syscalls(const std::set <ADDRINT> syscalls) {
+    system_calls = syscalls;
 }
