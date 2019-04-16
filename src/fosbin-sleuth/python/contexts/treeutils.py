@@ -1,3 +1,24 @@
+def output_equiv_classes_graph(tree, filename="tree.pdf"):
+    import matplotlib
+    matplotlib.use('pdf')
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import statistics
+    ec_lengths = list()
+    for idx in range(0, tree.size()):
+        if tree._is_leaf(idx):
+            ec_lengths.append(len(tree.get_equiv_classes(idx)))
+    ec_lengths.sort()
+    X = np.arange(1, len(ec_lengths) + 1)
+    CY = np.cumsum(ec_lengths)
+    plt.plot(X, CY)
+    plt.box(on=None)
+    frame = plt.gca()
+    frame.axes.get_yaxis().set_visible(False)
+    plt.savefig(filename)
+    return sum(ec_lengths), statistics.mean(ec_lengths)
+
+
 def diff_two_guess_sets(guesses0, guesses1):
     funcs0 = dict()
     funcs1 = dict()
