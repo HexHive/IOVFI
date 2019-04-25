@@ -1,3 +1,5 @@
+copy_acl
+set_acl
 __nanosleep_nocancel
 __lll_lock_wait_private
 __lll_timedwait_tid

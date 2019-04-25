@@ -8,6 +8,7 @@ fi
 echo "$0 $1 $2 $3 $4" > cmd.txt
 echo "Starting at `date`" >> cmd.txt
 
+IGNORE_PATH=$(realpath $0/../ignored.txt)
 DATA_DIR=$(realpath $1)
 PIN=$(realpath $2)
 PINTOOL=$(realpath $3)
