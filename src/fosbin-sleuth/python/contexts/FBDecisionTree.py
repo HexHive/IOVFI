@@ -104,6 +104,13 @@ class FBDecisionTree:
 
         return results
 
+    def get_all_equiv_classes(self):
+        result = list()
+        for idx in range(0, self.size()):
+            if self._is_leaf(idx):
+                result.append(self.get_equiv_classes(idx))
+        return result
+
     def get_equiv_classes(self, index):
         if index == self.UNKNOWN_FUNC:
             return None

@@ -336,7 +336,7 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
 //    std::cout << std::dec << diff << std::endl;
     if (fuzzing_run.size() > max_instructions) {
-//        log_message("write_to_cmd 3");
+        log_message("write_to_cmd 3");
         report_failure(ZCMD_TOO_MANY_INS);
         wait_to_start();
     }
@@ -572,12 +572,12 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 ////    currentContext.prettyPrint();
 
     if (!fuzzed_input) {
-//        log_message("write_to_cmd 4");
+        log_message("write_to_cmd 4");
         report_failure(ZCMD_FAILED_CTX, ctx);
         redirect_control_to_main(ctx);
         return false;
     } else if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) != EXCEPTCLASS_ACCESS_FAULT) {
-//        log_message("write_to_cmd 5");
+        log_message("write_to_cmd 5");
         report_failure(ZCMD_ERROR, ctx);
         redirect_control_to_main(ctx);
         return false;
@@ -796,7 +796,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 //                reset_to_preexecution(ctx);
 //                fuzz_registers(ctx);
 //                goto finish;
-//                log_message("write_to_cmd 6");
+                log_message("write_to_cmd 6");
                 report_failure(ZCMD_ERROR, ctx);
                 redirect_control_to_main(ctx);
             }
@@ -807,7 +807,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
             msg << "Faulting instruction (0x" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
                 << "): " << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
             log_message(msg);
-//            log_message("write_to_cmd 7");
+            log_message("write_to_cmd 7");
             report_failure(ZCMD_ERROR, ctx);
             redirect_control_to_main(ctx);
         }
@@ -1290,7 +1290,7 @@ void wait_to_start() {
                     ZergMessage msg(ZMSG_OK);
                     write_to_cmd_server(msg);
                 } else {
-//                    log_message("cmd server 10");
+                    log_message("cmd server 10");
                     report_failure(result);
 //                    PIN_ExitApplication(1);
                 }

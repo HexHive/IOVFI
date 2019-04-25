@@ -1,24 +1,3 @@
-def output_equiv_classes_graph(tree, filename="tree.pdf"):
-    import matplotlib
-    matplotlib.use('pdf')
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import statistics
-    ec_lengths = list()
-    for idx in range(0, tree.size()):
-        if tree._is_leaf(idx):
-            ec_lengths.append(len(tree.get_equiv_classes(idx)))
-    ec_lengths.sort()
-    X = np.arange(1, len(ec_lengths) + 1)
-    CY = np.cumsum(ec_lengths)
-    plt.plot(X, CY)
-    plt.box(on=None)
-    frame = plt.gca()
-    frame.axes.get_yaxis().set_visible(False)
-    plt.savefig(filename)
-    return sum(ec_lengths), statistics.mean(ec_lengths)
-
-
 def diff_two_guess_sets(guesses0, guesses1):
     funcs0 = dict()
     funcs1 = dict()
@@ -43,6 +22,28 @@ def diff_two_guess_sets(guesses0, guesses1):
             differing.add(name)
 
     return missing_in_0, missing_in_1, differing
+
+
+def histogram_data(tree):
+    sizes = list()
+    for ec in tree.get_all_equiv_classes():
+        sizes.append(len(ec))
+
+    return sizes
+
+
+def bin_data(tree, n_bins=10):
+    hist_data = histogram_data(tree)
+    bins = list()
+
+    for size in hist_data:
+        s = size
+        if s > n_bins:
+            s = n_bins
+
+        bins.append(s)
+
+    return bins
 
 
 def get_evaluation(tree, guesses):
