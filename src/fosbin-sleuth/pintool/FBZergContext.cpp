@@ -156,6 +156,10 @@ bool FBZergContext::operator==(const FBZergContext &ctx) const {
         return false;
     }
 
+    if(system_calls.size() != ctx.system_calls.size()) {
+        return false;
+    }
+    
     for (ADDRINT i : system_calls) {
         if (ctx.system_calls.find(i) == ctx.system_calls.end()) {
             return false;
