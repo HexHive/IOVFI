@@ -16,6 +16,7 @@ class X86Context:
                 self.allocated_areas.append(AllocatedArea(infile))
 
         syscall_count = struct.unpack_from('N', infile.read(struct.calcsize('N')))[0]
+        print("Reading {} system calls".format(syscall_count))
         self.syscalls = set()
         for idx in range(0, syscall_count):
             self.syscalls.add(struct.unpack_from('Q', infile.read(struct.calcsize('Q')))[0])
