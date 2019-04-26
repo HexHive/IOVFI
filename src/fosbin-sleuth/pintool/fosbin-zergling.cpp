@@ -1343,7 +1343,10 @@ VOID FindMain(IMG img, VOID *v) {
 }
 
 void track_syscalls(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, void *v) {
-    syscalls.insert(PIN_GetSyscallNumber(ctx, std));
+    if (cmd_server->get_state() == ZERG_SERVER_EXECUTING) {
+        ADDRINT syscall_num = PIN_GetSyscallNumber(ctx, std);
+        syscalls.insert(syscall_num);
+    }
 }
 
 int main(int argc, char **argv) {
