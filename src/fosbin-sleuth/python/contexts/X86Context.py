@@ -16,10 +16,10 @@ class X86Context:
                 self.allocated_areas.append(AllocatedArea(infile))
 
         syscall_count = struct.unpack_from('N', infile.read(struct.calcsize('N')))[0]
-        print("Reading {} system calls".format(syscall_count))
-        self.syscalls = set()
+        self.syscalls = list()
         for idx in range(0, syscall_count):
-            self.syscalls.add(struct.unpack_from('Q', infile.read(struct.calcsize('Q')))[0])
+            self.syscalls.append(struct.unpack_from('Q', infile.read(struct.calcsize('Q')))[0])
+        self.syscalls.sort()
 
     def __hash__(self):
         hash_sum = 0
@@ -30,7 +30,8 @@ class X86Context:
         for area in self.allocated_areas:
             hash_sum = hash((hash_sum, area))
 
-        hash_sum = hash((hash_sum, self.syscalls))
+        for syscall in self.syscalls:
+            hash_sum = hash((hash_sum, syscall))
 
         return hash_sum
 

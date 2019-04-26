@@ -4,9 +4,9 @@ from .X86Context import X86Context
 
 
 class IOVec:
-    def __init__(self, file):
-        self.input = X86Context(file)
-        self.output = X86Context(file)
+    def __init__(self, in_file):
+        self.input = X86Context(in_file)
+        self.output = X86Context(in_file)
 
     def __hash__(self):
         return hash((self.input, self.output))
@@ -22,9 +22,9 @@ class IOVec:
         hash_sum.update(hash(self).to_bytes(8, sys.byteorder, signed=True))
         return hash_sum
 
-    def write_bin(self, file):
-        self.input.write_bin(file)
-        self.output.write_bin(file)
+    def write_bin(self, out_file):
+        self.input.write_bin(out_file)
+        self.output.write_bin(out_file)
 
     def hexdigest(self):
         hash_sum = self._get_hash_obj()
