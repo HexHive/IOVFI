@@ -100,7 +100,6 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
     }
 
     size_t syscall_size = ctx.system_calls.size();
-    std::cout << "Outputting " << syscall_size << " syscalls" << std::endl;
     out.write((const char *) &syscall_size, sizeof(syscall_size));
     for (ADDRINT i : ctx.system_calls) {
         out.write((const char *) &i, sizeof(ADDRINT));
