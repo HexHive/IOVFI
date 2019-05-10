@@ -46,7 +46,7 @@ def bin_data(tree, n_bins=10):
     return bins
 
 
-def get_evaluation(tree, guesses):
+def get_evaluation(tree, guesses, equivalence_map=None):
     func_names = set()
     true_pos = set()
     true_neg = set()
@@ -59,7 +59,15 @@ def get_evaluation(tree, guesses):
         if equiv_class is not None:
             found = False
             for ec in equiv_class:
-                if ec.name == func_desc.name:
+                ec_name = ec.name
+                func_desc_name = func_desc.name
+                if equivalence_map is not None:
+                    if ec_name in equivalence_map:
+                        ec_name = equivalence_map[ec_name]
+                    if func_desc_name in equivalence_map:
+                        func_desc_name = equivalence_map[func_desc_name]
+
+                if ec_name == func_desc_name:
                     found = True
                     break
 
