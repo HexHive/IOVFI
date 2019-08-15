@@ -30,8 +30,9 @@ class X86Context:
         for area in self.allocated_areas:
             hash_sum = hash((hash_sum, area))
 
-        for syscall in self.syscalls:
-            hash_sum = hash((hash_sum, syscall))
+        if hasattr(self, 'syscalls'):
+            for syscall in self.syscalls:
+                hash_sum = hash((hash_sum, syscall))
 
         return hash_sum
 
@@ -46,6 +47,25 @@ class X86Context:
         for subarea in self.allocated_areas:
             subarea.write_bin(infile)
 
-        infile.write(struct.pack("N", len(self.syscalls)))
-        for syscall_number in self.syscalls:
-            infile.write(struct.pack('Q', syscall_number))
+        if hasattr(self, 'syscalls'):
+            infile.write(struct.pack("N", len(self.syscalls)))
+            for syscall_number in self.syscalls:
+                infile.write(struct.pack('Q', syscall_number))
+        else:
+            infile.write(struct.pack('N', 0))
+
+    def size_in_bytes(self):
+        total_size = 0
+        for reg in self.register_values:
+            total_size += struct.calcsize('Q')
+        total_size += struct.calcsize('c')
+
+        for subarea in self.allocated_areas:
+            total_size += subarea.size_in_bytes()
+
+        total_size += struct.calcsize('N')
+        if hasattr(self, 'syscalls'):
+            for syscall_number in self.syscalls:
+                total_size += struct.calcsize('Q')
+
+        return total_size

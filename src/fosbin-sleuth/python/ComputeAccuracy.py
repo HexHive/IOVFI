@@ -65,6 +65,8 @@ def main():
         dtree = pickle.load(treefile)
 
     accuracies = list()
+    recalls = list()
+    specificities = list()
 
     with open(args.guesses, "r") as guessList:
         for guessLine in guessList.readlines():
@@ -78,6 +80,12 @@ def main():
                 incorrect))
             accuracies.append(accuracy)
 
+            recall = len(true_pos) / (len(true_pos) + len(incorrect))
+            recalls.append(recall)
+
+            specificity = len(true_neg) / (len(true_neg) + len(incorrect))
+            specificities.append(specificity)
+
     if len(accuracies) > 1:
         avg = statistics.mean(accuracies)
         stddev = statistics.stdev(accuracies)
@@ -88,6 +96,28 @@ def main():
         raise AssertionError("No guesses provided")
 
     print("Average Accuracy: {} +- {}".format(avg, stddev))
+
+    if len(recalls) > 1:
+        avg = statistics.mean(recalls)
+        stddev = statistics.stdev(recalls)
+    elif len(recalls) == 1:
+        avg = recalls[0]
+        stddev = 0
+    else:
+        raise AssertionError("No guesses provided")
+
+    print("Average Recall: {} +- {}".format(avg, stddev))
+
+    if len(specificities) > 1:
+        avg = statistics.mean(specificities)
+        stddev = statistics.stdev(specificities)
+    elif len(specificities) == 1:
+        avg = specificities[0]
+        stddev = 0
+    else:
+        raise AssertionError("No guesses provided")
+
+    print("Average Specificity: {} +- {}".format(avg, stddev))
 
 
 if __name__ == "__main__":

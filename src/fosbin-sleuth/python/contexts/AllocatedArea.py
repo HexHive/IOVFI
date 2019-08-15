@@ -55,3 +55,14 @@ class AllocatedArea:
 
         for subarea in self.subareas:
             subarea.write_bin(file)
+
+    def size_in_bytes(self):
+        total_size = struct.calcsize('Q')
+        for i in range(0, self.size):
+            total_size += struct.calcsize('?')
+            total_size += struct.calcsize('B')
+
+        for subarea in self.subareas:
+            total_size += subarea.size_in_bytes()
+
+        return total_size

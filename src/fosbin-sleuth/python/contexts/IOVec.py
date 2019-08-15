@@ -1,5 +1,4 @@
-import hashlib
-import sys
+import sys, hashlib
 from .X86Context import X86Context
 
 
@@ -29,3 +28,6 @@ class IOVec:
     def hexdigest(self):
         hash_sum = self._get_hash_obj()
         return hash_sum.hexdigest()
+
+    def size_in_bytes(self):
+        return self.input.size_in_bytes() + self.output.size_in_bytes()
