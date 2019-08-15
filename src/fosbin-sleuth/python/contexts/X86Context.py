@@ -61,7 +61,9 @@ class X86Context:
         total_size += struct.calcsize('c')
 
         for subarea in self.allocated_areas:
-            total_size += subarea.size_in_bytes()
+            subarea_size = subarea.size_in_bytes()
+            print("subarea_size: %d" % (subarea_size))
+            total_size += subarea_size
 
         total_size += struct.calcsize('N')
         if hasattr(self, 'syscalls'):
