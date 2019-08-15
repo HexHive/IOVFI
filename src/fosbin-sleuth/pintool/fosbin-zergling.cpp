@@ -566,9 +566,9 @@ void redirect_control_to_main(CONTEXT *ctx) {
 }
 
 BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const EXCEPTION_INFO *pExceptInfo, VOID *v) {
-  //    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
-  //    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() <<
-  //    std::endl; displayCurrentContext(ctx); currentContext.prettyPrint();
+//      std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
+//      std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() <<
+//      std::endl; displayCurrentContext(ctx); currentContext.prettyPrint();
 
   if (!fuzzed_input) {
 //        log_message("write_to_cmd 4");
@@ -599,7 +599,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
         REG taint_source = REG_INVALID();
         INS last_taint_ins = INS_Invalid();
         for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
-             it != fuzzing_run.rend(); it++) {
+             it != fuzzing_run.rend(); ++it) {
             log.str(std::string());
             struct X86Context &c = *it;
             INS ins = INS_FindByAddress(c.rip);
@@ -744,7 +744,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
         }
 
         if (taintedObjs.size() > 0) {
-            struct TaintedObject taintedObject = taintedObjs.back();
+            struct TaintedObject &taintedObject = taintedObjs.back();
 
             if (!create_allocated_area(taintedObject, faulting_addr)) {
 //                log_message("write_to_cmd 6");

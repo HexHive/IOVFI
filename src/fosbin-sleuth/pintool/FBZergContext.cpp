@@ -186,8 +186,9 @@ bool FBZergContext::operator!=(const FBZergContext &ctx) const {
 }
 
 FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
-    for (auto it : pointer_registers) {
-        delete it.second;
+//    for (auto it : pointer_registers) {
+    for (std::map<REG, AllocatedArea *>::iterator it = pointer_registers.begin(); it != pointer_registers.end(); ++it) {
+        delete it->second;
     }
     pointer_registers.clear();
     values.clear();

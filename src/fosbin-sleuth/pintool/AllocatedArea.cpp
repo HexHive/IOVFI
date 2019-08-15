@@ -17,7 +17,7 @@ AllocatedArea::AllocatedArea(const AllocatedArea &aa) :
 }
 
 AllocatedArea::~AllocatedArea() {
-    free((void *) malloc_addr);
+    munmap(malloc_addr, getpagesize());
     for (AllocatedArea *subarea : subareas) {
         delete subarea;
     }
@@ -130,7 +130,7 @@ void AllocatedArea::prettyPrint(size_t depth) const {
 }
 
 void AllocatedArea::prettyPrint(std::ostream &s, size_t depth) const {
-    s << std::hex << malloc_addr << ":" << std::endl;
+    s << std::hex << getAddr() << ":" << std::endl;
     for (size_t i = 0; i < mem_map.size(); i++) {
         if ((i % 16) == 0) {
             if (i > 0) { s << std::endl; }
@@ -219,10 +219,10 @@ void AllocatedArea::allocate_area(size_t size) {
         goto error;
     }
 
-    msg << "lower_guard: " << std::hex << lower_guard
-        << "malloc_addr: " << std::hex << malloc_addr
-        << "upper_guard: " << std::hex << upper_guard;
-    log_message(msg);
+//    msg << "lower_guard: " << std::hex << lower_guard
+//        << "malloc_addr: " << std::hex << malloc_addr
+//        << "upper_guard: " << std::hex << upper_guard;
+//    log_message(msg);
     mem_map.resize(size);
     return;
 

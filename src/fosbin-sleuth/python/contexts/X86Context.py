@@ -1,4 +1,5 @@
 import struct
+
 from .AllocatedArea import AllocatedArea, AllocatedAreaMagic
 
 
@@ -62,7 +63,6 @@ class X86Context:
 
         for subarea in self.allocated_areas:
             subarea_size = subarea.size_in_bytes()
-            print("subarea_size: %d" % (subarea_size))
             total_size += subarea_size
 
         total_size += struct.calcsize('N')
