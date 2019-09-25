@@ -22,7 +22,7 @@ except through Intel's website
 ## Building
 1. `mkdir cmake-build-debug && cd cmake-build-debug`
 1. `cmake ..`
-1. `cmake --build . -target fosbin-sleuth`
+1. `cmake --build . -target fosbin-zergling`
 
 ## Building a decision tree
 Building the decision tree involves fuzzing the target application, consolidating the IOVecs generated, and then actually generating the decision tree.
