@@ -1,14 +1,14 @@
 #!/bin/bash
 
 if [[ $# != 4 ]]; then
-	echo "Usage: $(basename $0) /path/to/guess/dir /path/to/pin/dir /path/to/pintool /path/to/test/binaries"
-	exit
+  echo "Usage: $(basename $0) /path/to/guess/dir /path/to/pin/dir /path/to/pintool /path/to/test/binaries"
+  exit
 fi
 
 CURR_DIR=$(pwd)
 CMD_FILE=$CURR_DIR/cmd.txt
-echo "$0 $1 $2 $3 $4" > $CMD_FILE
-echo "Starting at `date`" >> $CMD_FILE
+echo "$0 $1 $2 $3 $4" >$CMD_FILE
+echo "Starting at $(date)" >>$CMD_FILE
 
 IGNORE_PATH=$(realpath $0/../ignored.txt)
 DATA_DIR=$(realpath $1)
@@ -19,18 +19,18 @@ ID_SCRIPT=$(realpath $(dirname $PINTOOL)/../../../src/fosbin-sleuth/python/Ident
 echo $CURR_DIR
 
 for test in $(find $TESTS -type f -executable); do
-	if [ -d "$(basename $test)" ]; then
-		echo "Skipping $test"
-        continue
-	fi
-	mkdir $(basename $test)
-	cd $(basename $test)
-	echo "Evaluating $test"
-	echo "Starting $test: `date`" >> $CMD_FILE
-	cmd="$ID_SCRIPT -t $DATA_DIR/tree.bin -pindir $PIN -tool $PINTOOL -b $test"
-	$cmd
-	cd $CURR_DIR
+  if [ -d "$(basename $test)" ]; then
+    echo "Skipping $test"
+    continue
+  fi
+  mkdir $(basename $test)
+  cd $(basename $test)
+  echo "Evaluating $test"
+  echo "Starting $test: $(date)" >>$CMD_FILE
+  cmd="$ID_SCRIPT -t $DATA_DIR/tree.bin -pindir $PIN -tool $PINTOOL -b $test"
+  $cmd
+  cd $CURR_DIR
 
 done
 
-echo "Ended at `date`" >> $CMD_FILE
+echo "Ended at $(date)" >>$CMD_FILE
