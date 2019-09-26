@@ -27,7 +27,7 @@ for test in $(find $TESTS -type f -executable); do
   cd $(basename $test)
   echo "Evaluating $test"
   echo "Starting $test: $(date)" >>"$CMD_FILE"
-  cmd="$ID_SCRIPT -t $DATA_DIR/tree.bin -pindir $PIN -tool $PINTOOL -b $test"
+  cmd="$ID_SCRIPT -t $DATA_DIR/tree.bin -pindir $PIN -tool $PINTOOL -b $test -ignore $IGNORE_PATH"
   $cmd
   cd $CURR_DIR
 
