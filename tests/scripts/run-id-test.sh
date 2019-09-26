@@ -5,8 +5,10 @@ if [[ $# != 4 ]]; then
 	exit
 fi
 
-echo "$0 $1 $2 $3 $4" > cmd.txt
-echo "Starting at `date`" >> cmd.txt
+CURR_DIR=$(pwd)
+CMD_FILE=$CURR_DIR/cmd.txt
+echo "$0 $1 $2 $3 $4" > $CMD_FILE
+echo "Starting at `date`" >> $CMD_FILE
 
 IGNORE_PATH=$(realpath $0/../ignored.txt)
 DATA_DIR=$(realpath $1)
@@ -14,7 +16,6 @@ PIN=$(realpath $2)
 PINTOOL=$(realpath $3)
 TESTS=$(realpath $4)
 ID_SCRIPT=$(realpath $(dirname $PINTOOL)/../../../src/fosbin-sleuth/python/IdentifyFunction.py)
-CURR_DIR=$(pwd)
 echo $CURR_DIR
 
 for test in $(find $TESTS -type f -executable); do
@@ -25,9 +26,11 @@ for test in $(find $TESTS -type f -executable); do
 	mkdir $(basename $test)
 	cd $(basename $test)
 	echo "Evaluating $test"
+	echo "Starting $test: `date`" >> $CMD_FILE
 	cmd="$ID_SCRIPT -t $DATA_DIR/tree.bin -pindir $PIN -tool $PINTOOL -b $test"
 	$cmd
 	cd $CURR_DIR
+
 done
 
-echo "Ended at `date`" >> cmd.txt
+echo "Ended at `date`" >> $CMD_FILE
