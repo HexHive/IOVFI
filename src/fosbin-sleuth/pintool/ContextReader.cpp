@@ -11,15 +11,15 @@ void output_context(std::istream &in) {
     in >> incontext;
     in >> outcontext;
 
-    std::cout << "===============================================" << std::endl;
-    std::cout << "                   PreContext                  " << std::endl;
-    std::cout << "===============================================" << std::endl;
-    incontext.prettyPrint(std::cout);
-
-    std::cout << std::endl;
-    std::cout << "===============================================" << std::endl;
-    std::cout << "                  PostContext                  " << std::endl;
-    std::cout << "===============================================" << std::endl;
-    outcontext.prettyPrint(std::cout);
-    std::cout << std::endl;
+//    std::cout << "===============================================" << std::endl;
+//    std::cout << "                   PreContext                  " << std::endl;
+//    std::cout << "===============================================" << std::endl;
+//    incontext.prettyPrint(std::cout);
+//
+//    std::cout << std::endl;
+//    std::cout << "===============================================" << std::endl;
+//    std::cout << "                  PostContext                  " << std::endl;
+//    std::cout << "===============================================" << std::endl;
+//    outcontext.prettyPrint(std::cout);
+//    std::cout << std::endl;
 }

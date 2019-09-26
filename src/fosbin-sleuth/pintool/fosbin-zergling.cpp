@@ -788,22 +788,22 @@ void report_success(CONTEXT *ctx, THREADID tid) {
         write_to_cmd_server(msg);
     } else {
         std::stringstream msg2;
-        msg2 << "Expected context" << std::endl;
-        expectedContext.prettyPrint(msg2);
-        msg2 << std::endl;
-        msg2 << "Current context" << std::endl;
-        currentContext.prettyPrint(msg2);
-        log_message(msg2);
+//        msg2 << "Expected context" << std::endl;
+//        expectedContext.prettyPrint(msg2);
+//        msg2 << std::endl;
+//        msg2 << "Current context" << std::endl;
+//        currentContext.prettyPrint(msg2);
+//        log_message(msg2);
 
         bool contexts_equal = (currentContext == expectedContext);
-        if (!contexts_equal) {
-            std::stringstream msg;
-            msg << "Ending context does not match expected" << std::endl;
-            msg << std::endl;
-
-            log_message(msg);
-
-        }
+//        if (!contexts_equal) {
+//            std::stringstream msg;
+//            msg << "Ending context does not match expected" << std::endl;
+//            msg << std::endl;
+//
+//            log_message(msg);
+//
+//        }
         zerg_message_t response = (contexts_equal ? ZMSG_OK : ZMSG_FAIL);
         ZergMessage msg(response);
         write_to_cmd_server(msg);
@@ -924,12 +924,12 @@ zerg_cmd_result_t handle_execute_cmd() {
     currentContext >> &snapshot;
     PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
     PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RBP, PIN_GetContextReg(&snapshot, LEVEL_BASE::REG_RSP));
-    std::stringstream msg;
-    msg << "About to start executing at "
-        << std::hex << RTN_Address(target) << "(" << RTN_Name(target) << ")"
-        << " with context " << std::endl;
-    preContext.prettyPrint(msg);
-    log_message(msg);
+//    std::stringstream msg;
+//    msg << "About to start executing at "
+//        << std::hex << RTN_Address(target) << "(" << RTN_Name(target) << ")"
+//        << " with context " << std::endl;
+//    preContext.prettyPrint(msg);
+//    log_message(msg);
 
     PIN_ExecuteAt(&snapshot);
     log_message("PIN_ExecuteAt returned magically");
