@@ -5,6 +5,7 @@ __lll_lock_wait_private
 __lll_timedwait_tid
 dup2
 pipe2
+main
 __pipe
 mprotect
 unlink
