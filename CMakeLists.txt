@@ -7,7 +7,7 @@ set( FUNC_CLASSIFIER ${PROJ_NAME}-sleuth )
 set( PIN_VERSION 3.7 )
 set( PINTOOL_NAME ${PROJ_NAME}-zergling )
 
-cmake_minimum_required( VERSION 3.10.2 )
+cmake_minimum_required( VERSION 3.5.1 )
 
 project( ${PROJ_NAME} )
 
