@@ -14,7 +14,7 @@ PINDIR=$TOP_DIR/src/pin/pin-3.7
 IGNORE_FILE=$(realpath $3)
 TIME_FILE=timing.txt
 
-for d in $(find $COREUTILS_DIR -maxdepth 1 -type d -name "build-*"); do
+for d in $(find $COREUTILS_DIR -maxdepth 1 -type d -name "build-*-O*"); do
   CURR_DIR=$(basename $d)
   cmd="mkdir $CURR_DIR; "
   cmd+="cd $CURR_DIR; "
