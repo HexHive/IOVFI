@@ -16,15 +16,14 @@ TIME_FILE=timing.txt
 
 for d in $(find $COREUTILS_DIR -maxdepth 1 -type d -name "build-*-O*"); do
   CURR_DIR=$(basename $d)
-  cmd="mkdir $CURR_DIR; "
-  cmd+="cd $CURR_DIR; "
-  cmd+="echo \"Fuzz Start: $(date)\" > $TIME_FILE; "
-  cmd+="$TOP_DIR/src/fosbin-sleuth/python/fuzz-applications.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE -bin $d/src/$TREE_BIN; "
-  cmd+="echo \"Fuzz End: $(date)\" >> $TIME_FILE; "
-  cmd+="echo \"Consolidation Start $(date)\" >> $TIME_FILE; "
-  cmd+="$TOP_DIR/src/fosbin-sleuth/python/ConsolidateContexts.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE; "
-  cmd+="echo \"Consolidation End $(date)\" >> $TIME_FILE; "
-  cmd+="rm -rf logs/ _work/; "
-  cmd+="cd $CWD; "
-  echo $cmd
+  mkdir $CURR_DIR
+  cd $CURR_DIR
+  echo "Fuzz Start: $(date)" > $TIME_FILE
+  $TOP_DIR/src/fosbin-sleuth/python/fuzz-applications.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE -bin $d/src/$TREE_BIN
+  echo "Fuzz End: $(date)" >> $TIME_FILE
+  echo "Consolidation Start $(date)" >> $TIME_FILE
+  $TOP_DIR/src/fosbin-sleuth/python/ConsolidateContexts.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE
+  echo "Consolidation End $(date)" >> $TIME_FILE
+  rm -rf logs/ _work/
+  cd $CWD;
 done
