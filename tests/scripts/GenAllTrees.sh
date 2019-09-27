@@ -24,6 +24,7 @@ for d in $(find $COREUTILS_DIR -maxdepth 1 -type d -name "build-*-O*"); do
   cmd+="echo \"Consolidation Start $(date)\" >> $TIME_FILE; "
   cmd+="$TOP_DIR/src/fosbin-sleuth/python/ConsolidateContexts.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE; "
   cmd+="echo \"Consolidation End $(date)\" >> $TIME_FILE; "
+  cmd+="rm -rf logs/ _work/; "
   cmd+="cd $CWD; "
   echo $cmd
 done
