@@ -18,12 +18,12 @@ for d in $(find $COREUTILS_DIR -maxdepth 1 -type d -name "build-*-O*"); do
   CURR_DIR=$(basename $d)
   mkdir $CURR_DIR
   cd $CURR_DIR
-  echo "Fuzz Start: $(date)" > $TIME_FILE
-  $TOP_DIR/src/fosbin-sleuth/python/fuzz-applications.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE -bin $d/src/$TREE_BIN
-  echo "Fuzz End: $(date)" >> $TIME_FILE
-  echo "Consolidation Start $(date)" >> $TIME_FILE
-  $TOP_DIR/src/fosbin-sleuth/python/ConsolidateContexts.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE
-  echo "Consolidation End $(date)" >> $TIME_FILE
+  echo "Fuzz Start: $(date)" >$TIME_FILE
+  python3 $TOP_DIR/src/fosbin-sleuth/python/fuzz-applications.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE -bin $d/src/$TREE_BIN
+  echo "Fuzz End: $(date)" >>$TIME_FILE
+  echo "Consolidation Start $(date)" >>$TIME_FILE
+  python3 $TOP_DIR/src/fosbin-sleuth/python/ConsolidateContexts.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE
+  echo "Consolidation End $(date)" >>$TIME_FILE
   rm -rf logs/ _work/
-  cd $CWD;
+  cd $CWD
 done
