@@ -16,14 +16,28 @@ TIME_FILE=timing.txt
 
 for d in $(find $COREUTILS_DIR -maxdepth 1 -type d -name "build-*-O*"); do
   CURR_DIR=$(basename $d)
-  mkdir $CURR_DIR
+  if [ -f "$CURR_DIR/tree.bin" ]; then
+    continue
+  fi
+  if [ ! -f "$CURR_DIR" ]; then
+    mkdir $CURR_DIR
+  fi
   cd $CURR_DIR
-  echo "Fuzz Start: $(date)" >$TIME_FILE
-  python3 $TOP_DIR/src/fosbin-sleuth/python/fuzz-applications.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE -bin $d/src/$TREE_BIN
-  echo "Fuzz End: $(date)" >>$TIME_FILE
-  echo "Consolidation Start $(date)" >>$TIME_FILE
-  python3 $TOP_DIR/src/fosbin-sleuth/python/ConsolidateContexts.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE
-  echo "Consolidation End $(date)" >>$TIME_FILE
+  if [ ! -f "$TIME_FILE" ] || [ -z $(grep "Fuzz End" $TIME_FILE) ]; then
+    echo "Fuzz Start: $(date)" >$TIME_FILE
+    python3 $TOP_DIR/src/fosbin-sleuth/python/fuzz-applications.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE -bin $d/src/$TREE_BIN
+    echo "Fuzz End: $(date)" >>$TIME_FILE
+  fi
+  if [ -z $(grep "Consolidation End" $TIME_FILE) ]; then
+    echo "Consolidation Start: $(date)" >>$TIME_FILE
+    python3 $TOP_DIR/src/fosbin-sleuth/python/ConsolidateContexts.py -pindir $PINDIR -tool $PINTOOL -ignore $IGNORE_FILE
+    echo "Consolidation End: $(date)" >>$TIME_FILE
+  fi
+  if [ -z $(grep "Tree Generation End" $TIME_FILE) ]; then
+    echo "Tree Generation Start: $(date)" >>$TIME_FILE
+    python3 $TOP_DIR/src/fosbin-sleuth/python/GenDecisionTree.py
+    echo "Tree Generation End: $(date)" >>$TIME_FILE
+  fi
   rm -rf logs/ _work/
   cd $CWD
 done
