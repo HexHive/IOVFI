@@ -10,12 +10,12 @@ CMD_FILE=$CURR_DIR/cmd.txt
 echo "$0 $1 $2 $3 $4" >$CMD_FILE
 echo "Starting at $(date)" >>$CMD_FILE
 
-IGNORE_PATH=$(realpath $(dirname $PINTOOL)/../../../tests/ignored.txt)
-DATA_DIR=$(realpath $1)
+DATA_DIR="$(realpath $1)"
 PIN=$(realpath $2)
 PINTOOL=$(realpath $3)
 TESTS=$(realpath $4)
 ID_SCRIPT=$(realpath $(dirname $PINTOOL)/../../../src/fosbin-sleuth/python/IdentifyFunction.py)
+IGNORE_PATH="$(realpath $(dirname $PINTOOL)/../../../tests/ignored.txt)"
 echo $CURR_DIR
 
 for test in $(find $TESTS -type f -executable); do
