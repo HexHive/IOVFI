@@ -10,7 +10,7 @@ CMD_FILE=$CURR_DIR/cmd.txt
 echo "$0 $1 $2 $3 $4" >$CMD_FILE
 echo "Starting at $(date)" >>$CMD_FILE
 
-IGNORE_PATH=$(realpath $0/../ignored.txt)
+IGNORE_PATH=$(realpath $(dirname $PINTOOL)/../../../tests/ignored.txt)
 DATA_DIR=$(realpath $1)
 PIN=$(realpath $2)
 PINTOOL=$(realpath $3)
