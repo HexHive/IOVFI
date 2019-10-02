@@ -30,12 +30,12 @@ for test in $(find $TESTS -type f -executable -printf "%p \t%k kb\n" | sort -k2n
   echo "Starting $test: $(date)" >>"$CMD_FILE"
   cmd="$ID_SCRIPT -t $DATA_DIR/tree.bin -pindir $PIN -tool $PINTOOL -b $test -ignore $IGNORE_PATH"
   echo "CMD: $cmd" >>"$CMD_FILE"
-#  $cmd
+  #  $cmd
   cd $CURR_DIR
 done
 
 # Largest 5
-for test in $(find $TESTS -type f -executable -printf "%p \t%k kb\n" | sort -k2nr | \
+for test in $(find $TESTS -type f -executable -printf "%p \t%k kb\n" | sort -k2nr |
   awk '{ if(count<5) { print $1; } count++; }'); do
   if [ -d "$(basename $test)" ]; then
     echo "Skipping $test"
@@ -47,7 +47,7 @@ for test in $(find $TESTS -type f -executable -printf "%p \t%k kb\n" | sort -k2n
   echo "Starting $test: $(date)" >>"$CMD_FILE"
   cmd="$ID_SCRIPT -t $DATA_DIR/tree.bin -pindir $PIN -tool $PINTOOL -b $test -ignore $IGNORE_PATH"
   echo "CMD: $cmd" >>"$CMD_FILE"
-#  $cmd
+  #  $cmd
   cd $CURR_DIR
 done
 
