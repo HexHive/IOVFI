@@ -8,8 +8,10 @@ unsafe fn my_memcpy(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
         return dest;
     }
 
-    for idx in 0..n {
+    let mut idx: usize = 0;
+    while idx < n {
         *dest.add(idx) = *src.add(idx);
+        idx += 1;
     }
     return dest;
 }
