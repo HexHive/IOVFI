@@ -31,6 +31,7 @@ for test in $(find $TESTS -type f -executable -printf "%p \t%k kb\n" | sort -k2n
   cmd="$ID_SCRIPT -t $DATA_DIR/tree.bin -pindir $PIN -tool $PINTOOL -b $test -ignore $IGNORE_PATH"
   echo "CMD: $cmd" >>"$CMD_FILE"
   #  $cmd
+  rm -rf _work/ logs/
   cd $CURR_DIR
 done
 
