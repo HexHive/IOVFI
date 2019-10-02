@@ -23,6 +23,7 @@ KNOB <std::string> KnobInPipe(KNOB_MODE_WRITEONCE, "pintool", "in-pipe", "", "Fi
 KNOB <std::string> KnobOutPipe(KNOB_MODE_WRITEONCE, "pintool", "out-pipe", "", "Filename of out pipe");
 KNOB <std::string> KnobLogFile(KNOB_MODE_WRITEONCE, "pintool", "log", "", "/path/to/log");
 KNOB <std::string> KnobCmdLogFile(KNOB_MODE_WRITEONCE, "pintool", "cmdlog", "", "/path/to/cmd/log");
+KNOB <std::string> KnobRustMain(KNOB_MODE_WRITEONCE, "pintool", "rust", "", "Mangled name of rust main");
 
 RTN target = RTN_Invalid();
 IMG target_so = IMG_Invalid();
@@ -1067,7 +1068,12 @@ VOID FindMain(IMG img, VOID *v) {
         return;
     }
 
-    RTN main = RTN_FindByName(img, "main");
+    RTN main;
+    if (!KnobRustMain.Value().empty()) {
+        main = RTN_FindByName(img, KnobRustMain.Value().c_str());
+    } else {
+        main = RTN_FindByName(img, "main");
+    }
     if (RTN_Valid(main)) {
         RTN_Open(main);
         if (is_executable_fbloader(img)) {
