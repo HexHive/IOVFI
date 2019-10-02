@@ -15,6 +15,7 @@ ZergCommand::~ZergCommand() {}
 ZergCommand *ZergCommand::create(ZergMessage &msg, ZergCommandServer &server) {
     switch (msg.type()) {
         case ZMSG_SET_TGT:
+        case ZMSG_SET_RUST_TGT:
             return new SetTargetCommand(msg, server);
         case ZMSG_EXIT:
             return new ExitCommand(msg, server);

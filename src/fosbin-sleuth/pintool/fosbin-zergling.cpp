@@ -39,6 +39,8 @@ ExecutionInfo executionInfo;
 std::string current_function;
 std::set <ADDRINT> syscalls;
 
+UINT32 imgId;
+
 std::vector<struct X86Context> fuzzing_run;
 std::ofstream log_out;
 uint64_t max_instructions = 1000000;
@@ -79,11 +81,11 @@ VOID log_message(std::stringstream &message) {
         return;
     }
 
-    if (log_out && log_out.is_open()) {
-        log_out << message.str() << std::endl;
-    } else {
-        std::cout << message.str() << std::endl;
-    }
+//    if (log_out && log_out.is_open()) {
+//        log_out << message.str() << std::endl;
+//    } else {
+//        std::cout << message.str() << std::endl;
+//    }
 
     message.str(std::string());
 }
@@ -872,6 +874,13 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
         msg << "Setting new target to " << (const char *) zmsg.data() << " in SO target " << IMG_Name(target_so);
         log_message(msg);
         new_target = RTN_FindByName(target_so, (const char *) zmsg.data());
+    } else if (zmsg.type() == ZMSG_SET_RUST_TGT) {
+        IMG img = IMG_FindImgById(imgId);
+        if (IMG_Valid(img)) {
+            msg << "Setting new target to " << (const char *) zmsg.data() << " in Rust binary";
+            log_message(msg);
+            new_target = RTN_FindByName(img, (const char *) zmsg.data());
+        }
     }
     if (!RTN_Valid(new_target)) {
         msg << "Could not find valid target";
@@ -980,6 +989,7 @@ zerg_cmd_result_t handle_cmd() {
     zerg_cmd_result_t result = ZCMD_ERROR;
     switch (msg->type()) {
         case ZMSG_SET_TGT:
+        case ZMSG_SET_RUST_TGT:
             log_message("Received SetTargetCommand");
             result = handle_set_target(*msg);
             break;
@@ -1087,9 +1097,11 @@ VOID FindMain(IMG img, VOID *v) {
             }
             first_ins = RTN_InsTail(main);
             first_ins_addr = INS_Address(first_ins);
+            imgId = IMG_Id(target_so);
         } else {
             first_ins = RTN_InsHead(main);
             first_ins_addr = INS_Address(first_ins);
+            imgId = IMG_Id(img);
         }
 
         std::stringstream msg;

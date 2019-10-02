@@ -70,6 +70,8 @@ const char *ZergMessage::str() const {
             return "ZMSG_SET_SO_TGT";
         case ZMSG_GET_EXE_INFO:
             return "ZMSG_GET_EXE_INFO";
+        case ZMSG_SET_RUST_TGT:
+            return "ZMSG_SET_RUST_TGT";
         default:
             return "UNKNOWN MESSAGE";
     }

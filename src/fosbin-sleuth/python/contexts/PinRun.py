@@ -25,6 +25,7 @@ class PinMessage:
     ZMSG_READY = 8
     ZMSG_SET_SO_TGT = 9
     ZMSG_GET_EXE_INFO = 10
+    ZMSG_SET_RUST_TGT = 11
     HEADER_FORMAT = "iQ"
 
     names = {
@@ -39,7 +40,8 @@ class PinMessage:
         ZMSG_RESET: "ZMSG_RESET",
         ZMSG_READY: "ZMSG_READY",
         ZMSG_SET_SO_TGT: "ZMSG_SET_SO_TGT",
-        ZMSG_GET_EXE_INFO: "ZMSG_GET_EXE_INFO"
+        ZMSG_GET_EXE_INFO: "ZMSG_GET_EXE_INFO",
+        ZMSG_SET_RUST_TGT: "ZMSG_SET_RUST_TGT"
     }
 
     def __init__(self, msgtype, data):
@@ -413,8 +415,13 @@ class PinRun:
 
     def send_set_target_cmd(self, target, timeout=None):
         if self.loader_loc is None:
-            logger.debug("Setting target to {} for {}".format(hex(target), os.path.basename(self.pipe_out_loc)))
-            return self._send_cmd(PinMessage.ZMSG_SET_TGT, struct.pack("Q", target), timeout)
+            if self.rust_main is None:
+                logger.debug("Setting target to {} for {}".format(hex(target), os.path.basename(self.pipe_out_loc)))
+                return self._send_cmd(PinMessage.ZMSG_SET_TGT, struct.pack("Q", target), timeout)
+            else:
+                logger.debug("Setting target to {} for {}".format(target, os.path.basename(self.pipe_out_loc)))
+                tgt = target + '\x00'
+                return self._send_cmd(PinMessage.ZMSG_SET_RUST_TGT, tgt.encode('ascii'))
         else:
             logger.debug("Setting target to {} for {}".format(target, os.path.basename(self.pipe_out_loc)))
             tgt = target + '\x00'

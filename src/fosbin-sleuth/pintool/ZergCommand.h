@@ -17,7 +17,8 @@ typedef enum zerg_message_type {
     ZMSG_RESET,
     ZMSG_READY,
     ZMSG_SET_SO_TGT,
-    ZMSG_GET_EXE_INFO
+    ZMSG_GET_EXE_INFO,
+    ZMSG_SET_RUST_TGT
 } zerg_message_t;
 
 class ZergMessage {
