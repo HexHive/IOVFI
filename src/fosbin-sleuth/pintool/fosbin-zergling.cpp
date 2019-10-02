@@ -81,11 +81,11 @@ VOID log_message(std::stringstream &message) {
         return;
     }
 
-//    if (log_out && log_out.is_open()) {
-//        log_out << message.str() << std::endl;
-//    } else {
-//        std::cout << message.str() << std::endl;
-//    }
+    if (log_out && log_out.is_open()) {
+        log_out << message.str() << std::endl;
+    } else {
+        std::cout << message.str() << std::endl;
+    }
 
     message.str(std::string());
 }
