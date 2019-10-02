@@ -202,8 +202,9 @@ class FBDecisionTree:
         base_dtree_index = self._find_dtree_idx(index)
         return self.hashMaps[base_dtree_index][hash]
 
-    def identify(self, func_desc, pin_loc, pintool_loc, loader_loc=None, cwd=os.getcwd(), max_confirm=MAX_CONFIRM):
-        pin_run = PinRun(pin_loc, pintool_loc, func_desc.binary, loader_loc, cwd=cwd)
+    def identify(self, func_desc, pin_loc, pintool_loc, loader_loc=None, cwd=os.getcwd(), max_confirm=MAX_CONFIRM,
+                 rust_main=None):
+        pin_run = PinRun(pin_loc, pintool_loc, func_desc.binary, loader_loc, cwd=cwd, rust_main=rust_main)
 
         idx = 0
         try:

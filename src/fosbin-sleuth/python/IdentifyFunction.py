@@ -28,13 +28,14 @@ pinLoc = None
 pintoolLoc = None
 binaryLoc = None
 fbDtree = None
+rust_main = None
 n_confirms = 1
 
 WORK_DIR = os.path.abspath(os.path.join("_work", "identifying"))
 
 
 def check_inputs(argparser):
-    global pinLoc, pintoolLoc, binaryLoc, guessLoc
+    global pinLoc, pintoolLoc, binaryLoc, guessLoc, rust_main
     if not os.path.exists(argparser.tree):
         logger.fatal("Could not find {}".format(argparser.tree))
         exit(1)
@@ -57,12 +58,15 @@ def check_inputs(argparser):
 
     guessLoc = os.path.abspath(argparser.guesses)
 
+    rust_main = argparser.rust
+
 
 def single_test(func_desc):
-    global error_msgs, pinLoc, pintoolLoc, fbDtree, n_confirms
+    global error_msgs, pinLoc, pintoolLoc, fbDtree, n_confirms, rust_main
 
     try:
-        guess = fbDtree.identify(func_desc, pinLoc, pintoolLoc, cwd=WORK_DIR, max_confirm=n_confirms)
+        guess = fbDtree.identify(func_desc, pinLoc, pintoolLoc, cwd=WORK_DIR, max_confirm=n_confirms,
+                                 rust_main=rust_main)
         guess_lock.acquire()
         guesses[func_desc] = guess
         guess_lock.release()
@@ -91,6 +95,7 @@ def main():
     parser.add_argument("-guesses", help="/path/to/guesses", default="guesses.bin")
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
     parser.add_argument("-n", help="Number of confirmation checks", type=int, default=1)
+    parser.add_argument('-rust', help='Rust application main', type=str)
     results = parser.parse_args()
 
     logger.info("Checking inputs...")

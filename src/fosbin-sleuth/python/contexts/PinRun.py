@@ -62,7 +62,7 @@ class PinMessage:
 
 class PinRun:
     def __init__(self, pin_loc, pintool_loc, binary_loc, loader_loc=None, pipe_in=None, pipe_out=None,
-                 log_loc=None, cwd=os.getcwd(), cmd_log_loc=None):
+                 log_loc=None, cwd=os.getcwd(), cmd_log_loc=None, rust_main=None):
         self.binary_loc = os.path.abspath(binary_loc)
         if not os.path.exists(self.binary_loc):
             raise FileNotFoundError("{} does not exist".format(self.binary_loc))
@@ -134,6 +134,7 @@ class PinRun:
         self.thr_r = None
         self.thr_w = None
         self.log = None
+        self.rust_main = rust_main
 
     def _check_state(self):
         if self.pin_loc is None:
@@ -168,6 +169,9 @@ class PinRun:
         if self.cmd_log_loc is not None:
             cmd.append("-cmdlog")
             cmd.append(self.cmd_log_loc)
+        if self.rust_main is not None:
+            cmd.append("-rust")
+            cmd.append(self.rust_main)
 
         cmd.append("--")
 
