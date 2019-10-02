@@ -212,7 +212,11 @@ class FBDecisionTree:
                 if not pin_run.is_running():
                     pin_run.stop()
                     pin_run.start(timeout=FBDecisionTree.WATCHDOG)
-                    ack_msg = pin_run.send_set_target_cmd(func_desc.location, FBDecisionTree.WATCHDOG)
+                    if pin_run.rust_main is None:
+                        ack_msg = pin_run.send_set_target_cmd(func_desc.location, FBDecisionTree.WATCHDOG)
+                    else:
+                        ack_msg = pin_run.send_set_target_cmd(func_desc.name, FBDecisionTree.WATCHDOG)
+
                     if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
                         raise AssertionError("Could not set target for {}".format(str(func_desc)))
                     resp_msg = pin_run.read_response(FBDecisionTree.WATCHDOG)
