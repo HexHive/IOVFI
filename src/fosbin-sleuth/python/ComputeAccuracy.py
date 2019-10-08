@@ -94,8 +94,8 @@ class TreeEvaluation:
         else:
             raise AssertionError("No guesses provided")
 
-        print("Average Accuracy: {} +- {}".format(avg, stddev))
-        print("Median Accuracy: {}".format(median))
+        result = "Average Accuracy: {} +- {}\n".format(avg, stddev)
+        result += "Median Accuracy: {}\n\n".format(median)
 
         if len(self.recalls) > 1:
             avg = statistics.mean(self.recalls)
@@ -108,8 +108,8 @@ class TreeEvaluation:
         else:
             raise AssertionError("No guesses provided")
 
-        print("Average Recall: {} +- {}".format(avg, stddev))
-        print("Median Accuracy: {}".format(median))
+        result += "Average Recall: {} +- {}\n".format(avg, stddev)
+        result += "Median Accuracy: {}\n".format(median)
 
         if len(self.specificities) > 1:
             avg = statistics.mean(self.specificities)
@@ -122,8 +122,8 @@ class TreeEvaluation:
         else:
             raise AssertionError("No guesses provided")
 
-        print("Average Specificity: {} +- {}".format(avg, stddev))
-        print("Median Accuracy: {}".format(median))
+        result += "Average Specificity: {} +- {}\n".format(avg, stddev)
+        result += "Median Accuracy: {}\n\n".format(median)
 
         if len(self.precisions) > 1:
             avg = statistics.mean(self.precisions)
@@ -136,8 +136,10 @@ class TreeEvaluation:
         else:
             raise AssertionError("No guesses provided")
 
-        print("Average Precision: {} +- {}".format(avg, stddev))
-        print("Median Accuracy: {}".format(median))
+        result += "Average Precision: {} +- {}\n".format(avg, stddev)
+        result += "Median Accuracy: {}\n\n".format(median)
+
+        return result
 
 
 def main():
