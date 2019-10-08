@@ -38,6 +38,6 @@ for testdir in $(find . -maxdepth 1 -type d); do
   cd $testdir
   cmd="$SCRIPT_LOC/run-id-test.sh $START_PATH $PINDIR $PINTOOL $COREUTILS_LOC/build-$(basename $testdir)/src"
   echo "Running command $cmd from $PWD"
-#  $cmd
+  #  $cmd
   cd $START_PATH
 done
