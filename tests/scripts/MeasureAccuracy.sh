@@ -3,7 +3,7 @@
 ACCURACY_SCRIPT=$(realpath $(dirname $0)/../../src/fosbin-sleuth/python/ComputeAccuracy.py)
 ROOT_DIR=$PWD
 
-for dir in $(find $ROOT_DIR -mindepth 2 -maxdepth 2 -type d); do
+for dir in $(find $ROOT_DIR -mindepth 1 -maxdepth 1 -type d); do
   cd $dir
   for dir2 in $(find . -mindepth 1 -maxdepth 1 -type d); do
     cd $dir2

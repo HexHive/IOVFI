@@ -109,7 +109,7 @@ class TreeEvaluation:
             raise AssertionError("No guesses provided")
 
         result += "Average Recall: {} +- {}\n".format(avg, stddev)
-        result += "Median Accuracy: {}\n".format(median)
+        result += "Median Accuracy: {}\n\n".format(median)
 
         if len(self.specificities) > 1:
             avg = statistics.mean(self.specificities)
@@ -123,7 +123,7 @@ class TreeEvaluation:
             raise AssertionError("No guesses provided")
 
         result += "Average Specificity: {} +- {}\n".format(avg, stddev)
-        result += "Median Accuracy: {}\n\n".format(median)
+        result += "Median Specificity: {}\n\n".format(median)
 
         if len(self.precisions) > 1:
             avg = statistics.mean(self.precisions)
@@ -137,7 +137,7 @@ class TreeEvaluation:
             raise AssertionError("No guesses provided")
 
         result += "Average Precision: {} +- {}\n".format(avg, stddev)
-        result += "Median Accuracy: {}\n\n".format(median)
+        result += "Median Accuracy: {}".format(median)
 
         return result
 
@@ -158,7 +158,7 @@ def main():
     with open(args.guesses, "r") as guessList:
         for guessLine in guessList.readlines():
             guessLine = guessLine.strip()
-            print("Computing accuracy for {}".format(guessLine))
+            print("Computing accuracy for {}\n".format(guessLine))
             with open(guessLine, "rb") as guessFile:
                 guesses = pickle.load(guessFile)
 
