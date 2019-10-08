@@ -1,8 +1,10 @@
 #!/usr/bin/python3
 
 import argparse
+import os
 import pickle
 import statistics
+
 import contexts.treeutils as tu
 
 equivalences = {
@@ -54,19 +56,102 @@ equivalences = {
     '__memchr_avx2': '__memchr'
 }
 
+
+class TreeEvaluation:
+    def __init__(self, tree_path):
+        self.tree_path = os.path.abspath(tree_path)
+        self.specificities = list()
+        self.recalls = list()
+        self.accuracies = list()
+        self.precisions = list()
+        self.guess_paths = list()
+
+    def add_evaluation(self, guess_path, true_pos, true_neg, incorrect):
+        self.guess_paths.append(os.path.abspath(guess_path))
+
+        accuracy = (len(true_pos) + len(true_neg)) / (len(true_pos) + len(true_neg) + len(incorrect) + len(
+            incorrect))
+        self.accuracies.append(accuracy)
+
+        recall = len(true_pos) / (len(true_pos) + len(incorrect))
+        self.recalls.append(recall)
+
+        specificity = len(true_neg) / (len(true_neg) + len(incorrect))
+        self.specificities.append(specificity)
+
+        precision = len(true_pos) / (len(true_pos) + len(incorrect))
+        self.precisions.append(precision)
+
+    def __str__(self):
+        if len(self.accuracies) > 1:
+            avg = statistics.mean(self.accuracies)
+            stddev = statistics.stdev(self.accuracies)
+            median = statistics.mean(self.accuracies)
+        elif len(self.accuracies) == 1:
+            avg = self.accuracies[0]
+            median = self.accuracies[0]
+            stddev = 0
+        else:
+            raise AssertionError("No guesses provided")
+
+        print("Average Accuracy: {} +- {}".format(avg, stddev))
+        print("Median Accuracy: {}".format(median))
+
+        if len(self.recalls) > 1:
+            avg = statistics.mean(self.recalls)
+            stddev = statistics.stdev(self.recalls)
+            median = statistics.mean(self.recalls)
+        elif len(self.recalls) == 1:
+            avg = self.recalls[0]
+            median = self.recalls[0]
+            stddev = 0
+        else:
+            raise AssertionError("No guesses provided")
+
+        print("Average Recall: {} +- {}".format(avg, stddev))
+        print("Median Accuracy: {}".format(median))
+
+        if len(self.specificities) > 1:
+            avg = statistics.mean(self.specificities)
+            stddev = statistics.stdev(self.specificities)
+            median = statistics.mean(self.specificities)
+        elif len(self.specificities) == 1:
+            avg = self.specificities[0]
+            median = self.specificities[0]
+            stddev = 0
+        else:
+            raise AssertionError("No guesses provided")
+
+        print("Average Specificity: {} +- {}".format(avg, stddev))
+        print("Median Accuracy: {}".format(median))
+
+        if len(self.precisions) > 1:
+            avg = statistics.mean(self.precisions)
+            stddev = statistics.stdev(self.precisions)
+            median = statistics.mean(self.precisions)
+        elif len(self.precisions) == 1:
+            avg = self.precisions[0]
+            median = self.precisions[0]
+            stddev = 0
+        else:
+            raise AssertionError("No guesses provided")
+
+        print("Average Precision: {} +- {}".format(avg, stddev))
+        print("Median Accuracy: {}".format(median))
+
+
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
     parser.add_argument("-g", dest="guesses", help="/path/to/guess/list", default="guesses.txt")
+    parser.add_argument("-output", "-o", help="/path/to/measurement.bin")
 
     args = parser.parse_args()
 
     with open(args.tree, "rb") as treefile:
         dtree = pickle.load(treefile)
 
-    accuracies = list()
-    recalls = list()
-    specificities = list()
+    evaluation = TreeEvaluation(args.tree)
 
     with open(args.guesses, "r") as guessList:
         for guessLine in guessList.readlines():
@@ -76,48 +161,12 @@ def main():
                 guesses = pickle.load(guessFile)
 
             true_pos, true_neg, incorrect = tu.get_evaluation(dtree, guesses, equivalences)
-            accuracy = (len(true_pos) + len(true_neg)) / (len(true_pos) + len(true_neg) + len(incorrect) + len(
-                incorrect))
-            accuracies.append(accuracy)
+            evaluation.add_evaluation(guessLine, true_pos, true_neg, incorrect)
 
-            recall = len(true_pos) / (len(true_pos) + len(incorrect))
-            recalls.append(recall)
-
-            specificity = len(true_neg) / (len(true_neg) + len(incorrect))
-            specificities.append(specificity)
-
-    if len(accuracies) > 1:
-        avg = statistics.mean(accuracies)
-        stddev = statistics.stdev(accuracies)
-    elif len(accuracies) == 1:
-        avg = accuracies[0]
-        stddev = 0
-    else:
-        raise AssertionError("No guesses provided")
-
-    print("Average Accuracy: {} +- {}".format(avg, stddev))
-
-    if len(recalls) > 1:
-        avg = statistics.mean(recalls)
-        stddev = statistics.stdev(recalls)
-    elif len(recalls) == 1:
-        avg = recalls[0]
-        stddev = 0
-    else:
-        raise AssertionError("No guesses provided")
-
-    print("Average Recall: {} +- {}".format(avg, stddev))
-
-    if len(specificities) > 1:
-        avg = statistics.mean(specificities)
-        stddev = statistics.stdev(specificities)
-    elif len(specificities) == 1:
-        avg = specificities[0]
-        stddev = 0
-    else:
-        raise AssertionError("No guesses provided")
-
-    print("Average Specificity: {} +- {}".format(avg, stddev))
+    print(evaluation)
+    if args.output is not None:
+        with open(args.output, 'wb') as outfile:
+            pickle.dump(evaluation, outfile)
 
 
 if __name__ == "__main__":
