@@ -36,8 +36,7 @@ for test in $(find $TESTS -type f -executable -printf "%p \t%k kb\n" | sort -k2n
 done
 
 # Largest 5
-for test in $(find $TESTS -type f -executable -printf "%p \t%k kb\n" | sort -k2nr |
-  awk '{ if(count<5) { print $1; } count++; }'); do
+for test in $(find $TESTS -type f -executable -printf "%p \t%k kb\n" | sort -k2nr | awk '{ if(count<5) { print $1; } count++; }'); do
   if [ -d "$(basename $test)" ]; then
     echo "Skipping $test"
     continue
