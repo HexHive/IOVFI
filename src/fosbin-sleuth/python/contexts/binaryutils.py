@@ -85,29 +85,30 @@ def fuzz_one_function(fuzz_desc):
     binary = fuzz_desc.func_desc.binary
     successful_contexts = set()
 
-    if os.path.splitext(binary)[1] == ".so":
-        target = func_name
-
-    run_name = "{}.{}.{}".format(os.path.basename(binary), func_name, target)
-    if fuzz_desc.loader_loc is None:
-        logger.debug("{} target is {}".format(run_name, hex(target)))
-    else:
-        logger.debug("{} target is {}".format(run_name, target))
-    pipe_in = os.path.join(fuzz_desc.work_dir, run_name + ".in")
-    pipe_out = os.path.join(fuzz_desc.work_dir, run_name + ".out")
-    log_out = os.path.join("logs", "fuzz", run_name + ".log")
-    # cmd_log = os.path.join("logs", "fuzz", run_name + ".cmd.log")
-    cmd_log = os.path.abspath("/dev/null")
-    if not os.path.exists(os.path.dirname(log_out)):
-        os.makedirs(os.path.dirname(log_out), exist_ok=True)
-
-    logger.debug("Creating PinRun for {}".format(run_name))
-    pin_run = PinRun(fuzz_desc.pin_loc, fuzz_desc.pintool_loc, binary, fuzz_desc.loader_loc, pipe_in=pipe_in,
-                     pipe_out=pipe_out, log_loc=log_out, cwd=fuzz_desc.work_dir, cmd_log_loc=cmd_log)
-    logger.debug("Done")
-    fuzz_count = 0
-    attempts = 0
     try:
+        if os.path.splitext(binary)[1] == ".so":
+            target = func_name
+
+        run_name = "{}.{}.{}".format(os.path.basename(binary), func_name, target)
+        if fuzz_desc.loader_loc is None:
+            logger.debug("{} target is {}".format(run_name, hex(target)))
+        else:
+            logger.debug("{} target is {}".format(run_name, target))
+        pipe_in = os.path.join(fuzz_desc.work_dir, run_name + ".in")
+        pipe_out = os.path.join(fuzz_desc.work_dir, run_name + ".out")
+        log_out = os.path.join("logs", "fuzz", run_name + ".log")
+        # cmd_log = os.path.join("logs", "fuzz", run_name + ".cmd.log")
+        cmd_log = os.path.abspath("/dev/null")
+        if not os.path.exists(os.path.dirname(log_out)):
+            os.makedirs(os.path.dirname(log_out), exist_ok=True)
+
+        logger.debug("Creating PinRun for {}".format(run_name))
+        pin_run = PinRun(fuzz_desc.pin_loc, fuzz_desc.pintool_loc, binary, fuzz_desc.loader_loc, pipe_in=pipe_in,
+                         pipe_out=pipe_out, log_loc=log_out, cwd=fuzz_desc.work_dir, cmd_log_loc=cmd_log)
+        logger.debug("Done")
+        fuzz_count = 0
+        attempts = 0
+
         while fuzz_count < fuzz_desc.fuzz_count:
             attempts += 1
             if attempts > fuzz_desc.attempt_count:
