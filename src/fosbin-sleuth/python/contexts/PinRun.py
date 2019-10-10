@@ -91,14 +91,20 @@ class PinRun:
         if log_loc is not None:
             self.log_loc = os.path.abspath(log_loc)
             if os.path.exists(self.log_loc):
-                os.unlink(self.log_loc)
+                try:
+                    os.unlink(self.log_loc)
+                except PermissionError:
+                    pass
         else:
             self.log_loc = None
 
         if cmd_log_loc is not None:
             self.cmd_log_loc = os.path.abspath(cmd_log_loc)
             if os.path.exists(self.cmd_log_loc):
-                os.unlink(self.cmd_log_loc)
+                try:
+                    os.unlink(self.cmd_log_loc)
+                except PermissionError:
+                    pass
         else:
             self.cmd_log_loc = None
 

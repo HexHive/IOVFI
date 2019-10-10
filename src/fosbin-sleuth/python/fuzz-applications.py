@@ -23,7 +23,7 @@ def main():
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
     parser.add_argument("-log", help="/path/to/log/file", default="fuzz.log")
-    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.DEBUG)
+    parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=4 * multiprocessing.cpu_count())
     parser.add_argument("-map", help="/path/to/context/map", default="hash.map")
     parser.add_argument("-count", help="Number of times to fuzz function", type=int, default=fuzz_count)
