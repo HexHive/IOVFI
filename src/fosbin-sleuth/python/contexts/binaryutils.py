@@ -96,7 +96,8 @@ def fuzz_one_function(fuzz_desc):
     pipe_in = os.path.join(fuzz_desc.work_dir, run_name + ".in")
     pipe_out = os.path.join(fuzz_desc.work_dir, run_name + ".out")
     log_out = os.path.join("logs", "fuzz", run_name + ".log")
-    cmd_log = os.path.join("logs", "fuzz", run_name + ".cmd.log")
+    # cmd_log = os.path.join("logs", "fuzz", run_name + ".cmd.log")
+    cmd_log = "/dev/null"
     if not os.path.exists(os.path.dirname(log_out)):
         os.makedirs(os.path.dirname(log_out), exist_ok=True)
 
