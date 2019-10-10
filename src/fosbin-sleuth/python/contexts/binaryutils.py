@@ -217,7 +217,8 @@ def consolidate_one_function(consolidationRunDesc):
     pipe_in = os.path.abspath(os.path.join(work_dir, run_name + ".in"))
     pipe_out = os.path.abspath(os.path.join(work_dir, run_name + ".out"))
     log_loc = os.path.abspath(os.path.join(work_dir, run_name + ".consol.log"))
-    cmd_log_loc = os.path.abspath(os.path.join(work_dir, run_name + ".consol.cmd.log"))
+    # cmd_log_loc = os.path.abspath(os.path.join(work_dir, run_name + ".consol.cmd.log"))
+    cmd_log_loc = os.path.abspath("/dev/null")
 
     desc_map = dict()
 
