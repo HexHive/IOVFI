@@ -170,6 +170,7 @@ def fuzz_one_function(fuzz_desc):
 
     except Exception as e:
         logger.debug("Error for {}: {}".format(run_name, e))
+        logger.exception(e)
     finally:
         logger.info("Finished {}".format(run_name))
         pin_run.stop()
