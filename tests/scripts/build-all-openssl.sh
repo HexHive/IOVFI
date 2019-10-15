@@ -17,6 +17,8 @@ for d in $(find $INSTALL_DIR -maxdepth 1 -mindepth 1 -type d); do
     echo "Failed to checkout tag $(basename $d)"
     continue
   fi
+  git reset --hard HEAD
+  make clean
   ./config --prefix=$(realpath $d) --openssldir=$(realpath $d)/ssl
   if [[ $? != 0 ]]; then
     echo "Config failed for $(basename $d)"
