@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ $# != 3 ]]; then
+if [[ $# != 2 ]]; then
   echo "Usage: $(basename "$0") /path/to/openssl /path/to/install/path"
   exit 1
 fi
@@ -11,7 +11,7 @@ INSTALL_DIR=$(realpath "$2")
 
 cd $OPENSSL_DIR
 
-for d in $(find INSTALL_DIR -maxdepth 1 -mindepth 1 -type d); do
+for d in $(find $INSTALL_DIR -maxdepth 1 -mindepth 1 -type d); do
   git checkout $(basename $d)
   if [[ $? != 0 ]]; then
     echo "Failed to checkout tag $(basename $d)"
