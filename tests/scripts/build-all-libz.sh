@@ -1,25 +1,25 @@
 #!/bin/bash
 
 if [[ $# != 2 ]]; then
-  echo "Usage: $(basename "$0") /path/to/openssl /path/to/install/path"
+  echo "Usage: $(basename "$0") /path/to/libz/source /path/to/install/path"
   exit 1
 fi
 
 START_DIR=$PWD
-OPENSSL_DIR=$(realpath "$1")
+LIBZ_DIR=$(realpath "$1")
 INSTALL_DIR=$(realpath "$2")
 
-cd $OPENSSL_DIR
+cd $LIBZ_DIR
 
 for d in $(find $INSTALL_DIR -maxdepth 1 -mindepth 1 -type d); do
+  make clean
+  git reset --hard HEAD
   git checkout $(basename $d)
   if [[ $? != 0 ]]; then
     echo "Failed to checkout tag $(basename $d)"
     continue
   fi
-  git reset --hard HEAD
-  make clean
-  ./config --prefix=$(realpath $d) --openssldir=$(realpath $d)/ssl
+  ./configure
   if [[ $? != 0 ]]; then
     echo "Config failed for $(basename $d)"
     continue
@@ -29,7 +29,7 @@ for d in $(find $INSTALL_DIR -maxdepth 1 -mindepth 1 -type d); do
     echo "Make failed for $(basename $d)"
     continue
   fi
-  make install
+  make install prefix=$d
   if [[ $? != 0 ]]; then
     echo "Make install failed for $(basename $d)"
     continue
