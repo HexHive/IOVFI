@@ -349,6 +349,8 @@ VOID trace_execution(TRACE trace, VOID *v) {
     if (RTN_Valid(target)) {
         for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
             for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
+//                std::cout << "Instrumenting " << INS_Disassemble(ins) << "(0x" << std::hex << INS_Address(ins) << ")"
+//                << std::endl;
                 INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
                                IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
                                IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
@@ -760,6 +762,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
             std::stringstream msg;
             msg << "Faulting instruction (0x" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
                 << "): " << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
+            msg << "\nException: " << PIN_ExceptionToString(pExceptInfo);
             log_message(msg);
 //            log_message("write_to_cmd 7");
             report_failure(ZCMD_ERROR, ctx);
@@ -873,7 +876,9 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
         }
         msg << "Setting new target to " << (const char *) zmsg.data() << " in SO target " << IMG_Name(target_so);
         log_message(msg);
-        new_target = RTN_FindByName(target_so, (const char *) zmsg.data());
+        RTN so_func = RTN_FindByName(target_so, (const char *) zmsg.data());
+
+        new_target = RTN_FindByAddress(RTN_Address(so_func));
     } else if (zmsg.type() == ZMSG_SET_RUST_TGT) {
         IMG img = IMG_FindImgById(imgId);
         if (IMG_Valid(img)) {
@@ -1073,12 +1078,24 @@ void wait_to_start() {
     }
 }
 
+VOID Find_Shared(IMG img, VOID *v) {
+    if (!IMG_Valid(img) || IMG_IsMainExecutable(img)) {
+        return;
+    }
+
+    const char *name = (const char *) v;
+    if (name == IMG_Name(img)) {
+        target_so = img;
+    }
+}
+
 VOID FindMain(IMG img, VOID *v) {
     if (!IMG_Valid(img) || !IMG_IsMainExecutable(img)) {
         return;
     }
 
     RTN main;
+    IMG target_so;
     if (!KnobRustMain.Value().empty()) {
         main = RTN_FindByName(img, KnobRustMain.Value().c_str());
     } else {
@@ -1087,14 +1104,14 @@ VOID FindMain(IMG img, VOID *v) {
     if (RTN_Valid(main)) {
         RTN_Open(main);
         if (is_executable_fbloader(img)) {
-            const char *shared_so_cname = (const char *) v;
-            std::string shared_so_name(shared_so_cname);
-            target_so = IMG_Open(shared_so_name);
-            if (!IMG_Valid(target_so)) {
-                std::stringstream ss;
-                ss << "Could not open shared object " << shared_so_name;
-                log_error(ss);
-            }
+//            const char *shared_so_cname = (const char *) v;
+//            std::string shared_so_name(shared_so_cname);
+//            target_so = IMG_Open(shared_so_name);
+//            if (!IMG_Valid(target_so)) {
+//                std::stringstream ss;
+//                ss << "Could not open shared object " << shared_so_name;
+//                log_error(ss);
+//            }
             first_ins = RTN_InsTail(main);
             first_ins_addr = INS_Address(first_ins);
             imgId = IMG_Id(target_so);
@@ -1113,6 +1130,9 @@ VOID FindMain(IMG img, VOID *v) {
         log_message(msg);
         INS_InsertCall(first_ins, IPOINT_BEFORE, (AFUNPTR) begin_execution, IARG_CONTEXT, IARG_END);
         RTN_Close(main);
+//        if(is_executable_fbloader(img)) {
+//            IMG_Close(target_so);
+//        }
     } else {
         std::stringstream ss;
         ss << "Could not find main!" << std::endl;
@@ -1182,6 +1202,7 @@ int main(int argc, char **argv) {
     log_message("done");
 
     IMG_AddInstrumentFunction(FindMain, argv[argc - 1]);
+    IMG_AddInstrumentFunction(Find_Shared, argv[argc - 1]);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
     PIN_AddSyscallEntryFunction(track_syscalls, nullptr);
     PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, nullptr);
