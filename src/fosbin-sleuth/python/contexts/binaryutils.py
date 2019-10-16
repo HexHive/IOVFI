@@ -52,7 +52,7 @@ class FuzzRunResult:
         return len(self.io_vecs)
 
 
-def find_funcs(binary, target=None, ignored_funcs=None):
+def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
     target_is_name = True
     if target is not None:
         try:
@@ -249,7 +249,12 @@ def consolidate_one_function(consolidationRunDesc):
                 logger.debug("Starting pin_run for {}".format(run_name))
                 pin_run.stop()
                 pin_run.start(timeout=consolidationRunDesc.watchdog)
-                ack_msg = pin_run.send_set_target_cmd(func_desc.location, timeout=consolidationRunDesc.watchdog)
+
+                if consolidationRunDesc.loader_loc is None:
+                    ack_msg = pin_run.send_set_target_cmd(func_desc.location, timeout=consolidationRunDesc.watchdog)
+                else:
+                    ack_msg = pin_run.send_set_target_cmd(func_desc.name, timeout=consolidationRunDesc.watchdog)
+
                 if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
                     logger.error("Set target ACK not received for {}".format(run_name))
                     break
@@ -316,7 +321,7 @@ def consolidate_one_function(consolidationRunDesc):
             pin_run.stop()
             continue
         except Exception as e:
-            logger.debug("Error for {}: {}".format(run_name, str(e)))
+            logger.exception("Error for {}: {}".format(run_name, str(e)))
             break
 
     pin_run.stop()

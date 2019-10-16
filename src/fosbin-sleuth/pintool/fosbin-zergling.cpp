@@ -1090,7 +1090,12 @@ VOID Find_Shared(IMG img, VOID *v) {
 }
 
 VOID FindMain(IMG img, VOID *v) {
-    if (!IMG_Valid(img) || !IMG_IsMainExecutable(img)) {
+    if (!IMG_Valid(img)) {
+        return;
+    }
+
+    if (!IMG_IsMainExecutable(img)) {
+        Find_Shared(img, v);
         return;
     }
 
@@ -1202,7 +1207,7 @@ int main(int argc, char **argv) {
     log_message("done");
 
     IMG_AddInstrumentFunction(FindMain, argv[argc - 1]);
-    IMG_AddInstrumentFunction(Find_Shared, argv[argc - 1]);
+//    IMG_AddInstrumentFunction(Find_Shared, argv[argc - 1]);
     TRACE_AddInstrumentFunction(trace_execution, nullptr);
     PIN_AddSyscallEntryFunction(track_syscalls, nullptr);
     PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, nullptr);
