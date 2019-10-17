@@ -249,8 +249,8 @@ FBZergContext &FBZergContext::operator<<(CONTEXT *ctx) {
     }
 
     void *ret_val = (void *) PIN_GetContextReg(ctx, FBZergContext::return_reg);
+    PIN_SafeCopy(&return_value, ret_val, sizeof(return_value));
     if (PIN_CheckReadAccess(ret_val)) {
-        PIN_SafeCopy(&return_value, ret_val, sizeof(return_value));
         values[FBZergContext::return_reg] = AllocatedArea::MAGIC_VALUE;
     } else {
         values[FBZergContext::return_reg] = (ADDRINT) ret_val;
