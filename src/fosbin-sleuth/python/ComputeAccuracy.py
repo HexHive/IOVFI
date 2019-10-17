@@ -87,6 +87,7 @@ class TreeEvaluation:
             print("Latest recall: {}".format(recall))
             print("Latest specificity: {}".format(specificity))
             print("Latest precision: {}".format(precision))
+            print()
 
     def __str__(self):
         if len(self.accuracies) > 1:
