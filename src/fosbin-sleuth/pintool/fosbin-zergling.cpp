@@ -313,24 +313,38 @@ VOID fuzz_registers() {
     fuzzed_input = true;
 }
 
-VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
-                            ADDRINT r8, ADDRINT r9, ADDRINT r10, ADDRINT r11,
-                            ADDRINT r12, ADDRINT r13, ADDRINT r14, ADDRINT r15,
-                            ADDRINT rdi, ADDRINT rsi, ADDRINT rip, ADDRINT rbp
-) {
+VOID record_current_context(CONTEXT *ctx) {
     if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
         wait_to_start();
     }
 //    std::cout << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
 //    std::cout << "Func " << RTN_FindNameByAddress(rip) << ": " << INS_Disassemble(INS_FindByAddress(rip)) << std::endl;
 
-    struct X86Context tmp = {rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip, rbp};
-    std::cout << "RAX (" << std::hex << rax << ") is " << (PIN_CheckReadAccess((void *) rax) ? "" : "NOT ") <<
-              "readable. ";
+    struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RCX),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RDX),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RDI),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSI),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R8),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R9),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R10),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R11),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R12),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R13),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R14),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R15),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP)
+    };
+    std::cout << "RAX (" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX)
+              << ") is "
+              << (PIN_CheckReadAccess((void *) PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX)) ? "" : "NOT ") <<
+              "readable. " << std::endl;
     //    << "RDI is " << (PIN_CheckWriteAccess((void*)rdi) ? "" : "NOT ") << "writeable." << std::endl;
     
     fuzzing_run.push_back(tmp);
-    std::string curr_name = RTN_FindNameByAddress(rip);
+    std::string curr_name = RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP));
     if (curr_name != current_function) {
         current_function = curr_name;
         executionInfo.add_function(current_function);
@@ -352,24 +366,25 @@ VOID trace_execution(TRACE trace, VOID *v) {
             for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
 //                std::cout << "Instrumenting " << INS_Disassemble(ins) << "(0x" << std::hex << INS_Address(ins) << ")"
 //                << std::endl;
-                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R8,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R9,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R10,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R11,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R12,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R13,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R14,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_R15,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
-                               IARG_INST_PTR,
-                               IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
-                               IARG_END);
+                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context, IARG_CONTEXT, IARG_END);
+//                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_R8,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_R9,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_R10,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_R11,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_R12,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_R13,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_R14,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_R15,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
+//                               IARG_INST_PTR,
+//                               IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
+//                               IARG_END);
             }
         }
     }
