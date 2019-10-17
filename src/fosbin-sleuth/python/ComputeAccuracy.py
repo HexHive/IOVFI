@@ -53,7 +53,8 @@ equivalences = {
     '__memmove_ssse3': '__memmove',
     '__memmove_ssse3_back': '__memmove',
     '__memchr_sse2': '__memchr',
-    '__memchr_avx2': '__memchr'
+    '__memchr_avx2': '__memchr',
+    '_IO_wpadn': '_IO_padn'
 }
 
 
