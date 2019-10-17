@@ -870,6 +870,7 @@ void adjust_stack_down(CONTEXT *ctx) {
         adjusted_stack = true;
         log_message("done");
     }
+    preContext >> ctx;
 }
 
 zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
