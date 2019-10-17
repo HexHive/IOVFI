@@ -67,7 +67,7 @@ class TreeEvaluation:
         self.precisions = list()
         self.guess_paths = list()
 
-    def add_evaluation(self, guess_path, true_pos, true_neg, incorrect):
+    def add_evaluation(self, guess_path, true_pos, true_neg, incorrect, verbose=False):
         self.guess_paths.append(os.path.abspath(guess_path))
 
         accuracy = (len(true_pos) + len(true_neg)) / (len(true_pos) + len(true_neg) + len(incorrect) + len(
@@ -82,12 +82,17 @@ class TreeEvaluation:
 
         precision = len(true_pos) / (len(true_pos) + len(incorrect))
         self.precisions.append(precision)
+        if verbose:
+            print("Latest accuracy: {}".format(accuracy))
+            print("Latest recall: {}".format(recall))
+            print("Latest specificity: {}".format(specificity))
+            print("Latest precision: {}".format(precision))
 
     def __str__(self):
         if len(self.accuracies) > 1:
             avg = statistics.mean(self.accuracies)
             stddev = statistics.stdev(self.accuracies)
-            median = statistics.mean(self.accuracies)
+            median = statistics.median(self.accuracies)
         elif len(self.accuracies) == 1:
             avg = self.accuracies[0]
             median = self.accuracies[0]
@@ -101,7 +106,7 @@ class TreeEvaluation:
         if len(self.recalls) > 1:
             avg = statistics.mean(self.recalls)
             stddev = statistics.stdev(self.recalls)
-            median = statistics.mean(self.recalls)
+            median = statistics.median(self.recalls)
         elif len(self.recalls) == 1:
             avg = self.recalls[0]
             median = self.recalls[0]
@@ -115,7 +120,7 @@ class TreeEvaluation:
         if len(self.specificities) > 1:
             avg = statistics.mean(self.specificities)
             stddev = statistics.stdev(self.specificities)
-            median = statistics.mean(self.specificities)
+            median = statistics.median(self.specificities)
         elif len(self.specificities) == 1:
             avg = self.specificities[0]
             median = self.specificities[0]
@@ -129,7 +134,7 @@ class TreeEvaluation:
         if len(self.precisions) > 1:
             avg = statistics.mean(self.precisions)
             stddev = statistics.stdev(self.precisions)
-            median = statistics.mean(self.precisions)
+            median = statistics.median(self.precisions)
         elif len(self.precisions) == 1:
             avg = self.precisions[0]
             median = self.precisions[0]
@@ -164,7 +169,7 @@ def main():
                 guesses = pickle.load(guessFile)
 
             true_pos, true_neg, incorrect = tu.get_evaluation(dtree, guesses, equivalences)
-            evaluation.add_evaluation(guessLine, true_pos, true_neg, incorrect)
+            evaluation.add_evaluation(guessLine, true_pos, true_neg, incorrect, True)
 
     print(evaluation)
     if args.output is not None:
