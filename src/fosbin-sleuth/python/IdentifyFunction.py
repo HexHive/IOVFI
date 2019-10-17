@@ -124,7 +124,7 @@ def main():
             guesses = pickle.load(guessFile)
         logger.info(msg + "done!")
 
-    if results.outputonly:
+    if not results.outputonly:
         ignored_funcs = set()
         if results.ignore is not None:
             logger.debug("Reading ignored functions")
