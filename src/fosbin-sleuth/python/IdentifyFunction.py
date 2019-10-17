@@ -96,6 +96,7 @@ def main():
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
     parser.add_argument("-n", help="Number of confirmation checks", type=int, default=1)
     parser.add_argument('-rust', help='Rust application main', type=str)
+    parser.add_argument('-outputonly', help='Only output the existing guesses', type=bool, default=False)
     results = parser.parse_args()
 
     logger.info("Checking inputs...")
@@ -123,40 +124,41 @@ def main():
             guesses = pickle.load(guessFile)
         logger.info(msg + "done!")
 
-    ignored_funcs = set()
-    if results.ignore is not None:
-        logger.debug("Reading ignored functions")
-        with open(results.ignore) as f:
-            for line in f.readlines():
-                line = line.strip()
-                ignored_funcs.add(line)
-        logger.debug("done")
+    if results.outputonly:
+        ignored_funcs = set()
+        if results.ignore is not None:
+            logger.debug("Reading ignored functions")
+            with open(results.ignore) as f:
+                for line in f.readlines():
+                    line = line.strip()
+                    ignored_funcs.add(line)
+            logger.debug("done")
 
-    msg = "Finding functions in {}...".format(binaryLoc)
-    location_map = binaryutils.find_funcs(binaryLoc, results.target, ignored_funcs)
-    logger.info(msg + "done!")
-    logger.info("Found {} functions".format(len(location_map)))
+        msg = "Finding functions in {}...".format(binaryLoc)
+        location_map = binaryutils.find_funcs(binaryLoc, results.target, ignored_funcs)
+        logger.info(msg + "done!")
+        logger.info("Found {} functions".format(len(location_map)))
 
-    random.seed()
-    args = list()
-    for loc, func_desc in location_map.items():
-        if func_desc.name in dangerous_functions or func_desc.name in guesses.keys():
-            logger.info("Skipping {}".format(func_desc.name))
-            continue
-        args.append(func_desc)
+        random.seed()
+        args = list()
+        for loc, func_desc in location_map.items():
+            if func_desc.name in dangerous_functions or func_desc.name in guesses.keys():
+                logger.info("Skipping {}".format(func_desc.name))
+                continue
+            args.append(func_desc)
 
-    if len(args) > 0:
-        with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
-            pool.map(single_test, args)
+        if len(args) > 0:
+            with futures.ThreadPoolExecutor(max_workers=results.threads) as pool:
+                pool.map(single_test, args)
 
-        with open(guessLoc, "wb+") as guessFile:
-            pickle.dump(guesses, guessFile)
+            with open(guessLoc, "wb+") as guessFile:
+                pickle.dump(guesses, guessFile)
 
-    if len(error_msgs) > 0:
-        logger.info("++++++++++++++++++++++++++++++++++++++++++++")
-        logger.info("                  Errors                    ")
-        logger.info("++++++++++++++++++++++++++++++++++++++++++++")
-        logger.info(error_msgs)
+        if len(error_msgs) > 0:
+            logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+            logger.info("                  Errors                    ")
+            logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+            logger.info(error_msgs)
 
     logger.info("++++++++++++++++++++++++++++++++++++++++++++")
     logger.info("                  Guesses                   ")
