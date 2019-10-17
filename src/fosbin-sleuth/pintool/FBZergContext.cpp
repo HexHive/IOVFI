@@ -221,7 +221,12 @@ void FBZergContext::prettyPrint(std::ostream &s) const {
     }
 
     s << REG_StringShort(FBZergContext::return_reg) << "\t= " << std::hex
-      << get_value(FBZergContext::return_reg) << std::endl;
+      << get_value(FBZergContext::return_reg);
+    if (return_is_ptr()) {
+        s << "(0x" << return_value << ")";
+    }
+
+    s << std::endl;
 
     for (auto it : pointer_registers) {
         it.second->prettyPrint(s, 1);
