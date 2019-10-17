@@ -222,9 +222,6 @@ void FBZergContext::prettyPrint(std::ostream &s) const {
 
     s << REG_StringShort(FBZergContext::return_reg) << "\t= " << std::hex
       << get_value(FBZergContext::return_reg);
-    if (return_is_ptr()) {
-        s << "(0x" << std::hex << return_value << ")";
-    }
 
     s << std::endl;
 
@@ -249,9 +246,9 @@ FBZergContext &FBZergContext::operator<<(CONTEXT *ctx) {
     }
 
     void *ret_val = (void *) PIN_GetContextReg(ctx, FBZergContext::return_reg);
-    PIN_SafeCopy(&return_value, ret_val, sizeof(return_value));
-    std::cout << "ret_val = " << std::hex << ret_val << std::endl;
     if (PIN_CheckReadAccess(ret_val)) {
+        PIN_SafeCopy(&return_value, ret_val, sizeof(return_value));
+        std::cout << "ret_val = " << std::hex << ret_val << std::endl;
         values[FBZergContext::return_reg] = AllocatedArea::MAGIC_VALUE;
     } else {
         values[FBZergContext::return_reg] = (ADDRINT) ret_val;
