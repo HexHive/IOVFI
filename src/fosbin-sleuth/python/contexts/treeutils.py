@@ -55,7 +55,7 @@ def get_evaluation(tree, guesses, equivalence_map=None):
         func_names.add(fd.name)
 
     for func_desc, idx in guesses.items():
-        if "ifunc" in func_desc:
+        if "ifunc" in func_desc.name:
             continue
 
         equiv_class = tree.get_equiv_classes(idx)
