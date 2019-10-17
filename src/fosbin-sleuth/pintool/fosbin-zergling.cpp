@@ -325,7 +325,8 @@ VOID record_current_context(ADDRINT rax, ADDRINT rbx, ADDRINT rcx, ADDRINT rdx,
 //    std::cout << "Func " << RTN_FindNameByAddress(rip) << ": " << INS_Disassemble(INS_FindByAddress(rip)) << std::endl;
 
     struct X86Context tmp = {rax, rbx, rcx, rdx, rdi, rsi, r8, r9, r10, r11, r12, r13, r14, r15, rip, rbp};
-    //std::cout << "RDI is " << (PIN_CheckReadAccess((void*)rdi) ? "" : "NOT ") << "readable. "
+    std::cout << "RAX (" << std::hex << rax << ") is " << (PIN_CheckReadAccess((void *) rax) ? "" : "NOT ") <<
+              "readable. ";
     //    << "RDI is " << (PIN_CheckWriteAccess((void*)rdi) ? "" : "NOT ") << "writeable." << std::endl;
     
     fuzzing_run.push_back(tmp);
