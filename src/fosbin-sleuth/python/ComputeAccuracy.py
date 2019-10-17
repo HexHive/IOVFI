@@ -144,7 +144,7 @@ class TreeEvaluation:
             raise AssertionError("No guesses provided")
 
         result += "Average Precision: {} +- {}\n".format(avg, stddev)
-        result += "Median Accuracy: {}".format(median)
+        result += "Median Precision: {}".format(median)
 
         return result
 
