@@ -8,7 +8,7 @@ START_DIR=$PWD
 for d in $(find $ZLIB_DIR -mindepth 1 -maxdepth 1 -type d); do
   for d2 in $(find $ZLIB_DIR -mindepth 1 -maxdepth 1 -type d); do
     if version_gt $d2 $d1; then
-      echo "mkdir $d/$d2"
+      echo "mkdir -p $(basename $d)/$(basename $d2)"
     fi
   done
 done
