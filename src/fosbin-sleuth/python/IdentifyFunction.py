@@ -29,6 +29,7 @@ pintoolLoc = None
 binaryLoc = None
 fbDtree = None
 rust_main = None
+fbLoader = None
 n_confirms = 1
 
 WORK_DIR = os.path.abspath(os.path.join("_work", "identifying"))
@@ -62,11 +63,11 @@ def check_inputs(argparser):
 
 
 def single_test(func_desc):
-    global error_msgs, pinLoc, pintoolLoc, fbDtree, n_confirms, rust_main
+    global error_msgs, pinLoc, pintoolLoc, fbDtree, n_confirms, rust_main, fbLoader
 
     try:
         guess = fbDtree.identify(func_desc, pinLoc, pintoolLoc, cwd=WORK_DIR, max_confirm=n_confirms,
-                                 rust_main=rust_main)
+                                 rust_main=rust_main, loader_loc=fbLoader)
         guess_lock.acquire()
         guesses[func_desc] = guess
         guess_lock.release()
@@ -81,7 +82,7 @@ def single_test(func_desc):
 
 
 def main():
-    global fbDtree, guessLoc, binaryLoc, guesses, n_confirms
+    global fbDtree, guessLoc, binaryLoc, guesses, n_confirms, fbLoader
 
     parser = argparse.ArgumentParser(description="IdentifyFunction")
     parser.add_argument('-t', '--tree', help="/path/to/decision/tree", default="tree.bin")
@@ -97,12 +98,14 @@ def main():
     parser.add_argument("-n", help="Number of confirmation checks", type=int, default=1)
     parser.add_argument('-rust', help='Rust application main', type=str)
     parser.add_argument('-outputonly', help='Only output the existing guesses', type=bool, default=False)
+    parser.add_argument("-ld", help="/path/to/fb-load")
     results = parser.parse_args()
 
     logger.info("Checking inputs...")
     check_inputs(results)
     logger.info("done!")
     n_confirms = results.n
+    fbLoader = results.ld
 
     logpath = os.path.abspath(os.path.join("logs", "identifying", results.logprefix))
     if not os.path.exists(logpath):
