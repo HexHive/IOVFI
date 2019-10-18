@@ -234,7 +234,7 @@ CONTEXT *FBZergContext::operator>>(CONTEXT *ctx) const {
     for (REG reg : FBZergContext::argument_regs) {
         PIN_SetContextReg(ctx, reg, get_value(reg));
     }
-    PIN_SetContextReg(ctx, FBZergContext::return_reg, get_value(FBZergContext::return_reg));
+    PIN_SetContextReg(ctx, FBZergContext::return_reg, 0);
     return ctx;
 }
 
