@@ -4,7 +4,7 @@ function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$
 
 ZLIB_DIR=$(realpath $1)
 START_DIR=$PWD
-TOP_DIR=$(realpath $(basename $0)/../..)
+TOP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 for d in $(find $ZLIB_DIR -mindepth 1 -maxdepth 1 -type d); do
   for d2 in $(find $ZLIB_DIR -mindepth 1 -maxdepth 1 -type d); do
