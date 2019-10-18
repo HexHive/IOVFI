@@ -213,7 +213,10 @@ class FBDecisionTree:
                     pin_run.stop()
                     pin_run.start(timeout=FBDecisionTree.WATCHDOG)
                     if pin_run.rust_main is None:
-                        ack_msg = pin_run.send_set_target_cmd(func_desc.location, FBDecisionTree.WATCHDOG)
+                        if loader_loc is None:
+                            ack_msg = pin_run.send_set_target_cmd(func_desc.location, FBDecisionTree.WATCHDOG)
+                        else:
+                            ack_msg = pin_run.send_set_target_cmd(func_desc.name, FBDecisionTree.WATCHDOG)
                     else:
                         ack_msg = pin_run.send_set_target_cmd(func_desc.name, FBDecisionTree.WATCHDOG)
 
