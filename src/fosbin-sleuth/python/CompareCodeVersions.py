@@ -32,7 +32,7 @@ def main():
             changed_funcs.append(name)
             continue
 
-        equiv_class = tree.get_equiv_class(guess_map[name])
+        equiv_class = tree.get_equiv_classes(guess_map[name])
         if equiv_class is None:
             changed_funcs.append(name)
             continue
