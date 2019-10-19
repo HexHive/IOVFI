@@ -47,8 +47,10 @@ def main():
         if not found:
             changed_funcs.append(name)
 
-    print("Same ({}): {}".format(len(same_funcs), " ".join(same_funcs.sort())))
-    print("Diff ({}): {}".format(len(changed_funcs), " ".join(changed_funcs.sort())))
+    same_funcs.sort()
+    changed_funcs.sort()
+    print("Same ({}): {}".format(len(same_funcs), " ".join(same_funcs)))
+    print("Diff ({}): {}".format(len(changed_funcs), " ".join(changed_funcs)))
 
 
 if __name__ == "__main__":
