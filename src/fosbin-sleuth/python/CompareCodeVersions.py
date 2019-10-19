@@ -50,6 +50,7 @@ def main():
     same_funcs.sort()
     changed_funcs.sort()
     print("Same ({}): {}".format(len(same_funcs), " ".join(same_funcs)))
+    print()
     print("Diff ({}): {}".format(len(changed_funcs), " ".join(changed_funcs)))
 
 
