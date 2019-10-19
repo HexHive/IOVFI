@@ -23,7 +23,7 @@ def main():
 
     guess_map = dict()
     for func_desc, guess in guesses.items():
-        guess_map[func_desc] = guess
+        guess_map[func_desc.name] = guess
 
     changed_funcs = list()
     same_funcs = list()
