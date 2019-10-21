@@ -318,8 +318,8 @@ VOID record_current_context(CONTEXT *ctx) {
         wait_to_start();
     }
 //    std::cout << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
-    std::cout << "Func " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << ": "
-              << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP))) << std::endl;
+//    std::cout << "Func " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << ": "
+//              << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP))) << std::endl;
 
     struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
