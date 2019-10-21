@@ -337,10 +337,10 @@ VOID record_current_context(CONTEXT *ctx) {
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP)
     };
-    std::cout << "RAX (" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX)
-              << ") is "
-              << (PIN_CheckReadAccess((void *) PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX)) ? "" : "NOT ") <<
-              "readable. " << std::endl;
+//    std::cout << "RAX (" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX)
+//              << ") is "
+//              << (PIN_CheckReadAccess((void *) PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX)) ? "" : "NOT ") <<
+//              "readable. " << std::endl;
     //    << "RDI is " << (PIN_CheckWriteAccess((void*)rdi) ? "" : "NOT ") << "writeable." << std::endl;
     
     fuzzing_run.push_back(tmp);
