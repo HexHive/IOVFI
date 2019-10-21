@@ -929,7 +929,7 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
         }
     }
     instrument_sites++;
-    INS_InsertCall(RTN_InsTail(new_target), IPOINT_BEFORE, (AFUNPTR) report_success, IARG_CONTEXT,
+    INS_InsertCall(RTN_InsTail(new_target), IPOINT_AFTER, (AFUNPTR) report_success, IARG_CONTEXT,
                    IARG_THREAD_ID, IARG_END);
 
     last_ins_addr = INS_Address(RTN_InsTail(new_target));
