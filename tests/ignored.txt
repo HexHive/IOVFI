@@ -48,3 +48,7 @@ strlen_ifunc
 strncmp_ifunc
 strrchr_ifunc
 strspn_ifunc
+__wmemchr_ifunc
+__stpncpy_ifunc
+__strncasecmp_ifunc
+
