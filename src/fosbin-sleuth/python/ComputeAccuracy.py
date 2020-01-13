@@ -11,12 +11,22 @@ equivalences = {
     '__strncmp_sse2': '__strncmp',
     '__strncmp_sse42': '__strncmp',
     '__strncmp_ssse3': '__strncmp',
+    '__strncmp_avx2': '__strncmp',
+    '_pcre2_strncmp_8': '__strncmp',
+    '_pcre2_strncmp_c8_8': '__strncmp',
+    '__strncasecmp_sse2': '__strncmp',
     '__memcmp_avx2_movbe': '__memcmp',
     '__memcmp_sse2': '__memcmp',
     '__memcmp_sse4_1': '__memcmp',
     '__memcmp_ssse3': '__memcmp',
+    '__wmemcmp_sse4_1': '__memcmp',
+    '__wmemcmp_ssse3': '__memcmp',
+    '__wmemcmp_sse2': '__memcmp',
+    '__wmemcmp_avx2_movbe': '__memcmp',
     '__strnlen_avx2': '__strnlen',
     '__strnlen_sse2': '__strnlen',
+    '__strlen_avx2': '__strlen',
+    '__strlen_sse2': '__strlen',
     '__mempcpy_sse2_unaligned': '__mempcpy',
     '__mempcpy_avx512_no_vzeroupper': '__mempcpy',
     '__mempcpy_avx512_unaligned': '__mempcpy',
@@ -26,9 +36,14 @@ equivalences = {
     '__mempcpy_ssse3': '__mempcpy',
     '__mempcpy_ssse3_back': '__mempcpy',
     '__mempcpy_avx_unaligned': '__mempcpy',
-    '__strncasecmp_avx': '__strncasecmp',
-    '__strncasecmp_ssse3': '__strncasecmp',
-    '__strncasecmp_l_nonascii': '__strncasecmp',
+    '__strncasecmp_avx': '__strcmp',
+    '__strncasecmp_ssse3': '__strcmp',
+    '__strncasecmp_l_nonascii': '__strcmp',
+    '__strcmp_avx2': '__strcmp',
+    '__strcmp_ssse3': '__strcmp',
+    '__strcmp_sse2_unaligned': '__strcmp',
+    '__strcmp_sse2': '__strcmp',
+    'c_strcasecmp': '__strcmp',
     '__memset_erms': '__memset',
     '__memset_avx2_unaligned': '__memset',
     '__memset_avx2_unaligned_erms': '__memset',
@@ -40,21 +55,55 @@ equivalences = {
     '__wcsnlen_sse4_1': '__wcsnlen',
     '__wcsnlen_avx2': '__wcsnlen',
     '__wcsnlen_sse2': '__wcsnlen',
-    '__strnlen_sse2': '__strnlen',
-    '__strnlen_avx2': '__strnlen',
     '__memcpy_ssse3_back': '__memcpy',
     '__memcpy_ssse3': '__memcpy',
+    '__strncpy_avx2': '__memcpy',
+    '__strncpy_ssse3': '__memcpy',
+    '__strncpy_sse2_unaligned': '__memcpy',
     '__mempcpy_chk_erms': '__mempcpy_chk',
     '__mempcpy_chk_avx512_no_vzeroupper': '__mempcpy_chk',
     '__mempcpy_chk_ssse3': '__mempcpy_chk',
     '__mempcpy_chk_ssse3_back': '__mempcpy_chk',
+    '__wmempcpy': '__wmemcpy',
+    'wmemmove': '__wmemcpy',
     '__memmove_avx_unaligned': '__memmove',
     '__memmove_avx_unaligned_erms': '__memmove',
     '__memmove_ssse3': '__memmove',
     '__memmove_ssse3_back': '__memmove',
     '__memchr_sse2': '__memchr',
     '__memchr_avx2': '__memchr',
-    '_IO_wpadn': '_IO_padn'
+    '__wmemchr_sse2': '__memchr',
+    '_IO_wpadn': '_IO_padn',
+    'iswalnum': 'c_isalnum',
+    '__wmemchr_avx2': '__memchr_avx2',
+    '__iswprint': 'c_isprint',
+    '__strcpy_avx2': "__strcpy",
+    '__strcpy_ssse3': '__strcpy',
+    '__strcpy_sse2': '__strcpy',
+    '__strcpy_sse2_unaligned': '__strcpy',
+    '__strcat_avx2': '__strcat',
+    '__strcat_sse2': '__strcat',
+    '__strcat_sse2_unaligned': '__strcat',
+    '__strcat_ssse3': '__strcat',
+    '__stpncpy_ssse3': '__stpncpy',
+    '__stpncpy_sse2_unaligned': '__stpncpy',
+    '__stpncpy_sse2': '__stpncpy',
+    '__stpncpy_avx2': '__stpncpy',
+    '__stpcpy_avx2': '__stpcpy',
+    '__stpcpy_ssse3': '__stpcpy',
+    '__IO_vsprintf': '__vsprintf',
+    '__vsnprintf_internal': '__vsnprintf',
+    '__vfprintf_internal': '__vfprintf',
+    'vfprintf': '__vfprintf',
+    '__gnu_dev_major': 'gnu_dev_major',
+    '__gnu_dev_minor': 'gnu_dev_minor',
+    'get_common_indices.constprop.0': 'get_common_indices.constprop',
+    'get_common_indeces.constprop.1': 'get_common_indeces.constprop',
+    '__malloc_info.part.0': '__malloc_info.part',
+    '__malloc_info.part.10': '__malloc_info.part',
+    '__isoc99_sscanf': '__sscanf',
+    '_IO_sscanf': '__sscanf',
+    '_IO_str_pbackfail': '_IO_default_pbackfail',
 }
 
 
@@ -170,6 +219,21 @@ def main():
                 guesses = pickle.load(guessFile)
 
             true_pos, true_neg, incorrect = tu.get_evaluation(dtree, guesses, equivalences)
+            sorted_true_pos = list()
+            for name in true_pos:
+                sorted_true_pos.append(name)
+
+            sorted_true_pos.sort()
+            print(sorted_true_pos)
+            print()
+
+            sorted_incorrect = list()
+            for name in incorrect:
+                sorted_incorrect.append(name)
+
+            sorted_incorrect.sort()
+            print(sorted_incorrect)
+
             evaluation.add_evaluation(guessLine, true_pos, true_neg, incorrect, True)
 
     print(evaluation)

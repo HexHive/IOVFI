@@ -60,6 +60,7 @@ def get_evaluation(tree, guesses, equivalence_map=None):
 
         equiv_class = tree.get_equiv_classes(idx)
         if equiv_class is not None:
+
             found = False
             for ec in equiv_class:
                 if "ifunc" in ec.name:
@@ -67,6 +68,7 @@ def get_evaluation(tree, guesses, equivalence_map=None):
 
                 ec_name = ec.name
                 func_desc_name = func_desc.name
+
                 if equivalence_map is not None:
                     if ec_name in equivalence_map:
                         ec_name = equivalence_map[ec_name]
@@ -88,6 +90,34 @@ def get_evaluation(tree, guesses, equivalence_map=None):
                 true_neg.add(func_desc.name)
 
     return true_pos, true_neg, incorrect
+
+
+def get_tree_path(tree, func_name):
+    found = False
+    path = list()
+    path.append(0)
+    if _dfs_tree(tree, func_name, path):
+        return path
+    path.pop()
+    return path
+
+
+def _dfs_tree(tree, func_name, path):
+    if tree._is_leaf(path[-1]):
+        for ec in tree.get_equiv_classes(path[-1]):
+            if ec.name == func_name:
+                return True
+        return False
+    else:
+        path.append(tree._left_child(path[-1]))
+        if _dfs_tree(tree, func_name, path):
+            return True
+        path.pop()
+        path.append(tree._right_child(path[-1]))
+        if _dfs_tree(tree, func_name, path):
+            return True
+        path.pop()
+        return False
 
 
 def get_func_indices(tree):

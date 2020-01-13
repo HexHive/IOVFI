@@ -318,7 +318,8 @@ VOID record_current_context(CONTEXT *ctx) {
         wait_to_start();
     }
 //    std::cout << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
-//    std::cout << "Func " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << ": "
+//    std::cout << "Func " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << " (" << std::hex <<
+//    PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << "): "
 //              << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP))) << std::endl;
 
     struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
@@ -826,6 +827,8 @@ void report_success(CONTEXT *ctx, THREADID tid) {
 
             log_message(msg);
 
+        } else {
+            log_message("Ending contexts match");
         }
         zerg_message_t response = (contexts_equal ? ZMSG_OK : ZMSG_FAIL);
         ZergMessage msg(response);
@@ -1165,6 +1168,8 @@ VOID FindMain(IMG img, VOID *v) {
 
 void track_syscalls(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, void *v) {
     if (cmd_server->get_state() == ZERG_SERVER_EXECUTING) {
+//            std::cout << "Func " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << ": "
+//              << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP))) << std::endl;
         ADDRINT syscall_num = PIN_GetSyscallNumber(ctx, std);
         syscalls.insert(syscall_num);
     }

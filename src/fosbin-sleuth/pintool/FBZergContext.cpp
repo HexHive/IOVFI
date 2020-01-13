@@ -152,15 +152,20 @@ bool FBZergContext::return_values_equal(const FBZergContext &ctx) const {
 
 bool FBZergContext::operator==(const FBZergContext &ctx) const {
     if (!return_values_equal(ctx)) {
+        log_message("Return values not equal");
         return false;
     }
 
     if(system_calls.size() != ctx.system_calls.size()) {
+        std::stringstream msg;
+        msg << "System call size are not the same: " << system_calls.size() << " vs. " << ctx.system_calls.size();
+        log_message(msg.str().c_str());
         return false;
     }
     
     for (ADDRINT i : system_calls) {
         if (ctx.system_calls.find(i) == ctx.system_calls.end()) {
+            log_message("System call not the same");
             return false;
         }
     }
@@ -221,9 +226,13 @@ void FBZergContext::prettyPrint(std::ostream &s) const {
     }
 
     s << REG_StringShort(FBZergContext::return_reg) << "\t= " << std::hex
-      << get_value(FBZergContext::return_reg);
+      << get_value(FBZergContext::return_reg) << std::endl;
 
-    s << std::endl;
+    s << "System Calls: [ ";
+    for (auto sc : system_calls) {
+        s << std::hex << "0x" << sc << " ";
+    }
+    s << "]" << std::endl;
 
     for (auto it : pointer_registers) {
         it.second->prettyPrint(s, 1);

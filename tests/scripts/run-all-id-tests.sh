@@ -26,7 +26,7 @@ fi
 
 cd $START_PATH
 
-for testdir in $(find . -maxdepth 1 -type d); do
+for testdir in $(find . -mindepth 1 -maxdepth 1 -type d); do
   if [[ $(realpath $testdir) == $START_PATH ]]; then
     continue
   elif [[ $(realpath $testdir) == $START_PATH/logs ]]; then
