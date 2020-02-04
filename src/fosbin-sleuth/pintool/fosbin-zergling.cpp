@@ -308,7 +308,8 @@ size_t fuzz_strategy(uint8_t *buffer, size_t size) {
 }
 
 VOID fuzz_registers() {
-    for (REG reg : FBZergContext::argument_regs) {
+    for (size_t i = 0; i < FBZergContext::argument_count; i++) {
+        REG reg = FBZergContext::argument_regs[i];
         AllocatedArea *aa = preContext.find_allocated_area(reg);
         if (aa == nullptr) {
             ADDRINT value = preContext.get_value(reg);
@@ -1083,7 +1084,8 @@ void begin_execution(CONTEXT *ctx) {
     std::stringstream log_msg;
     if (!sent_initial_ready) {
         PIN_SaveContext(ctx, &snapshot);
-        for (REG reg : FBZergContext::argument_regs) {
+        for (size_t i = 0; i < FBZergContext::argument_count; i++) {
+            REG reg = FBZergContext::argument_regs[i];
             preContext.add(reg, (ADDRINT) 0);
         }
         log_message("Starting execution with snapshot ");

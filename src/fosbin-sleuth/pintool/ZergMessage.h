@@ -6,6 +6,7 @@
 #define FOSBIN_ZERGMESSAGE_H
 
 #include "IOVec.h"
+#include "ExecutionInfo.h"
 
 typedef enum zerg_message_type {
     ZMSG_FAIL = -1,

@@ -3,6 +3,7 @@
 //
 
 #include "AllocatedArea.h"
+#include "fosbin-zergling.h"
 
 #include <sys/mman.h>
 #include <unistd.h>

@@ -9,8 +9,10 @@ IOVec::IOVec(FBZergContext &preContext, FBZergContext &postContext, std::set <AD
 coverage) : preContext_(preContext), postContext_(postContext), systemCalls_(systemCalls), coverage_(coverage) {}
 
 std::ostream &operator<<(std::ostream &out, const IOVec &ioVec) {
-    out << preContext_;
-    out << postContext_;
-    out << coverage_;
+    out << ioVec.preContext_;
+    out << ioVec.postContext_;
+    out << ioVec.coverage_;
+    /* TODO: Add in system call output */
 
+    return out;
 }

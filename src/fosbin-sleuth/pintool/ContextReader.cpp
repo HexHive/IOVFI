@@ -1,6 +1,9 @@
 //
 // Created by derrick on 1/9/19.
 //
+#include <iostream>
+#include "FBZergContext.h"
+
 void output_context(std::istream &in) {
     if (!in) {
         std::cerr << "istream is not correct!" << std::endl;

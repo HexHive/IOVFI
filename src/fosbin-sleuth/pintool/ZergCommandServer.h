@@ -25,6 +25,8 @@ typedef enum zerg_server_state {
     ZERG_SERVER_WAITING_TO_EXE
 } zerg_server_state_t;
 
+class ZergCommand;
+
 class ZergCommandServer {
 public:
     ZergCommandServer(int internal_w, int internal_r, std::string cmd_in_name, std::string cmd_out_name, const

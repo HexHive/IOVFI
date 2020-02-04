@@ -9,6 +9,8 @@
 #include <iostream>
 #include <set>
 #include <vector>
+#include "AllocatedArea.h"
+#include "FBZergContext.h"
 
 class FBZergContext {
 public:
@@ -36,7 +38,9 @@ public:
 
     AllocatedArea *find_allocated_area(REG reg) const;
 
-    const static std::vector <REG> argument_regs;
+    const static REG argument_regs[];
+
+    const static size_t argument_count;
 
     const static REG return_reg;
 
