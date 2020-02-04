@@ -14,7 +14,7 @@ std::ostream &operator<<(std::ostream &out, const ExecutionInfo &info) {
     std::string str = info.called_functions[i];
     out.write(str.c_str(), str.size() + 1);
   }
-  out << std::min(1.0, (float)executedInstructions / targetInsCount);
+  out << std::min(1.0f, (float) executedInstructions / targetInsCount);
 
   return out;
 }
@@ -26,10 +26,4 @@ void ExecutionInfo::reset() {
 
 void ExecutionInfo::add_function(const std::string &name) {
   called_functions.push_back(name);
-}
-
-void ExecutionInfo::add_instruction() { executedInstructions++; }
-
-void ExecutionInfo::setTargetInstructionCount(uint64_t count) {
-  targetInsCount = count;
 }

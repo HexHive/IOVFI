@@ -15,7 +15,7 @@ for d in $(find $ZLIB_DIR -mindepth 1 -maxdepth 1 -type d); do
       fi
       cd $CURR_DIR
       if [ ! -f "guesses.bin" ]; then
-        python3 $TOP_DIR/src/fosbin-sleuth/python/IdentifyFunction.py -pindir $TOP_DIR/src/pin/pin-3.7 \
+        python3 $TOP_DIR/src/fosbin-sleuth/python/IdentifyFunction.py -pindir $TOP_DIR/src/pin-3.11/pin-3.11-3.7 \
           -tool $TOP_DIR/cmake-build-debug/pintools/intel64/fosbin-zergling.so \
           -t ../tree.bin -b $ZLIB_DIR/$(basename $d2)/lib/libz.so \
           -ld $TOP_DIR/cmake-build-debug/bin/fb-load

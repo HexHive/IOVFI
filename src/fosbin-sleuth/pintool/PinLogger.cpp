@@ -2,9 +2,11 @@
 // Created by derrick on 12/20/18.
 //
 
+#include "PinLogger.h"
+
 PinLogger::PinLogger(THREADID tid, std::string fname) {
-  _ofile.open(fname.c_str(), std::ios::binary | std::ios::out);
-  if (!_ofile) {
+    _ofile.open(fname.c_str(), std::ios::binary | std::ios::out);
+    if (!_ofile) {
         std::cerr << "Could not open logger output" << std::endl;
         exit(1);
     }

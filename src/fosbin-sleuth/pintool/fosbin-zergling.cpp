@@ -1,7 +1,14 @@
 //
 // Created by derrick on 12/4/18.
 //
-#include "pin.H"
+#include "fosbin-zergling.h"
+#include "FBZergContext.h"
+#include "ExecutionInfo.h"
+#include "ZergCommandServer.h"
+#include "ZergCommand.h"
+#include "ZergMessage.h"
+#include "IOVec.h"
+
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -10,10 +17,12 @@
 #include <vector>
 #include <limits.h>
 #include <unistd.h>
-#include "FuzzResults.h"
-#include "fosbin-zergling.h"
 #include <string.h>
 #include <csetjmp>
+#include <algorithm>
+
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define USER_MSG_TYPE   1000
 
@@ -40,6 +49,7 @@ RTN current_function;
 std::set<ADDRINT> syscalls;
 
 UINT32 imgId;
+UINT64 instructionCount;
 
 std::vector<struct X86Context> fuzzing_run;
 std::ofstream log_out;
@@ -352,12 +362,12 @@ VOID record_current_context(CONTEXT *ctx) {
     RTN current =
         RTN_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP));
     if (RTN_Id(current) != RTN_Id(current_function)) {
-      current_function = curr_name;
-      executionInfo.add_function(RTN_Name(current_function));
+        current_function = current;
+        executionInfo.add_function(RTN_Name(current_function));
     }
 
     if (RTN_Id(target) == RTN_Id(current_function)) {
-      executionInfo.add_instruction();
+        instructionCount++;
     }
 
     // tmp.prettyPrint(std::cout);
@@ -810,22 +820,24 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 
 void report_success(CONTEXT *ctx, THREADID tid) {
     currentContext << ctx;
-    currentContext.set_syscalls(syscalls);
+//    currentContext.set_syscalls(syscalls);
 //    currentContext.prettyPrint();
 
 //    log_message("write_to_cmd 8");
     if (fuzzed_input) {
         ZergMessage msg(ZMSG_OK);
-        msg.add_contexts(preContext, currentContext);
+        IOVec ioVec(preContext, currentContext, syscalls,
+                    std::min(1.0f, (float) instructionCount / RTN_NumIns(target)));
+        msg.add_IOVec(ioVec);
         write_to_cmd_server(msg);
     } else {
-        std::stringstream msg2;
-        msg2 << "Expected context" << std::endl;
-        expectedContext.prettyPrint(msg2);
-        msg2 << std::endl;
-        msg2 << "Current context" << std::endl;
-        currentContext.prettyPrint(msg2);
-        log_message(msg2);
+//        std::stringstream msg2;
+//        msg2 << "Expected context" << std::endl;
+//        expectedContext.prettyPrint(msg2);
+//        msg2 << std::endl;
+//        msg2 << "Current context" << std::endl;
+//        currentContext.prettyPrint(msg2);
+//        log_message(msg2);
 
         bool contexts_equal = (currentContext == expectedContext);
         if (!contexts_equal) {
@@ -963,8 +975,8 @@ zerg_cmd_result_t handle_fuzz_cmd() {
 zerg_cmd_result_t handle_execute_cmd() {
     fuzzing_run.clear();
     executionInfo.reset();
-    executionInfo.setTargetInstructionCount(RTN_NumIns(target)) adjusted_stack =
-        false;
+    instructionCount = 0;
+    adjusted_stack = false;
     currentContext = preContext;
     currentContext >> &snapshot;
     PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));

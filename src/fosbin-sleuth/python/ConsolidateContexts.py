@@ -17,7 +17,7 @@ def main():
     parser = argparse.ArgumentParser(description="Consolidate")
     parser.add_argument('-o', '--out', help="/path/to/output/function/descriptions", default="out.desc")
     parser.add_argument("-map", help="/path/to/context/map", default="hash.map")
-    parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
+    parser.add_argument("-pindir", help="/path/to/pin-3.11/dir", required=True)
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
     parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-target", help="Name of single function to target")
@@ -36,7 +36,7 @@ def main():
         logger.fatal("Could not find {}".format(results.map))
         sys.exit(1)
 
-    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
+    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin-3.11"))
     if not os.path.exists(pin_loc):
         logger.fatal("Could not find {}".format(pin_loc))
         sys.exit(1)

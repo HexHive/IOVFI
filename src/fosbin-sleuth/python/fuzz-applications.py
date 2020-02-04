@@ -14,7 +14,7 @@ def main():
     global fuzz_count
 
     parser = argparse.ArgumentParser(description="Generate input/output vectors")
-    parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
+    parser.add_argument("-pindir", help="/path/to/pin-3.11/dir", required=True)
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
     parser.add_argument("-bin", help="/path/to/target/application", required=True)
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
@@ -61,7 +61,7 @@ def main():
         loader_loc = os.path.abspath(results.ld)
 
     pintool_loc = os.path.abspath(results.tool)
-    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
+    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin-3.11"))
 
     ignored_funcs = set()
 

@@ -2,6 +2,8 @@
 // Created by derrick on 12/20/18.
 //
 
+#include "X86Context.h"
+
 ADDRINT X86Context::get_reg_value(REG reg) {
     std::stringstream ss;
     switch (reg) {

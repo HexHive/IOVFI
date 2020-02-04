@@ -234,7 +234,7 @@ def consolidate_one_function(consolidationRunDesc):
     ctx_count = 0
     retry_count = 0
     idx = 0
-    logger.debug("Created pin run for {}".format(run_name))
+    logger.debug("Created pin-3.11 run for {}".format(run_name))
     while idx < len(consolidationRunDesc.contexts):
         context = consolidationRunDesc.contexts[idx]
         if retry_count > MAX_RETRY_COUNT:
@@ -262,7 +262,7 @@ def consolidate_one_function(consolidationRunDesc):
                 if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
                     logger.error("Could not set target for {}".format(run_name))
                     break
-                logger.debug("pin run started for {}".format(run_name))
+                logger.debug("pin-3.11 run started for {}".format(run_name))
                 ctx_count = 0
             ctx_count += 1
 

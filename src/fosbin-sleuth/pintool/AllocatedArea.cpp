@@ -2,6 +2,11 @@
 // Created by derrick on 12/20/18.
 //
 
+#include "AllocatedArea.h"
+
+#include <sys/mman.h>
+#include <unistd.h>
+
 ADDRINT AllocatedArea::MAGIC_VALUE = 0xA110CA3D;
 
 AllocatedArea::AllocatedArea() :

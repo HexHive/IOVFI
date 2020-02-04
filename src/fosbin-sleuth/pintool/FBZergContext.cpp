@@ -2,8 +2,10 @@
 // Created by derrick on 12/27/18.
 //
 
-const REG FBZergContext::argument_regs[] = {LEVEL_BASE::REG_RDI, LEVEL_BASE::REG_RSI, LEVEL_BASE::REG_RDX,
-                                            LEVEL_BASE::REG_RCX, LEVEL_BASE::REG_R8, LEVEL_BASE::REG_R9};
+#include "FBZergContext.h"
+
+const std::vector <REG> FBZergContext::argument_regs = {LEVEL_BASE::REG_RDI, LEVEL_BASE::REG_RSI, LEVEL_BASE::REG_RDX,
+                                                        LEVEL_BASE::REG_RCX, LEVEL_BASE::REG_R8, LEVEL_BASE::REG_R9};
 
 const REG FBZergContext::return_reg = LEVEL_BASE::REG_RAX;
 

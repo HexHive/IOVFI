@@ -1,4 +1,6 @@
-import sys, hashlib
+import hashlib
+import sys
+
 from .X86Context import X86Context
 
 

@@ -150,15 +150,38 @@ size_t ZergMessage::read_from_fd(int fd) {
     return read_bytes;
 }
 
-size_t ZergMessage::add_contexts(const FBZergContext &pre, const FBZergContext &post) {
+//size_t ZergMessage::add_contexts(const FBZergContext &pre, const FBZergContext &post) {
+//    /* Do not overwrite data if there is already some */
+//    if (_length > 0) {
+//        return 0;
+//    }
+//
+//    std::stringstream data(std::ios::in | std::ios::out | std::ios::binary);
+//    data << pre;
+//    data << post;
+//
+//    if (data.str().size() > ZMSG_MAX_DATA_LEN) {
+//        return 0;
+//    }
+//
+//    _data = malloc(data.str().size());
+//    if (!_data) {
+//        return 0;
+//    }
+//
+//    _length = data.str().size();
+//    memcpy(_data, data.str().c_str(), _length);
+//    return _length;
+//}
+
+size_t ZergMessage::add_IOVec(IOVec &iovec) {
     /* Do not overwrite data if there is already some */
     if (_length > 0) {
         return 0;
     }
 
     std::stringstream data(std::ios::in | std::ios::out | std::ios::binary);
-    data << pre;
-    data << post;
+    data << iovec;
 
     if (data.str().size() > ZMSG_MAX_DATA_LEN) {
         return 0;

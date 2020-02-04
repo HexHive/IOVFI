@@ -6,8 +6,11 @@
 #define FOSBIN_ZERGCOMMANDSERVER_H
 
 #include <fstream>
+#include <string>
+#include <unistd.h>
 #include <iostream>
 #include "ZergCommand.h"
+#include "pin.H"
 
 typedef enum zerg_server_state {
     ZERG_SERVER_INVALID,
@@ -69,7 +72,5 @@ protected:
 
     std::ofstream logger_;
 };
-
-#include "ZergCommandServer.cpp"
 
 #endif //FOSBIN_ZERGCOMMANDSERVER_H

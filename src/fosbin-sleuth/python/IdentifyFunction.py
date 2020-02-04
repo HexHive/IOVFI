@@ -46,7 +46,7 @@ def check_inputs(argparser):
         exit(1)
     binaryLoc = os.path.abspath(argparser.binary)
 
-    pinLoc = os.path.abspath(os.path.join(argparser.pindir, "pin"))
+    pinLoc = os.path.abspath(os.path.join(argparser.pindir, "pin-3.11"))
     pintoolLoc = os.path.abspath(argparser.tool)
 
     if not os.path.exists(pinLoc):
@@ -86,7 +86,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="IdentifyFunction")
     parser.add_argument('-t', '--tree', help="/path/to/decision/tree", default="tree.bin")
-    parser.add_argument("-pindir", help="/path/to/pin/dir", required=True)
+    parser.add_argument("-pindir", help="/path/to/pin-3.11/dir", required=True)
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
     parser.add_argument("-b", "--binary", help="/path/to/binary", required=True)
     parser.add_argument("-loglevel", help="Set log level", default=logging.DEBUG)
