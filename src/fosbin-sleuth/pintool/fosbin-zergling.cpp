@@ -46,7 +46,7 @@ FBZergContext expectedContext;
 std::string shared_library_name;
 ExecutionInfo executionInfo;
 RTN current_function;
-std::set<ADDRINT> syscalls;
+std::set <ADDRINT> syscalls;
 
 UINT32 imgId;
 UINT64 instructionCount;
@@ -361,7 +361,7 @@ VOID record_current_context(CONTEXT *ctx) {
     fuzzing_run.push_back(tmp);
 
     RTN current =
-        RTN_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP));
+            RTN_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP));
     if (RTN_Id(current) != RTN_Id(current_function)) {
         current_function = current;
         executionInfo.add_function(RTN_Name(current_function));
@@ -375,9 +375,9 @@ VOID record_current_context(CONTEXT *ctx) {
     //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
     //    std::cout << std::dec << diff << std::endl;
     if (fuzzing_run.size() > max_instructions) {
-      //        log_message("write_to_cmd 3");
-      report_failure(ZCMD_TOO_MANY_INS);
-      wait_to_start();
+        //        log_message("write_to_cmd 3");
+        report_failure(ZCMD_TOO_MANY_INS);
+        wait_to_start();
     }
 }
 
@@ -612,7 +612,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 //      std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() <<
 //      std::endl; displayCurrentContext(ctx); currentContext.prettyPrint();
 
-  if (!fuzzed_input) {
+    if (!fuzzed_input) {
 //        log_message("write_to_cmd 4");
         report_failure(ZCMD_FAILED_CTX, ctx);
         redirect_control_to_main(ctx);

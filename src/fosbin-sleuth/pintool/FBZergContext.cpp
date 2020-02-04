@@ -68,7 +68,7 @@ ADDRINT FBZergContext::get_value(REG reg) const {
 
 bool FBZergContext::return_is_ptr() const {
     ADDRINT ret_val = get_value(FBZergContext::return_reg);
-    if(ret_val == AllocatedArea::MAGIC_VALUE) {
+    if (ret_val == AllocatedArea::MAGIC_VALUE) {
         return true;
     }
 
@@ -135,7 +135,7 @@ bool FBZergContext::return_values_equal(const FBZergContext &ctx) const {
     if (return_is_ptr()) {
         return true;
     }
-    
+
     int64_t this_ret_val = (int64_t) get_value(FBZergContext::return_reg);
     int64_t that_ret_val = (int64_t) ctx.get_value(FBZergContext::return_reg);
 
@@ -160,13 +160,13 @@ bool FBZergContext::operator==(const FBZergContext &ctx) const {
         return false;
     }
 
-    if(system_calls.size() != ctx.system_calls.size()) {
+    if (system_calls.size() != ctx.system_calls.size()) {
         std::stringstream msg;
         msg << "System call size are not the same: " << system_calls.size() << " vs. " << ctx.system_calls.size();
         log_message(msg.str().c_str());
         return false;
     }
-    
+
     for (ADDRINT i : system_calls) {
         if (ctx.system_calls.find(i) == ctx.system_calls.end()) {
             log_message("System call not the same");
