@@ -3,8 +3,8 @@
 //
 
 PinLogger::PinLogger(THREADID tid, std::string fname) {
-    _ofile.open(fname.c_str(), ios::binary | ios::out);
-    if (!_ofile) {
+  _ofile.open(fname.c_str(), std::ios::binary | std::ios::out);
+  if (!_ofile) {
         std::cerr << "Could not open logger output" << std::endl;
         exit(1);
     }

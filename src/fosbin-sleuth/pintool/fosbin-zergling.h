@@ -5,10 +5,11 @@
 #ifndef FOSBIN_FOSBIN_ZERGLING_H
 #define FOSBIN_FOSBIN_ZERGLING_H
 
-#include <cstdlib>
-#include <sys/mman.h>
 #include "pin.H"
+#include <cstdlib>
+#include <ios>
 #include <set>
+#include <sys/mman.h>
 
 #define DEFAULT_ALLOCATION_SIZE 4096
 #define SHARED_LIBRARY_LOADER   "fb-load"
