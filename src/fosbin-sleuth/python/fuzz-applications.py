@@ -1,13 +1,11 @@
-#!/usr/bin/python3.7
-
 import argparse
 import logging
 import multiprocessing
 import os
 import pickle
 
-from contexts import binaryutils
-from contexts.FBLogging import logger
+from .contexts import binaryutils
+from .contexts.FBLogging import logger
 
 fuzz_count = 5
 

@@ -36,8 +36,8 @@ FBZergContext expectedContext;
 
 std::string shared_library_name;
 ExecutionInfo executionInfo;
-std::string current_function;
-std::set <ADDRINT> syscalls;
+RTN current_function;
+std::set<ADDRINT> syscalls;
 
 UINT32 imgId;
 
@@ -337,28 +337,36 @@ VOID record_current_context(CONTEXT *ctx) {
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R14),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R15),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP)
-    };
-//    std::cout << "RAX (" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX)
-//              << ") is "
-//              << (PIN_CheckReadAccess((void *) PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX)) ? "" : "NOT ") <<
-//              "readable. " << std::endl;
-    //    << "RDI is " << (PIN_CheckWriteAccess((void*)rdi) ? "" : "NOT ") << "writeable." << std::endl;
-    
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP)};
+    //    std::cout << "RAX (" << std::hex << PIN_GetContextReg(ctx,
+    //    LEVEL_BASE::REG_RAX)
+    //              << ") is "
+    //              << (PIN_CheckReadAccess((void *) PIN_GetContextReg(ctx,
+    //              LEVEL_BASE::REG_RAX)) ? "" : "NOT ") << "readable. " <<
+    //              std::endl;
+    //    << "RDI is " << (PIN_CheckWriteAccess((void*)rdi) ? "" : "NOT ") <<
+    //    "writeable." << std::endl;
+
     fuzzing_run.push_back(tmp);
-    std::string curr_name = RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP));
-    if (curr_name != current_function) {
-        current_function = curr_name;
-        executionInfo.add_function(current_function);
+
+    RTN current =
+        RTN_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP));
+    if (RTN_Id(current) != RTN_Id(current_function)) {
+      current_function = curr_name;
+      executionInfo.add_function(RTN_Name(current_function));
     }
 
-    //tmp.prettyPrint(std::cout);
-//    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
-//    std::cout << std::dec << diff << std::endl;
+    if (RTN_Id(target) == RTN_Id(current_function)) {
+      executionInfo.add_instruction();
+    }
+
+    // tmp.prettyPrint(std::cout);
+    //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
+    //    std::cout << std::dec << diff << std::endl;
     if (fuzzing_run.size() > max_instructions) {
-//        log_message("write_to_cmd 3");
-        report_failure(ZCMD_TOO_MANY_INS);
-        wait_to_start();
+      //        log_message("write_to_cmd 3");
+      report_failure(ZCMD_TOO_MANY_INS);
+      wait_to_start();
     }
 }
 
@@ -955,7 +963,8 @@ zerg_cmd_result_t handle_fuzz_cmd() {
 zerg_cmd_result_t handle_execute_cmd() {
     fuzzing_run.clear();
     executionInfo.reset();
-    adjusted_stack = false;
+    executionInfo.setTargetInstructionCount(RTN_NumIns(target)) adjusted_stack =
+        false;
     currentContext = preContext;
     currentContext >> &snapshot;
     PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
@@ -968,7 +977,7 @@ zerg_cmd_result_t handle_execute_cmd() {
     log_message(msg);
 
     PIN_ExecuteAt(&snapshot);
-    log_message("PIN_ExecuteAt returned magically");
+    //    log_message("PIN_ExecuteAt returned magically");
     return ZCMD_ERROR;
 }
 

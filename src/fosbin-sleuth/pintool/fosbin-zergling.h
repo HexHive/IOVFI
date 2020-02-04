@@ -41,18 +41,24 @@ struct X86Context {
 
 class ExecutionInfo {
 public:
-    ExecutionInfo();
+  ExecutionInfo();
 
-    ~ExecutionInfo();
+  ~ExecutionInfo();
 
-    friend std::ostream &operator<<(std::ostream &out, const ExecutionInfo &info);
+  friend std::ostream &operator<<(std::ostream &out, const ExecutionInfo &info);
 
-    void add_function(const std::string &name);
+  void add_function(const std::string &name);
 
-    void reset();
+  void reset();
+
+  void add_instruction();
+
+  void setTargetInstructionCount(uint64_t count);
 
 protected:
-    std::vector <std::string> called_functions;
+  std::vector<std::string> called_functions;
+  uint64_t executedInstructions;
+  uint64_t targetInsCount;
 };
 
 class AllocatedArea {
@@ -154,9 +160,10 @@ protected:
     std::map <REG, ADDRINT> values;
     std::map<REG, AllocatedArea *> pointer_registers;
     char return_value;
-    std::set <ADDRINT> system_calls;
+    std::set<ADDRINT> system_calls;
+    uint64_t
 
-private:
+        private:
     bool return_values_equal(const FBZergContext &ctx) const;
 
     int64_t sign_extend(int64_t orig) const;
