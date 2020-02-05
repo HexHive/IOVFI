@@ -92,11 +92,4 @@ public:
     SetSharedTargetCommand(ZergMessage &msg, ZergCommandServer &server);
 };
 
-//class SendExecuteInfoCommand : public ZergCommand {
-//public:
-//    virtual zerg_cmd_result_t execute();
-//
-//    SendExecuteInfoCommand(ZergMessage &msg, ZergCommandServer &server);
-//};
-
 #endif //FOSBIN_ZERGCOMMAND_H

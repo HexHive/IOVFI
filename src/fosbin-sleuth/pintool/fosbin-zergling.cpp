@@ -3,7 +3,6 @@
 //
 #include "fosbin-zergling.h"
 #include "FBZergContext.h"
-//#include "ExecutionInfo.h"
 #include "ZergCommandServer.h"
 #include "ZergCommand.h"
 #include "ZergMessage.h"
