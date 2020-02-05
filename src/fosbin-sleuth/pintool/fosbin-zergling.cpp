@@ -3,7 +3,7 @@
 //
 #include "fosbin-zergling.h"
 #include "FBZergContext.h"
-#include "ExecutionInfo.h"
+//#include "ExecutionInfo.h"
 #include "ZergCommandServer.h"
 #include "ZergCommand.h"
 #include "ZergMessage.h"
@@ -44,12 +44,11 @@ FBZergContext currentContext;
 FBZergContext expectedContext;
 
 std::string shared_library_name;
-ExecutionInfo executionInfo;
-RTN current_function;
 std::set <ADDRINT> syscalls;
 
 UINT32 imgId;
-UINT64 instructionCount;
+
+std::map <RTN, std::set<ADDRINT>> executedInstructions;
 
 std::vector<struct X86Context> fuzzing_run;
 std::ofstream log_out;
@@ -70,6 +69,24 @@ int ctx_count = 0;
 void wait_to_start();
 
 void report_failure(zerg_cmd_result_t reason, CONTEXT *ctx = nullptr);
+
+void output_context(std::istream &in) {
+    FBZergContext incontext, outcontext;
+    in >> incontext;
+    in >> outcontext;
+
+    std::cout << "===============================================" << std::endl;
+    std::cout << "                   PreContext                  " << std::endl;
+    std::cout << "===============================================" << std::endl;
+    incontext.prettyPrint(std::cout);
+
+    std::cout << std::endl;
+    std::cout << "===============================================" << std::endl;
+    std::cout << "                  PostContext                  " << std::endl;
+    std::cout << "===============================================" << std::endl;
+    outcontext.prettyPrint(std::cout);
+    std::cout << std::endl;
+}
 
 void cleanup(int exitcode) {
     PIN_RemoveInstrumentation();
@@ -349,33 +366,14 @@ VOID record_current_context(CONTEXT *ctx) {
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R15),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP)};
-    //    std::cout << "RAX (" << std::hex << PIN_GetContextReg(ctx,
-    //    LEVEL_BASE::REG_RAX)
-    //              << ") is "
-    //              << (PIN_CheckReadAccess((void *) PIN_GetContextReg(ctx,
-    //              LEVEL_BASE::REG_RAX)) ? "" : "NOT ") << "readable. " <<
-    //              std::endl;
-    //    << "RDI is " << (PIN_CheckWriteAccess((void*)rdi) ? "" : "NOT ") <<
-    //    "writeable." << std::endl;
 
     fuzzing_run.push_back(tmp);
 
-    RTN current =
-            RTN_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP));
-    if (RTN_Id(current) != RTN_Id(current_function)) {
-        current_function = current;
-        executionInfo.add_function(RTN_Name(current_function));
-    }
+    ADDRINT currentAddress = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP);
+    RTN current = RTN_FindByAddress(currentAddress);
+    executedInstructions[current].insert(currentAddress);
 
-    if (RTN_Id(target) == RTN_Id(current_function)) {
-        instructionCount++;
-    }
-
-    // tmp.prettyPrint(std::cout);
-    //    int64_t diff = MaxInstructions.Value() - fuzzing_run.size();
-    //    std::cout << std::dec << diff << std::endl;
     if (fuzzing_run.size() > max_instructions) {
-        //        log_message("write_to_cmd 3");
         report_failure(ZCMD_TOO_MANY_INS);
         wait_to_start();
     }
@@ -821,14 +819,12 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 
 void report_success(CONTEXT *ctx, THREADID tid) {
     currentContext << ctx;
-//    currentContext.set_syscalls(syscalls);
-//    currentContext.prettyPrint();
 
 //    log_message("write_to_cmd 8");
     if (fuzzed_input) {
         ZergMessage msg(ZMSG_OK);
-        IOVec ioVec(preContext, currentContext, syscalls,
-                    std::min(1.0f, (float) instructionCount / RTN_NumIns(target)));
+
+        IOVec ioVec(preContext, currentContext, syscalls, executedInstructions);
         msg.add_IOVec(ioVec);
         write_to_cmd_server(msg);
     } else {
@@ -975,8 +971,7 @@ zerg_cmd_result_t handle_fuzz_cmd() {
 
 zerg_cmd_result_t handle_execute_cmd() {
     fuzzing_run.clear();
-    executionInfo.reset();
-    instructionCount = 0;
+    executedInstructions.clear();
     adjusted_stack = false;
     currentContext = preContext;
     currentContext >> &snapshot;
@@ -998,15 +993,15 @@ zerg_cmd_result_t handle_reset_cmd() {
     return ZCMD_OK;
 }
 
-zerg_cmd_result_t handle_get_exe_info_cmd() {
-    ZergMessage msg(ZMSG_OK);
-    if (msg.add_exe_info(executionInfo) > 0) {
-        write_to_cmd_server(msg);
-        return ZCMD_OK;
-    } else {
-        return ZCMD_ERROR;
-    }
-}
+//zerg_cmd_result_t handle_get_exe_info_cmd() {
+//    ZergMessage msg(ZMSG_OK);
+//    if (msg.add_exe_info(executionInfo) > 0) {
+//        write_to_cmd_server(msg);
+//        return ZCMD_OK;
+//    } else {
+//        return ZCMD_ERROR;
+//    }
+//}
 
 zerg_cmd_result_t handle_set_ctx_cmd(ZergMessage &msg) {
     std::stringstream all_ctxs(std::ios::in | std::ios::out | std::ios::binary);
@@ -1065,10 +1060,10 @@ zerg_cmd_result_t handle_cmd() {
             log_message("Received ExitCommand");
             cleanup(0);
             break;
-        case ZMSG_GET_EXE_INFO:
-            log_message("Received SendExecuteInfoCommand");
-            result = handle_get_exe_info_cmd();
-            break;
+//        case ZMSG_GET_EXE_INFO:
+//            log_message("Received SendExecuteInfoCommand");
+//            result = handle_get_exe_info_cmd();
+//            break;
         default:
             log_msg << "Unknown command: " << msg->str();
             log_message(log_msg);

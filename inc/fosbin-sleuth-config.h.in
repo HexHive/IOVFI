@@ -1,7 +1,0 @@
-#ifndef FOSBIN_SLEUTH_CONFIG_H
-#define FOSBIN_SLEUTH_CONFIG_H
-
-#include "fosbin-config.h"
-#define SLEUTH_NAME "@FUNC_CLASSIFIER@"
-
-#endif

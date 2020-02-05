@@ -54,15 +54,10 @@ public:
 
     bool return_is_ptr() const;
 
-    const std::set <ADDRINT> get_syscalls() const;
-
-    void set_syscalls(const std::set <ADDRINT> syscalls);
-
 protected:
     std::map <REG, ADDRINT> values;
     std::map<REG, AllocatedArea *> pointer_registers;
     char return_value;
-    std::set <ADDRINT> system_calls;
 
 private:
     bool return_values_equal(const FBZergContext &ctx) const;

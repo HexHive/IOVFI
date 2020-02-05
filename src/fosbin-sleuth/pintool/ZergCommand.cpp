@@ -29,8 +29,8 @@ ZergCommand *ZergCommand::create(ZergMessage &msg, ZergCommandServer &server) {
             return new ResetCommand(msg, server);
         case ZMSG_SET_SO_TGT:
             return new SetSharedTargetCommand(msg, server);
-        case ZMSG_GET_EXE_INFO:
-            return new SendExecuteInfoCommand(msg, server);
+//        case ZMSG_GET_EXE_INFO:
+//            return new SendExecuteInfoCommand(msg, server);
         default:
             return new InvalidCommand(msg, server);
     }
@@ -150,12 +150,12 @@ SetContextCommand::SetContextCommand(ZergMessage &msg, ZergCommandServer &server
 SetSharedTargetCommand::SetSharedTargetCommand(ZergMessage &msg, ZergCommandServer &server) :
         SetTargetCommand(msg, server) {}
 
-SendExecuteInfoCommand::SendExecuteInfoCommand(ZergMessage &msg, ZergCommandServer &server) :
-        ZergCommand(msg, server) {}
-
-zerg_cmd_result_t SendExecuteInfoCommand::execute() {
-    if (server_.write_to_executor(msg_) == 0) {
-        return ZCMD_ERROR;
-    }
-    return ZCMD_OK;
-}
+//SendExecuteInfoCommand::SendExecuteInfoCommand(ZergMessage &msg, ZergCommandServer &server) :
+//        ZergCommand(msg, server) {}
+//
+//zerg_cmd_result_t SendExecuteInfoCommand::execute() {
+//    if (server_.write_to_executor(msg_) == 0) {
+//        return ZCMD_ERROR;
+//    }
+//    return ZCMD_OK;
+//}

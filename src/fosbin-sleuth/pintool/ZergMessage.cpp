@@ -66,10 +66,8 @@ const char *ZergMessage::str() const {
             return "ZMSG_ACK";
         case ZMSG_READY:
             return "ZMSG_READY";
-        case ZMSG_SET_SO_TGT:
-            return "ZMSG_SET_SO_TGT";
-        case ZMSG_GET_EXE_INFO:
-            return "ZMSG_GET_EXE_INFO";
+//        case ZMSG_SET_SO_TGT:
+//            return "ZMSG_SET_SO_TGT";
         case ZMSG_SET_RUST_TGT:
             return "ZMSG_SET_RUST_TGT";
         default:
@@ -197,19 +195,19 @@ size_t ZergMessage::add_IOVec(IOVec &iovec) {
     return _length;
 }
 
-size_t ZergMessage::add_exe_info(const ExecutionInfo &info) {
-    std::stringstream data(std::ios::in | std::ios::out | std::ios::binary);
-    data << info;
-
-    if (data.str().size() > ZMSG_MAX_DATA_LEN) {
-        return 0;
-    }
-
-    _length = data.str().size();
-    _data = malloc(_length);
-    if (!_data) {
-        return 0;
-    }
-    memcpy(_data, data.str().c_str(), _length);
-    return _length;
-}
+//size_t ZergMessage::add_exe_info(const ExecutionInfo &info) {
+//    std::stringstream data(std::ios::in | std::ios::out | std::ios::binary);
+//    data << info;
+//
+//    if (data.str().size() > ZMSG_MAX_DATA_LEN) {
+//        return 0;
+//    }
+//
+//    _length = data.str().size();
+//    _data = malloc(_length);
+//    if (!_data) {
+//        return 0;
+//    }
+//    memcpy(_data, data.str().c_str(), _length);
+//    return _length;
+//}

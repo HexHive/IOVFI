@@ -1,4 +1,5 @@
 import hashlib
+import struct
 import sys
 
 from .X86Context import X86Context
@@ -8,6 +9,13 @@ class IOVec:
     def __init__(self, in_file):
         self.input = X86Context(in_file)
         self.output = X86Context(in_file)
+        self.coverage = struct.unpack_from('f', in_file.read(struct.calcsize('f')))[0]
+
+        syscall_count = struct.unpack_from('N', in_file.read(struct.calcsize('N')))[0]
+        self.syscalls = list()
+        for idx in range(0, syscall_count):
+            self.syscalls.append(struct.unpack_from('Q', in_file.read(struct.calcsize('Q')))[0])
+        self.syscalls.sort()
 
     def __hash__(self):
         return hash((self.input, self.output))

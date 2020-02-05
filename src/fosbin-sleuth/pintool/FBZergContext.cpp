@@ -44,16 +44,6 @@ std::istream &operator>>(std::istream &in, FBZergContext &ctx) {
         ctx.values[aa.first] = (ADDRINT) aa.second->getAddr();
     }
 
-    size_t syscall_count = 0;
-    in.read((char *) &syscall_count, sizeof(syscall_count));
-    ctx.system_calls.clear();
-    while (syscall_count > 0) {
-        ADDRINT syscall;
-        in.read((char *) &syscall, sizeof(syscall));
-        ctx.system_calls.insert(syscall);
-        syscall_count--;
-    }
-
     return in;
 }
 
@@ -101,12 +91,6 @@ std::ostream &operator<<(std::ostream &out, const FBZergContext &ctx) {
 
     for (AllocatedArea *aa : allocs) {
         out << aa;
-    }
-
-    size_t syscall_size = ctx.system_calls.size();
-    out.write((const char *) &syscall_size, sizeof(syscall_size));
-    for (ADDRINT i : ctx.system_calls) {
-        out.write((const char *) &i, sizeof(ADDRINT));
     }
 
     return out;
@@ -160,20 +144,6 @@ bool FBZergContext::operator==(const FBZergContext &ctx) const {
         return false;
     }
 
-    if (system_calls.size() != ctx.system_calls.size()) {
-        std::stringstream msg;
-        msg << "System call size are not the same: " << system_calls.size() << " vs. " << ctx.system_calls.size();
-        log_message(msg.str().c_str());
-        return false;
-    }
-
-    for (ADDRINT i : system_calls) {
-        if (ctx.system_calls.find(i) == ctx.system_calls.end()) {
-            log_message("System call not the same");
-            return false;
-        }
-    }
-
     for (auto it : pointer_registers) {
         AllocatedArea *aa = ctx.find_allocated_area(it.first);
         if (aa == nullptr) {
@@ -195,14 +165,12 @@ bool FBZergContext::operator!=(const FBZergContext &ctx) const {
 }
 
 FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
-//    for (auto it : pointer_registers) {
     for (std::map<REG, AllocatedArea *>::iterator it = pointer_registers.begin(); it != pointer_registers.end(); ++it) {
         delete it->second;
     }
     pointer_registers.clear();
     values.clear();
     return_value = orig.return_value;
-    system_calls = orig.system_calls;
 
     for (auto it : orig.values) {
         AllocatedArea *aa = orig.find_allocated_area(it.first);
@@ -232,12 +200,6 @@ void FBZergContext::prettyPrint(std::ostream &s) const {
     s << REG_StringShort(FBZergContext::return_reg) << "\t= " << std::hex
       << get_value(FBZergContext::return_reg) << std::endl;
 
-    s << "System Calls: [ ";
-    for (auto sc : system_calls) {
-        s << std::hex << "0x" << sc << " ";
-    }
-    s << "]" << std::endl;
-
     for (auto it : pointer_registers) {
         it.second->prettyPrint(s, 1);
     }
@@ -262,7 +224,6 @@ FBZergContext &FBZergContext::operator<<(CONTEXT *ctx) {
     void *ret_val = (void *) PIN_GetContextReg(ctx, FBZergContext::return_reg);
     if (PIN_CheckReadAccess(ret_val)) {
         PIN_SafeCopy(&return_value, ret_val, sizeof(return_value));
-        std::cout << "ret_val = " << std::hex << ret_val << std::endl;
         values[FBZergContext::return_reg] = AllocatedArea::MAGIC_VALUE;
     } else {
         values[FBZergContext::return_reg] = (ADDRINT) ret_val;
@@ -307,12 +268,4 @@ FBZergContext::~FBZergContext() {
     for (auto it : pointer_registers) {
         delete it.second;
     }
-}
-
-const std::set <ADDRINT> FBZergContext::get_syscalls() const {
-    return system_calls;
-}
-
-void FBZergContext::set_syscalls(const std::set <ADDRINT> syscalls) {
-    system_calls = syscalls;
 }

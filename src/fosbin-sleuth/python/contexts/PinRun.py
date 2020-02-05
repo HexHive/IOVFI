@@ -24,7 +24,7 @@ class PinMessage:
     ZMSG_RESET = 7
     ZMSG_READY = 8
     ZMSG_SET_SO_TGT = 9
-    ZMSG_GET_EXE_INFO = 10
+    # ZMSG_GET_EXE_INFO = 10
     ZMSG_SET_RUST_TGT = 11
     HEADER_FORMAT = "iQ"
 
@@ -40,7 +40,7 @@ class PinMessage:
         ZMSG_RESET: "ZMSG_RESET",
         ZMSG_READY: "ZMSG_READY",
         ZMSG_SET_SO_TGT: "ZMSG_SET_SO_TGT",
-        ZMSG_GET_EXE_INFO: "ZMSG_GET_EXE_INFO",
+        # ZMSG_GET_EXE_INFO: "ZMSG_GET_EXE_INFO",
         ZMSG_SET_RUST_TGT: "ZMSG_SET_RUST_TGT"
     }
 
@@ -348,42 +348,42 @@ class PinRun:
     def send_reset_cmd(self, timeout=None):
         return self._send_cmd(PinMessage.ZMSG_RESET, None, timeout)
 
-    def send_get_exe_info_cmd(self, timeout=None):
-        return self._send_cmd(PinMessage.ZMSG_GET_EXE_INFO, None, timeout)
+    # def send_get_exe_info_cmd(self, timeout=None):
+    #     return self._send_cmd(PinMessage.ZMSG_GET_EXE_INFO, None, timeout)
 
     def clear_response_pipe(self):
         resp = self.read_response(0.1)
         while resp is not None:
             resp = self.read_response(0.1)
 
-    def get_executed_functions(self, timeout=None):
-        self.clear_response_pipe()
-
-        resp = self.send_get_exe_info_cmd(timeout)
-        if resp is None or resp.msgtype != PinMessage.ZMSG_ACK:
-            return None
-
-        resp = self.read_response(timeout)
-        if resp is None or resp.msgtype != PinMessage.ZMSG_OK:
-            return None
-
-        num_functions = struct.unpack_from("N", resp.data.read(struct.calcsize("N")))[0]
-        executed_functions = list()
-        offset = struct.calcsize("N")
-        for idx in range(0, num_functions):
-            func_name = ""
-
-            str_chr = struct.unpack_from("c", resp.data.getbuffer(), offset)[0].decode("utf-8")
-            while str_chr != '\x00':
-                func_name += str_chr
-                offset += struct.calcsize("c")
-                str_chr = struct.unpack_from("c", resp.data.getbuffer(), offset)[0].decode("utf-8")
-
-            offset += struct.calcsize("c")
-            executed_functions.append(func_name)
-
-        self.read_response()
-        return executed_functions
+    # def get_executed_functions(self, timeout=None):
+    #     self.clear_response_pipe()
+    #
+    #     resp = self.send_get_exe_info_cmd(timeout)
+    #     if resp is None or resp.msgtype != PinMessage.ZMSG_ACK:
+    #         return None
+    #
+    #     resp = self.read_response(timeout)
+    #     if resp is None or resp.msgtype != PinMessage.ZMSG_OK:
+    #         return None
+    #
+    #     num_functions = struct.unpack_from("N", resp.data.read(struct.calcsize("N")))[0]
+    #     executed_functions = list()
+    #     offset = struct.calcsize("N")
+    #     for idx in range(0, num_functions):
+    #         func_name = ""
+    #
+    #         str_chr = struct.unpack_from("c", resp.data.getbuffer(), offset)[0].decode("utf-8")
+    #         while str_chr != '\x00':
+    #             func_name += str_chr
+    #             offset += struct.calcsize("c")
+    #             str_chr = struct.unpack_from("c", resp.data.getbuffer(), offset)[0].decode("utf-8")
+    #
+    #         offset += struct.calcsize("c")
+    #         executed_functions.append(func_name)
+    #
+    #     self.read_response()
+    #     return executed_functions
 
     def read_response(self, timeout=None):
         result = None

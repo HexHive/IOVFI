@@ -20,7 +20,7 @@ typedef enum zerg_message_type {
     ZMSG_RESET,
     ZMSG_READY,
     ZMSG_SET_SO_TGT,
-    ZMSG_GET_EXE_INFO,
+//    ZMSG_GET_EXE_INFO,
     ZMSG_SET_RUST_TGT
 } zerg_message_t;
 
@@ -55,7 +55,7 @@ public:
 
 //    size_t add_contexts(const FBZergContext &pre, const FBZergContext &post);
 
-    size_t add_exe_info(const ExecutionInfo &info);
+//    size_t add_exe_info(const ExecutionInfo &info);
 };
 
 #endif //FOSBIN_ZERGMESSAGE_H
