@@ -9,7 +9,6 @@ set(PINTOOL_SOURCES
         ZergCommandServer.cpp
         ZergCommand.cpp
         ZergMessage.cpp
-        ExecutionInfo.cpp
         IOVec.cpp
         )
 
@@ -18,7 +17,6 @@ set(PINTOOL_INCLUDES
         ZergCommandServer.h
         ZergCommand.h
         AllocatedArea.h
-        ExecutionInfo.h
         FBZergContext.h
         IOVec.h
         X86Context.h
