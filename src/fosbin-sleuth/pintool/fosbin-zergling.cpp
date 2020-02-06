@@ -423,13 +423,8 @@ VOID trace_execution(TRACE trace, VOID *v) {
 
 EXCEPT_HANDLING_RESULT globalSegfaultHandler(THREADID tid, EXCEPTION_INFO *exceptionInfo, PHYSICAL_CONTEXT
 *physContext, VOID *v) {
-    std::stringstream ss;
-    if (cmd_server) {
-        cmd_server->stop();
-        delete cmd_server;
-    }
-    ss << "Global segfault handler called: " << PIN_ExceptionToString(exceptionInfo);
-    log_error(ss);
+    logMsg << "Global segfault handler called: " << PIN_ExceptionToString(exceptionInfo);
+    log_error(logMsg);
     return EHR_UNHANDLED;
 }
 
