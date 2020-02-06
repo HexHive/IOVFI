@@ -2,7 +2,6 @@ add_subdirectory("shared-library-support")
 
 set(PINTOOL_SOURCES
         ${PINTOOL_NAME}.cpp
-        PinLogger.cpp
         X86Context.cpp
         AllocatedArea.cpp
         FBZergContext.cpp
