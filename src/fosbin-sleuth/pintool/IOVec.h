@@ -13,7 +13,7 @@
 #include <iostream>
 
 struct IOVec {
-    IOVec(FBZergContext &preContext, FBZergContext &postContext, std::set <ADDRINT> &systemCalls, std::map <RTN,
+    IOVec(FBZergContext *preContext, FBZergContext *postContext, std::set <ADDRINT> &systemCalls, std::map <RTN,
     std::set<ADDRINT>> executedInstructions);
 
     friend std::ostream &operator<<(std::ostream &out, const IOVec &ioVec);
@@ -25,8 +25,8 @@ struct IOVec {
 
     bool operator!=(const IOVec &ioVec) const;
 
-    FBZergContext preContext_;
-    FBZergContext postContext_;
+    FBZergContext *preContext_;
+    FBZergContext *postContext_;
     std::set <ADDRINT> systemCalls_;
     float coverage_;
 };

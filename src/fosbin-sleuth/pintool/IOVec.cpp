@@ -5,7 +5,7 @@
 #include "IOVec.h"
 #include "FBZergContext.h"
 
-IOVec::IOVec(FBZergContext &preContext, FBZergContext &postContext, std::set <ADDRINT> &systemCalls, std::map <RTN,
+IOVec::IOVec(FBZergContext *preContext, FBZergContext *postContext, std::set <ADDRINT> &systemCalls, std::map <RTN,
 std::set<ADDRINT>> executedInstructions) : preContext_(preContext), postContext_(postContext), systemCalls_
         (systemCalls), coverage_(0.0) {
     uint64_t totalInstructionsExecuted = 0;
@@ -22,8 +22,8 @@ std::set<ADDRINT>> executedInstructions) : preContext_(preContext), postContext_
 }
 
 std::ostream &operator<<(std::ostream &out, const IOVec &ioVec) {
-    out << ioVec.preContext_;
-    out << ioVec.postContext_;
+    out << *ioVec.preContext_;
+    out << *ioVec.postContext_;
 
     out.write((char *) &ioVec.coverage_, sizeof(ioVec.coverage_));
 
@@ -37,8 +37,8 @@ std::ostream &operator<<(std::ostream &out, const IOVec &ioVec) {
 }
 
 std::istream &operator>>(std::istream &in, IOVec &ioVec) {
-    in >> ioVec.preContext_;
-    in >> ioVec.postContext_;
+    in >> *ioVec.preContext_;
+    in >> *ioVec.postContext_;
 
     in.read((char *) &ioVec.coverage_, sizeof(ioVec.coverage_));
 
@@ -56,7 +56,7 @@ std::istream &operator>>(std::istream &in, IOVec &ioVec) {
 }
 
 bool IOVec::operator==(const IOVec &ioVec) const {
-    if (this->postContext_ != ioVec.postContext_) {
+    if (*this->postContext_ != *ioVec.postContext_) {
         return false;
     }
 

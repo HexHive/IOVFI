@@ -19,7 +19,6 @@
 #include <string.h>
 #include <csetjmp>
 #include <algorithm>
-#include <memory>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -327,8 +326,13 @@ size_t fuzz_strategy(uint8_t *buffer, size_t size) {
 
 VOID fuzz_registers() {
     log_message("fuzzing registers");
+    std::stringstream msg;
+    AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
+    if (aa != nullptr) {
+        msg << "3 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
+        log_message(msg);
+    }
     for (size_t i = 0; i < FBZergContext::argument_count; i++) {
-        std::stringstream msg;
         REG reg = FBZergContext::argument_regs[i];
         msg << "Fuzzing register " << REG_StringShort(reg);
         AllocatedArea *aa = preContext.find_allocated_area(reg);
@@ -337,11 +341,14 @@ VOID fuzz_registers() {
             log_message(msg);
             ADDRINT value = preContext.get_value(reg);
             do {
+//                msg << "Prefuzz:\t" << std::hex << value;
                 fuzz_strategy((uint8_t * ) & value, sizeof(value));
+//                msg << "\nPostfuzz:\t" << std::hex << value;
+//                log_message(msg);
+                preContext.add(reg, value);
             } while (PIN_CheckReadAccess((void *) value) || PIN_CheckWriteAccess((void *) value));
-            preContext.add(reg, value);
         } else {
-            msg << " which is an allocated area located at 0x" << std::hex << (void*)aa;
+            msg << " which is an allocated area located at " << std::hex << (void *) aa;
             log_message(msg);
             aa->fuzz();
         }
@@ -355,9 +362,17 @@ VOID record_current_context(CONTEXT *ctx) {
         wait_to_start();
     }
 //    std::cout << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
-    std::cout << "Func " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << " (" << std::hex <<
-    PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << "): "
-              << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP))) << std::endl;
+    std::stringstream msg;
+    msg << "Func " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << " (" << std::hex <<
+        PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << "): "
+        << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
+
+    log_message(msg);
+    AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
+    if (aa != nullptr) {
+        msg << "4 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
+        log_message(msg);
+    }
 
     struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
@@ -381,8 +396,8 @@ VOID record_current_context(CONTEXT *ctx) {
     ADDRINT currentAddress = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP);
     PIN_LockClient();
     RTN current = RTN_FindByAddress(currentAddress);
-    PIN_UnlockClient();
     executedInstructions[current].insert(currentAddress);
+    PIN_UnlockClient();
 
     if (fuzzing_run.size() > max_instructions) {
         report_failure(ZCMD_TOO_MANY_INS);
@@ -849,16 +864,32 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 void report_success(CONTEXT *ctx, THREADID tid) {
     currentContext << ctx;
 
+    std::stringstream log;
 //    log_message("write_to_cmd 8");
     if (fuzzed_input) {
         ZergMessage msg(ZMSG_OK);
 
         log_message("Creating IOVec");
-        IOVec ioVec(preContext, currentContext, syscalls, executedInstructions);
+        IOVec ioVec(&preContext, &currentContext, syscalls, executedInstructions);
         log_message("Adding IOVec to message");
+        AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
+        if (aa != nullptr) {
+            log << "5 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
+            log_message(log);
+        }
         msg.add_IOVec(ioVec);
+        aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
+        if (aa != nullptr) {
+            log << "6 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
+            log_message(log);
+        }
         log_message("Writing IOVec message to server");
         write_to_cmd_server(msg);
+        aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
+        if (aa != nullptr) {
+            log << "7 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
+            log_message(log);
+        }
     } else {
 //        std::stringstream msg2;
 //        msg2 << "Expected context" << std::endl;
@@ -884,6 +915,11 @@ void report_success(CONTEXT *ctx, THREADID tid) {
         write_to_cmd_server(msg);
     }
 
+    AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
+    if (aa != nullptr) {
+        log << "9 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
+        log_message(log);
+    }
     wait_to_start();
 }
 
@@ -1022,18 +1058,14 @@ zerg_cmd_result_t handle_execute_cmd() {
 }
 
 zerg_cmd_result_t handle_reset_cmd() {
+    AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
+    if (aa != nullptr) {
+        std::stringstream msg;
+        msg << "8 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
+        log_message(msg);
+    }
     return ZCMD_OK;
 }
-
-//zerg_cmd_result_t handle_get_exe_info_cmd() {
-//    ZergMessage msg(ZMSG_OK);
-//    if (msg.add_exe_info(executionInfo) > 0) {
-//        write_to_cmd_server(msg);
-//        return ZCMD_OK;
-//    } else {
-//        return ZCMD_ERROR;
-//    }
-//}
 
 zerg_cmd_result_t handle_set_ctx_cmd(ZergMessage &msg) {
     std::stringstream all_ctxs(std::ios::in | std::ios::out | std::ios::binary);
@@ -1123,10 +1155,20 @@ void begin_execution(CONTEXT *ctx) {
 
 void wait_to_start() {
     std::stringstream log_msg;
+    AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
+    if (aa != nullptr) {
+        log_msg << "1 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
+        log_message(log_msg);
+    }
     while (true) {
         log_message("Executor waiting for command");
         FD_SET(internal_pipe_in[0], &exe_fd_set_in);
         if (select(FD_SETSIZE, &exe_fd_set_in, nullptr, nullptr, nullptr) > 0) {
+            aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
+            if (aa != nullptr) {
+                log_msg << "2 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
+                log_message(log_msg);
+            }
             if (FD_ISSET(internal_pipe_in[0], &exe_fd_set_in)) {
                 zerg_cmd_result_t result = handle_cmd();
                 if (result == ZCMD_OK) {

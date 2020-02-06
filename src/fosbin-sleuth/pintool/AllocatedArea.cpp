@@ -172,12 +172,15 @@ void AllocatedArea::copy_allocated_area(const AllocatedArea &orig) {
             this_ptr[i] = that_ptr[i];
         }
     }
+    msg << "Completed allocated area copy from " << std::hex << (void *) orig.malloc_addr << " to " << std::hex
+        << (void *) malloc_addr;
+    log_message(msg);
 }
 
 AllocatedArea &AllocatedArea::operator=(const AllocatedArea &orig) {
-//    for (AllocatedArea *subarea : subareas) {
-//        delete subarea;
-//    }
+    for (AllocatedArea *subarea : subareas) {
+        delete subarea;
+    }
     subareas.clear();
     allocate_area(orig.size());
     copy_allocated_area(orig);
@@ -304,10 +307,10 @@ void AllocatedArea::reset_non_ptrs(const AllocatedArea &aa) {
 
 void AllocatedArea::setup_for_round(bool fuzz) {
     std::stringstream msg;
-    msg << "Fuzzing allocated area located at 0x" << std::hex << (void *) this;
+    msg << "Fuzzing allocated area located at " << std::hex << (void *) this;
     log_message(msg);
     for (AllocatedArea *subarea : subareas) {
-        msg << "Fuzzing subarea located at 0x" << std::hex << (void *) subarea;
+        msg << "Fuzzing subarea located at " << std::hex << (void *) subarea;
         log_message(msg);
         subarea->setup_for_round(fuzz);
     }
@@ -315,7 +318,7 @@ void AllocatedArea::setup_for_round(bool fuzz) {
     int pointer_count = 0;
     uint8_t *curr = (uint8_t *) malloc_addr;
     msg << "malloc_addr for " << std::hex << (void *) this << " = " << std::hex << (void *) malloc_addr
-        << " with size = "
+        << " with size = " << std::dec
         << size() << " and mem_map.size() = " << mem_map.size();
     log_message(msg);
 
