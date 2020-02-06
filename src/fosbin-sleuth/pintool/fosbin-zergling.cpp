@@ -66,6 +66,8 @@ fd_set exe_fd_set_in;
 fd_set exe_fd_set_out;
 int ctx_count = 0;
 
+std::stringstream logMsg;
+
 void wait_to_start();
 
 void report_failure(zerg_cmd_result_t reason, CONTEXT *ctx = nullptr);
@@ -325,31 +327,21 @@ size_t fuzz_strategy(uint8_t *buffer, size_t size) {
 }
 
 VOID fuzz_registers() {
-    log_message("fuzzing registers");
-    std::stringstream msg;
-    AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
-    if (aa != nullptr) {
-        msg << "3 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
-        log_message(msg);
-    }
     for (size_t i = 0; i < FBZergContext::argument_count; i++) {
         REG reg = FBZergContext::argument_regs[i];
-        msg << "Fuzzing register " << REG_StringShort(reg);
+        logMsg << "Fuzzing register " << REG_StringShort(reg);
         AllocatedArea *aa = preContext.find_allocated_area(reg);
         if (aa == nullptr) {
-            msg << " which is not an allocated area";
-            log_message(msg);
+            logMsg << " which is not an allocated area";
+            log_message(logMsg);
             ADDRINT value = preContext.get_value(reg);
             do {
-//                msg << "Prefuzz:\t" << std::hex << value;
                 fuzz_strategy((uint8_t * ) & value, sizeof(value));
-//                msg << "\nPostfuzz:\t" << std::hex << value;
-//                log_message(msg);
                 preContext.add(reg, value);
             } while (PIN_CheckReadAccess((void *) value) || PIN_CheckWriteAccess((void *) value));
         } else {
-            msg << " which is an allocated area located at " << std::hex << (void *) aa;
-            log_message(msg);
+            logMsg << " which is an allocated area located at " << std::hex << (void *) aa;
+            log_message(logMsg);
             aa->fuzz();
         }
     }
@@ -361,18 +353,12 @@ VOID record_current_context(CONTEXT *ctx) {
     if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
         wait_to_start();
     }
-//    std::cout << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
-    std::stringstream msg;
-    msg << "Func " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << " (" << std::hex <<
-        PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << "): "
-        << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
+//    logMsg << "Recording context " << std::dec << fuzzing_run.size() << std::endl;
+    logMsg << "Func " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << " (" << std::hex <<
+           PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << "): "
+           << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
 
-    log_message(msg);
-    AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
-    if (aa != nullptr) {
-        msg << "4 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
-        log_message(msg);
-    }
+    log_message(logMsg);
 
     struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
@@ -575,15 +561,12 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
             std::cout << "Creating allocated area (" << std::hex << (void*)aa << ") for "
                       << REG_StringShort(to.reg) << " at 0x"
                       << std::hex << (void*)aa->getAddr() << std::endl;
-            log_message("aa 1");
             preContext.add(to.reg, aa);
-            log_message("aa 2");
             currentContext = preContext;
-            log_message("aa 3");
         } else {
             if (!aa->fix_pointer(faulting_address)) {
-                std::stringstream ss;
-                ss << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
+                logMsg << "Could not fix pointer in register " << REG_StringShort(to.reg) << std::endl;
+                log_message(logMsg);
                 return false;
             }
             AllocatedArea *tmp = preContext.find_allocated_area(to.reg);
@@ -592,7 +575,6 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
             *tmp = *aa;
             preContext.add(to.reg, tmp);
 //            preContext.prettyPrint();
-//            std::cout << "Fixed pointer" << std::endl;
         }
     } else {
         IMG img = IMG_FindByAddress(to.addr);
@@ -604,18 +586,17 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
                 break;
             }
         }
-        std::stringstream ss;
-        ss << "Cannot taint non-registers. ";
+        logMsg << "Cannot taint non-registers. ";
         if (SEC_Valid(s)) {
-            ss << "Address 0x" << std::hex << to.addr << " is in section " << SEC_Name(s) << "of image " << IMG_Name
+            logMsg << "Address 0x" << std::hex << to.addr << " is in section " << SEC_Name(s) << "of image " << IMG_Name
                     (img);
         } else if (IMG_Valid(img)) {
-            ss << "Address 0x" << std::hex << to.addr << " could not be found in a section but is in image " <<
-               IMG_Name(img);
+            logMsg << "Address 0x" << std::hex << to.addr << " could not be found in a section but is in image " <<
+                   IMG_Name(img);
         } else {
-            ss << "Address 0x" << std::hex << to.addr << " could not be found in an image";
+            logMsg << "Address 0x" << std::hex << to.addr << " could not be found in an image";
         }
-        log_message(ss);
+        log_message(logMsg);
         return false;
     }
 
@@ -625,9 +606,8 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 
 void redirect_control_to_main(CONTEXT *ctx) {
     if (INS_Valid(first_ins)) {
-        std::stringstream msg;
-        msg << "Thread " << PIN_ThreadId() << " redirecting control to 0x" << std::hex << first_ins_addr;
-        log_message(msg);
+        logMsg << "Thread " << PIN_ThreadId() << " redirecting control to 0x" << std::hex << first_ins_addr;
+        log_message(logMsg);
         PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, first_ins_addr);
     } else {
         log_message("Could not redirect control");
@@ -656,47 +636,45 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
     {
         ADDRINT faulting_addr = -1;
         if (!PIN_GetFaultyAccessAddress(pExceptInfo, &faulting_addr)) {
-            std::stringstream msg;
             INS faulty_ins = INS_FindByAddress(fuzzing_run.back().rip);
-            msg << "Could not find faulty address for instruction at 0x" << std::hex << INS_Address(faulty_ins)
-                << " (" << INS_Disassemble(faulty_ins) << ")";
-            log_message(msg);
+            logMsg << "Could not find faulty address for instruction at 0x" << std::hex << INS_Address(faulty_ins)
+                   << " (" << INS_Disassemble(faulty_ins) << ")";
+            log_message(logMsg);
             report_failure(ZCMD_ERROR, ctx);
             redirect_control_to_main(ctx);
             return false;
         }
-        std::stringstream log;
         std::vector<struct TaintedObject> taintedObjs;
         REG taint_source = REG_INVALID();
         INS last_taint_ins = INS_Invalid();
         for (std::vector<struct X86Context>::reverse_iterator it = fuzzing_run.rbegin();
              it != fuzzing_run.rend(); ++it) {
-            log.str(std::string());
+            logMsg.str(std::string());
             struct X86Context &c = *it;
             INS ins = INS_FindByAddress(c.rip);
             if (!INS_Valid(ins)) {
-                log << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
-                log_message(log);
+                logMsg << "Could not find failing instruction at 0x" << std::hex << c.rip << std::endl;
+                log_message(logMsg);
                 report_failure(ZCMD_ERROR, ctx);
                 redirect_control_to_main(ctx);
                 return false;
             }
 
-            log << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
-                << "(0x" << std::hex << INS_Address(ins) << "): " << INS_Disassemble(ins) << std::endl;
-            log << "\tINS_IsMemoryRead: " << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
-            log << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
-            log << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
-            log << "\tCategory: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
-            log << "\tINS_MaxNumRRegs: " << INS_MaxNumRRegs(ins) << std::endl;
+            logMsg << RTN_Name(RTN_FindByAddress(INS_Address(ins)))
+                   << "(0x" << std::hex << INS_Address(ins) << "): " << INS_Disassemble(ins) << std::endl;
+            logMsg << "\tINS_IsMemoryRead: " << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
+            logMsg << "\tINS_HasMemoryRead2: " << (INS_HasMemoryRead2(ins) ? "true" : "false") << std::endl;
+            logMsg << "\tINS_IsMemoryWrite: " << (INS_IsMemoryWrite(ins) ? "true" : "false") << std::endl;
+            logMsg << "\tCategory: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
+            logMsg << "\tINS_MaxNumRRegs: " << INS_MaxNumRRegs(ins) << std::endl;
             for (unsigned int i = 0; i < INS_MaxNumRRegs(ins); i++) {
-                log << "\t\t" << REG_StringShort(INS_RegR(ins, i)) << std::endl;
+                logMsg << "\t\t" << REG_StringShort(INS_RegR(ins, i)) << std::endl;
             }
-            log << "\tINS_MaxNumWRegs: " << INS_MaxNumWRegs(ins) << std::endl;
+            logMsg << "\tINS_MaxNumWRegs: " << INS_MaxNumWRegs(ins) << std::endl;
             for (unsigned int i = 0; i < INS_MaxNumWRegs(ins); i++) {
-                log << "\t\t" << REG_StringShort(INS_RegW(ins, i)) << std::endl;
+                logMsg << "\t\t" << REG_StringShort(INS_RegW(ins, i)) << std::endl;
             }
-            log_message(log);
+            log_message(logMsg);
 
             if (it == fuzzing_run.rbegin()) {
                 for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
@@ -710,9 +688,8 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
                 }
 
                 if (!REG_valid(taint_source)) {
-                    std::stringstream ss;
-                    ss << "Could not find valid base register for instruction: " << INS_Disassemble(ins);
-                    log_message(ss);
+                    logMsg << "Could not find valid base register for instruction: " << INS_Disassemble(ins);
+                    log_message(logMsg);
                     redirect_control_to_main(ctx);
                     report_failure(ZCMD_ERROR, ctx);
                     return false;
@@ -726,29 +703,29 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
                 ADDRINT writeAddr = 0;
                 if (INS_OperandIsReg(ins, 0)) {
                     wreg = INS_OperandReg(ins, 0);
-                    log << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
+                    logMsg << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
                 } else if (INS_OperandIsMemory(ins, 0)) {
-                    log << "\tOperandIsMemory" << std::endl;
+                    logMsg << "\tOperandIsMemory" << std::endl;
                     wreg = INS_OperandMemoryBaseReg(ins, 0);
                     if (!REG_valid(wreg) || wreg == LEVEL_BASE::REG_GBP) {
                         writeAddr = compute_effective_address(ins, c);
-                        log << "\tWrite address is 0x" << writeAddr << std::endl;
+                        logMsg << "\tWrite address is 0x" << writeAddr << std::endl;
                     }
-                    log << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
+                    logMsg << "\tWrite register is " << REG_StringShort(wreg) << std::endl;
                 } else {
-                    log << "Write operand is not memory or register: " << INS_Disassemble(ins) << std::endl;
-                    log_error(log);
+                    logMsg << "Write operand is not memory or register: " << INS_Disassemble(ins) << std::endl;
+                    log_error(logMsg);
                     continue;
                 }
-                log_message(log);
+                log_message(logMsg);
 
                 if (REG_valid(wreg) && !isTainted(wreg, taintedObjs) && wreg != LEVEL_BASE::REG_GBP) {
-                    log << "\tWrite register is not tainted" << std::endl;
-                    log_message(log);
+                    logMsg << "\tWrite register is not tainted" << std::endl;
+                    log_message(logMsg);
                     continue;
                 } else if ((!REG_valid(wreg) || wreg == LEVEL_BASE::REG_GBP) && !isTainted(writeAddr, taintedObjs)) {
-                    log << "\tWrite address 0x" << std::hex << writeAddr << " is not tainted" << std::endl;
-                    log_message(log);
+                    logMsg << "\tWrite address 0x" << std::hex << writeAddr << " is not tainted" << std::endl;
+                    log_message(logMsg);
                     continue;
                 }
 
@@ -757,10 +734,10 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 
                 if (INS_OperandIsReg(ins, 1)) {
                     rreg = INS_OperandReg(ins, 1);
-                    log << "0\tRead register is " << REG_StringShort(rreg) << std::endl;
+                    logMsg << "0\tRead register is " << REG_StringShort(rreg) << std::endl;
                 } else if (INS_OperandIsMemory(ins, 1)) {
 //                    rreg = INS_OperandMemoryBaseReg(ins, 1);
-                    log << "2" << std::endl;
+                    logMsg << "2" << std::endl;
 //                    if (!REG_valid(rreg) || rreg == LEVEL_BASE::REG_GBP) {
                     readAddr = compute_effective_address(ins, c, 1);
 //                    }
@@ -768,25 +745,26 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
                     continue;
                 } else if (INS_OperandIsAddressGenerator(ins, 1) || INS_MemoryOperandIsRead(ins, 1)) {
                     rreg = INS_OperandMemoryBaseReg(ins, 1);
-                    log << "1\tRead register is " << REG_StringShort(rreg) << std::endl;
+                    logMsg << "1\tRead register is " << REG_StringShort(rreg) << std::endl;
                 } else {
-                    log << "Read operand is not a register, memory address, or immediate: " << INS_Disassemble(ins) <<
-                        std::endl;
-                    log << "OperandIsAddressGenerator: " << INS_OperandIsAddressGenerator(ins, 1) << std::endl;
-                    log << "OperandIsFixedMemop: " << INS_OperandIsFixedMemop(ins, 1) << std::endl;
-                    log << "OperandIsImplicit: " << INS_OperandIsImplicit(ins, 1) << std::endl;
-                    log << "Base register: " << REG_StringShort(INS_MemoryBaseReg(ins)) << std::endl;
-                    log << "Category: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
+                    logMsg << "Read operand is not a register, memory address, or immediate: " << INS_Disassemble(ins)
+                           <<
+                           std::endl;
+                    logMsg << "OperandIsAddressGenerator: " << INS_OperandIsAddressGenerator(ins, 1) << std::endl;
+                    logMsg << "OperandIsFixedMemop: " << INS_OperandIsFixedMemop(ins, 1) << std::endl;
+                    logMsg << "OperandIsImplicit: " << INS_OperandIsImplicit(ins, 1) << std::endl;
+                    logMsg << "Base register: " << REG_StringShort(INS_MemoryBaseReg(ins)) << std::endl;
+                    logMsg << "Category: " << CATEGORY_StringShort(INS_Category(ins)) << std::endl;
                     for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
-                        log << "Operand " << std::dec << i << " reg: " << REG_StringShort(INS_OperandReg(ins, i)) <<
-                            std::endl;
+                        logMsg << "Operand " << std::dec << i << " reg: " << REG_StringShort(INS_OperandReg(ins, i)) <<
+                               std::endl;
                     }
 
-                    log_message(log);
+                    log_message(logMsg);
                     continue;
                 }
 
-                log_message(log);
+                log_message(logMsg);
                 last_taint_ins = ins;
                 faulting_addr = compute_effective_address(ins, c, 1);
                 if (REG_valid(wreg)) {
@@ -835,11 +813,10 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
         } else {
             log_message("Taint analysis failed for the following context: ");
             log_message(getCurrentContext(ctx, 0));
-            std::stringstream msg;
-            msg << "Faulting instruction (0x" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
-                << "): " << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
-            msg << "\nException: " << PIN_ExceptionToString(pExceptInfo);
-            log_message(msg);
+            logMsg << "Faulting instruction (0x" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
+                   << "): " << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
+            logMsg << "\nException: " << PIN_ExceptionToString(pExceptInfo);
+            log_message(logMsg);
             log_message("write_to_cmd 7");
             report_failure(ZCMD_ERROR, ctx);
             redirect_control_to_main(ctx);
@@ -864,32 +841,12 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler, const
 void report_success(CONTEXT *ctx, THREADID tid) {
     currentContext << ctx;
 
-    std::stringstream log;
 //    log_message("write_to_cmd 8");
     if (fuzzed_input) {
         ZergMessage msg(ZMSG_OK);
-
-        log_message("Creating IOVec");
         IOVec ioVec(&preContext, &currentContext, syscalls, executedInstructions);
-        log_message("Adding IOVec to message");
-        AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
-        if (aa != nullptr) {
-            log << "5 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
-            log_message(log);
-        }
         msg.add_IOVec(ioVec);
-        aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
-        if (aa != nullptr) {
-            log << "6 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
-            log_message(log);
-        }
-        log_message("Writing IOVec message to server");
         write_to_cmd_server(msg);
-        aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
-        if (aa != nullptr) {
-            log << "7 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
-            log_message(log);
-        }
     } else {
 //        std::stringstream msg2;
 //        msg2 << "Expected context" << std::endl;
@@ -901,11 +858,10 @@ void report_success(CONTEXT *ctx, THREADID tid) {
 
         bool contexts_equal = (currentContext == expectedContext);
         if (!contexts_equal) {
-            std::stringstream msg;
-            msg << "Ending context does not match expected" << std::endl;
-            msg << std::endl;
+            logMsg << "Ending context does not match expected" << std::endl;
+            logMsg << std::endl;
 
-            log_message(msg);
+            log_message(logMsg);
 
         } else {
             log_message("Ending contexts match");
@@ -913,12 +869,6 @@ void report_success(CONTEXT *ctx, THREADID tid) {
         zerg_message_t response = (contexts_equal ? ZMSG_OK : ZMSG_FAIL);
         ZergMessage msg(response);
         write_to_cmd_server(msg);
-    }
-
-    AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
-    if (aa != nullptr) {
-        log << "9 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
-        log_message(log);
     }
     wait_to_start();
 }
@@ -942,15 +892,12 @@ void adjust_stack_down(CONTEXT *ctx) {
         log_message("Adjusting stack down");
         ADDRINT orig_rbp = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP);
         ADDRINT orig_rsp = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSP);
-        std::stringstream msg;
 
-        log_message(msg);
         EXCEPTION_INFO exception_info;
         size_t bytes_copied = PIN_SafeCopyEx((void *) orig_rbp, &last_ins_addr, sizeof(last_ins_addr), &exception_info);
-        log_message(msg);
         if (bytes_copied == 0) {
-            msg << PIN_ExceptionToString(&exception_info);
-            log_error(msg);
+            logMsg << PIN_ExceptionToString(&exception_info);
+            log_error(logMsg);
         }
         orig_rbp -= sizeof(last_ins_addr);
         orig_rsp -= sizeof(last_ins_addr);
@@ -963,39 +910,38 @@ void adjust_stack_down(CONTEXT *ctx) {
 }
 
 zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
-    std::stringstream msg;
-    log_message(msg);
+    log_message(logMsg);
     PIN_LockClient();
     RTN new_target = RTN_Invalid();
     if (zmsg.type() == ZMSG_SET_TGT) {
         uintptr_t new_target_addr;
         memcpy(&new_target_addr, zmsg.data(), sizeof(new_target_addr));
-        msg << "Setting new target to 0x" << std::hex << new_target_addr;
-        log_message(msg);
+        logMsg << "Setting new target to 0x" << std::hex << new_target_addr;
+        log_message(logMsg);
         new_target = RTN_FindByAddress(new_target_addr);
     } else if (zmsg.type() == ZMSG_SET_SO_TGT) {
         if (!IMG_Valid(target_so)) {
-            msg << "Target shared object is invalid";
-            log_message(msg);
+            logMsg << "Target shared object is invalid";
+            log_message(logMsg);
             PIN_UnlockClient();
             return ZCMD_ERROR;
         }
-        msg << "Setting new target to " << (const char *) zmsg.data() << " in SO target " << IMG_Name(target_so);
-        log_message(msg);
+        logMsg << "Setting new target to " << (const char *) zmsg.data() << " in SO target " << IMG_Name(target_so);
+        log_message(logMsg);
         RTN so_func = RTN_FindByName(target_so, (const char *) zmsg.data());
 
         new_target = RTN_FindByAddress(RTN_Address(so_func));
     } else if (zmsg.type() == ZMSG_SET_RUST_TGT) {
         IMG img = IMG_FindImgById(imgId);
         if (IMG_Valid(img)) {
-            msg << "Setting new target to " << (const char *) zmsg.data() << " in Rust binary";
-            log_message(msg);
+            logMsg << "Setting new target to " << (const char *) zmsg.data() << " in Rust binary";
+            log_message(logMsg);
             new_target = RTN_FindByName(img, (const char *) zmsg.data());
         }
     }
     if (!RTN_Valid(new_target)) {
-        msg << "Could not find valid target";
-        log_message(msg);
+        logMsg << "Could not find valid target";
+        log_message(logMsg);
         PIN_UnlockClient();
         return ZCMD_ERROR;
     }
@@ -1004,9 +950,9 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
         PIN_RemoveInstrumentationInRange(RTN_Address(target), RTN_Address(target) + RTN_Size(target));
     }
 
-    msg << "Found target: " << RTN_Name(new_target) << " at 0x" << std::hex << RTN_Address(new_target) << std::endl;
-    log_message(msg);
-    msg << "Instrumenting returns...";
+    logMsg << "Found target: " << RTN_Name(new_target) << " at 0x" << std::hex << RTN_Address(new_target) << std::endl;
+    log_message(logMsg);
+    logMsg << "Instrumenting returns...";
     int instrument_sites = 0;
     RTN_Open(new_target);
     INS_InsertCall(RTN_InsHead(new_target), IPOINT_BEFORE, (AFUNPTR) adjust_stack_down, IARG_CONTEXT, IARG_END);
@@ -1026,9 +972,9 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
 
     target = new_target;
 
-    msg << "done. ";
-    msg << "Number of instrument sites = " << std::dec << instrument_sites;
-    log_message(msg);
+    logMsg << "done. ";
+    logMsg << "Number of instrument sites = " << std::dec << instrument_sites;
+    log_message(logMsg);
     return ZCMD_OK;
 }
 
@@ -1045,12 +991,11 @@ zerg_cmd_result_t handle_execute_cmd() {
     currentContext >> &snapshot;
     PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
     PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RBP, PIN_GetContextReg(&snapshot, LEVEL_BASE::REG_RSP));
-    std::stringstream msg;
-    msg << "About to start executing at "
-        << std::hex << RTN_Address(target) << "(" << RTN_Name(target) << ")"
-        << " with context " << std::endl;
-    preContext.prettyPrint(msg);
-    log_message(msg);
+    logMsg << "About to start executing at "
+           << std::hex << RTN_Address(target) << "(" << RTN_Name(target) << ")"
+           << " with context " << std::endl;
+    preContext.prettyPrint(logMsg);
+    log_message(logMsg);
 
     PIN_ExecuteAt(&snapshot);
     //    log_message("PIN_ExecuteAt returned magically");
@@ -1058,12 +1003,6 @@ zerg_cmd_result_t handle_execute_cmd() {
 }
 
 zerg_cmd_result_t handle_reset_cmd() {
-    AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
-    if (aa != nullptr) {
-        std::stringstream msg;
-        msg << "8 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
-        log_message(msg);
-    }
     return ZCMD_OK;
 }
 
@@ -1078,15 +1017,13 @@ zerg_cmd_result_t handle_set_ctx_cmd(ZergMessage &msg) {
 
     fuzzed_input = false;
     ctx_count++;
-    std::stringstream logmsg;
-    logmsg << "Set context " << ctx_count;
-    log_message(logmsg);
+    logMsg << "Set context " << ctx_count;
+    log_message(logMsg);
     return ZCMD_OK;
 }
 
 zerg_cmd_result_t handle_cmd() {
     ZergMessage *msg = nullptr;
-    std::stringstream log_msg;
     msg = read_from_cmd_server();
     if (!msg) {
         log_message("Could not read command from server");
@@ -1125,8 +1062,8 @@ zerg_cmd_result_t handle_cmd() {
             cleanup(0);
             break;
         default:
-            log_msg << "Unknown command: " << msg->str();
-            log_message(log_msg);
+            logMsg << "Unknown command: " << msg->str();
+            log_message(logMsg);
             result = ZCMD_ERROR;
             break;
     }
@@ -1154,21 +1091,10 @@ void begin_execution(CONTEXT *ctx) {
 }
 
 void wait_to_start() {
-    std::stringstream log_msg;
-    AllocatedArea *aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
-    if (aa != nullptr) {
-        log_msg << "1 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
-        log_message(log_msg);
-    }
     while (true) {
         log_message("Executor waiting for command");
         FD_SET(internal_pipe_in[0], &exe_fd_set_in);
         if (select(FD_SETSIZE, &exe_fd_set_in, nullptr, nullptr, nullptr) > 0) {
-            aa = preContext.find_allocated_area(LEVEL_BASE::REG_RDI);
-            if (aa != nullptr) {
-                log_msg << "2 Allocated area for " << std::hex << (void *) aa << " = " << (void *) aa->getAddr();
-                log_message(log_msg);
-            }
             if (FD_ISSET(internal_pipe_in[0], &exe_fd_set_in)) {
                 zerg_cmd_result_t result = handle_cmd();
                 if (result == ZCMD_OK) {
@@ -1235,22 +1161,20 @@ VOID FindMain(IMG img, VOID *v) {
             imgId = IMG_Id(img);
         }
 
-        std::stringstream msg;
-        msg << "Address of first_ins = 0x" << std::hex << first_ins_addr;
-        log_message(msg);
+        logMsg << "Address of first_ins = 0x" << std::hex << first_ins_addr;
+        log_message(logMsg);
 
-        msg << "Adding call to wait_to_start to " << RTN_Name(main) << "(0x" << std::hex << RTN_Address(main)
-            << ")";
-        log_message(msg);
+        logMsg << "Adding call to wait_to_start to " << RTN_Name(main) << "(0x" << std::hex << RTN_Address(main)
+               << ")";
+        log_message(logMsg);
         INS_InsertCall(first_ins, IPOINT_BEFORE, (AFUNPTR) begin_execution, IARG_CONTEXT, IARG_END);
         RTN_Close(main);
 //        if(is_executable_fbloader(img)) {
 //            IMG_Close(target_so);
 //        }
     } else {
-        std::stringstream ss;
-        ss << "Could not find main!" << std::endl;
-        log_error(ss);
+        logMsg << "Could not find main!" << std::endl;
+        log_error(logMsg);
     }
 }
 
@@ -1278,9 +1202,8 @@ int main(int argc, char **argv) {
         }
     }
 
-    std::stringstream ss;
-    ss << "Starting Zergling as process " << PIN_GetPid() << "..." << std::endl;
-    log_message(ss);
+    logMsg << "Starting Zergling as process " << PIN_GetPid() << "..." << std::endl;
+    log_message(logMsg);
 
     if (pipe(internal_pipe_in) != 0 || pipe(internal_pipe_out) != 0) {
         log_error("Error creating internal pipe");
@@ -1291,21 +1214,21 @@ int main(int argc, char **argv) {
     FD_SET(internal_pipe_in[0], &exe_fd_set_in);
     FD_SET(internal_pipe_out[1], &exe_fd_set_out);
 
-    ss << "Opening command in pipe " << KnobInPipe.Value();
-    log_message(ss);
+    logMsg << "Opening command in pipe " << KnobInPipe.Value();
+    log_message(logMsg);
     cmd_in = open(KnobInPipe.Value().c_str(), O_RDONLY);
     if (cmd_in < 0) {
-        ss << "Could not open in pipe: " << strerror(errno);
-        log_error(ss);
+        logMsg << "Could not open in pipe: " << strerror(errno);
+        log_error(logMsg);
     }
     close(cmd_in);
 
-    ss << "Opening command out pipe " << KnobOutPipe.Value();
-    log_message(ss);
+    logMsg << "Opening command out pipe " << KnobOutPipe.Value();
+    log_message(logMsg);
     cmd_out = open(KnobOutPipe.Value().c_str(), O_WRONLY);
     if (cmd_out < 0) {
-        ss << "Could not open out pipe: " << strerror(errno);
-        log_error(ss);
+        logMsg << "Could not open out pipe: " << strerror(errno);
+        log_error(logMsg);
     }
     close(cmd_out);
     log_message("done opening command pipes");
