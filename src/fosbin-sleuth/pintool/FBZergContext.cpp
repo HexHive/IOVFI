@@ -177,9 +177,8 @@ FBZergContext &FBZergContext::operator=(const FBZergContext &orig) {
         if (aa == nullptr) {
             values[it.first] = orig.get_value(it.first);
         } else {
-            AllocatedArea *new_aa = new AllocatedArea(*aa);
-            values[it.first] = new_aa->getAddr();
-            pointer_registers[it.first] = new_aa;
+            values[it.first] = aa->getAddr();
+            pointer_registers[it.first] = aa;
         }
     }
 

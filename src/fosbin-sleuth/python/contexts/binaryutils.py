@@ -80,6 +80,7 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
 
 
 def fuzz_one_function(fuzz_desc):
+    pin_run = None
     func_name = fuzz_desc.func_desc.name
     target = fuzz_desc.func_desc.location
     binary = fuzz_desc.func_desc.binary
@@ -155,6 +156,12 @@ def fuzz_one_function(fuzz_desc):
                                                                   fuzz_desc.fuzz_count))
                 elif result is not None and len(result.data.getbuffer()) > 0:
                     logger.info("Fuzzing run failed: {}".format(result.data.getvalue()))
+                elif result is None:
+                    logger.debug("Fuzzing result is None")
+                elif result is not None and len(result.data.getbuffer()) == 0:
+                    logger.debug("Fuzzing data is zero")
+                elif result.msgtype != PinMessage.ZMSG_OK:
+                    logger.debug("Pin message is not OK: %s".format(result))
             except TimeoutError as e:
                 logger.debug(str(e))
                 pin_run.stop()
@@ -167,10 +174,8 @@ def fuzz_one_function(fuzz_desc):
                 logger.debug("{} received KeyboardInterrupt".format(run_name))
                 pin_run.stop()
                 continue
-
     except Exception as e:
         logger.debug("Error for {}: {}".format(run_name, e))
-        # logger.exception(e)
     finally:
         logger.info("Finished {}".format(run_name))
         pin_run.stop()

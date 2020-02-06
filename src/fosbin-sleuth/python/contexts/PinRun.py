@@ -24,7 +24,6 @@ class PinMessage:
     ZMSG_RESET = 7
     ZMSG_READY = 8
     ZMSG_SET_SO_TGT = 9
-    # ZMSG_GET_EXE_INFO = 10
     ZMSG_SET_RUST_TGT = 11
     HEADER_FORMAT = "iQ"
 
@@ -40,7 +39,6 @@ class PinMessage:
         ZMSG_RESET: "ZMSG_RESET",
         ZMSG_READY: "ZMSG_READY",
         ZMSG_SET_SO_TGT: "ZMSG_SET_SO_TGT",
-        # ZMSG_GET_EXE_INFO: "ZMSG_GET_EXE_INFO",
         ZMSG_SET_RUST_TGT: "ZMSG_SET_RUST_TGT"
     }
 
@@ -55,6 +53,9 @@ class PinMessage:
         else:
             self.msglen = len(data)
             self.data = io.BytesIO(data)
+
+    def __str__(self):
+        return self.names[self.msgtype]
 
     def write_to_pipe(self, pipe):
         pipe.write(struct.pack(PinMessage.HEADER_FORMAT, self.msgtype, self.msglen))

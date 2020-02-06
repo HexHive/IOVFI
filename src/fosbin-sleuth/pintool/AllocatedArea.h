@@ -5,9 +5,10 @@
 #ifndef FOSBIN_ALLOCATEDAREA_H
 #define FOSBIN_ALLOCATEDAREA_H
 
-#include "pin.H"
 #include <vector>
 #include <iostream>
+
+#include "pin.H"
 
 #define DEFAULT_ALLOCATION_SIZE 4096
 
@@ -51,7 +52,7 @@ public:
 protected:
     char *malloc_addr, *lower_guard, *upper_guard;
     std::vector<bool> mem_map;
-    std::vector<AllocatedArea *> subareas;
+    std::vector<AllocatedArea*> subareas;
 
     void copy_allocated_area(const AllocatedArea &orig);
 

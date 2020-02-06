@@ -5,10 +5,11 @@
 #ifndef FOSBIN_FBZERGCONTEXT_H
 #define FOSBIN_FBZERGCONTEXT_H
 
-#include "pin.H"
 #include <iostream>
 #include <set>
 #include <vector>
+
+#include "pin.H"
 #include "AllocatedArea.h"
 #include "FBZergContext.h"
 
@@ -56,7 +57,7 @@ public:
 
 protected:
     std::map <REG, ADDRINT> values;
-    std::map<REG, AllocatedArea *> pointer_registers;
+    std::map<REG, AllocatedArea*> pointer_registers;
     char return_value;
 
 private:

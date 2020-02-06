@@ -11,13 +11,13 @@
 ADDRINT AllocatedArea::MAGIC_VALUE = 0xA110CA3D;
 
 AllocatedArea::AllocatedArea() :
-        malloc_addr(0), lower_guard(0), upper_guard(0) {
+        malloc_addr(0), lower_guard(0), upper_guard(0), mem_map() {
     allocate_area(DEFAULT_ALLOCATION_SIZE);
     std::memset((void *) malloc_addr, 0, DEFAULT_ALLOCATION_SIZE);
 }
 
 AllocatedArea::AllocatedArea(const AllocatedArea &aa) :
-        malloc_addr(0), lower_guard(0), upper_guard(0) {
+        malloc_addr(0), lower_guard(0), upper_guard(0), mem_map() {
     allocate_area(aa.size());
     copy_allocated_area(aa);
 }
@@ -154,6 +154,9 @@ void AllocatedArea::prettyPrint(std::ostream &s, size_t depth) const {
 }
 
 void AllocatedArea::copy_allocated_area(const AllocatedArea &orig) {
+    std::stringstream msg;
+    msg << "Copying allocated area from " << std::hex << (void*)orig.malloc_addr << " to " << std::hex << (void*)malloc_addr;
+    log_message(msg);
     mem_map = orig.mem_map;
     char *this_ptr = (char *) malloc_addr;
     char *that_ptr = (char *) orig.malloc_addr;
@@ -172,9 +175,9 @@ void AllocatedArea::copy_allocated_area(const AllocatedArea &orig) {
 }
 
 AllocatedArea &AllocatedArea::operator=(const AllocatedArea &orig) {
-    for (AllocatedArea *subarea : subareas) {
-        delete subarea;
-    }
+//    for (AllocatedArea *subarea : subareas) {
+//        delete subarea;
+//    }
     subareas.clear();
     allocate_area(orig.size());
     copy_allocated_area(orig);
@@ -230,6 +233,9 @@ void AllocatedArea::allocate_area(size_t size) {
 //        << "upper_guard: " << std::hex << upper_guard;
 //    log_message(msg);
     mem_map.resize(size);
+    for (size_t i = 0; i < mem_map.size(); i++) {
+        mem_map[i] = false;
+    }
     return;
 
     error:
@@ -297,12 +303,22 @@ void AllocatedArea::reset_non_ptrs(const AllocatedArea &aa) {
 }
 
 void AllocatedArea::setup_for_round(bool fuzz) {
+    std::stringstream msg;
+    msg << "Fuzzing allocated area located at 0x" << std::hex << (void *) this;
+    log_message(msg);
     for (AllocatedArea *subarea : subareas) {
+        msg << "Fuzzing subarea located at 0x" << std::hex << (void *) subarea;
+        log_message(msg);
         subarea->setup_for_round(fuzz);
     }
 
     int pointer_count = 0;
     uint8_t *curr = (uint8_t *) malloc_addr;
+    msg << "malloc_addr for " << std::hex << (void *) this << " = " << std::hex << (void *) malloc_addr
+        << " with size = "
+        << size() << " and mem_map.size() = " << mem_map.size();
+    log_message(msg);
+
     for (size_t i = 0; i < mem_map.size(); i++) {
         size_t write_size;
         if (fuzz) {
@@ -310,19 +326,24 @@ void AllocatedArea::setup_for_round(bool fuzz) {
         } else {
             write_size = 1;
             *curr = '\0';
+            curr += write_size;
         }
-        curr += write_size;
         i += write_size - 1;
     }
+    msg << "Done with fuzzing " << std::hex << (void*)this;
+    log_message(msg);
     for (size_t i = 0; i < mem_map.size(); i++) {
         if (mem_map[i]) {
-            AllocatedArea *aa = subareas[pointer_count];
-            ADDRINT *ptr = (ADDRINT *) curr;
+            msg << "Setting subarea for " << std::hex << (void*)this;
+            log_message(msg);
+            AllocatedArea *aa = subareas[pointer_count++];
+            ADDRINT *ptr = (ADDRINT *) ((uint8_t*)malloc_addr + i);
             *ptr = aa->getAddr();
-            curr += sizeof(ADDRINT);
             i += sizeof(ADDRINT) - 1;
         }
     }
+    msg << "Done with setting memory areas for " << std::hex << (void*)this;
+    log_message(msg);
 }
 
 void AllocatedArea::fuzz() {

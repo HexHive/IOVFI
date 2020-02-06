@@ -4,8 +4,8 @@ import multiprocessing
 import os
 import pickle
 
-from .contexts import binaryutils
-from .contexts.FBLogging import logger
+from contexts import binaryutils
+from contexts.FBLogging import logger
 
 fuzz_count = 5
 
@@ -61,7 +61,7 @@ def main():
         loader_loc = os.path.abspath(results.ld)
 
     pintool_loc = os.path.abspath(results.tool)
-    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin-3.11"))
+    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
 
     ignored_funcs = set()
 
