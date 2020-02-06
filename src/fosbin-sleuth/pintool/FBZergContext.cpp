@@ -140,19 +140,19 @@ bool FBZergContext::return_values_equal(const FBZergContext &ctx) const {
 
 bool FBZergContext::operator==(const FBZergContext &ctx) const {
     if (!return_values_equal(ctx)) {
-        log_message("Return values not equal");
+//        log_message("Return values not equal");
         return false;
     }
 
     for (auto it : pointer_registers) {
         AllocatedArea *aa = ctx.find_allocated_area(it.first);
         if (aa == nullptr) {
-            log_message("Expected AllocatedArea is missing");
+//            log_message("Expected AllocatedArea is missing");
             return false;
         }
 
         if (*aa != *it.second) {
-            log_message("AllocatedAreas are not the same");
+//            log_message("AllocatedAreas are not the same");
             return false;
         }
     }
