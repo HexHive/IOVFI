@@ -72,24 +72,6 @@ void wait_to_start();
 
 void report_failure(zerg_cmd_result_t reason, CONTEXT *ctx = nullptr);
 
-void output_context(std::istream &in) {
-    FBZergContext incontext, outcontext;
-    in >> incontext;
-    in >> outcontext;
-
-    std::cout << "===============================================" << std::endl;
-    std::cout << "                   PreContext                  " << std::endl;
-    std::cout << "===============================================" << std::endl;
-    incontext.prettyPrint(std::cout);
-
-    std::cout << std::endl;
-    std::cout << "===============================================" << std::endl;
-    std::cout << "                  PostContext                  " << std::endl;
-    std::cout << "===============================================" << std::endl;
-    outcontext.prettyPrint(std::cout);
-    std::cout << std::endl;
-}
-
 void cleanup(int exitcode) {
     PIN_RemoveInstrumentation();
     if (cmd_server) {
@@ -1175,8 +1157,6 @@ VOID FindMain(IMG img, VOID *v) {
 
 void track_syscalls(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, void *v) {
     if (cmd_server->get_state() == ZERG_SERVER_EXECUTING) {
-//            std::cout << "Func " << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << ": "
-//              << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP))) << std::endl;
         ADDRINT syscall_num = PIN_GetSyscallNumber(ctx, std);
         syscalls.insert(syscall_num);
     }

@@ -37,6 +37,4 @@ VOID log_error(const char *message);
 
 size_t fuzz_strategy(uint8_t *buffer, size_t size);
 
-void output_context(std::istream &in);
-
 #endif //FOSBIN_FOSBIN_ZERGLING_H
