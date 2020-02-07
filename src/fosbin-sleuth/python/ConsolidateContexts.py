@@ -36,7 +36,7 @@ def main():
         logger.fatal("Could not find {}".format(results.map))
         sys.exit(1)
 
-    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin-3.11"))
+    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
     if not os.path.exists(pin_loc):
         logger.fatal("Could not find {}".format(pin_loc))
         sys.exit(1)
