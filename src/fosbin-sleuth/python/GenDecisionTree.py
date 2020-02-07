@@ -1,12 +1,11 @@
 #!/usr/bin/python3
 
-import sys
 import argparse
+import logging
 import pickle
-from sklearn.externals.six import StringIO
+
 from contexts.FBDecisionTree import FBDecisionTree
 from contexts.FBLogging import logger
-import logging
 
 TREE_OUT = "tree.bin"
 
@@ -17,23 +16,14 @@ def main():
                         default="out.desc")
     parser.add_argument('-t', '--tree', help="File to output decision tree", default=TREE_OUT)
     parser.add_argument('-m', '--map', help="Map of hashes to contexts", default="hash.map")
-    parser.add_argument('--dot', help="File to output tree dot file", default=TREE_OUT + ".dot")
     parser.add_argument("-log", help='/path/to/log/file', default="tree.log")
 
     results = parser.parse_args()
     logger.addHandler(logging.FileHandler(results.log, mode="w"))
 
     fbDtree = FBDecisionTree(results.desc, results.map)
-    treeFile = open(results.tree, "wb+")
-    pickle.dump(fbDtree, treeFile)
-
-    msg = "Generating dot file..."
-    dotFile = open(results.dot, "w+")
-    sys.stdout.flush()
-    dot_data = StringIO()
-    fbDtree.export_graphviz(dot_data)
-    dotFile.write(dot_data.getvalue())
-    logger.info(msg + "done!")
+    with open(results.tree, "wb+") as f:
+        pickle.dump(fbDtree, f)
 
 
 if __name__ == "__main__":

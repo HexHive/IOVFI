@@ -285,8 +285,8 @@ class FBDecisionTree:
         with open(descLoc, "rb") as descFile:
             self.descMaps[base_idx] = pickle.load(descFile)
         for key, funcDescs in self.descMaps[base_idx].items():
-            for funcDesc in funcDescs:
-                self.funcDescs[hash(funcDesc)] = funcDesc
+            for (funcDesc, coverage) in funcDescs:
+                self.funcDescs[hash(funcDesc)] = (funcDesc, coverage)
         self._log(msg + "done!")
 
         msg = "Loading {}...".format(hashMapLoc)
@@ -312,7 +312,7 @@ class FBDecisionTree:
         for key, funcs in self.descMaps[base_idx].items():
             idx = self.labels[base_idx].transform([key])[0]
             count += 1
-            for func in funcs:
+            for (func, coverage) in funcs:
                 hashsum = hash(func)
                 if hashsum not in added_func_hashes:
                     added_func_hashes.add(hashsum)
