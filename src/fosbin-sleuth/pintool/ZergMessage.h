@@ -6,17 +6,19 @@
 #define FOSBIN_ZERGMESSAGE_H
 
 #include "IOVec.h"
+#include <map>
+#include <set>
 
 typedef enum zerg_message_type {
-    ZMSG_FAIL = -1,
-    ZMSG_OK,
-    ZMSG_ACK,
-    ZMSG_SET_TGT,
-    ZMSG_EXIT,
-    ZMSG_FUZZ,
-    ZMSG_EXECUTE,
-    ZMSG_SET_CTX,
-    ZMSG_RESET,
+  ZMSG_FAIL = -1,
+  ZMSG_OK,
+  ZMSG_ACK,
+  ZMSG_SET_TGT,
+  ZMSG_EXIT,
+  ZMSG_FUZZ,
+  ZMSG_EXECUTE,
+  ZMSG_SET_CTX,
+  ZMSG_RESET,
     ZMSG_READY,
     ZMSG_SET_SO_TGT,
     ZMSG_SET_RUST_TGT
@@ -50,6 +52,8 @@ public:
     const char *str() const;
 
     size_t add_IOVec(IOVec &iovec);
+
+    size_t add_coverage(std::map<RTN, std::set<ADDRINT>> executedInstructions);
 };
 
 #endif //FOSBIN_ZERGMESSAGE_H

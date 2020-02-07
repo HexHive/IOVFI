@@ -826,16 +826,19 @@ void report_success(CONTEXT *ctx, THREADID tid) {
 //        currentContext.prettyPrint(msg2);
 //        log_message(msg2);
 
-        bool contexts_equal = (currentContext == expectedContext);
-        if (!contexts_equal) {
-            logMsg << "Ending context does not match expected";
-            log_message(logMsg);
-        } else {
-            log_message("Ending contexts match");
-        }
-        zerg_message_t response = (contexts_equal ? ZMSG_OK : ZMSG_FAIL);
-        ZergMessage msg(response);
-        write_to_cmd_server(msg);
+      bool contexts_equal = (currentContext == expectedContext);
+      if (!contexts_equal) {
+        logMsg << "Ending context does not match expected";
+        log_message(logMsg);
+      } else {
+        log_message("Ending contexts match");
+      }
+      zerg_message_t response = (contexts_equal ? ZMSG_OK : ZMSG_FAIL);
+      ZergMessage msg(response);
+      if (response == ZMSG_OK) {
+        msg.add_coverage(executedInstructions);
+      }
+      write_to_cmd_server(msg);
     }
     wait_to_start();
 }

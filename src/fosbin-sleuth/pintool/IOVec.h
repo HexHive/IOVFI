@@ -8,28 +8,31 @@
 #include "FBZergContext.h"
 #include "pin.H"
 
-#include <set>
-#include <map>
 #include <iostream>
+#include <map>
+#include <set>
 
 struct IOVec {
-    IOVec(FBZergContext *preContext, FBZergContext *postContext, std::set <ADDRINT> &systemCalls, std::map <RTN,
-    std::set<ADDRINT>> executedInstructions);
+  IOVec(FBZergContext *preContext, FBZergContext *postContext,
+        std::set<ADDRINT> &systemCalls,
+        std::map<RTN, std::set<ADDRINT>> executedInstructions);
 
-    friend std::ostream &operator<<(std::ostream &out, const IOVec &ioVec);
+  friend std::ostream &operator<<(std::ostream &out, const IOVec &ioVec);
 
-    friend std::istream &operator>>(std::istream &in, IOVec &ioVec);
+  friend std::istream &operator>>(std::istream &in, IOVec &ioVec);
 
-    /* Only checks post contexts */
-    bool operator==(const IOVec &ioVec) const;
+  /* Only checks post contexts */
+  bool operator==(const IOVec &ioVec) const;
 
-    bool operator!=(const IOVec &ioVec) const;
+  bool operator!=(const IOVec &ioVec) const;
 
-    FBZergContext *preContext_;
-    FBZergContext *postContext_;
-    std::set <ADDRINT> systemCalls_;
-    float coverage_;
+  static float
+  computeCoverage(std::map<RTN, std::set<ADDRINT>> executedInstructions);
+
+  FBZergContext *preContext_;
+  FBZergContext *postContext_;
+  std::set<ADDRINT> systemCalls_;
+  float coverage_;
 };
 
-
-#endif //FOSBIN_IOVEC_H
+#endif // FOSBIN_IOVEC_H
