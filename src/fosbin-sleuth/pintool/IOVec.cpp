@@ -4,6 +4,7 @@
 
 #include "IOVec.h"
 #include "FBZergContext.h"
+#include "fosbin-zergling.h"
 
 IOVec::IOVec(FBZergContext *preContext, FBZergContext *postContext,
              std::set<ADDRINT> &systemCalls,
@@ -19,8 +20,13 @@ float IOVec::computeCoverage(
   uint64_t totalReachableInstructions = 0;
 
   float coverage = -1.0f;
+  std::stringstream msg;
   PIN_LockClient();
   for (auto it : executedInstructions) {
+    //    msg << RTN_Name(it.first) << " Reachable:\t" << std::dec
+    //        << RTN_NumIns(it.first) << "\n"
+    //        << RTN_Name(it.first) << " Executed:\t" << it.second.size();
+    //    log_message(msg);
     totalReachableInstructions += RTN_NumIns(it.first);
     totalInstructionsExecuted += it.second.size();
   }

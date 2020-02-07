@@ -86,13 +86,13 @@ def main():
                 ignored_funcs.add(line)
         logger.debug("done")
 
-    for binary in binaries:
-        logger.info("Finding functions in {}".format(binary))
-        location_map = binaryutils.find_funcs(binary, ignored_funcs=ignored_funcs)
-        for loc, func_desc in location_map.items():
-            if func_desc not in consolidation_map:
-                logger.info("Adding {}".format(func_desc.name))
-                consolidation_map[func_desc] = list()
+    # for binary in binaries:
+    #     logger.info("Finding functions in {}".format(binary))
+    #     location_map = binaryutils.find_funcs(binary, ignored_funcs=ignored_funcs)
+    #     for loc, func_desc in location_map.items():
+    #         if func_desc not in consolidation_map:
+    #             logger.info("Adding {}".format(func_desc.name))
+    #             consolidation_map[func_desc] = list()
 
     all_func_descs = set()
     for func_desc in consolidation_map.keys():

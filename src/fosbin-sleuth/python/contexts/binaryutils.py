@@ -314,7 +314,7 @@ def consolidate_one_function(consolidationRunDesc):
 
             resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
             if resp_msg is not None and resp_msg.msgtype == PinMessage.ZMSG_OK:
-                coverage = struct.unpack('f', resp_msg.data)[0]
+                coverage = struct.unpack('f', resp_msg.data.getbuffer())[0]
                 desc_map[hash(context)] = (func_desc, coverage)
                 logger.info("{} accepts {} ({})".format(run_name, context.hexdigest(), ctx_count))
             else:

@@ -149,9 +149,9 @@ ZergMessage *read_from_cmd_server() {
 }
 
 int write_to_cmd_server(ZergMessage &msg) {
-  logMsg << "Writing " << msg.str() << " and " << std::dec << msg.size()
-         << " bytes to server" << std::endl;
-  log_message(logMsg);
+  //  logMsg << "Writing " << msg.str() << " and " << std::dec << msg.size()
+  //         << " bytes to server" << std::endl;
+  //  log_message(logMsg);
   size_t written = msg.write_to_fd(internal_pipe_out[1]);
   if (written == 0) {
     log_message("Could not write to command pipe");
@@ -328,11 +328,11 @@ size_t fuzz_strategy(uint8_t *buffer, size_t size) {
 VOID fuzz_registers() {
   for (size_t i = 0; i < FBZergContext::argument_count; i++) {
     REG reg = FBZergContext::argument_regs[i];
-    logMsg << "Fuzzing register " << REG_StringShort(reg);
+    //    logMsg << "Fuzzing register " << REG_StringShort(reg);
     AllocatedArea *aa = preContext.find_allocated_area(reg);
     if (aa == nullptr) {
-      logMsg << " which is not an allocated area";
-      log_message(logMsg);
+      //      logMsg << " which is not an allocated area";
+      //      log_message(logMsg);
       ADDRINT value = preContext.get_value(reg);
       do {
         fuzz_strategy((uint8_t *)&value, sizeof(value));
@@ -340,13 +340,13 @@ VOID fuzz_registers() {
       } while (PIN_CheckReadAccess((void *)value) ||
                PIN_CheckWriteAccess((void *)value));
     } else {
-      logMsg << " which is an allocated area located at " << std::hex
-             << (void *)aa;
-      log_message(logMsg);
+      //      logMsg << " which is an allocated area located at " << std::hex
+      //             << (void *)aa;
+      //      log_message(logMsg);
       aa->fuzz();
     }
   }
-  log_message("Done fuzzing registers");
+  //  log_message("Done fuzzing registers");
   fuzzed_input = true;
 }
 
@@ -354,15 +354,17 @@ VOID record_current_context(CONTEXT *ctx) {
   if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
     wait_to_start();
   }
-  //    logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
-  //    std::endl; logMsg << "Func " <<
-  //    RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)) << "
-  //    (" << std::hex <<
-  //           PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << "): "
-  //           << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx,
-  //           LEVEL_BASE::REG_RIP)));
-  //
-  //    log_message(logMsg);
+  //  logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
+  //  std::endl; logMsg << "Func "
+  //         << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
+  //         LEVEL_BASE::REG_RIP))
+  //         << "(" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
+  //         << "): "
+  //         << INS_Disassemble(
+  //                INS_FindByAddress(PIN_GetContextReg(ctx,
+  //                LEVEL_BASE::REG_RIP)));
+
+  log_message(logMsg);
 
   struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
                            PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
@@ -1068,11 +1070,12 @@ zerg_cmd_result_t handle_execute_cmd() {
   PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
   PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RBP,
                     PIN_GetContextReg(&snapshot, LEVEL_BASE::REG_RSP));
-  logMsg << "About to start executing at " << std::hex << RTN_Address(target)
-         << "(" << RTN_Name(target) << ")"
-         << " with context " << std::endl;
-  preContext.prettyPrint(logMsg);
-  log_message(logMsg);
+  //  logMsg << "About to start executing at " << std::hex <<
+  //  RTN_Address(target)
+  //         << "(" << RTN_Name(target) << ")"
+  //         << " with context " << std::endl;
+  //  preContext.prettyPrint(logMsg);
+  //  log_message(logMsg);
 
   PIN_ExecuteAt(&snapshot);
   //    log_message("PIN_ExecuteAt returned magically");
