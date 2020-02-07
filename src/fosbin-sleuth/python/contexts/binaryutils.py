@@ -1,4 +1,5 @@
 import os
+import struct
 import subprocess
 from concurrent import futures
 
@@ -239,7 +240,7 @@ def consolidate_one_function(consolidationRunDesc):
     ctx_count = 0
     retry_count = 0
     idx = 0
-    logger.debug("Created pin-3.11 run for {}".format(run_name))
+    logger.debug("Created pin run for {}".format(run_name))
     while idx < len(consolidationRunDesc.contexts):
         context = consolidationRunDesc.contexts[idx]
         if retry_count > MAX_RETRY_COUNT:
@@ -267,7 +268,7 @@ def consolidate_one_function(consolidationRunDesc):
                 if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
                     logger.error("Could not set target for {}".format(run_name))
                     break
-                logger.debug("pin-3.11 run started for {}".format(run_name))
+                logger.debug("pin run started for {}".format(run_name))
                 ctx_count = 0
             ctx_count += 1
 
@@ -313,7 +314,8 @@ def consolidate_one_function(consolidationRunDesc):
 
             resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
             if resp_msg is not None and resp_msg.msgtype == PinMessage.ZMSG_OK:
-                desc_map[hash(context)] = func_desc
+                coverage = struct.unpack('f', resp_msg.data)[0]
+                desc_map[hash(context)] = (func_desc, coverage)
                 logger.info("{} accepts {} ({})".format(run_name, context.hexdigest(), ctx_count))
             else:
                 logger.info("{} rejects {} ({})".format(run_name, context.hexdigest(), ctx_count))
@@ -357,10 +359,10 @@ def consolidate_contexts(pin_loc, pintool_loc, loader_loc, num_threads, contexts
         for result in futures.as_completed(results):
             try:
                 consolidation_mapping = result.result()
-                for hash_sum, func_desc in consolidation_mapping.items():
+                for hash_sum, (func_desc, coverage) in consolidation_mapping.items():
                     if hash_sum not in desc_map:
                         desc_map[hash_sum] = list()
-                    desc_map[hash_sum].append(func_desc)
+                    desc_map[hash_sum].append((func_desc, coverage))
             except Exception as e:
                 logger.exception(e)
                 continue
