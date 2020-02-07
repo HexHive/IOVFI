@@ -447,16 +447,21 @@ ADDRINT compute_effective_address(INS ins, struct X86Context &ctx, UINT32 operan
     REG idx = INS_OperandMemoryIndexReg(ins, operand);
     UINT32 scale = INS_OperandMemoryScale(ins, operand);
     ADDRDELTA displacement = INS_OperandMemoryDisplacement(ins, operand);
-//    std::cout << INS_Disassemble(ins) << std::endl;
-//    std::cout << "Base: " << REG_StringShort(base)
-//        << " Idx: " << REG_StringShort(idx)
-//        << " Scale: 0x" << std::hex << scale
-//        << " Disp: 0x" << displacement << std::endl;
-//
-//    ctx.prettyPrint(std::cout);
+    //    std::cout << INS_Disassemble(ins) << std::endl;
+    //    std::cout << "Base: " << REG_StringShort(base)
+    //        << " Idx: " << REG_StringShort(idx)
+    //        << " Scale: 0x" << std::hex << scale
+    //        << " Disp: 0x" << displacement << std::endl;
+    //
+    //    ctx.prettyPrint(std::cout);
 
-    ADDRINT ret = compute_effective_address(base, idx, scale, displacement, ctx);
-//    std::cout << "ret: " << ret << std::endl;
+    ADDRINT ret =
+        compute_effective_address(base, idx, scale, displacement, ctx);
+    //    std::cout << "ret: " << ret << std::endl;
+    if (ret == 0) {
+      logMsg << "Invalid base instruction: " << INS_Disassemble(ins);
+      log_message(logMsg);
+    }
     return ret;
 }
 
