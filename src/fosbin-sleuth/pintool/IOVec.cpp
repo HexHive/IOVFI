@@ -19,10 +19,12 @@ float IOVec::computeCoverage(
   uint64_t totalReachableInstructions = 0;
 
   float coverage = -1.0f;
+  PIN_LockClient();
   for (auto it : executedInstructions) {
     totalReachableInstructions += RTN_NumIns(it.first);
     totalInstructionsExecuted += it.second.size();
   }
+  PIN_UnlockClient();
 
   if (totalReachableInstructions > 0) {
     coverage = (float)totalInstructionsExecuted / totalReachableInstructions;
