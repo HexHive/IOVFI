@@ -1,3 +1,5 @@
+_init
+_start
 copy_acl
 set_acl
 __nanosleep_nocancel

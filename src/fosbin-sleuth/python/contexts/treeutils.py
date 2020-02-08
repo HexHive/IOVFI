@@ -104,7 +104,7 @@ def get_tree_path(tree, func_name):
 
 def _dfs_tree(tree, func_name, path):
     if tree._is_leaf(path[-1]):
-        for ec in tree.get_equiv_classes(path[-1]):
+        for (ec, _) in tree.get_equiv_classes(path[-1]):
             if ec.name == func_name:
                 return True
         return False

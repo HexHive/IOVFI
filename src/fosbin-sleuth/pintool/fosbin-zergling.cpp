@@ -52,6 +52,7 @@ std::string shared_library_name;
 std::set<ADDRINT> syscalls;
 
 UINT32 imgId;
+UINT32 targetImgId;
 
 std::map<RTN, std::set<ADDRINT>> executedInstructions;
 
@@ -354,17 +355,16 @@ VOID record_current_context(CONTEXT *ctx) {
   if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
     wait_to_start();
   }
-  //  logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
-  //  std::endl; logMsg << "Func "
-  //         << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
-  //         LEVEL_BASE::REG_RIP))
-  //         << "(" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
-  //         << "): "
-  //         << INS_Disassemble(
-  //                INS_FindByAddress(PIN_GetContextReg(ctx,
-  //                LEVEL_BASE::REG_RIP)));
-
-  log_message(logMsg);
+  //    logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
+  //    std::endl; logMsg << "Func "
+  //           << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
+  //           LEVEL_BASE::REG_RIP))
+  //           << "(" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
+  //           << "): "
+  //           << INS_Disassemble(
+  //                  INS_FindByAddress(PIN_GetContextReg(ctx,
+  //                  LEVEL_BASE::REG_RIP)));
+  //  log_message(logMsg);
 
   struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
                            PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
@@ -387,8 +387,14 @@ VOID record_current_context(CONTEXT *ctx) {
 
   ADDRINT currentAddress = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP);
   PIN_LockClient();
-  RTN current = RTN_FindByAddress(currentAddress);
-  executedInstructions[current].insert(currentAddress);
+  //  IMG_TYPE type = IMG_Type(IMG_FindByAddress(currentAddress));
+  //  logMsg << IMG_Name(IMG_FindByAddress(currentAddress)) << ": " << type;
+  //  logMsg << IMG_TYPE::IMG_TYPE_SHAREDLIB << " " << IMG_TYPE::IMG_TYPE_
+  //  log_message(logMsg);
+  if (IMG_Id(IMG_FindByAddress(currentAddress)) == targetImgId) {
+    RTN current = RTN_FindByAddress(currentAddress);
+    executedInstructions[current].insert(currentAddress);
+  }
   PIN_UnlockClient();
 
   if (fuzzing_run.size() > max_instructions) {
@@ -981,15 +987,58 @@ void adjust_stack_down(CONTEXT *ctx) {
   preContext >> ctx;
 }
 
+RTN RTN_FindByOffset(uintptr_t target_offset) {
+  RTN result = RTN_Invalid();
+
+  for (IMG img = APP_ImgHead(); IMG_Valid(img); img = IMG_Next(img)) {
+    if (IMG_IsMainExecutable(img)) {
+      for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec)) {
+        if (SEC_IsExecutable(sec)) {
+          logMsg << IMG_Name(img) << "\n";
+          logMsg << "Possible routines for " << SEC_Name(sec) << ":\n";
+          for (RTN r = SEC_RtnHead(sec); RTN_Valid(r); r = RTN_Next(r)) {
+            logMsg << "\t" << RTN_Name(r) << " (" << std::hex
+                   << (void *)RTN_Address(r) << ")\n";
+          }
+          /* The magic number probably has to do with an ELF header entry,
+           * but it seems to work for now */
+          ADDRINT potential_address = SEC_Address(sec) + target_offset - 0x1000;
+          logMsg << "Potential address = " << std::hex
+                 << (void *)potential_address << "(";
+          RTN potential_rtn = RTN_FindByAddress(potential_address);
+          if (RTN_Valid(potential_rtn)) {
+            logMsg << RTN_Name(potential_rtn);
+          } else {
+            logMsg << "Invalid";
+          }
+          logMsg << ")";
+          log_message(logMsg);
+          if (RTN_Valid(potential_rtn) &&
+              RTN_Address(potential_rtn) == potential_address) {
+            result = potential_rtn;
+            break;
+          }
+        }
+      }
+      break;
+    }
+  }
+
+  return result;
+}
+
 zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
   PIN_LockClient();
   RTN new_target = RTN_Invalid();
   if (zmsg.type() == ZMSG_SET_TGT) {
     uintptr_t new_target_addr;
     memcpy(&new_target_addr, zmsg.data(), sizeof(new_target_addr));
-    //        logMsg << "Setting new target to 0x" << std::hex <<
-    //        new_target_addr; log_message(logMsg);
+    logMsg << "Setting new target to 0x" << std::hex << new_target_addr;
+    log_message(logMsg);
     new_target = RTN_FindByAddress(new_target_addr);
+    if (!RTN_Valid(new_target)) {
+      new_target = RTN_FindByOffset(new_target_addr);
+    }
   } else if (zmsg.type() == ZMSG_SET_SO_TGT) {
     if (!IMG_Valid(target_so)) {
       logMsg << "Target shared object is invalid";
@@ -1046,9 +1095,10 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
 
   last_ins_addr = INS_Address(RTN_InsTail(new_target));
   RTN_Close(new_target);
-  PIN_UnlockClient();
 
   target = new_target;
+  targetImgId = IMG_Id(IMG_FindByAddress(RTN_Address(target)));
+  PIN_UnlockClient();
 
   logMsg << "done. ";
   logMsg << "Number of instrument sites = " << std::dec << instrument_sites;

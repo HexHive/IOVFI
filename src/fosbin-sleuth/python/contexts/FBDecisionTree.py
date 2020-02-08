@@ -197,10 +197,17 @@ class FBDecisionTree:
         hash = self.labels[base_dtree_index].inverse_transform([dtree.tree_.feature[tree_idx]])[0]
         return hash
 
-    def _get_iovec(self, index):
-        hash = self._get_hash(index)
-        base_dtree_index = self._find_dtree_idx(index)
-        return self.hashMaps[base_dtree_index][hash]
+    def get_iovec(self, index):
+        try:
+            if index < 0:
+                return None
+            hash = self._get_hash(index)
+            base_dtree_index = self._find_dtree_idx(index)
+            if hash in self.hashMaps[base_dtree_index]:
+                return self.hashMaps[base_dtree_index][hash]
+            return None
+        except:
+            return None
 
     def identify(self, func_desc, pin_loc, pintool_loc, loader_loc=None, cwd=os.getcwd(), max_confirm=MAX_CONFIRM,
                  rust_main=None):
@@ -241,7 +248,7 @@ class FBDecisionTree:
                         logger.exception("Error confirming leaf for {}: {}".format(func_desc, e))
                         break
 
-                iovec = self._get_iovec(idx)
+                iovec = self.get_iovec(idx)
                 iovec_accepted = False
                 try:
                     logger.debug("Trying iovec {} ({})".format(idx, iovec.hexdigest()))
