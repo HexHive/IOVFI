@@ -7,6 +7,7 @@ import statistics
 import sys
 
 import contexts.treeutils as tu
+import matplotlib.pyplot as plt
 
 
 def main():
@@ -45,12 +46,16 @@ def main():
                 if h in ec_coverage[func_desc]:
                     path_coverages[func_desc].append(ec_coverage[func_desc][h])
 
+    all_coverage = list()
     for func_desc, path_coverage in path_coverages.items():
         if len(path_coverage) > 0:
-            print("{}: {}".format(func_desc.name, statistics.mean(path_coverage)))
-        else:
-            print("{}: ERROR".format(func_desc.name))
-
+            all_coverage.append(statistics.mean(path_coverage))
+    if len(all_coverage) > 0:
+        all_coverage.sort()
+        plt.hist(all_coverage, 20, facecolor='blue', alpha=0.5)
+        plt.show()
+    else:
+        print("No coverage data available")
 
 if __name__ == "__main__":
     main()
