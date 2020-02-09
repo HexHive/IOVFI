@@ -92,6 +92,29 @@ def get_evaluation(tree, guesses, equivalence_map=None):
     return true_pos, true_neg, incorrect
 
 
+def get_tree_coverage(dtree, target_func_desc):
+    ec_coverage = dict()
+    path_coverages = list()
+    func_descs = dtree.get_func_descs()
+    if target_func_desc not in func_descs:
+        return path_coverages
+
+    for h, fds in func_descs.items():
+        for (func_desc, coverage) in fds:
+            if func_desc not in ec_coverage:
+                ec_coverage[func_desc] = dict()
+            ec_coverage[func_desc][h] = coverage
+
+    tree_path = get_tree_path(dtree, target_func_desc.name)
+    for idx in tree_path:
+        iovec = dtree.get_iovec(idx)
+        if iovec is not None:
+            h = hash(iovec)
+            if h in ec_coverage[func_desc]:
+                path_coverages.append(ec_coverage[func_desc][h])
+    return path_coverages
+
+
 def get_tree_path(tree, func_name):
     found = False
     path = list()
