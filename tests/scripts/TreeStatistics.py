@@ -45,10 +45,10 @@ def main():
 
     names = list()
     for (ec, coverage) in max_ec:
-        names.append(ec.name)
+        names.append((ec.name, coverage))
     names.sort()
-    for name in names:
-        print(name)
+    for (name, coverage) in names:
+        print("{}: {}".format(name, coverage))
 
 
 if __name__ == "__main__":
