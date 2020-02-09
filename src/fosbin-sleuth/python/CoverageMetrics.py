@@ -53,7 +53,7 @@ def main():
     if len(all_coverage) > 0:
         all_coverage.sort()
         plt.hist(all_coverage, 20, facecolor='blue', alpha=0.5)
-        plt.show()
+        plt.savefig('cov.png')
     else:
         print("No coverage data available")
 
