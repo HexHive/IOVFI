@@ -44,7 +44,7 @@ def main():
         print("%d: %d" % (bin_idx, bins[bin_idx]))
 
     names = list()
-    for ec in max_ec:
+    for (ec, coverage) in max_ec:
         names.append(ec.name)
     names.sort()
     for name in names:
