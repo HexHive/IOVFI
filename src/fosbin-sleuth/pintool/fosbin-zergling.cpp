@@ -919,7 +919,7 @@ void report_success(CONTEXT *ctx, THREADID tid) {
   //    log_message("write_to_cmd 8");
   if (fuzzed_input) {
     ZergMessage msg(ZMSG_OK);
-    IOVec ioVec(&preContext, &currentContext, syscalls, executedInstructions);
+      IOVec ioVec(&preContext, &currentContext, syscalls);
     msg.add_IOVec(ioVec);
     write_to_cmd_server(msg);
   } else {
