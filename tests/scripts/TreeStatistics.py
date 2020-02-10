@@ -4,6 +4,7 @@ import os
 import pickle
 import statistics
 import sys
+import contexts.treeutils as tu
 
 BIN_COUNT = 10
 
@@ -45,8 +46,8 @@ def main():
 
     names = list()
     for (ec, coverage) in max_ec:
-        names.append((ec.name, coverage))
-    names.sort()
+        names.append((ec.name, tu.get_tree_coverage(tree, ec)))
+    names.sort(key=lambda ent: ent[0])
     for (name, coverage) in names:
         print("{}: {}".format(name, coverage))
 

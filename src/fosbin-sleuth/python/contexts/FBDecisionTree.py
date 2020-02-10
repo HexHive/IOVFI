@@ -147,35 +147,12 @@ class FBDecisionTree:
             hashMap = self.hashMaps[dtree_base_idx]
             labels = self.labels[dtree_base_idx]
 
-            # available_hashes = list()
-
             lengths = list()
             for hash_sum, accepting_funcs in descMap.items():
                 for possible_equiv in possible_equivs:
                     if possible_equiv in accepting_funcs:
                         lengths.append((hash_sum, len(accepting_funcs)))
                         continue
-                        # if len(accepting_funcs) < min_accepting:
-                        #     # available_hashes.append(hash_sum)
-                        #     min_hashes.clear()
-                        #     min_accepting = len(accepting_funcs)
-                        #     min_hashes.append(hash_sum)
-                        # elif len(accepting_funcs) == min_accepting:
-                        #     min_hashes.append(hash_sum)
-
-            # used_labels = set()
-            # for feature in dtree.tree_.feature:
-            #     if feature > 0:
-            #         used_labels.add(feature)
-            # used_hashes = labels.inverse_transform(list(used_labels))
-            # for used_hash in used_hashes:
-            #     if used_hash in available_hashes:
-            #         available_hashes.remove(used_hash)
-            #
-            # if len(available_hashes) == 0:
-            #     raise RuntimeError("There are no available hashes to confirm {}({}) is {}".format(hex(func_desc.location),
-            #                                                                                       func_desc.name,
-            #                                                                                       possible_equivs))
 
             sorted_iovecs = sorted(lengths, key=lambda length: length[1])
             for hash_sum in sorted_iovecs[0:min(len(sorted_iovecs), max_iovecs)]:
@@ -293,6 +270,7 @@ class FBDecisionTree:
             self.descMaps[base_idx] = pickle.load(descFile)
         for key, funcDescs in self.descMaps[base_idx].items():
             for (funcDesc, coverage) in funcDescs:
+                # print("{}: {}".format(funcDesc.name, coverage))
                 self.funcDescs[hash(funcDesc)] = (funcDesc, coverage)
         self._log(msg + "done!")
 

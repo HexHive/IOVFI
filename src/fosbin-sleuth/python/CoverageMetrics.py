@@ -47,15 +47,37 @@ def main():
                     path_coverages[func_desc].append(ec_coverage[func_desc][h])
 
     all_coverage = list()
+    low_coverage = list()
     for func_desc, path_coverage in path_coverages.items():
         if len(path_coverage) > 0:
             all_coverage.append(statistics.mean(path_coverage))
+            if statistics.mean(path_coverage) < 0.5:
+                low_coverage.append((func_desc, statistics.mean(path_coverage)))
+
     if len(all_coverage) > 0:
         all_coverage.sort()
         plt.hist(all_coverage, 20, facecolor='blue', alpha=0.5)
         plt.savefig('cov.png')
     else:
         print("No coverage data available")
+
+    ecs = dtree.get_all_equiv_classes()
+    low_coverage.sort(key=lambda ent: ent[1])
+    index_count = dict()
+    for ent in low_coverage:
+        for ec in ecs:
+            for fd in ec:
+                if fd[0].name == ent[0].name:
+                    print("{}: {} ({})".format(ent[0].name, ent[1], ecs.index(ec)))
+                    if ecs.index(ec) not in index_count:
+                        index_count[ecs.index(ec)] = 1
+                    else:
+                        index_count[ecs.index(ec)] += 1
+                    break
+
+    for idx, count in index_count.items():
+        print("{}: {} ({})".format(idx, count, count / len(low_coverage)))
+
 
 if __name__ == "__main__":
     main()

@@ -96,10 +96,11 @@ def get_tree_coverage(dtree, target_func_desc):
     ec_coverage = dict()
     path_coverages = list()
     func_descs = dtree.get_func_descs()
-    if target_func_desc not in func_descs:
-        return path_coverages
+#    if target_func_desc not in func_descs:
+#        print("{} not in tree".format(target_func_desc.name))
+#        return path_coverages
 
-    for h, fds in func_descs.items():
+    for fds in func_descs:
         for (func_desc, coverage) in fds:
             if func_desc not in ec_coverage:
                 ec_coverage[func_desc] = dict()
