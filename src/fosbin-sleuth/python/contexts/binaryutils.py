@@ -222,9 +222,9 @@ def consolidate_one_function(consolidationRunDesc):
     run_name = os.path.basename(func_desc.binary) + "." + func_desc.name + "." + str(func_desc.location)
     pipe_in = os.path.abspath(os.path.join(work_dir, run_name + ".in"))
     pipe_out = os.path.abspath(os.path.join(work_dir, run_name + ".out"))
-    log_loc = os.path.abspath(os.path.join(work_dir, run_name + ".consol.log"))
-    # cmd_log_loc = os.path.abspath(os.path.join(work_dir, run_name + ".consol.cmd.log"))
-    cmd_log_loc = os.path.abspath("/dev/null")
+    log_loc = os.path.abspath(os.path.join(log_dir, run_name + ".consol.log"))
+    cmd_log_loc = os.path.abspath(os.path.join(log_dir, run_name + ".consol.cmd.log"))
+    # cmd_log_loc = os.path.abspath("/dev/null")
 
     desc_map = dict()
 
@@ -242,14 +242,14 @@ def consolidate_one_function(consolidationRunDesc):
     idx = 0
     logger.debug("Created pin run for {}".format(run_name))
     while idx < len(consolidationRunDesc.contexts):
-        context = consolidationRunDesc.contexts[idx]
+        iovec = consolidationRunDesc.contexts[idx]
         if retry_count > MAX_RETRY_COUNT:
             idx += 1
             retry_count = 0
-            logger.error("{} failed to properly execute {}".format(run_name, context.hexdigest()))
+            logger.error("{} failed to properly execute {}".format(run_name, iovec.hexdigest()))
             continue
 
-        logger.info("{} testing {}".format(run_name, context.hexdigest()))
+        logger.info("{} testing {}".format(run_name, iovec.hexdigest()))
         try:
             if not pin_run.is_running():
                 logger.debug("Starting pin_run for {}".format(run_name))
@@ -291,7 +291,7 @@ def consolidate_one_function(consolidationRunDesc):
                 continue
 
             logger.debug("Sending set ctx command for {}".format(run_name))
-            ack_msg = pin_run.send_set_ctx_cmd(context, timeout=consolidationRunDesc.watchdog)
+            ack_msg = pin_run.send_set_ctx_cmd(iovec, timeout=consolidationRunDesc.watchdog)
             if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
                 pin_run.stop()
                 retry_count += 1
@@ -314,16 +314,21 @@ def consolidate_one_function(consolidationRunDesc):
 
             resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
             if resp_msg is not None and resp_msg.msgtype == PinMessage.ZMSG_OK:
-                coverage = struct.unpack('f', resp_msg.data.getbuffer())[0]
-                desc_map[hash(context)] = (func_desc, coverage)
-                logger.info("{} accepts {} ({})".format(run_name, context.hexdigest(), ctx_count))
+                coveragesize = struct.unpack('N', resp_msg.data.getbuffer()[0:struct.calcsize('N')])[0]
+                coverage = list()
+                fmt = 'N' * 2 * coveragesize
+                coverage_tuples = struct.unpack_from(fmt, resp_msg.data.getbuffer(), struct.calcsize('N'))
+                for i in range(0, coveragesize, 2):
+                    coverage.append((coverage_tuples[i], coverage_tuples[i + 1]))
+                desc_map[hash(iovec)] = (func_desc, coverage)
+                logger.info("{} accepts {} ({})".format(run_name, iovec.hexdigest(), ctx_count))
             else:
-                logger.info("{} rejects {} ({})".format(run_name, context.hexdigest(), ctx_count))
+                logger.info("{} rejects {} ({})".format(run_name, iovec.hexdigest(), ctx_count))
             idx += 1
             retry_count = 0
         except AssertionError as e:
             logger.debug("Error for {}: {}".format(run_name, str(e)))
-            logger.info("{} rejects {} ({})".format(run_name, context.hexdigest(), ctx_count))
+            logger.info("{} rejects {} ({})".format(run_name, iovec.hexdigest(), ctx_count))
             idx += 1
             pin_run.stop()
             continue
@@ -361,8 +366,8 @@ def consolidate_contexts(pin_loc, pintool_loc, loader_loc, num_threads, contexts
                 consolidation_mapping = result.result()
                 for hash_sum, (func_desc, coverage) in consolidation_mapping.items():
                     if hash_sum not in desc_map:
-                        desc_map[hash_sum] = list()
-                    desc_map[hash_sum].append((func_desc, coverage))
+                        desc_map[hash_sum] = dict()
+                    desc_map[hash_sum][func_desc] = coverage
             except Exception as e:
                 logger.exception(e)
                 continue

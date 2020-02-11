@@ -9,7 +9,6 @@ class IOVec:
     def __init__(self, in_file):
         self.input = X86Context(in_file)
         self.output = X86Context(in_file)
-        self.coverage = struct.unpack_from('f', in_file.read(struct.calcsize('f')))[0]
 
         syscall_count = struct.unpack_from('N', in_file.read(struct.calcsize('N')))[0]
         self.syscalls = list()

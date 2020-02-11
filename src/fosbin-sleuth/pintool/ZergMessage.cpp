@@ -186,6 +186,7 @@ size_t ZergMessage::add_coverage(
     data << coverage;
 
     _length = data.str().size();
+    std::cout << "_length = " << std::dec << _length << std::endl;
     _data = malloc(_length);
     if (!_data) {
         return 0;

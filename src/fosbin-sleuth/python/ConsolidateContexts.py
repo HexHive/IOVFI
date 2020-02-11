@@ -86,14 +86,6 @@ def main():
                 ignored_funcs.add(line)
         logger.debug("done")
 
-    # for binary in binaries:
-    #     logger.info("Finding functions in {}".format(binary))
-    #     location_map = binaryutils.find_funcs(binary, ignored_funcs=ignored_funcs)
-    #     for loc, func_desc in location_map.items():
-    #         if func_desc not in consolidation_map:
-    #             logger.info("Adding {}".format(func_desc.name))
-    #             consolidation_map[func_desc] = list()
-
     all_func_descs = set()
     for func_desc in consolidation_map.keys():
         all_func_descs.add(func_desc)
@@ -118,11 +110,11 @@ def main():
         new_desc_map = binaryutils.consolidate_contexts(pin_loc, pintool_loc, loader_loc, results.threads,
                                                         consolidation_map)
         desc_map.clear()
-        for hash_sum, func_descs in new_desc_map.items():
-            for func_desc in func_descs:
+        for hash_sum, coverage_dict in new_desc_map.items():
+            for func_desc, coverage in coverage_dict.items():
                 if hash_sum not in desc_map:
-                    desc_map[hash_sum] = set()
-                desc_map[hash_sum].add(func_desc)
+                    desc_map[hash_sum] = dict()
+                desc_map[hash_sum][func_desc] = coverage
 
         with open(desc_file_path, "wb") as file:
             pickle.dump(desc_map, file)

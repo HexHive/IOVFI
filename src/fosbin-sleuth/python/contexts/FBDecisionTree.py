@@ -268,8 +268,8 @@ class FBDecisionTree:
         msg = "Loading {}...".format(descLoc)
         with open(descLoc, "rb") as descFile:
             self.descMaps[base_idx] = pickle.load(descFile)
-        for key, funcDescs in self.descMaps[base_idx].items():
-            for (funcDesc, coverage) in funcDescs:
+        for key, coverage_map in self.descMaps[base_idx].items():
+            for funcDesc, coverage in coverage_map.items():
                 # print("{}: {}".format(funcDesc.name, coverage))
                 self.funcDescs[hash(funcDesc)] = (funcDesc, coverage)
         self._log(msg + "done!")
@@ -294,11 +294,11 @@ class FBDecisionTree:
 
         msg = "Reading in function labels..."
         count = 0
-        for key, funcs in self.descMaps[base_idx].items():
+        for key, coverage_map in self.descMaps[base_idx].items():
             idx = self.labels[base_idx].transform([key])[0]
             count += 1
-            for (func, coverage) in funcs:
-                hashsum = hash(func)
+            for func_desc, _ in coverage_map.items():
+                hashsum = hash(func_desc)
                 if hashsum not in added_func_hashes:
                     added_func_hashes.add(hashsum)
                     funcs_labels.append(hashsum)
