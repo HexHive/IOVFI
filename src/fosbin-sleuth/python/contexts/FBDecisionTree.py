@@ -271,7 +271,7 @@ class FBDecisionTree:
         for key, coverage_map in self.descMaps[base_idx].items():
             for funcDesc, coverage in coverage_map.items():
                 # print("{}: {}".format(funcDesc.name, coverage))
-                self.funcDescs[hash(funcDesc)] = (funcDesc, coverage)
+                self.funcDescs[hash(funcDesc)] = funcDesc
         self._log(msg + "done!")
 
         msg = "Loading {}...".format(hashMapLoc)

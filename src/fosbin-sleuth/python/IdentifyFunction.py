@@ -46,7 +46,7 @@ def check_inputs(argparser):
         exit(1)
     binaryLoc = os.path.abspath(argparser.binary)
 
-    pinLoc = os.path.abspath(os.path.join(argparser.pindir, "pin-3.11"))
+    pinLoc = os.path.abspath(os.path.join(argparser.pindir, "pin"))
     pintoolLoc = os.path.abspath(argparser.tool)
 
     if not os.path.exists(pinLoc):

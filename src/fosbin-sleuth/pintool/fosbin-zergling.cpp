@@ -936,8 +936,6 @@ void report_success(CONTEXT *ctx, THREADID tid) {
             /* The last instruction does not get executed, because we redirect control, so this accounts for that */
             executedInstructions[target].insert(last_ins_addr);
             msg.add_coverage(executedInstructions);
-            logMsg << "message size: " << std::dec << msg.size();
-            log_message(logMsg);
         }
         write_to_cmd_server(msg);
     }
