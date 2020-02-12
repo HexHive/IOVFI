@@ -104,11 +104,15 @@ def main():
     logger.info("Fuzzing {} targets".format(len(args)))
 
     if len(args) > 0:
-        fuzz_run_results = binaryutils.fuzz_functions(args, pin_loc, pintool_loc, loader_loc, results.threads,
-                                                      fuzz_count=results.count)
+        (fuzz_run_results, unclassified) = binaryutils.fuzz_functions(args, pin_loc, pintool_loc, loader_loc,
+                                                                      results.threads, fuzz_count=results.count)
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(len(fuzz_run_results)))
+        if len(unclassified) > 0:
+            logger.info("Unclassified functions:")
+            for func_desc in unclassified:
+                logger.info(func_desc.name)
 
         context_hashes = dict()
         desc_map = dict()

@@ -205,7 +205,7 @@ class PinRun:
         pid = self.pin_proc.pid
         logger.debug("{} spawned process {}".format(os.path.basename(self.pipe_in_loc), pid))
         self.pin_proc.wait()
-        logger.debug("Pin process {} ended".format(pid))
+        logger.debug("Pin process {} ended with return code {}".format(pid, self.pin_proc.returncode))
         if self.log is not None:
             self.log.close()
         self.log = None

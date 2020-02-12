@@ -355,16 +355,17 @@ VOID record_current_context(CONTEXT *ctx) {
     if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
         wait_to_start();
     }
-    //    logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
-    //    std::endl; logMsg << "Func "
-    //           << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
-    //           LEVEL_BASE::REG_RIP))
-    //           << "(" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
-    //           << "): "
-    //           << INS_Disassemble(
-    //                  INS_FindByAddress(PIN_GetContextReg(ctx,
-    //                  LEVEL_BASE::REG_RIP)));
-    //  log_message(logMsg);
+//        logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
+//        std::endl;
+//    logMsg << "Func "
+//               << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
+//               LEVEL_BASE::REG_RIP))
+//               << "(" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
+//               << "): "
+//               << INS_Disassemble(
+//                      INS_FindByAddress(PIN_GetContextReg(ctx,
+//                      LEVEL_BASE::REG_RIP)));
+//      log_message(logMsg);
 
     struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
@@ -535,8 +536,8 @@ BOOL isTainted(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) {
 }
 
 VOID remove_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
-    //  logMsg << "\tRemoving taint from " << REG_StringShort(reg) << std::endl;
-    //  log_message(logMsg);
+//      logMsg << "\tRemoving taint from " << REG_StringShort(reg) << std::endl;
+//      log_message(logMsg);
     for (std::vector<struct TaintedObject>::iterator it = taintedObjs.begin();
          it != taintedObjs.end(); ++it) {
         struct TaintedObject &to = *it;
@@ -548,8 +549,8 @@ VOID remove_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
 }
 
 VOID add_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
-    //  logMsg << "\tAdding taint to " << REG_StringShort(reg) << std::endl;
-    //  log_message(logMsg);
+//      logMsg << "\tAdding taint to " << REG_StringShort(reg) << std::endl;
+//      log_message(logMsg);
     struct TaintedObject to;
     to.isRegister = true;
     to.reg = reg;
@@ -558,8 +559,8 @@ VOID add_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
 
 VOID remove_taint(ADDRINT addr,
                   std::vector<struct TaintedObject> &taintedObjs) {
-    //  logMsg << "\tRemoving taint from 0x" << std::hex << addr << std::endl;
-    //  log_message(logMsg);
+//      logMsg << "\tRemoving taint from 0x" << std::hex << addr << std::endl;
+//      log_message(logMsg);
     for (std::vector<struct TaintedObject>::iterator it = taintedObjs.begin();
          it != taintedObjs.end(); ++it) {
         struct TaintedObject &to = *it;
@@ -571,8 +572,8 @@ VOID remove_taint(ADDRINT addr,
 }
 
 VOID add_taint(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) {
-    //  logMsg << "\tAdding taint to 0x" << std::hex << addr << std::endl;
-    //  log_message(logMsg);
+//      logMsg << "\tAdding taint to 0x" << std::hex << addr << std::endl;
+//      log_message(logMsg);
     struct TaintedObject to;
     to.isRegister = false;
     to.addr = addr;
@@ -651,23 +652,25 @@ void redirect_control_to_main(CONTEXT *ctx) {
 
 BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
                    const EXCEPTION_INFO *pExceptInfo, VOID *v) {
-    //    std::cout << PIN_ExceptionToString(pExceptInfo) << std::endl;
+//        logMsg << std::dec << tid << " " << PIN_ExceptionToString(pExceptInfo);
+//        log_message(logMsg);
     //    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() <<
     //              std::endl;
     //    displayCurrentContext(ctx);
     //    currentContext.prettyPrint();
 
     if (!fuzzed_input) {
-        //        log_message("write_to_cmd 4");
+//                log_message("write_to_cmd 4");
         report_failure(ZCMD_FAILED_CTX, ctx);
         redirect_control_to_main(ctx);
-        return false;
+        return TRUE;
     } else if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) !=
                EXCEPTCLASS_ACCESS_FAULT) {
-        //        log_message("write_to_cmd 5");
+//        logMsg << "write_to_cmd 5: " << PIN_ExceptionToString(pExceptInfo) << std::endl;
+//        log_message(logMsg);
         report_failure(ZCMD_ERROR, ctx);
         redirect_control_to_main(ctx);
-        return false;
+        return TRUE;
     }
 
     {
@@ -680,7 +683,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
             log_message(logMsg);
             report_failure(ZCMD_ERROR, ctx);
             redirect_control_to_main(ctx);
-            return false;
+            return TRUE;
         }
         std::vector<struct TaintedObject> taintedObjs;
         REG taint_source = REG_INVALID();
@@ -697,37 +700,37 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
                 log_message(logMsg);
                 report_failure(ZCMD_ERROR, ctx);
                 redirect_control_to_main(ctx);
-                return false;
+                return TRUE;
             }
 
-            //      logMsg << RTN_Name(RTN_FindByAddress(INS_Address(ins))) << "(0x"
-            //             << std::hex << INS_Address(ins) << "): " <<
-            //             INS_Disassemble(ins)
-            //             << std::endl;
-            //      logMsg << "\tINS_IsMemoryRead: "
-            //             << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
-            //      logMsg << "\tINS_HasMemoryRead2: "
-            //             << (INS_HasMemoryRead2(ins) ? "true" : "false") <<
-            //             std::endl;
-            //      logMsg << "\tINS_IsMemoryWrite: "
-            //             << (INS_IsMemoryWrite(ins) ? "true" : "false") <<
-            //             std::endl;
-            //      logMsg << "\tCategory: " <<
-            //      CATEGORY_StringShort(INS_Category(ins))
-            //             << std::endl;
-            //      logMsg << "\tINS_MaxNumRRegs: " << INS_MaxNumRRegs(ins) <<
-            //      std::endl; for (unsigned int i = 0; i < INS_MaxNumRRegs(ins); i++)
-            //      {
-            //        logMsg << "\t\t" << REG_StringShort(INS_RegR(ins, i)) <<
-            //        std::endl;
-            //      }
-            //      logMsg << "\tINS_MaxNumWRegs: " << INS_MaxNumWRegs(ins) <<
-            //      std::endl; for (unsigned int i = 0; i < INS_MaxNumWRegs(ins); i++)
-            //      {
-            //        logMsg << "\t\t" << REG_StringShort(INS_RegW(ins, i)) <<
-            //        std::endl;
-            //      }
-            //      log_message(logMsg);
+//                  logMsg << RTN_Name(RTN_FindByAddress(INS_Address(ins))) << "(0x"
+//                         << std::hex << INS_Address(ins) << "): " <<
+//                         INS_Disassemble(ins)
+//                         << std::endl;
+//                  logMsg << "\tINS_IsMemoryRead: "
+//                         << (INS_IsMemoryRead(ins) ? "true" : "false") << std::endl;
+//                  logMsg << "\tINS_HasMemoryRead2: "
+//                         << (INS_HasMemoryRead2(ins) ? "true" : "false") <<
+//                         std::endl;
+//                  logMsg << "\tINS_IsMemoryWrite: "
+//                         << (INS_IsMemoryWrite(ins) ? "true" : "false") <<
+//                         std::endl;
+//                  logMsg << "\tCategory: " <<
+//                  CATEGORY_StringShort(INS_Category(ins))
+//                         << std::endl;
+//                  logMsg << "\tINS_MaxNumRRegs: " << INS_MaxNumRRegs(ins) <<
+//                  std::endl; for (unsigned int i = 0; i < INS_MaxNumRRegs(ins); i++)
+//                  {
+//                    logMsg << "\t\t" << REG_StringShort(INS_RegR(ins, i)) <<
+//                    std::endl;
+//                  }
+//                  logMsg << "\tINS_MaxNumWRegs: " << INS_MaxNumWRegs(ins) <<
+//                  std::endl; for (unsigned int i = 0; i < INS_MaxNumWRegs(ins); i++)
+//                  {
+//                    logMsg << "\t\t" << REG_StringShort(INS_RegW(ins, i)) <<
+//                    std::endl;
+//                  }
+//                  log_message(logMsg);
 
             if (it == fuzzing_run.rbegin()) {
                 for (UINT32 i = 0; i < INS_OperandCount(ins); i++) {
@@ -746,7 +749,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
                     log_message(logMsg);
                     redirect_control_to_main(ctx);
                     report_failure(ZCMD_ERROR, ctx);
-                    return false;
+                    return TRUE;
                 }
                 add_taint(taint_source, taintedObjs);
                 continue;
@@ -880,9 +883,10 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
             struct TaintedObject &taintedObject = taintedObjs.back();
 
             if (!create_allocated_area(taintedObject, faulting_addr)) {
-                //                log_message("write_to_cmd 6");
+//                                log_message("write_to_cmd 6");
                 report_failure(ZCMD_ERROR, ctx);
                 redirect_control_to_main(ctx);
+                return TRUE;
             }
         } else {
             log_message("Taint analysis failed for the following context: ");
@@ -896,6 +900,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
             log_message("write_to_cmd 7");
             report_failure(ZCMD_ERROR, ctx);
             redirect_control_to_main(ctx);
+            return TRUE;
         }
     }
 
@@ -909,8 +914,8 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
     //    fuzz_registers(ctx);
     //    PIN_SaveContext(ctx, &preexecution);
     //    displayCurrentContext(ctx);
-    //    log_message("Ending segfault handler");
-    return false;
+    log_message("Ending segfault handler");
+    return TRUE;
 }
 
 void report_success(CONTEXT *ctx, THREADID tid) {
@@ -1179,7 +1184,7 @@ zerg_cmd_result_t handle_cmd() {
             break;
         case ZMSG_EXIT:
             log_message("Received ExitCommand");
-            cleanup(0);
+            cleanup(9);
             break;
         default:
             logMsg << "Unknown command: " << msg->str();
@@ -1212,7 +1217,8 @@ void begin_execution(CONTEXT *ctx) {
 
 void wait_to_start() {
     while (true) {
-        //        log_message("Executor waiting for command");
+        logMsg << std::dec << PIN_ThreadId() << " Executor waiting for command";
+        log_message(logMsg);
         FD_SET(internal_pipe_in[0], &exe_fd_set_in);
         if (select(FD_SETSIZE, &exe_fd_set_in, nullptr, nullptr, nullptr) > 0) {
             if (FD_ISSET(internal_pipe_in[0], &exe_fd_set_in)) {
@@ -1222,13 +1228,13 @@ void wait_to_start() {
                     ZergMessage msg(ZMSG_OK);
                     write_to_cmd_server(msg);
                 } else {
-                    //                    log_message("cmd server 10");
+                    log_message("cmd server 10");
                     report_failure(result);
                 }
             }
         } else {
             log_message("Select <= 0");
-            cleanup(0);
+            cleanup(3);
         }
     }
 }
@@ -1264,14 +1270,6 @@ VOID FindMain(IMG img, VOID *v) {
     if (RTN_Valid(main)) {
         RTN_Open(main);
         if (is_executable_fbloader(img)) {
-            //            const char *shared_so_cname = (const char *) v;
-            //            std::string shared_so_name(shared_so_cname);
-            //            target_so = IMG_Open(shared_so_name);
-            //            if (!IMG_Valid(target_so)) {
-            //                std::stringstream ss;
-            //                ss << "Could not open shared object " << shared_so_name;
-            //                log_error(ss);
-            //            }
             first_ins = RTN_InsTail(main);
             first_ins_addr = INS_Address(first_ins);
             imgId = IMG_Id(target_so);
@@ -1281,19 +1279,9 @@ VOID FindMain(IMG img, VOID *v) {
             imgId = IMG_Id(img);
         }
 
-        //        logMsg << "Address of first_ins = 0x" << std::hex <<
-        //        first_ins_addr; log_message(logMsg);
-        //
-        //        logMsg << "Adding call to wait_to_start to " << RTN_Name(main) <<
-        //        "(0x" << std::hex << RTN_Address(main)
-        //               << ")";
-        //        log_message(logMsg);
         INS_InsertCall(first_ins, IPOINT_BEFORE, (AFUNPTR) begin_execution,
                        IARG_CONTEXT, IARG_END);
         RTN_Close(main);
-        //        if(is_executable_fbloader(img)) {
-        //            IMG_Close(target_so);
-        //        }
     } else {
         logMsg << "Could not find main!" << std::endl;
         log_error(logMsg);
@@ -1305,6 +1293,30 @@ void track_syscalls(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, void *v) {
         ADDRINT syscall_num = PIN_GetSyscallNumber(ctx, std);
         syscalls.insert(syscall_num);
     }
+}
+
+void fini(INT32 code, void *v) {
+    logMsg << "Exiting with code " << code;
+    log_message(logMsg);
+}
+
+void ctxChange(THREADID threadId, CONTEXT_CHANGE_REASON reason, const CONTEXT *from, CONTEXT *to, INT32 info, void *v) {
+    logMsg << std::dec << threadId << " ctxChange: ";
+    switch (reason) {
+        case CONTEXT_CHANGE_REASON_FATALSIGNAL:
+            logMsg << "FATAL: " << std::dec << info;
+            break;
+        case CONTEXT_CHANGE_REASON_SIGNAL:
+            logMsg << "SIGNAL: " << std::dec << info;
+            break;
+        case CONTEXT_CHANGE_REASON_SIGRETURN:
+            logMsg << "SIGRETURN";
+            break;
+        default:
+            logMsg << "OTHER";
+            break;
+    }
+    log_message(logMsg);
 }
 
 int main(int argc, char **argv) {
@@ -1370,6 +1382,8 @@ int main(int argc, char **argv) {
 
     PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
     PIN_AddInternalExceptionHandler(globalSegfaultHandler, nullptr);
+    PIN_AddFiniFunction(fini, nullptr);
+    PIN_AddContextChangeFunction(ctxChange, nullptr);
 
     log_message("Starting");
     PIN_StartProgram();

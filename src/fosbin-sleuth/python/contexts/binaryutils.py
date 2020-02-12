@@ -192,6 +192,7 @@ def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, wa
                    work_dir=os.path.abspath(os.path.join(os.curdir, "_work"))):
     fuzz_runs = list()
     io_vecs_dict = dict()
+    unclassified = set()
 
     if not os.path.exists(work_dir):
         os.makedirs(work_dir, exist_ok=True)
@@ -207,10 +208,12 @@ def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, wa
                 fuzz_run_result = result.result()
                 if len(fuzz_run_result) > 0:
                     io_vecs_dict[fuzz_run.func_desc] = fuzz_run_result
+                else:
+                    unclassified.add(fuzz_run.func_desc)
             except Exception as e:
                 continue
 
-    return io_vecs_dict
+    return (io_vecs_dict, unclassified)
 
 
 def consolidate_one_function(consolidationRunDesc):
