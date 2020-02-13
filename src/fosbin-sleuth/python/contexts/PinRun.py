@@ -161,6 +161,7 @@ class PinRun:
 
     def generate_cmd(self):
         cmd = [self.pin_loc]
+
         if self.log_loc is not None:
             cmd.append("-logfile")
             cmd.append(os.path.join(self.cwd, os.path.basename(self.log_loc) + ".pin-3.11"))

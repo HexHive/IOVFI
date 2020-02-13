@@ -22,8 +22,12 @@
 
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <execinfo.h>
 
-#define USER_MSG_TYPE 1000
+#define USER_MSG_TYPE   1000
+#define CONTEXT_FIXED   0
+#define CONTEXT_ERR     1
+#define CONTEXT_COMPL   2
 
 CONTEXT snapshot;
 
@@ -73,6 +77,7 @@ fd_set exe_fd_set_out;
 int ctx_count = 0;
 
 std::stringstream logMsg;
+PIN_LOCK logLock;
 
 void wait_to_start();
 
@@ -100,8 +105,10 @@ VOID log_message(std::stringstream &message) {
 
     if (log_out && log_out.is_open()) {
         log_out << message.str() << std::endl;
+        log_out.flush();
     } else {
         std::cout << message.str() << std::endl;
+        log_out.flush();
     }
 
     message.str(std::string());
@@ -150,7 +157,7 @@ ZergMessage *read_from_cmd_server() {
 }
 
 int write_to_cmd_server(ZergMessage &msg) {
-    //  logMsg << "Writing " << msg.str() << " and " << std::dec << msg.size()
+    //  GETLOG << "Writing " << msg.str() << " and " << std::dec << msg.size()
     //         << " bytes to server" << std::endl;
     //  log_message(logMsg);
     size_t written = msg.write_to_fd(internal_pipe_out[1]);
@@ -329,10 +336,10 @@ size_t fuzz_strategy(uint8_t *buffer, size_t size) {
 VOID fuzz_registers() {
     for (size_t i = 0; i < FBZergContext::argument_count; i++) {
         REG reg = FBZergContext::argument_regs[i];
-        //    logMsg << "Fuzzing register " << REG_StringShort(reg);
+        //    GETLOG << "Fuzzing register " << REG_StringShort(reg);
         AllocatedArea *aa = preContext.find_allocated_area(reg);
         if (aa == nullptr) {
-            //      logMsg << " which is not an allocated area";
+            //      GETLOG << " which is not an allocated area";
             //      log_message(logMsg);
             ADDRINT value = preContext.get_value(reg);
             do {
@@ -341,7 +348,7 @@ VOID fuzz_registers() {
             } while (PIN_CheckReadAccess((void *) value) ||
                      PIN_CheckWriteAccess((void *) value));
         } else {
-            //      logMsg << " which is an allocated area located at " << std::hex
+            //      GETLOG << " which is an allocated area located at " << std::hex
             //             << (void *)aa;
             //      log_message(logMsg);
             aa->fuzz();
@@ -351,21 +358,21 @@ VOID fuzz_registers() {
     fuzzed_input = true;
 }
 
-VOID record_current_context(CONTEXT *ctx) {
+VOID record_current_context(const CONTEXT *ctx) {
     if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
         wait_to_start();
     }
-//        logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
+//        GETLOG << "Recording context " << std::dec << fuzzing_run.size() <<
 //        std::endl;
-//    logMsg << "Func "
-//               << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
-//               LEVEL_BASE::REG_RIP))
-//               << "(" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
-//               << "): "
-//               << INS_Disassemble(
-//                      INS_FindByAddress(PIN_GetContextReg(ctx,
-//                      LEVEL_BASE::REG_RIP)));
-//      log_message(logMsg);
+    logMsg << "Func "
+           << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
+                                                      LEVEL_BASE::REG_RIP))
+           << "(" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
+           << "): "
+           << INS_Disassemble(
+                   INS_FindByAddress(PIN_GetContextReg(ctx,
+                                                       LEVEL_BASE::REG_RIP)));
+    log_message(logMsg);
 
     struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
@@ -389,8 +396,8 @@ VOID record_current_context(CONTEXT *ctx) {
     ADDRINT currentAddress = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP);
     PIN_LockClient();
     //  IMG_TYPE type = IMG_Type(IMG_FindByAddress(currentAddress));
-    //  logMsg << IMG_Name(IMG_FindByAddress(currentAddress)) << ": " << type;
-    //  logMsg << IMG_TYPE::IMG_TYPE_SHAREDLIB << " " << IMG_TYPE::IMG_TYPE_
+    //  GETLOG << IMG_Name(IMG_FindByAddress(currentAddress)) << ": " << type;
+    //  GETLOG << IMG_TYPE::IMG_TYPE_SHAREDLIB << " " << IMG_TYPE::IMG_TYPE_
     //  log_message(logMsg);
     if (IMG_Id(IMG_FindByAddress(currentAddress)) == targetImgId) {
         RTN current = RTN_FindByAddress(currentAddress);
@@ -405,33 +412,17 @@ VOID record_current_context(CONTEXT *ctx) {
 }
 
 VOID trace_execution(TRACE trace, VOID *v) {
+    logMsg << "Trace execution called by thread " << std::dec << PIN_ThreadId() << " for TRACE at " << std::hex
+           << (void *) TRACE_Address(trace) << " (" << RTN_Name(TRACE_Rtn(trace)) << ")";
+    log_message(logMsg);
     if (RTN_Valid(target)) {
         for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
             for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
-                //                std::cout << "Instrumenting " << INS_Disassemble(ins)
-                //                << "(0x" << std::hex << INS_Address(ins) << ")"
-                //                << std::endl;
+                logMsg << "Instrumenting " << INS_Disassemble(ins)
+                       << "(0x" << std::hex << INS_Address(ins) << ")";
+                log_message(logMsg);
                 INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
-                               IARG_CONTEXT, IARG_END);
-                //                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)
-                //                record_current_context,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R8,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R9,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R10,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R11,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R12,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R13,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R14,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R15,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
-                //                               IARG_INST_PTR,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
-                //                               IARG_END);
+                               IARG_CONST_CONTEXT, IARG_END);
             }
         }
     }
@@ -441,10 +432,29 @@ EXCEPT_HANDLING_RESULT globalSegfaultHandler(THREADID tid,
                                              EXCEPTION_INFO *exceptionInfo,
                                              PHYSICAL_CONTEXT *physContext,
                                              VOID *v) {
+    PIN_LockClient();
+    std::string func_name = RTN_FindNameByAddress(PIN_GetExceptionAddress(exceptionInfo));
+    if (func_name.empty()) {
+        func_name = "<< UNKNOWN >>";
+    }
     logMsg << "Global segfault handler called: "
-           << PIN_ExceptionToString(exceptionInfo);
-    log_error(logMsg);
-    return EHR_UNHANDLED;
+           << PIN_ExceptionToString(exceptionInfo)
+           << " from thread " << std::dec << tid << ". Function name: " << func_name;
+    log_message(logMsg);
+
+//    void *buffer[10];
+//    int nptrs = backtrace(buffer, 10);
+//    char **strings;
+//    strings = backtrace_symbols(buffer, nptrs);
+//    for(int i = 0; i < nptrs; i++) {
+//        logMsg << "\t" << std::hex << buffer[i] << "\n";
+//    }
+//    free(strings);
+//    log_message(logMsg);
+    PIN_UnlockClient();
+
+    PIN_ExitThread(CONTEXT_ERR);
+    return EHR_HANDLED;
 }
 
 const std::string getCurrentContext(const CONTEXT *ctx, UINT32 sig) {
@@ -536,7 +546,7 @@ BOOL isTainted(ADDRINT addr, std::vector<struct TaintedObject> &taintedObjs) {
 }
 
 VOID remove_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
-//      logMsg << "\tRemoving taint from " << REG_StringShort(reg) << std::endl;
+//      GETLOG << "\tRemoving taint from " << REG_StringShort(reg) << std::endl;
 //      log_message(logMsg);
     for (std::vector<struct TaintedObject>::iterator it = taintedObjs.begin();
          it != taintedObjs.end(); ++it) {
@@ -549,7 +559,7 @@ VOID remove_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
 }
 
 VOID add_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
-//      logMsg << "\tAdding taint to " << REG_StringShort(reg) << std::endl;
+//      GETLOG << "\tAdding taint to " << REG_StringShort(reg) << std::endl;
 //      log_message(logMsg);
     struct TaintedObject to;
     to.isRegister = true;
@@ -559,7 +569,7 @@ VOID add_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
 
 VOID remove_taint(ADDRINT addr,
                   std::vector<struct TaintedObject> &taintedObjs) {
-//      logMsg << "\tRemoving taint from 0x" << std::hex << addr << std::endl;
+//      GETLOG << "\tRemoving taint from 0x" << std::hex << addr << std::endl;
 //      log_message(logMsg);
     for (std::vector<struct TaintedObject>::iterator it = taintedObjs.begin();
          it != taintedObjs.end(); ++it) {
@@ -639,38 +649,40 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
     return true;
 }
 
-void redirect_control_to_main(CONTEXT *ctx) {
-    if (INS_Valid(first_ins)) {
-        //    logMsg << "Thread " << PIN_ThreadId() << " redirecting control to 0x"
-        //           << std::hex << first_ins_addr;
-        //    log_message(logMsg);
-        PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, first_ins_addr);
-    } else {
-        log_message("Could not redirect control");
-    }
-}
+//void redirect_control_to_main(CONTEXT *ctx) {
+//    if (INS_Valid(first_ins)) {
+//        //    logMsg << "Thread " << PIN_ThreadId() << " redirecting control to 0x"
+//        //           << std::hex << first_ins_addr;
+//        //    log_message(logMsg);
+//        PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, first_ins_addr);
+//    } else {
+//        log_message("Could not redirect control");
+//    }
+//}
 
 BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
                    const EXCEPTION_INFO *pExceptInfo, VOID *v) {
-//        logMsg << std::dec << tid << " " << PIN_ExceptionToString(pExceptInfo);
-//        log_message(logMsg);
+    logMsg << std::dec << tid << " " << PIN_ExceptionToString(pExceptInfo);
+    log_message(logMsg);
     //    std::cout << "Fuzzing run size: " << std::dec << fuzzing_run.size() <<
     //              std::endl;
-    //    displayCurrentContext(ctx);
+//        displayCurrentContext(ctx);
     //    currentContext.prettyPrint();
 
     if (!fuzzed_input) {
 //                log_message("write_to_cmd 4");
         report_failure(ZCMD_FAILED_CTX, ctx);
-        redirect_control_to_main(ctx);
-        return TRUE;
+//        redirect_control_to_main(ctx);
+//        return TRUE;
+        PIN_ExitThread(CONTEXT_FIXED);
     } else if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) !=
                EXCEPTCLASS_ACCESS_FAULT) {
 //        logMsg << "write_to_cmd 5: " << PIN_ExceptionToString(pExceptInfo) << std::endl;
 //        log_message(logMsg);
         report_failure(ZCMD_ERROR, ctx);
-        redirect_control_to_main(ctx);
-        return TRUE;
+//        redirect_control_to_main(ctx);
+//        return TRUE;
+        PIN_ExitThread(CONTEXT_ERR);
     }
 
     {
@@ -682,8 +694,9 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
                    << INS_Disassemble(faulty_ins) << ")";
             log_message(logMsg);
             report_failure(ZCMD_ERROR, ctx);
-            redirect_control_to_main(ctx);
-            return TRUE;
+            PIN_ExitThread(CONTEXT_ERR);
+//            redirect_control_to_main(ctx);
+//            return TRUE;
         }
         std::vector<struct TaintedObject> taintedObjs;
         REG taint_source = REG_INVALID();
@@ -699,8 +712,9 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
                        << c.rip << std::endl;
                 log_message(logMsg);
                 report_failure(ZCMD_ERROR, ctx);
-                redirect_control_to_main(ctx);
-                return TRUE;
+                PIN_ExitThread(CONTEXT_ERR);
+//                redirect_control_to_main(ctx);
+//                return TRUE;
             }
 
 //                  logMsg << RTN_Name(RTN_FindByAddress(INS_Address(ins))) << "(0x"
@@ -747,9 +761,10 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
                     logMsg << "Could not find valid base register for instruction: "
                            << INS_Disassemble(ins);
                     log_message(logMsg);
-                    redirect_control_to_main(ctx);
                     report_failure(ZCMD_ERROR, ctx);
-                    return TRUE;
+                    PIN_ExitThread(CONTEXT_ERR);
+//                    redirect_control_to_main(ctx);
+//                    return TRUE;
                 }
                 add_taint(taint_source, taintedObjs);
                 continue;
@@ -885,8 +900,9 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
             if (!create_allocated_area(taintedObject, faulting_addr)) {
 //                                log_message("write_to_cmd 6");
                 report_failure(ZCMD_ERROR, ctx);
-                redirect_control_to_main(ctx);
-                return TRUE;
+//                redirect_control_to_main(ctx);
+//                return TRUE;
+                PIN_ExitThread(0);
             }
         } else {
             log_message("Taint analysis failed for the following context: ");
@@ -899,22 +915,25 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
             log_message(logMsg);
             log_message("write_to_cmd 7");
             report_failure(ZCMD_ERROR, ctx);
-            redirect_control_to_main(ctx);
-            return TRUE;
+//            redirect_control_to_main(ctx);
+//            return TRUE;
+            PIN_ExitThread(CONTEXT_ERR);
         }
     }
 
     //    preContext.prettyPrint();
     //    currentContext.prettyPrint();
-    currentContext >> ctx;
-    PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
-    fuzzing_run.clear();
+//    currentContext >> ctx;
+//    PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
+//    fuzzing_run.clear();
     //    currentContext << ctx;
     //    currentContext.prettyPrint();
     //    fuzz_registers(ctx);
     //    PIN_SaveContext(ctx, &preexecution);
     //    displayCurrentContext(ctx);
     log_message("Ending segfault handler");
+//    PIN_ExitThread(CONTEXT_FIXED);
+    CallTarget(nullptr);
     return TRUE;
 }
 
@@ -944,7 +963,8 @@ void report_success(CONTEXT *ctx, THREADID tid) {
         }
         write_to_cmd_server(msg);
     }
-    wait_to_start();
+//    wait_to_start();
+    PIN_ExitThread(CONTEXT_COMPL);
 }
 
 void report_failure(zerg_cmd_result_t reason, CONTEXT *ctx) {
@@ -956,6 +976,43 @@ void report_failure(zerg_cmd_result_t reason, CONTEXT *ctx) {
 }
 
 void start_cmd_server(void *v) {
+    logMsg << "Command server started in thread " << std::dec << PIN_ThreadId();
+
+    if (pipe(internal_pipe_in) != 0 || pipe(internal_pipe_out) != 0) {
+        log_error("Error creating internal pipe");
+    }
+
+    FD_ZERO(&exe_fd_set_in);
+    FD_ZERO(&exe_fd_set_out);
+    FD_SET(internal_pipe_in[0], &exe_fd_set_in);
+    FD_SET(internal_pipe_out[1], &exe_fd_set_out);
+
+    logMsg << "Opening command in pipe " << KnobInPipe.Value();
+    log_message(logMsg);
+    cmd_in = open(KnobInPipe.Value().c_str(), O_RDONLY);
+    if (cmd_in < 0) {
+        logMsg << "Could not open in pipe: " << strerror(errno);
+        log_error(logMsg);
+    }
+    close(cmd_in);
+
+    logMsg << "Opening command out pipe " << KnobOutPipe.Value();
+    log_message(logMsg);
+    cmd_out = open(KnobOutPipe.Value().c_str(), O_WRONLY);
+    if (cmd_out < 0) {
+        logMsg << "Could not open out pipe: " << strerror(errno);
+        log_error(logMsg);
+    }
+    close(cmd_out);
+    log_message("done opening command pipes");
+
+    log_message("Creating command server");
+    cmd_server =
+            new ZergCommandServer(internal_pipe_in[1], internal_pipe_out[0],
+                                  KnobInPipe.Value(), KnobOutPipe.Value(), KnobCmdLogFile.Value());
+    log_message("done");
+
+    log_message(logMsg);
     cmd_server->start();
     delete cmd_server;
 }
@@ -1078,13 +1135,13 @@ zerg_cmd_result_t handle_set_target(ZergMessage &zmsg) {
     logMsg << "Instrumenting returns...";
     int instrument_sites = 0;
     RTN_Open(new_target);
-    INS_InsertCall(RTN_InsHead(new_target), IPOINT_BEFORE,
-                   (AFUNPTR) adjust_stack_down, IARG_CONTEXT, IARG_END);
+//    INS_InsertCall(RTN_InsHead(new_target), IPOINT_BEFORE,
+//                   (AFUNPTR) adjust_stack_down, IARG_CONTEXT, IARG_END);
     for (INS ins = RTN_InsHead(new_target); INS_Valid(ins); ins = INS_Next(ins)) {
         if (INS_IsRet(ins)) {
             instrument_sites++;
-            INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) report_success, IARG_CONTEXT,
-                           IARG_THREAD_ID, IARG_END);
+//            INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) report_success, IARG_CONTEXT,
+//                           IARG_THREAD_ID, IARG_END);
         }
     }
     //    instrument_sites++;
@@ -1110,15 +1167,25 @@ zerg_cmd_result_t handle_fuzz_cmd() {
     return ZCMD_OK;
 }
 
-zerg_cmd_result_t handle_execute_cmd() {
+void CallTarget(void *v) {
     fuzzing_run.clear();
     executedInstructions.clear();
     adjusted_stack = false;
     currentContext = preContext;
     currentContext >> &snapshot;
-    PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
-    PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RBP,
-                      PIN_GetContextReg(&snapshot, LEVEL_BASE::REG_RSP));
+    logMsg << "Thread " << PIN_ThreadId() << " about to call function " << std::hex << (void *) RTN_Funptr(target)
+           << " (" << RTN_Name(target) << ")";
+    log_message(logMsg);
+    PIN_CallApplicationFunction(&snapshot, PIN_ThreadId(), CALLINGSTD_REGPARMS, RTN_Funptr(target), NULL,
+                                PIN_PARG_END());
+    log_message("target returned");
+    PIN_ExitThread(CONTEXT_COMPL);
+}
+
+zerg_cmd_result_t handle_execute_cmd() {
+//    PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
+//    PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RBP,
+//                      PIN_GetContextReg(&snapshot, LEVEL_BASE::REG_RSP));
     //  logMsg << "About to start executing at " << std::hex <<
     //  RTN_Address(target)
     //         << "(" << RTN_Name(target) << ")"
@@ -1126,9 +1193,27 @@ zerg_cmd_result_t handle_execute_cmd() {
     //  preContext.prettyPrint(logMsg);
     //  log_message(logMsg);
 
-    PIN_ExecuteAt(&snapshot);
+//    PIN_ExecuteAt(&snapshot);
     //    log_message("PIN_ExecuteAt returned magically");
-    return ZCMD_ERROR;
+//    return ZCMD_ERROR;
+    PIN_THREAD_UID child_uid = -1;
+    THREADID child_tid = -1;
+    INT32 exitCode = -1;
+    do {
+        if ((child_tid = PIN_SpawnInternalThread(CallTarget, nullptr, 0, &child_uid)) == INVALID_THREADID) {
+            return ZCMD_ERROR;
+        }
+        logMsg << "Thread " << std::dec << PIN_ThreadId() << " waiting for child_thread " << std::dec << child_tid;
+        log_message(logMsg);
+        if (PIN_WaitForThreadTermination(child_uid, PIN_INFINITE_TIMEOUT, &exitCode)) {
+            logMsg << "Thread " << std::dec << child_tid << " returned " << exitCode;
+            log_message(logMsg);
+        }
+    } while (exitCode == CONTEXT_FIXED);
+
+    return (exitCode == CONTEXT_COMPL ? ZCMD_OK : ZCMD_ERROR);
+//    CallTarget(nullptr);
+//    return ZCMD_OK;
 }
 
 zerg_cmd_result_t handle_reset_cmd() { return ZCMD_OK; }
@@ -1197,27 +1282,9 @@ zerg_cmd_result_t handle_cmd() {
     return result;
 }
 
-void begin_execution(CONTEXT *ctx) {
-    std::stringstream log_msg;
-    if (!sent_initial_ready) {
-        PIN_SaveContext(ctx, &snapshot);
-        for (size_t i = 0; i < FBZergContext::argument_count; i++) {
-            REG reg = FBZergContext::argument_regs[i];
-            preContext.add(reg, (ADDRINT) 0);
-        }
-        //        log_message("Starting execution with snapshot ");
-        //        log_message(getCurrentContext(&snapshot, 0));
-
-        ZergMessage ready(ZMSG_READY);
-        write_to_cmd_server(ready);
-        sent_initial_ready = true;
-    }
-    wait_to_start();
-}
-
 void wait_to_start() {
     while (true) {
-        logMsg << std::dec << PIN_ThreadId() << " Executor waiting for command";
+        logMsg << "Thread " << std::dec << PIN_ThreadId() << " is waiting for command";
         log_message(logMsg);
         FD_SET(internal_pipe_in[0], &exe_fd_set_in);
         if (select(FD_SETSIZE, &exe_fd_set_in, nullptr, nullptr, nullptr) > 0) {
@@ -1228,7 +1295,7 @@ void wait_to_start() {
                     ZergMessage msg(ZMSG_OK);
                     write_to_cmd_server(msg);
                 } else {
-                    log_message("cmd server 10");
+//                    log_message("cmd server 10");
                     report_failure(result);
                 }
             }
@@ -1250,43 +1317,43 @@ VOID Find_Shared(IMG img, VOID *v) {
     }
 }
 
-VOID FindMain(IMG img, VOID *v) {
-    if (!IMG_Valid(img)) {
-        return;
-    }
-
-    if (!IMG_IsMainExecutable(img)) {
-        Find_Shared(img, v);
-        return;
-    }
-
-    RTN main;
-    IMG target_so;
-    if (!KnobRustMain.Value().empty()) {
-        main = RTN_FindByName(img, KnobRustMain.Value().c_str());
-    } else {
-        main = RTN_FindByName(img, "main");
-    }
-    if (RTN_Valid(main)) {
-        RTN_Open(main);
-        if (is_executable_fbloader(img)) {
-            first_ins = RTN_InsTail(main);
-            first_ins_addr = INS_Address(first_ins);
-            imgId = IMG_Id(target_so);
-        } else {
-            first_ins = RTN_InsHead(main);
-            first_ins_addr = INS_Address(first_ins);
-            imgId = IMG_Id(img);
-        }
-
-        INS_InsertCall(first_ins, IPOINT_BEFORE, (AFUNPTR) begin_execution,
-                       IARG_CONTEXT, IARG_END);
-        RTN_Close(main);
-    } else {
-        logMsg << "Could not find main!" << std::endl;
-        log_error(logMsg);
-    }
-}
+//VOID FindMain(IMG img, VOID *v) {
+//    if (!IMG_Valid(img)) {
+//        return;
+//    }
+//
+//    if (!IMG_IsMainExecutable(img)) {
+//        Find_Shared(img, v);
+//        return;
+//    }
+//
+//    RTN main;
+//    IMG target_so;
+//    if (!KnobRustMain.Value().empty()) {
+//        main = RTN_FindByName(img, KnobRustMain.Value().c_str());
+//    } else {
+//        main = RTN_FindByName(img, "main");
+//    }
+//    if (RTN_Valid(main)) {
+//        RTN_Open(main);
+//        if (is_executable_fbloader(img)) {
+//            first_ins = RTN_InsTail(main);
+//            first_ins_addr = INS_Address(first_ins);
+//            imgId = IMG_Id(target_so);
+//        } else {
+//            first_ins = RTN_InsHead(main);
+//            first_ins_addr = INS_Address(first_ins);
+//            imgId = IMG_Id(img);
+//        }
+//
+//        INS_InsertCall(first_ins, IPOINT_BEFORE, (AFUNPTR) begin_execution,
+//                       IARG_CONTEXT, IARG_END);
+//        RTN_Close(main);
+//    } else {
+//        logMsg << "Could not find main!" << std::endl;
+//        log_error(logMsg);
+//    }
+//}
 
 void track_syscalls(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, void *v) {
     if (cmd_server->get_state() == ZERG_SERVER_EXECUTING) {
@@ -1319,11 +1386,55 @@ void ctxChange(THREADID threadId, CONTEXT_CHANGE_REASON reason, const CONTEXT *f
     log_message(logMsg);
 }
 
+void AddInstrumentation() {
+    PIN_LockClient();
+    TRACE_AddInstrumentFunction(trace_execution, nullptr);
+    PIN_AddSyscallEntryFunction(track_syscalls, nullptr);
+    PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
+    PIN_AddFiniFunction(fini, nullptr);
+    PIN_UnlockClient();
+}
+
+void begin_execution(THREADID threadId, const CONTEXT *ctx) {
+    logMsg << "Thread " << std::dec << threadId << " is beginning";
+    log_message(logMsg);
+    if (!sent_initial_ready) {
+        PIN_SaveContext(ctx, &snapshot);
+        AddInstrumentation();
+
+        for (size_t i = 0; i < FBZergContext::argument_count; i++) {
+            REG reg = FBZergContext::argument_regs[i];
+            preContext.add(reg, (ADDRINT) 0);
+        }
+
+        ZergMessage ready(ZMSG_READY);
+        write_to_cmd_server(ready);
+        sent_initial_ready = true;
+    }
+    wait_to_start();
+}
+
+VOID ReplaceStart(IMG img, void *v) {
+    if (IMG_IsMainExecutable(img)) {
+        RTN entry = RTN_FindByName(img, "main");
+        if (!RTN_Valid(entry)) {
+            entry = RTN_FindByAddress(IMG_EntryAddress(img));
+            if (!RTN_Valid(entry)) {
+                log_error("Could not find main!");
+            }
+        }
+        logMsg << "Found entry " << std::hex << (void *) RTN_Address(entry) << " (" << RTN_Name(entry) << ")";
+        log_message(logMsg);
+        RTN_ReplaceSignature(entry, (AFUNPTR) begin_execution, IARG_THREAD_ID, IARG_CONST_CONTEXT, IARG_END);
+    }
+}
+
 int main(int argc, char **argv) {
     PIN_InitSymbols();
     if (PIN_Init(argc, argv)) {
         return usage();
     }
+    PIN_InitLock(&logLock);
 
     srand(time(NULL));
     if (!KnobLogFile.Value().empty()) {
@@ -1334,56 +1445,14 @@ int main(int argc, char **argv) {
         }
     }
 
-    logMsg << "Starting Zergling as process " << PIN_GetPid() << "..."
-           << std::endl;
-    log_message(logMsg);
-
-    if (pipe(internal_pipe_in) != 0 || pipe(internal_pipe_out) != 0) {
-        log_error("Error creating internal pipe");
-    }
-
-    FD_ZERO(&exe_fd_set_in);
-    FD_ZERO(&exe_fd_set_out);
-    FD_SET(internal_pipe_in[0], &exe_fd_set_in);
-    FD_SET(internal_pipe_out[1], &exe_fd_set_out);
-
-    logMsg << "Opening command in pipe " << KnobInPipe.Value();
-    log_message(logMsg);
-    cmd_in = open(KnobInPipe.Value().c_str(), O_RDONLY);
-    if (cmd_in < 0) {
-        logMsg << "Could not open in pipe: " << strerror(errno);
-        log_error(logMsg);
-    }
-    close(cmd_in);
-
-    logMsg << "Opening command out pipe " << KnobOutPipe.Value();
-    log_message(logMsg);
-    cmd_out = open(KnobOutPipe.Value().c_str(), O_WRONLY);
-    if (cmd_out < 0) {
-        logMsg << "Could not open out pipe: " << strerror(errno);
-        log_error(logMsg);
-    }
-    close(cmd_out);
-    log_message("done opening command pipes");
-
-    log_message("Creating command server");
-    std::string cmd_log = KnobCmdLogFile.Value();
-
-    cmd_server =
-            new ZergCommandServer(internal_pipe_in[1], internal_pipe_out[0],
-                                  KnobInPipe.Value(), KnobOutPipe.Value(), cmd_log);
-    log_message("done");
-
-    IMG_AddInstrumentFunction(FindMain, argv[argc - 1]);
-    //    IMG_AddInstrumentFunction(Find_Shared, argv[argc - 1]);
-    TRACE_AddInstrumentFunction(trace_execution, nullptr);
-    PIN_AddSyscallEntryFunction(track_syscalls, nullptr);
-    PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, nullptr);
-
-    PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
+    IMG_AddInstrumentFunction(ReplaceStart, nullptr);
+//    PIN_AddThreadStartFunction(begin_execution, nullptr);
     PIN_AddInternalExceptionHandler(globalSegfaultHandler, nullptr);
-    PIN_AddFiniFunction(fini, nullptr);
-    PIN_AddContextChangeFunction(ctxChange, nullptr);
+    PIN_SpawnInternalThread(start_cmd_server, nullptr, 0, nullptr);
+//    TRACE_AddInstrumentFunction(trace_execution, nullptr);
+//    PIN_AddSyscallEntryFunction(track_syscalls, nullptr);
+//    PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
+//    PIN_AddFiniFunction(fini, nullptr);
 
     log_message("Starting");
     PIN_StartProgram();

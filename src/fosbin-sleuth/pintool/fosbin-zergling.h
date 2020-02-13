@@ -37,4 +37,10 @@ VOID log_error(const char *message);
 
 size_t fuzz_strategy(uint8_t *buffer, size_t size);
 
+void track_syscalls(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, void *v);
+
+void fini(INT32 code, void *v);
+
+void CallTarget(void *v);
+
 #endif //FOSBIN_FOSBIN_ZERGLING_H
