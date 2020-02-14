@@ -161,6 +161,8 @@ class PinRun:
 
     def generate_cmd(self):
         cmd = [self.pin_loc]
+        # cmd.append('-pause-tool')
+        # cmd.append('20')
 
         if self.log_loc is not None:
             cmd.append("-logfile")

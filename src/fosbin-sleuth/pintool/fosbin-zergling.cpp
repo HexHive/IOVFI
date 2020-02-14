@@ -30,6 +30,7 @@
 #define CONTEXT_COMPL   2
 
 CONTEXT snapshot;
+CONTEXT targetSnapshot;
 
 KNOB <std::string> KnobInPipe(KNOB_MODE_WRITEONCE, "pintool", "in-pipe", "",
                               "Filename of in pipe");
@@ -366,12 +367,12 @@ VOID record_current_context(const CONTEXT *ctx) {
 //        std::endl;
     logMsg << "Func "
            << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
-                                                      LEVEL_BASE::REG_RIP))
-           << "(" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
+                                                      REG_INST_PTR))
+           << "(" << std::hex << PIN_GetContextReg(ctx, REG_INST_PTR)
            << "): "
            << INS_Disassemble(
                    INS_FindByAddress(PIN_GetContextReg(ctx,
-                                                       LEVEL_BASE::REG_RIP)));
+                                                       REG_INST_PTR)));
     log_message(logMsg);
 
     struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
@@ -388,12 +389,12 @@ VOID record_current_context(const CONTEXT *ctx) {
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R13),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R14),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R15),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP),
+                             PIN_GetContextReg(ctx, REG_INST_PTR),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP)};
 
     fuzzing_run.push_back(tmp);
 
-    ADDRINT currentAddress = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP);
+    ADDRINT currentAddress = PIN_GetContextReg(ctx, REG_INST_PTR);
     PIN_LockClient();
     //  IMG_TYPE type = IMG_Type(IMG_FindByAddress(currentAddress));
     //  GETLOG << IMG_Name(IMG_FindByAddress(currentAddress)) << ": " << type;
@@ -447,7 +448,7 @@ EXCEPT_HANDLING_RESULT globalSegfaultHandler(THREADID tid,
 //    char **strings;
 //    strings = backtrace_symbols(buffer, nptrs);
 //    for(int i = 0; i < nptrs; i++) {
-//        logMsg << "\t" << std::hex << buffer[i] << "\n";
+//        logMsg << "\t" << strings[i] << "\n";
 //    }
 //    free(strings);
 //    log_message(logMsg);
@@ -479,7 +480,7 @@ const std::string getCurrentContext(const CONTEXT *ctx, UINT32 sig) {
        << " "
        << "RSP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSP)
        << " "
-       << "RIP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
+       << "RIP = " << std::setw(16) << PIN_GetContextReg(ctx, REG_INST_PTR)
        << std::endl;
     ss << "+-------------------------------------------------------------------"
        << std::endl;
@@ -654,7 +655,7 @@ BOOL create_allocated_area(struct TaintedObject &to, ADDRINT faulting_address) {
 //        //    logMsg << "Thread " << PIN_ThreadId() << " redirecting control to 0x"
 //        //           << std::hex << first_ins_addr;
 //        //    log_message(logMsg);
-//        PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, first_ins_addr);
+//        PIN_SetContextReg(ctx, REG_INST_PTR, first_ins_addr);
 //    } else {
 //        log_message("Could not redirect control");
 //    }
@@ -908,9 +909,9 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
             log_message("Taint analysis failed for the following context: ");
             log_message(getCurrentContext(ctx, 0));
             logMsg << "Faulting instruction (0x" << std::hex
-                   << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << "): "
+                   << PIN_GetContextReg(ctx, REG_INST_PTR) << "): "
                    << INS_Disassemble(INS_FindByAddress(
-                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
+                           PIN_GetContextReg(ctx, REG_INST_PTR)));
             logMsg << "\nException: " << PIN_ExceptionToString(pExceptInfo);
             log_message(logMsg);
             log_message("write_to_cmd 7");
@@ -924,7 +925,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
     //    preContext.prettyPrint();
     //    currentContext.prettyPrint();
 //    currentContext >> ctx;
-//    PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
+//    PIN_SetContextReg(ctx, REG_INST_PTR, RTN_Address(target));
 //    fuzzing_run.clear();
     //    currentContext << ctx;
     //    currentContext.prettyPrint();
@@ -1040,7 +1041,7 @@ void adjust_stack_down(CONTEXT *ctx) {
         adjusted_stack = true;
         //        log_message("done");
     }
-    preContext >> ctx;
+//    preContext >> ctx;
 }
 
 RTN RTN_FindByOffset(uintptr_t target_offset) {
@@ -1172,18 +1173,29 @@ void CallTarget(void *v) {
     executedInstructions.clear();
     adjusted_stack = false;
     currentContext = preContext;
-    currentContext >> &snapshot;
-    logMsg << "Thread " << PIN_ThreadId() << " about to call function " << std::hex << (void *) RTN_Funptr(target)
-           << " (" << RTN_Name(target) << ")";
+    currentContext >> &targetSnapshot;
+
+    PIN_SetContextReg(&targetSnapshot, REG_INST_PTR, RTN_Address(target));
+    PIN_SetContextReg(&targetSnapshot, REG_GBP, PIN_GetContextReg(&snapshot, REG_STACK_PTR));
+    adjust_stack_down(&targetSnapshot);
+    THREADID id = PIN_ThreadId();
+    logMsg << "Thread " << id << " about to call function " << std::hex << (void *) RTN_Funptr(target)
+           << " (" << RTN_Name(target) << ") with context\n"
+           << getCurrentContext(&targetSnapshot, 0);
     log_message(logMsg);
-    PIN_CallApplicationFunction(&snapshot, PIN_ThreadId(), CALLINGSTD_REGPARMS, RTN_Funptr(target), NULL,
-                                PIN_PARG_END());
+    if(id == INVALID_THREADID) {
+        log_message("Invalid ThreadID!!!");
+    }
+    PIN_CallApplicationFunction(&targetSnapshot, id, CALLINGSTD_DEFAULT, RTN_Funptr(target), NULL,
+                                PIN_PARG(void),
+                                PIN_PARG_END()
+                                );
     log_message("target returned");
     PIN_ExitThread(CONTEXT_COMPL);
 }
 
 zerg_cmd_result_t handle_execute_cmd() {
-//    PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
+//    PIN_SetContextReg(&snapshot, REG_INST_PTR, RTN_Address(target));
 //    PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RBP,
 //                      PIN_GetContextReg(&snapshot, LEVEL_BASE::REG_RSP));
     //  logMsg << "About to start executing at " << std::hex <<
@@ -1200,7 +1212,7 @@ zerg_cmd_result_t handle_execute_cmd() {
     THREADID child_tid = -1;
     INT32 exitCode = -1;
     do {
-        if ((child_tid = PIN_SpawnInternalThread(CallTarget, nullptr, 0, &child_uid)) == INVALID_THREADID) {
+        if ((child_tid = PIN_SpawnInternalThread(CallTarget, nullptr, 5 * getpagesize(), &child_uid)) == INVALID_THREADID) {
             return ZCMD_ERROR;
         }
         logMsg << "Thread " << std::dec << PIN_ThreadId() << " waiting for child_thread " << std::dec << child_tid;
@@ -1400,6 +1412,8 @@ void begin_execution(THREADID threadId, const CONTEXT *ctx) {
     log_message(logMsg);
     if (!sent_initial_ready) {
         PIN_SaveContext(ctx, &snapshot);
+        logMsg << "Recorded context " << getCurrentContext(&snapshot, 0);
+        log_message(logMsg);
         AddInstrumentation();
 
         for (size_t i = 0; i < FBZergContext::argument_count; i++) {
