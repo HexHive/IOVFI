@@ -1183,11 +1183,7 @@ void CallTarget(void *v) {
            << " (" << RTN_Name(target) << ") with context\n"
            << getCurrentContext(&targetSnapshot, 0);
     log_message(logMsg);
-    if(id == INVALID_THREADID) {
-        log_message("Invalid ThreadID!!!");
-    }
     PIN_CallApplicationFunction(&targetSnapshot, id, CALLINGSTD_DEFAULT, RTN_Funptr(target), NULL,
-                                PIN_PARG(void),
                                 PIN_PARG_END()
                                 );
     log_message("target returned");
@@ -1212,7 +1208,7 @@ zerg_cmd_result_t handle_execute_cmd() {
     THREADID child_tid = -1;
     INT32 exitCode = -1;
     do {
-        if ((child_tid = PIN_SpawnInternalThread(CallTarget, nullptr, 5 * getpagesize(), &child_uid)) == INVALID_THREADID) {
+        if ((child_tid = PIN_SpawnInternalThread(CallTarget, nullptr, 1024 * getpagesize(), &child_uid)) == INVALID_THREADID) {
             return ZCMD_ERROR;
         }
         logMsg << "Thread " << std::dec << PIN_ThreadId() << " waiting for child_thread " << std::dec << child_tid;
