@@ -177,19 +177,22 @@ size_t ZergMessage::add_IOVec(IOVec &iovec) {
 
 size_t ZergMessage::add_coverage(
     std::map<RTN, std::set<ADDRINT>> executedInstructions) {
-    if (_length > 0) {
-        return 0;
-    }
+//    if (_length > 0) {
+//        return 0;
+//    }
 
     Coverage coverage(executedInstructions);
     std::stringstream data(std::ios::in | std::ios::out | std::ios::binary);
     data << coverage;
 
-    _length = data.str().size();
-    _data = malloc(_length);
+    _length += data.str().size();
+    _data = realloc(_data, _length);
+
     if (!_data) {
         return 0;
     }
-    memcpy(_data, data.str().c_str(), _length);
+
+    memcpy((char *) _data + (_length - data.str().size()), data.str().c_str(), data.str().size());
+
     return _length;
 }

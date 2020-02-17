@@ -926,6 +926,7 @@ void report_success(CONTEXT *ctx, THREADID tid) {
         ZergMessage msg(ZMSG_OK);
         IOVec ioVec(&preContext, &currentContext, syscalls);
         msg.add_IOVec(ioVec);
+        msg.add_coverage(executedInstructions);
         write_to_cmd_server(msg);
     } else {
         bool contexts_equal = (currentContext == expectedContext);

@@ -43,14 +43,27 @@ class ConsolidationRunDesc(RunDesc):
 
 
 class FuzzRunResult:
-    def __init__(self, func_desc, io_vecs):
+    def __init__(self, func_desc, io_vecs, coverage):
         self.func_desc = func_desc
         self.io_vecs = dict()
+        self.coverages = dict()
         for io_vec in io_vecs:
             self.io_vecs[hash(io_vec)] = io_vec
+            self.coverages[hash(io_vec)] = coverage[io_vec]
 
     def __len__(self):
         return len(self.io_vecs)
+
+
+def read_coverage(resp_msg):
+    curr_pos = resp_msg.data.tell()
+    coveragesize = struct.unpack('N', resp_msg.data.getbuffer()[curr_pos:curr_pos + struct.calcsize('N')])[0]
+    coverage = list()
+    fmt = 'N' * 2 * coveragesize
+    coverage_tuples = struct.unpack_from(fmt, resp_msg.data.getbuffer(), curr_pos + struct.calcsize('N'))
+    for i in range(0, coveragesize, 2):
+        coverage.append((coverage_tuples[i], coverage_tuples[i + 1]))
+    return coverage
 
 
 def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
@@ -86,6 +99,7 @@ def fuzz_one_function(fuzz_desc):
     target = fuzz_desc.func_desc.location
     binary = fuzz_desc.func_desc.binary
     successful_contexts = set()
+    coverages = dict()
 
     try:
         if os.path.splitext(binary)[1] == ".so":
@@ -151,7 +165,10 @@ def fuzz_one_function(fuzz_desc):
                 result = pin_run.read_response(timeout=fuzz_desc.watchdog)
                 if result is not None and result.msgtype == PinMessage.ZMSG_OK:
                     io_vec = IOVec(result.data)
+                    io_vec_coverage = read_coverage(result)
+
                     successful_contexts.add(io_vec)
+                    coverages[io_vec] = io_vec_coverage
                     fuzz_count += 1
                     logger.info("{} created {} ({} of {})".format(run_name, io_vec.hexdigest(), fuzz_count,
                                                                   fuzz_desc.fuzz_count))
@@ -185,7 +202,7 @@ def fuzz_one_function(fuzz_desc):
         if os.path.exists(pipe_out):
             os.unlink(pipe_out)
         del pin_run
-        return FuzzRunResult(fuzz_desc.func_desc, successful_contexts)
+        return FuzzRunResult(fuzz_desc.func_desc, successful_contexts, coverages)
 
 
 def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, watchdog=WATCHDOG, fuzz_count=5,
@@ -213,7 +230,7 @@ def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, wa
             except Exception as e:
                 continue
 
-    return (io_vecs_dict, unclassified)
+    return io_vecs_dict, unclassified
 
 
 def consolidate_one_function(consolidationRunDesc):
@@ -317,12 +334,7 @@ def consolidate_one_function(consolidationRunDesc):
 
             resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
             if resp_msg is not None and resp_msg.msgtype == PinMessage.ZMSG_OK:
-                coveragesize = struct.unpack('N', resp_msg.data.getbuffer()[0:struct.calcsize('N')])[0]
-                coverage = list()
-                fmt = 'N' * 2 * coveragesize
-                coverage_tuples = struct.unpack_from(fmt, resp_msg.data.getbuffer(), struct.calcsize('N'))
-                for i in range(0, coveragesize, 2):
-                    coverage.append((coverage_tuples[i], coverage_tuples[i + 1]))
+                coverage = read_coverage(resp_msg)
                 desc_map[hash(iovec)] = (func_desc, coverage)
                 logger.info("{} accepts {} ({})".format(run_name, iovec.hexdigest(), ctx_count))
             else:

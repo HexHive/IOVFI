@@ -117,9 +117,21 @@ def main():
         context_hashes = dict()
         desc_map = dict()
 
+        total_instructions = 0
+        executed_instructions = 0
+
         for func_desc, fuzz_run_result in fuzz_run_results.items():
             for hash_sum, io_vec in fuzz_run_result.io_vecs.items():
                 context_hashes[hash_sum] = io_vec
+                individual_executed = 0
+                individual_total = 0
+                for coverage_tuple in fuzz_run_results.coverages[io_vec]:
+                    individual_executed += coverage_tuple[0]
+                    individual_total += coverage_tuple[1]
+                    executed_instructions += coverage_tuple[0]
+                    total_instructions += coverage_tuple[1]
+                print("{} has {} coverage".format(func_desc.name, individual_executed / individual_total))
+
                 if hash_sum not in desc_map:
                     desc_map[hash_sum] = set()
                 desc_map[hash_sum].add(func_desc)
