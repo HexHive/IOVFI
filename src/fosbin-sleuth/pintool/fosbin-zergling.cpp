@@ -381,12 +381,12 @@ VOID record_current_context(CONTEXT *ctx) {
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R13),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R14),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R15),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP),
+                             PIN_GetContextReg(ctx, REG_INST_PTR),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBP)};
 
     fuzzing_run.push_back(tmp);
 
-    ADDRINT currentAddress = PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP);
+    ADDRINT currentAddress = PIN_GetContextReg(ctx, REG_INST_PTR);
     PIN_LockClient();
     //  IMG_TYPE type = IMG_Type(IMG_FindByAddress(currentAddress));
     //  logMsg << IMG_Name(IMG_FindByAddress(currentAddress)) << ": " << type;
@@ -413,25 +413,6 @@ VOID trace_execution(TRACE trace, VOID *v) {
                 //                << std::endl;
                 INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR) record_current_context,
                                IARG_CONTEXT, IARG_END);
-                //                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)
-                //                record_current_context,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RAX,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RBX,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RCX,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RDX,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R8,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R9,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R10,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R11,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R12,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R13,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R14,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_R15,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RDI,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RSI,
-                //                               IARG_INST_PTR,
-                //                               IARG_REG_VALUE, LEVEL_BASE::REG_RBP,
-                //                               IARG_END);
             }
         }
     }
@@ -469,7 +450,7 @@ const std::string getCurrentContext(const CONTEXT *ctx, UINT32 sig) {
        << " "
        << "RSP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSP)
        << " "
-       << "RIP = " << std::setw(16) << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
+       << "RIP = " << std::setw(16) << PIN_GetContextReg(ctx, REG_INST_PTR)
        << std::endl;
     ss << "+-------------------------------------------------------------------"
        << std::endl;
@@ -519,7 +500,7 @@ ADDRINT compute_effective_address(INS ins, struct X86Context &ctx,
 
 BOOL isTainted(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
     for (struct TaintedObject &to : taintedObjs) {
-        if (to.isRegister && REG_StringShort(to.reg) == REG_StringShort(reg)) {
+        if (to.isRegister && REG_FullRegName(to.reg) == REG_FullRegName(reg)) {
             return true;
         }
     }
@@ -541,7 +522,7 @@ VOID remove_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
     for (std::vector<struct TaintedObject>::iterator it = taintedObjs.begin();
          it != taintedObjs.end(); ++it) {
         struct TaintedObject &to = *it;
-        if (to.isRegister && REG_StringShort(to.reg) == REG_StringShort(reg)) {
+        if (to.isRegister && REG_FullRegName(to.reg) == REG_FullRegName(reg)) {
             taintedObjs.erase(it);
             return;
         }
@@ -553,7 +534,7 @@ VOID add_taint(REG reg, std::vector<struct TaintedObject> &taintedObjs) {
 //      log_message(logMsg);
     struct TaintedObject to;
     to.isRegister = true;
-    to.reg = reg;
+    to.reg = REG_FullRegName(reg);
     taintedObjs.push_back(to);
 }
 
@@ -644,7 +625,7 @@ void redirect_control_to_main(CONTEXT *ctx) {
         //    logMsg << "Thread " << PIN_ThreadId() << " redirecting control to 0x"
         //           << std::hex << first_ins_addr;
         //    log_message(logMsg);
-        PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, first_ins_addr);
+        PIN_SetContextReg(ctx, REG_INST_PTR, first_ins_addr);
     } else {
         log_message("Could not redirect control");
     }
@@ -663,14 +644,14 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
 //                log_message("write_to_cmd 4");
         report_failure(ZCMD_FAILED_CTX, ctx);
         redirect_control_to_main(ctx);
-        return TRUE;
+        return FALSE;
     } else if (PIN_GetExceptionClass(PIN_GetExceptionCode(pExceptInfo)) !=
                EXCEPTCLASS_ACCESS_FAULT) {
 //        logMsg << "write_to_cmd 5: " << PIN_ExceptionToString(pExceptInfo) << std::endl;
 //        log_message(logMsg);
         report_failure(ZCMD_ERROR, ctx);
         redirect_control_to_main(ctx);
-        return TRUE;
+        return FALSE;
     }
 
     {
@@ -683,7 +664,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
             log_message(logMsg);
             report_failure(ZCMD_ERROR, ctx);
             redirect_control_to_main(ctx);
-            return TRUE;
+            return FALSE;
         }
         std::vector<struct TaintedObject> taintedObjs;
         REG taint_source = REG_INVALID();
@@ -700,7 +681,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
                 log_message(logMsg);
                 report_failure(ZCMD_ERROR, ctx);
                 redirect_control_to_main(ctx);
-                return TRUE;
+                return FALSE;
             }
 
 //                  logMsg << RTN_Name(RTN_FindByAddress(INS_Address(ins))) << "(0x"
@@ -730,6 +711,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
 //                    logMsg << "\t\t" << REG_StringShort(INS_RegW(ins, i)) <<
 //                    std::endl;
 //                  }
+//                  logMsg << "\tINS_MemoryBaseReg: " << REG_StringShort(INS_MemoryBaseReg(ins));
 //                  log_message(logMsg);
 
             if (it == fuzzing_run.rbegin()) {
@@ -749,7 +731,7 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
                     log_message(logMsg);
                     redirect_control_to_main(ctx);
                     report_failure(ZCMD_ERROR, ctx);
-                    return TRUE;
+                    return FALSE;
                 }
                 add_taint(taint_source, taintedObjs);
                 continue;
@@ -886,36 +868,36 @@ BOOL catchSegfault(THREADID tid, INT32 sig, CONTEXT *ctx, BOOL hasHandler,
 //                                log_message("write_to_cmd 6");
                 report_failure(ZCMD_ERROR, ctx);
                 redirect_control_to_main(ctx);
-                return TRUE;
+                return FALSE;
             }
         } else {
             log_message("Taint analysis failed for the following context: ");
             log_message(getCurrentContext(ctx, 0));
             logMsg << "Faulting instruction (0x" << std::hex
-                   << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP) << "): "
+                   << PIN_GetContextReg(ctx, REG_INST_PTR) << "): "
                    << INS_Disassemble(INS_FindByAddress(
-                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
+                           PIN_GetContextReg(ctx, REG_INST_PTR)));
             logMsg << "\nException: " << PIN_ExceptionToString(pExceptInfo);
             log_message(logMsg);
             log_message("write_to_cmd 7");
             report_failure(ZCMD_ERROR, ctx);
             redirect_control_to_main(ctx);
-            return TRUE;
+            return FALSE;
         }
     }
 
     //    preContext.prettyPrint();
     //    currentContext.prettyPrint();
     currentContext >> ctx;
-    PIN_SetContextReg(ctx, LEVEL_BASE::REG_RIP, RTN_Address(target));
+    PIN_SetContextReg(ctx, REG_INST_PTR, RTN_Address(target));
     fuzzing_run.clear();
     //    currentContext << ctx;
-    //    currentContext.prettyPrint();
+//        currentContext.prettyPrint();
     //    fuzz_registers(ctx);
     //    PIN_SaveContext(ctx, &preexecution);
     //    displayCurrentContext(ctx);
-    log_message("Ending segfault handler");
-    return TRUE;
+//    log_message("Ending segfault handler");
+    return FALSE;
 }
 
 void report_success(CONTEXT *ctx, THREADID tid) {
@@ -1117,9 +1099,9 @@ zerg_cmd_result_t handle_execute_cmd() {
     adjusted_stack = false;
     currentContext = preContext;
     currentContext >> &snapshot;
-    PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RIP, RTN_Address(target));
-    PIN_SetContextReg(&snapshot, LEVEL_BASE::REG_RBP,
-                      PIN_GetContextReg(&snapshot, LEVEL_BASE::REG_RSP));
+    PIN_SetContextReg(&snapshot, REG_INST_PTR, RTN_Address(target));
+    PIN_SetContextReg(&snapshot, REG_GBP,
+                      PIN_GetContextReg(&snapshot, REG_STACK_PTR));
     //  logMsg << "About to start executing at " << std::hex <<
     //  RTN_Address(target)
     //         << "(" << RTN_Name(target) << ")"

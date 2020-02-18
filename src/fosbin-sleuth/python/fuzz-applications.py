@@ -116,25 +116,38 @@ def main():
 
         context_hashes = dict()
         desc_map = dict()
+        coverage_map = dict()
 
-        total_instructions = 0
-        executed_instructions = 0
+        total_instructions = dict()
+        executed_instructions = set()
 
         for func_desc, fuzz_run_result in fuzz_run_results.items():
+            coverage_map[func_desc] = list()
             for hash_sum, io_vec in fuzz_run_result.io_vecs.items():
                 context_hashes[hash_sum] = io_vec
-                individual_executed = 0
-                individual_total = 0
-                for coverage_tuple in fuzz_run_results.coverages[io_vec]:
-                    individual_executed += coverage_tuple[0]
-                    individual_total += coverage_tuple[1]
-                    executed_instructions += coverage_tuple[0]
-                    total_instructions += coverage_tuple[1]
-                print("{} has {} coverage".format(func_desc.name, individual_executed / individual_total))
+                individual_executed = list()
+                individual_total = list()
+                for coverage_tuple in fuzz_run_result.coverages[hash(io_vec)]:
+                    individual_total.append(coverage_tuple[1])
+                    for addr in coverage_tuple[0]:
+                        executed_instructions.add(addr)
+                        individual_executed.append(addr)
+                    individual_executed.sort()
+                    total_instructions[coverage_tuple[0][0]] = coverage_tuple[1]
+                coverage_map[func_desc].append((individual_executed, individual_total))
 
                 if hash_sum not in desc_map:
                     desc_map[hash_sum] = set()
                 desc_map[hash_sum].add(func_desc)
+
+        whole_application_instructions = 0
+        for func_addr, n_instructions in total_instructions.items():
+            whole_application_instructions += n_instructions
+
+        print("Total application coverage: {}".format(len(executed_instructions) / whole_application_instructions))
+
+        with open('cov.map', "wb") as cov_out:
+            pickle.dump(coverage_map, cov_out)
 
         with open(hash_file, "wb") as hashes_out:
             pickle.dump(context_hashes, hashes_out)

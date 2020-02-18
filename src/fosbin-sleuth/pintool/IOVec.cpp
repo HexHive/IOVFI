@@ -11,8 +11,7 @@ Coverage::Coverage(std::map <RTN, std::set<ADDRINT>> &executedInstructions) : co
     for (auto it : executedInstructions) {
         uintptr_t addr = RTN_Address(it.first);
         size_t totalInstructions = RTN_NumIns(it.first);
-        size_t numInstructions = it.second.size();
-        coverages[addr] = std::make_pair(numInstructions, totalInstructions);
+        coverages[addr] = std::make_pair(it.second, totalInstructions);
     }
     PIN_UnlockClient();
 }
@@ -21,10 +20,14 @@ std::ostream &operator<<(std::ostream &out, Coverage &coverage) {
     size_t size = coverage.coverages.size();
     out.write((char *) &size, sizeof(size));
     for (const auto it : coverage.coverages) {
-        size_t numInstructions = coverage.coverages[it.first].first;
+        std::set <ADDRINT> &instructions = coverage.coverages[it.first].first;
         size_t totalInstructions = coverage.coverages[it.first].second;
+        size_t numInstructions = instructions.size();
         out.write((char *) &numInstructions, sizeof(numInstructions));
         out.write((char *) &totalInstructions, sizeof(totalInstructions));
+        for (auto addr : instructions) {
+            out.write((char *) &addr, sizeof(addr));
+        }
     }
 
     return out;

@@ -196,16 +196,15 @@ class PinRun:
         self._check_state()
         cmd = self.generate_cmd()
 
-        logger.info("Running {}".format(" ".join(cmd)))
+        logger.debug("Running {}".format(" ".join(cmd)))
         if self.log_loc is not None:
             self.log = open(self.log_loc, "a+")
 
         self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True, stdout=self.log, stderr=self.log)
-        # self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True)
         pid = self.pin_proc.pid
         logger.debug("{} spawned process {}".format(os.path.basename(self.pipe_in_loc), pid))
-        self.pin_proc.wait()
-        logger.debug("Pin process {} ended with return code {}".format(pid, self.pin_proc.returncode))
+        ret_value = self.pin_proc.wait()
+        logger.debug("Pin process {} ended with return code {}".format(pid, ret_value))
         if self.log is not None:
             self.log.close()
         self.log = None
@@ -318,7 +317,7 @@ class PinRun:
             if self.create_pipe_out and os.path.exists(self.pipe_out_loc):
                 os.unlink(self.pipe_out_loc)
 
-            logger.info("PinRun stopped for {}".format(os.path.basename(self.pipe_in_loc)))
+            logger.debug("PinRun stopped for {}".format(os.path.basename(self.pipe_in_loc)))
 
     def wait_for_ready(self, timeout=None):
         byte_data = []

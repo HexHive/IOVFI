@@ -17,7 +17,7 @@ struct Coverage {
 
     friend std::ostream &operator<<(std::ostream &out, Coverage &coverage);
 
-    std::map <uintptr_t, std::pair<size_t, size_t>> coverages;
+    std::map <uintptr_t, std::pair<std::set < ADDRINT>, size_t>> coverages;
 };
 
 struct IOVec {

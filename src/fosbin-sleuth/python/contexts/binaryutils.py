@@ -49,7 +49,7 @@ class FuzzRunResult:
         self.coverages = dict()
         for io_vec in io_vecs:
             self.io_vecs[hash(io_vec)] = io_vec
-            self.coverages[hash(io_vec)] = coverage[io_vec]
+            self.coverages[hash(io_vec)] = coverage[hash(io_vec)]
 
     def __len__(self):
         return len(self.io_vecs)
@@ -57,12 +57,24 @@ class FuzzRunResult:
 
 def read_coverage(resp_msg):
     curr_pos = resp_msg.data.tell()
-    coveragesize = struct.unpack('N', resp_msg.data.getbuffer()[curr_pos:curr_pos + struct.calcsize('N')])[0]
+    coveragesize = struct.unpack_from('N', resp_msg.data.getbuffer(), curr_pos)[0]
     coverage = list()
-    fmt = 'N' * 2 * coveragesize
-    coverage_tuples = struct.unpack_from(fmt, resp_msg.data.getbuffer(), curr_pos + struct.calcsize('N'))
-    for i in range(0, coveragesize, 2):
-        coverage.append((coverage_tuples[i], coverage_tuples[i + 1]))
+    resp_msg.data.seek(curr_pos + struct.calcsize('N'))
+    for i in range(coveragesize):
+        curr_pos = resp_msg.data.tell()
+        (numInstructions, totalInstructions) = struct.unpack_from('NN', resp_msg.data.getbuffer(), curr_pos)
+        resp_msg.data.seek(curr_pos + struct.calcsize('NN'))
+
+        instructionAddrs = list()
+        curr_pos = resp_msg.data.tell()
+        fmt = 'P' * numInstructions
+        instructions = struct.unpack_from(fmt, resp_msg.data.getbuffer(), curr_pos)
+        resp_msg.data.seek(curr_pos + struct.calcsize(fmt))
+        for addr in instructions:
+            instructionAddrs.append(addr)
+        instructionAddrs.sort()
+        coverage.append((instructionAddrs, totalInstructions))
+
     return coverage
 
 
@@ -168,12 +180,12 @@ def fuzz_one_function(fuzz_desc):
                     io_vec_coverage = read_coverage(result)
 
                     successful_contexts.add(io_vec)
-                    coverages[io_vec] = io_vec_coverage
+                    coverages[hash(io_vec)] = io_vec_coverage
                     fuzz_count += 1
                     logger.info("{} created {} ({} of {})".format(run_name, io_vec.hexdigest(), fuzz_count,
                                                                   fuzz_desc.fuzz_count))
                 elif result is not None and len(result.data.getbuffer()) > 0:
-                    logger.info("Fuzzing run failed: {}".format(result.data.getvalue()))
+                    logger.debug("Fuzzing run failed: {}".format(result.data.getvalue()))
                 elif result is None:
                     logger.debug("Fuzzing result is None")
                 elif result is not None and len(result.data.getbuffer()) == 0:
