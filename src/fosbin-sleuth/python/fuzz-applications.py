@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import os
 import pickle
+import statistics
 
 from contexts import binaryutils
 from contexts.FBLogging import logger
@@ -125,26 +126,43 @@ def main():
             coverage_map[func_desc] = list()
             for hash_sum, io_vec in fuzz_run_result.io_vecs.items():
                 context_hashes[hash_sum] = io_vec
-                individual_executed = list()
-                individual_total = list()
                 for coverage_tuple in fuzz_run_result.coverages[hash(io_vec)]:
-                    individual_total.append(coverage_tuple[1])
+                    individual_executed = list()
                     for addr in coverage_tuple[0]:
                         executed_instructions.add(addr)
                         individual_executed.append(addr)
                     individual_executed.sort()
                     total_instructions[coverage_tuple[0][0]] = coverage_tuple[1]
-                coverage_map[func_desc].append((individual_executed, individual_total))
+                    coverage_map[func_desc].append((individual_executed, coverage_tuple[1]))
 
                 if hash_sum not in desc_map:
                     desc_map[hash_sum] = set()
                 desc_map[hash_sum].add(func_desc)
 
-        whole_application_instructions = 0
-        for func_addr, n_instructions in total_instructions.items():
-            whole_application_instructions += n_instructions
+        whole_coverage = dict()
+        full_count = dict()
+        percent_covered = list()
+        for func_desc, coverages in coverage_map.items():
+            for (instructions, total_instructions) in coverages:
+                start = instructions[0]
+                if start not in whole_coverage:
+                    whole_coverage[start] = set()
+                if start not in full_count:
+                    full_count[start] = total_instructions
+                for i in instructions:
+                    whole_coverage[start].add(i)
 
-        print("Total application coverage: {}".format(len(executed_instructions) / whole_application_instructions))
+        total_executed = 0
+        total_reachable = 0
+        for start, covered_instructions in whole_coverage.items():
+            print("{}: {}/{} = {}".format(hex(start), len(covered_instructions), full_count[start],
+                                          len(covered_instructions) / full_count[start]))
+            percent_covered.append(len(covered_instructions) / full_count[start])
+            total_executed += len(covered_instructions)
+            total_reachable += full_count[start]
+
+        print("Mean function coverage: {}".format(statistics.mean(percent_covered)))
+        print("Total coverage: {} / {} = {}".format(total_executed, total_reachable, total_executed / total_reachable))
 
         with open('cov.map', "wb") as cov_out:
             pickle.dump(coverage_map, cov_out)

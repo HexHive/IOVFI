@@ -360,7 +360,7 @@ VOID record_current_context(CONTEXT *ctx) {
 //    logMsg << "Func "
 //               << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
 //               LEVEL_BASE::REG_RIP))
-//               << "(" << std::hex << PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)
+//               << "(" << std::hex << PIN_GetContextReg(ctx, REG_INST_PTR)
 //               << "): "
 //               << INS_Disassemble(
 //                      INS_FindByAddress(PIN_GetContextReg(ctx,
@@ -392,7 +392,13 @@ VOID record_current_context(CONTEXT *ctx) {
     //  logMsg << IMG_Name(IMG_FindByAddress(currentAddress)) << ": " << type;
     //  logMsg << IMG_TYPE::IMG_TYPE_SHAREDLIB << " " << IMG_TYPE::IMG_TYPE_
     //  log_message(logMsg);
-    if (IMG_Id(IMG_FindByAddress(currentAddress)) == targetImgId) {
+    SEC currentSec = RTN_Sec(RTN_FindByAddress(currentAddress));
+    if (SEC_Valid(currentSec) && IMG_Id(SEC_Img(currentSec)) == targetImgId && SEC_Name(currentSec) == ".text") {
+//        logMsg << "Func "
+//               << RTN_FindNameByAddress(PIN_GetContextReg(ctx, REG_INST_PTR))
+//               << "(" << std::hex << (void *) PIN_GetContextReg(ctx, REG_INST_PTR) << " - SEC_Name = " << std::dec << SEC_Name(currentSec) << "): "
+//               << INS_Disassemble(INS_FindByAddress(PIN_GetContextReg(ctx, REG_INST_PTR)));
+//        log_message(logMsg);
         RTN current = RTN_FindByAddress(currentAddress);
         executedInstructions[current].insert(currentAddress);
     }
