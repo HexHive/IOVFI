@@ -27,6 +27,7 @@ def main():
     parser.add_argument("-map", help="/path/to/context/map", default="hash.map")
     parser.add_argument("-count", help="Number of times to fuzz function", type=int, default=fuzz_count)
     parser.add_argument('-o', '--out', help="/path/to/output/function/descriptions", default="out.desc")
+    parser.add_argument('-c', '--cov', help="/path/to/coverage/output", default='cov.map')
 
     results = parser.parse_args()
 
@@ -141,7 +142,7 @@ def main():
 
         whole_coverage = dict()
         full_count = dict()
-        percent_covered = list()
+        percent_covered = dict()
         for func_desc, coverages in coverage_map.items():
             for (instructions, total_instructions) in coverages:
                 start = instructions[0]
@@ -154,18 +155,26 @@ def main():
 
         total_executed = 0
         total_reachable = 0
+        percentages = list()
         for start, covered_instructions in whole_coverage.items():
             print("{}: {}/{} = {}".format(hex(start), len(covered_instructions), full_count[start],
                                           len(covered_instructions) / full_count[start]))
-            percent_covered.append(len(covered_instructions) / full_count[start])
+            percent_covered[start] = len(covered_instructions) / full_count[start]
+            percentages.append(len(covered_instructions) / full_count[start])
             total_executed += len(covered_instructions)
             total_reachable += full_count[start]
 
-        print("Mean function coverage: {}".format(statistics.mean(percent_covered)))
+        print("Mean function coverage: {}".format(statistics.mean(percentages)))
         print("Total coverage: {} / {} = {}".format(total_executed, total_reachable, total_executed / total_reachable))
 
-        with open('cov.map', "wb") as cov_out:
+        with open(results.cov, "wb") as cov_out:
             pickle.dump(coverage_map, cov_out)
+
+        with open(results.cov + ".pct", 'wb') as pct_out:
+            pickle.dump(percent_covered, pct_out)
+
+        with open(results.cov + ".whole", 'wb') as whole_out:
+            pickle.dump(whole_coverage, whole_out)
 
         with open(hash_file, "wb") as hashes_out:
             pickle.dump(context_hashes, hashes_out)
