@@ -914,7 +914,7 @@ void report_success(CONTEXT *ctx, THREADID tid) {
         ZergMessage msg(ZMSG_OK);
         /* The last instruction does not get executed, because we redirect control, so this accounts for that */
         executedInstructions[target].insert(last_ins_addr);
-        
+
         IOVec ioVec(&preContext, &currentContext, syscalls);
         msg.add_IOVec(ioVec);
         msg.add_coverage(executedInstructions);

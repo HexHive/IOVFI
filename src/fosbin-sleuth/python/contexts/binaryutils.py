@@ -1,4 +1,5 @@
 import os
+import statistics
 import struct
 import subprocess
 from concurrent import futures
@@ -400,3 +401,59 @@ def consolidate_contexts(pin_loc, pintool_loc, loader_loc, num_threads, contexts
                 continue
 
     return desc_map
+
+
+def get_functions_needing_fuzzing(func_desc_coverage, whole_coverage, threshold=0.7):
+    result = list()
+
+    for func_desc, coverage_data in func_desc_coverage.items():
+        func_coverage = 0
+        reachable_instructions = 0
+        total_call_graph_coverage = 0
+        for (instructions_executed, total_instructions) in coverage_data:
+            start_addr = instructions_executed[0]
+            func_coverage += len(instructions_executed)
+            reachable_instructions += total_instructions
+            total_call_graph_coverage += len(whole_coverage[start_addr])
+
+        if reachable_instructions == 0:
+            print("{} has 0 reachable instructions".format(func_desc.name))
+            continue
+
+        if func_coverage / reachable_instructions < threshold:
+            if total_call_graph_coverage / reachable_instructions > threshold:
+                print("{} has low {} coverage but {} call graph coverage".format(func_desc.name, func_coverage /
+                                                                                 reachable_instructions,
+                                                                                 total_call_graph_coverage / reachable_instructions))
+            else:
+                print("{} has low {} coverage and low {} call graph coverage".format(func_desc.name, func_coverage /
+                                                                                     reachable_instructions,
+                                                                                     total_call_graph_coverage / reachable_instructions))
+                result.append(func_desc)
+
+    return result
+
+
+def rank_iovecs(iovec_coverages):
+    instruction_counts = dict()
+    iovec_rankings = list()
+
+    for hash_sum, coverage_dict in iovec_coverages.items():
+        iovec_coverage = list()
+        for func_desc, coverage_data in coverage_dict.items():
+            instr_executed = 0
+            reachable_instructions = 0
+            for (instructions, instruction_count) in coverage_data:
+                start_addr = instructions[0]
+                if start_addr not in instruction_counts:
+                    instruction_counts[start_addr] = instruction_count
+                instr_executed += len(instructions)
+                reachable_instructions += instruction_counts[start_addr]
+            if reachable_instructions == 0:
+                print("{} has 0 reachable instructions".format(func_desc.name))
+                continue
+
+            iovec_coverage.append(instr_executed / reachable_instructions)
+        iovec_rankings.append((hash_sum, statistics.harmonic_mean(iovec_coverage), len(coverage_dict)))
+
+    return sorted(iovec_rankings, key=lambda ent: ent[1])

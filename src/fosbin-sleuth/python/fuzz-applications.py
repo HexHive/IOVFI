@@ -144,12 +144,12 @@ def main():
         full_count = dict()
         percent_covered = dict()
         for func_desc, coverages in coverage_map.items():
-            for (instructions, total_instructions) in coverages:
+            for (instructions, n_instructions) in coverages:
                 start = instructions[0]
                 if start not in whole_coverage:
                     whole_coverage[start] = set()
                 if start not in full_count:
-                    full_count[start] = total_instructions
+                    full_count[start] = n_instructions
                 for i in instructions:
                     whole_coverage[start].add(i)
 
