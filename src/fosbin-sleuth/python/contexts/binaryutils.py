@@ -4,6 +4,8 @@ import struct
 import subprocess
 from concurrent import futures
 
+import contexts.treeutils as tu
+
 from .FBLogging import logger
 from .FunctionDescriptor import FunctionDescriptor
 from .IOVec import IOVec
@@ -493,3 +495,30 @@ def compute_iovec_coverage(iovec_coverages):
         percent_coverages.append(len(executed_instructions) / total_reachable_instructions)
 
     return percent_coverages
+
+
+def compute_path_quality(dtree, func_name, iovec_coverages):
+    result = list()
+    path = tu.get_tree_path(dtree, func_name)
+    path_iovecs = list()
+    for idx in path:
+        path_iovecs.append(dtree.get_iovec(idx))
+
+    path_coverages = list()
+    for iovec in path_iovecs:
+        print(iovec.hexdigest())
+        if hash(iovec) in iovec_coverages:
+            for func_desc, coverage_data in iovec_coverages[hash(iovec)]:
+                if func_desc.name == func_name:
+                    path_coverages.append(coverage_data)
+                    break
+    if len(path_coverages) > 0:
+        ranked_iovecs = rank_iovecs(iovec_coverages, reverse=True)
+        percent_coverages = compute_iovec_coverage(iovec_coverages)
+
+        for iovec in path_iovecs:
+            hash_sum = hash(iovec)
+            for i in len(ranked_iovecs):
+                if ranked_iovecs[i][0] == hash_sum:
+                    result.append((ranked_iovecs[i], percent_coverages[i]))
+    return result

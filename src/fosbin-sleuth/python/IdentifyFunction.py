@@ -89,7 +89,7 @@ def main():
     parser.add_argument("-pindir", help="/path/to/pin-3.11/dir", required=True)
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
     parser.add_argument("-b", "--binary", help="/path/to/binary", required=True)
-    parser.add_argument("-loglevel", help="Set log level", default=logging.INFO)
+    parser.add_argument("-loglevel", help="Set log level", default=logging.DEBUG)
     parser.add_argument("-logprefix", help="Prefix to use before log files", default="")
     parser.add_argument("-threads", help="Number of threads to use", default=multiprocessing.cpu_count() * 8, type=int)
     parser.add_argument("-target", help="Location or function name to target")
