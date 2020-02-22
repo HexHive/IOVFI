@@ -5,6 +5,7 @@ import subprocess
 from concurrent import futures
 
 import contexts.treeutils as tu
+
 from .FBLogging import logger
 from .FunctionDescriptor import FunctionDescriptor
 from .IOVec import IOVec
@@ -182,7 +183,8 @@ def fuzz_one_function(fuzz_desc):
                     io_vec_coverage = read_coverage(result)
 
                     successful_contexts.add(io_vec)
-                    coverages[hash(io_vec)] = io_vec_coverage
+                    hash_sum = hash(io_vec)
+                    coverages[hash_sum] = io_vec_coverage
                     fuzz_count += 1
                     logger.info("{} created {} ({} of {})".format(run_name, io_vec.hexdigest(), fuzz_count,
                                                                   fuzz_desc.fuzz_count))
@@ -207,7 +209,7 @@ def fuzz_one_function(fuzz_desc):
                 pin_run.stop()
                 continue
     except Exception as e:
-        logger.debug("Error for {}: {}".format(run_name, e))
+        logger.exception("Error for {}: {}".format(run_name, e))
     finally:
         logger.info("Finished {}".format(run_name))
         pin_run.stop()
@@ -242,6 +244,7 @@ def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, wa
                 else:
                     unclassified.add(fuzz_run.func_desc)
             except Exception as e:
+                logger.exception(e)
                 continue
 
     return io_vecs_dict, unclassified

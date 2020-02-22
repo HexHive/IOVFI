@@ -352,31 +352,28 @@ VOID fuzz_registers() {
 }
 
 VOID record_current_context(CONTEXT *ctx) {
-    if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
-        wait_to_start();
-    }
-//        logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
-//        std::endl;
-//    logMsg << "Func "
-//               << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
-//               LEVEL_BASE::REG_RIP))
-//               << "(" << std::hex << PIN_GetContextReg(ctx, REG_INST_PTR)
-//               << "): "
-//               << INS_Disassemble(
-//                      INS_FindByAddress(PIN_GetContextReg(ctx,
-//                      LEVEL_BASE::REG_RIP)));
-//      log_message(logMsg);
+  if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
+    wait_to_start();
+  }
+  //        logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
+  //        std::endl;
+  logMsg << "Func "
+         << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP))
+         << "(" << std::hex << PIN_GetContextReg(ctx, REG_INST_PTR) << "): "
+         << INS_Disassemble(
+                INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
+  log_message(logMsg);
 
-    struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RCX),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RDX),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RDI),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSI),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R8),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R9),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R10),
-                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R11),
+  struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
+                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
+                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_RCX),
+                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_RDX),
+                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_RDI),
+                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_RSI),
+                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_R8),
+                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_R9),
+                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_R10),
+                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_R11),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R12),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R13),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R14),

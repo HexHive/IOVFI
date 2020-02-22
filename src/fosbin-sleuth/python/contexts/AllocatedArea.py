@@ -1,10 +1,11 @@
+import hashlib
 import struct
 
 AllocatedAreaMagic = 0xA110CA3D
 AllocatedAreaSize = 4096
 
-class AllocatedArea:
 
+class AllocatedArea:
     def __init__(self, file):
         self.size = struct.unpack_from("Q", file.read(8))[0]
         if self.size > AllocatedAreaSize:
@@ -35,15 +36,15 @@ class AllocatedArea:
         return hash(self) == hash(other)
 
     def __hash__(self):
-        hash_sum = 0
+        hash_sum = hashlib.sha256()
 
         for i in range(0, self.size):
-            hash_sum = hash((hash_sum, self.data[i]))
+            hash_sum.update(struct.pack('B', self.data[i]))
 
         for area in self.subareas:
-            hash_sum = hash((hash_sum, area))
+            hash_sum.update(hash(area))
 
-        return hash_sum
+        return int(hash_sum.hexdigest(), 16)
 
     def write_bin(self, file):
         file.write(struct.pack("Q", self.size))

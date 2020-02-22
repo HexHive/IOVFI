@@ -1,3 +1,4 @@
+import hashlib
 import struct
 
 from .AllocatedArea import AllocatedArea, AllocatedAreaMagic
@@ -17,15 +18,15 @@ class X86Context:
                 self.allocated_areas.append(AllocatedArea(infile))
 
     def __hash__(self):
-        hash_sum = 0
+        hash_sum = hashlib.sha256()
 
         for reg in self.register_values:
-            hash_sum = hash((hash_sum, reg))
+            hash_sum.update(struct.pack('P', reg))
 
         for area in self.allocated_areas:
-            hash_sum = hash((hash_sum, area))
+            hash_sum.update(struct.pack('N', hash(area)))
 
-        return hash_sum
+        return int(hash_sum.hexdigest(), 16)
 
     def __eq__(self, other):
         return hash(self) == hash(other)

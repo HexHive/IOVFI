@@ -1,7 +1,5 @@
-
 import hashlib
 import struct
-import sys
 
 from .X86Context import X86Context
 
@@ -18,7 +16,7 @@ class IOVec:
         self.syscalls.sort()
 
     def __hash__(self):
-        return hash((self.input, self.output))
+        return int(self._get_hash_obj().hexdigest(), 16)
 
     def __str__(self):
         return self.hexdigest()
@@ -27,8 +25,14 @@ class IOVec:
         return hash(self) == hash(other)
 
     def _get_hash_obj(self):
-        hash_sum = hashlib.md5()
-        hash_sum.update(hash(self).to_bytes(8, sys.byteorder, signed=True))
+        hash_sum = hashlib.sha256()
+        in_hash = hash(self.input)
+        out_hash = hash(self.input)
+        hash_sum.update(struct.pack('N', in_hash))
+        hash_sum.update(struct.pack('N', out_hash))
+
+        for syscall in self.syscalls:
+            hash_sum.update(struct.pack('Q', syscall))
         return hash_sum
 
     def write_bin(self, out_file):
@@ -39,5 +43,5 @@ class IOVec:
         hash_sum = self._get_hash_obj()
         return hash_sum.hexdigest()
 
-    def size_in_bytes(self):
-        return self.input.size_in_bytes() + self.output.size_in_bytes()
+    # def size_in_bytes(self):
+    #     return self.input.size_in_bytes() + self.output.size_in_bytes()
