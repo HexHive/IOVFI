@@ -108,6 +108,11 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
     return location_map
 
 
+def get_log_names(func_desc):
+    run_name = "{}.{}.{}".format(os.path.basename(func_desc.binary), func_desc.name, func_desc.location)
+    return run_name + ".log", run_name + ".cmd.log"
+
+
 def fuzz_one_function(fuzz_desc):
     pin_run = None
     func_name = fuzz_desc.func_desc.name
@@ -127,8 +132,9 @@ def fuzz_one_function(fuzz_desc):
             logger.debug("{} target is {}".format(run_name, target))
         pipe_in = os.path.join(fuzz_desc.work_dir, run_name + ".in")
         pipe_out = os.path.join(fuzz_desc.work_dir, run_name + ".out")
-        log_out = os.path.join("logs", "fuzz", run_name + ".log")
-        cmd_log = os.path.join("logs", "fuzz", run_name + ".cmd.log")
+        log_names = get_log_names(fuzz_desc.func_desc)
+        log_out = os.path.join("logs", "fuzz", log_names[0])
+        cmd_log = os.path.join("logs", "fuzz", log_names[1])
         # cmd_log = os.path.abspath("/dev/null")
         if not os.path.exists(os.path.dirname(log_out)):
             os.makedirs(os.path.dirname(log_out), exist_ok=True)

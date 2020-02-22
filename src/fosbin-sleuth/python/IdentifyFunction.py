@@ -66,8 +66,11 @@ def single_test(func_desc):
     global error_msgs, pinLoc, pintoolLoc, fbDtree, n_confirms, rust_main, fbLoader
 
     try:
+        log_names = binaryutils.get_log_names(func_desc)
+        log = os.path.join('logs', 'identify', log_names[0])
+        cmd_log = os.path.join('logs', 'identify', log_names[1])
         guess = fbDtree.identify(func_desc, pinLoc, pintoolLoc, cwd=WORK_DIR, max_confirm=n_confirms,
-                                 rust_main=rust_main, loader_loc=fbLoader)
+                                 rust_main=rust_main, loader_loc=fbLoader, cmd_log_loc=cmd_log, log_loc=log)
         guess_lock.acquire()
         guesses[func_desc] = guess
         guess_lock.release()
@@ -89,7 +92,7 @@ def main():
     parser.add_argument("-pindir", help="/path/to/pin-3.11/dir", required=True)
     parser.add_argument("-tool", help="/path/to/pintool", required=True)
     parser.add_argument("-b", "--binary", help="/path/to/binary", required=True)
-    parser.add_argument("-loglevel", help="Set log level", default=logging.DEBUG)
+    parser.add_argument("-loglevel", help="Set log level", default=logging.INFO)
     parser.add_argument("-logprefix", help="Prefix to use before log files", default="")
     parser.add_argument("-threads", help="Number of threads to use", default=multiprocessing.cpu_count() * 8, type=int)
     parser.add_argument("-target", help="Location or function name to target")
@@ -107,7 +110,7 @@ def main():
     n_confirms = results.n
     fbLoader = results.ld
 
-    logpath = os.path.abspath(os.path.join("logs", "identifying", results.logprefix))
+    logpath = os.path.abspath(os.path.join("logs", "identify", results.logprefix))
     if not os.path.exists(logpath):
         os.makedirs(logpath, exist_ok=True)
     loghandler = logging.FileHandler(os.path.join(logpath, os.path.basename(binaryLoc) + ".log"), mode="w")
@@ -168,17 +171,16 @@ def main():
     logger.info("++++++++++++++++++++++++++++++++++++++++++++")
     for func_desc, guess in guesses.items():
         indicator = "X"
-        guess_descs = fbDtree.get_equiv_classes(guess)
 
         guess_list = list()
-        if guess_descs is None:
+        if guess is None:
             indicator = "?"
         else:
-            for func in guess_descs:
+            for func in guess.get_equivalence_class():
                 if func.name.find(func_desc.name) >= 0:
                     indicator = "!"
                     break
-            for func in guess_descs:
+            for func in guess.get_equivalence_class():
                 guess_list.append(str(func))
 
         logger.info("[{}] {}: {}".format(indicator, func_desc.name, " ".join(guess_list)))

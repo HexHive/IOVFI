@@ -198,6 +198,8 @@ class PinRun:
 
         logger.debug("Running {}".format(" ".join(cmd)))
         if self.log_loc is not None:
+            if not os.path.exists(os.path.dirname(self.log_loc)):
+                os.makedirs(os.path.dirname(self.log_loc), exist_ok=True)
             self.log = open(self.log_loc, "a+")
 
         self.pin_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True, stdout=self.log, stderr=self.log)

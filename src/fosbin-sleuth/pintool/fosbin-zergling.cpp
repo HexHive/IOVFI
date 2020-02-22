@@ -357,12 +357,14 @@ VOID record_current_context(CONTEXT *ctx) {
   }
   //        logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
   //        std::endl;
-  logMsg << "Func "
-         << RTN_FindNameByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP))
-         << "(" << std::hex << PIN_GetContextReg(ctx, REG_INST_PTR) << "): "
-         << INS_Disassemble(
-                INS_FindByAddress(PIN_GetContextReg(ctx, LEVEL_BASE::REG_RIP)));
-  log_message(logMsg);
+  //  logMsg << "Func "
+  //         << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
+  //         LEVEL_BASE::REG_RIP))
+  //         << "(" << std::hex << PIN_GetContextReg(ctx, REG_INST_PTR) << "): "
+  //         << INS_Disassemble(
+  //                INS_FindByAddress(PIN_GetContextReg(ctx,
+  //                LEVEL_BASE::REG_RIP)));
+  //  log_message(logMsg);
 
   struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
                            PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
@@ -425,10 +427,10 @@ EXCEPT_HANDLING_RESULT globalSegfaultHandler(THREADID tid,
                                              EXCEPTION_INFO *exceptionInfo,
                                              PHYSICAL_CONTEXT *physContext,
                                              VOID *v) {
-    logMsg << "Global segfault handler called: "
-           << PIN_ExceptionToString(exceptionInfo);
-    log_error(logMsg);
-    return EHR_UNHANDLED;
+  logMsg << "Global segfault handler called: "
+         << PIN_ExceptionToString(exceptionInfo);
+  log_message(logMsg);
+  return EHR_UNHANDLED;
 }
 
 const std::string getCurrentContext(const CONTEXT *ctx, UINT32 sig) {
@@ -1371,8 +1373,8 @@ int main(int argc, char **argv) {
 
     PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
     PIN_AddInternalExceptionHandler(globalSegfaultHandler, nullptr);
-    PIN_AddFiniFunction(fini, nullptr);
-    PIN_AddContextChangeFunction(ctxChange, nullptr);
+    //    PIN_AddFiniFunction(fini, nullptr);
+    //    PIN_AddContextChangeFunction(ctxChange, nullptr);
 
     log_message("Starting");
     PIN_StartProgram();

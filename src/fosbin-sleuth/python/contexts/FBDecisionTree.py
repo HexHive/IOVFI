@@ -206,7 +206,7 @@ class FBDecisionTree:
 
         try:
             self._log("Confirming {}({}) is {}".format(func_desc.name, hex(func_desc.location),
-                                                       " ".join(equiv_class_names)))
+                                                       " ".join([fd.name for fd in node.get_equivalence_class()])))
             if not node.is_leaf():
                 raise AssertionError("Node is not a leaf")
 
@@ -243,8 +243,9 @@ class FBDecisionTree:
     #         return None
 
     def identify(self, func_desc, pin_loc, pintool_loc, loader_loc=None, cwd=os.getcwd(), max_confirm=MAX_CONFIRM,
-                 rust_main=None):
-        pin_run = PinRun(pin_loc, pintool_loc, func_desc.binary, loader_loc, cwd=cwd, rust_main=rust_main)
+                 rust_main=None, cmd_log_loc=None, log_loc=None):
+        pin_run = PinRun(pin_loc, pintool_loc, func_desc.binary, loader_loc, cwd=cwd, rust_main=rust_main,
+                         cmd_log_loc=cmd_log_loc, log_loc=log_loc)
 
         current_node = self.root
 
@@ -361,6 +362,7 @@ class FBDecisionTree:
         self._log("Creating decision tree...")
         dtree.fit(funcs_features, funcs_labels)
         nodes = dict()
+        path_iovec_hashes = set()
         for index in range(0, dtree.tree_.node_count):
             right_child = dtree.tree_.children_right[index]
             left_child = dtree.tree_.children_left[index]
@@ -368,7 +370,9 @@ class FBDecisionTree:
                 nodes[index] = FBDecisionTreeLeafNode(identifier=index)
             else:
                 iovec_hash = labels.inverse_transform([dtree.tree_.feature[index]])[0]
+                path_iovec_hashes.add(iovec_hash)
                 iovec = iovec_hash_map[iovec_hash]
+                self._log("Adding IOVec {} to path".format(iovec))
                 nodes[index] = FBDecisionTreeInteriorNode(iovec=iovec, coverage=iovec_coverages[iovec_hash],
                                                           identifier=index)
 
@@ -400,7 +404,10 @@ class FBDecisionTree:
 
                 confirmation_iovecs = list()
                 for iovec_hash in confirmation_iovec_hashes:
-                    confirmation_iovecs.append(iovec_coverages[iovec_hash])
+                    if iovec_hash not in path_iovec_hashes:
+                        self._log(
+                            "Adding iovec {} to node {}".format(iovec_hash_map[iovec_hash], current_node.identifier))
+                        confirmation_iovecs.append(iovec_hash_map[iovec_hash])
                 current_node.set_confirmation_iovecs(confirmation_iovecs)
         self._log("done!")
 
