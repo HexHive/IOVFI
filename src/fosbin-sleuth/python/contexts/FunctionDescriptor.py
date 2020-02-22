@@ -1,3 +1,4 @@
+import hashlib
 import os
 
 
@@ -21,11 +22,16 @@ class FunctionDescriptor:
             result += ".{}".format(self.name)
         else:
             result += ".0x{}".format(hex(self.location))
-
         return result
 
-    def __hash__(self):
-        if self.name is not None:
-            return hash((self.binary, self.name))
+    def hash(self):
+        m = hashlib.sha256()
+        m.update(self.binary)
+        if self.name is None:
+            m.update(self.location)
         else:
-            return hash((self.binary, self.location))
+            m.update(self.name)
+        return m.digest()
+
+    def __hash__(self):
+        return self.hash()
