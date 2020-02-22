@@ -316,12 +316,12 @@ class FBDecisionTree:
         if not os.path.exists(iovec_hash_map):
             raise FileNotFoundError(iovec_hash_map)
 
-        self.log("Loading {}...".format(iovec_coverage_location))
+        self._log("Loading {}...".format(iovec_coverage_location))
         with open(iovec_coverage_location, "rb") as f:
             iovec_coverages = pickle.load(f)
         self._log("done!")
 
-        self.log("Loading {}...".format(iovec_hash_map))
+        self._log("Loading {}...".format(iovec_hash_map))
         with open(iovec_hash_map, "rb") as f:
             iovec_hash_map = pickle.load(f)
         self._log("done!")
@@ -386,27 +386,26 @@ class FBDecisionTree:
                 current_node.set_right_child(right_child)
             else:
                 # We are a leaf, the parent member will be set elsewhere
-                equivalence_class = set()
+                equivalence_class = list()
                 confirmation_iovec_hashes = set()
                 for i in range(len(dtree.tree_.value[index][0])):
                     if dtree.tree_.value[index][0][i]:
                         hash_sum = dtree.classes_[i]
-                        equivalence_class.add(added_func_descs[hash_sum])
+                        equivalence_class.append(added_func_descs[hash_sum])
                         for iovec_hash in accepted_iovecs[hash_sum]:
                             confirmation_iovec_hashes.add(iovec_hash)
 
                 current_node.set_equivalence_class(equivalence_class)
-                self.equivalence_classes.add(equivalence_class)
+                self.equivalence_classes.append(equivalence_class)
 
                 confirmation_iovecs = list()
                 for iovec_hash in confirmation_iovec_hashes:
                     confirmation_iovecs.append(iovec_coverages[iovec_hash])
                 current_node.set_confirmation_iovecs(confirmation_iovecs)
-
         self._log("done!")
 
     def __init__(self, iovec_coverage_location, iovec_hash_map):
         self.root = None
         self.func_descs = set()
-        self.equivalence_classes = set()
-        self.gen_dtree(iovec_coverage_location, iovec_coverage_location)
+        self.equivalence_classes = list()
+        self.gen_dtree(iovec_coverage_location, iovec_hash_map)
