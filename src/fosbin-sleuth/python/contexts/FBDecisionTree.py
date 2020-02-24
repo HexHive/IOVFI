@@ -93,7 +93,7 @@ class FBDecisionTree:
     WATCHDOG = 1.0
     MAX_CONFIRM = 1
 
-    def _log(self, msg, level=logging.INFO):
+    def _log(self, msg, level=logging.DEBUG):
         logger.log(level, msg)
 
     # def _find_dtree_idx(self, index):
@@ -181,6 +181,11 @@ class FBDecisionTree:
 
     def get_all_equiv_classes(self):
         return self.equivalence_classes
+
+    def get_all_interior_nodes(self):
+        for _, node in self.nodes.items():
+            if isinstance(node, FBDecisionTreeInteriorNode):
+                yield node
 
     # def get_equiv_classes(self, index):
     #     if index == self.UNKNOWN_FUNC:
@@ -344,7 +349,9 @@ class FBDecisionTree:
         for hash_sum, coverage_map in iovec_coverages.items():
             idx = labels.transform([hash_sum])[0]
             for func_desc, _ in coverage_map.items():
-                func_desc_hash = func_desc.hash()
+                func_desc_hash = hash(func_desc)
+                self._log("Function {} ({}) accepts IOVec {}".format(func_desc_hash, func_desc.name,
+                                                                     hex(hash_sum)))
                 if func_desc_hash not in accepted_iovecs:
                     accepted_iovecs[func_desc_hash] = set()
                 accepted_iovecs[func_desc_hash].add(hash_sum)
@@ -361,31 +368,31 @@ class FBDecisionTree:
         dtree = tree.DecisionTreeClassifier()
         self._log("Creating decision tree...")
         dtree.fit(funcs_features, funcs_labels)
-        nodes = dict()
+        self.nodes = dict()
         path_iovec_hashes = set()
         for index in range(0, dtree.tree_.node_count):
             right_child = dtree.tree_.children_right[index]
             left_child = dtree.tree_.children_left[index]
             if left_child == right_child:
-                nodes[index] = FBDecisionTreeLeafNode(identifier=index)
+                self.nodes[index] = FBDecisionTreeLeafNode(identifier=index)
             else:
                 iovec_hash = labels.inverse_transform([dtree.tree_.feature[index]])[0]
                 path_iovec_hashes.add(iovec_hash)
                 iovec = iovec_hash_map[iovec_hash]
                 self._log("Adding IOVec {} to path".format(iovec))
-                nodes[index] = FBDecisionTreeInteriorNode(iovec=iovec, coverage=iovec_coverages[iovec_hash],
-                                                          identifier=index)
+                self.nodes[index] = FBDecisionTreeInteriorNode(iovec=iovec, coverage=iovec_coverages[iovec_hash],
+                                                               identifier=index)
 
         for index in range(0, dtree.tree_.node_count):
             right_child_idx = dtree.tree_.children_right[index]
             left_child_idx = dtree.tree_.children_left[index]
-            current_node = nodes[index]
+            current_node = self.nodes[index]
             if index == 0:
                 self.root = current_node
 
             if right_child_idx != left_child_idx:
-                right_child = nodes[right_child_idx]
-                left_child = nodes[left_child_idx]
+                right_child = self.nodes[right_child_idx]
+                left_child = self.nodes[left_child_idx]
                 current_node.set_left_child(left_child)
                 current_node.set_right_child(right_child)
             else:
@@ -395,9 +402,16 @@ class FBDecisionTree:
                 for i in range(len(dtree.tree_.value[index][0])):
                     if dtree.tree_.value[index][0][i]:
                         hash_sum = dtree.classes_[i]
-                        equivalence_class.append(added_func_descs[hash_sum])
-                        for iovec_hash in accepted_iovecs[hash_sum]:
-                            confirmation_iovec_hashes.add(iovec_hash)
+                        if hash_sum in added_func_descs:
+                            func_desc_to_add = added_func_descs[hash_sum]
+                            self._log(
+                                "Adding func desc {} to node {}".format(func_desc_to_add, current_node.identifier))
+                            equivalence_class.append(func_desc_to_add)
+                            for iovec_hash in accepted_iovecs[hash_sum]:
+                                confirmation_iovec_hashes.add(iovec_hash)
+                        else:
+                            self._log("Func desc {} is not in added_func_descs".format(hash_sum))
+                            continue
 
                 current_node.set_equivalence_class(equivalence_class)
                 self.equivalence_classes.append(equivalence_class)
@@ -414,5 +428,6 @@ class FBDecisionTree:
     def __init__(self, iovec_coverage_location, iovec_hash_map):
         self.root = None
         self.func_descs = set()
+        self.nodes = dict()
         self.equivalence_classes = list()
         self.gen_dtree(iovec_coverage_location, iovec_hash_map)
