@@ -6,11 +6,12 @@ import multiprocessing
 import os
 import pickle
 import random
+import statistics
 import threading
 from concurrent import futures
 
-from contexts import binaryutils
-from contexts.FBDecisionTree import FBDecisionTree
+from contexts import binaryutils as bu
+from contexts import treeutils as tu
 from contexts.FBLogging import logger
 
 dangerous_functions = {'kill', '_exit', 'exit', '__kill', '_Exit', }
@@ -18,6 +19,7 @@ error_lock = threading.RLock()
 error_msgs = list()
 
 guesses = dict()
+coverages = dict()
 guess_lock = threading.RLock()
 
 guessLoc = None
@@ -65,14 +67,46 @@ def check_inputs(argparser):
 def single_test(func_desc):
     global error_msgs, pinLoc, pintoolLoc, fbDtree, n_confirms, rust_main, fbLoader
 
+    coverage_window = 0.7
+
     try:
-        log_names = binaryutils.get_log_names(func_desc)
+        log_names = bu.get_log_names(func_desc)
         log = os.path.join('logs', 'identify', log_names[0])
         cmd_log = os.path.join('logs', 'identify', log_names[1])
-        guess = fbDtree.identify(func_desc, pinLoc, pintoolLoc, cwd=WORK_DIR, max_confirm=n_confirms,
-                                 rust_main=rust_main, loader_loc=fbLoader, cmd_log_loc=cmd_log, log_loc=log)
+        guess, coverage = fbDtree.identify(func_desc, pinLoc, pintoolLoc, cwd=WORK_DIR, max_confirm=n_confirms,
+                                           rust_main=rust_main, loader_loc=fbLoader, cmd_log_loc=cmd_log, log_loc=log)
+
+        if guess is not None:
+            tmp_coverages = list()
+            ec_list = list(guess.equivalence_class)
+            for ec in ec_list:
+                tmp_coverages.append(tu.compute_path_coverage(fbDtree, ec.name))
+            tmp_coverages.sort()
+
+            reachable_instructions_count = bu.compute_total_reachable_instruction_count(coverage)
+            if reachable_instructions_count == 0:
+                guess = None
+            else:
+                executed_instruction_count = bu.compute_total_executed_instruction_count(coverage)
+                pct_cov = executed_instruction_count / reachable_instructions_count
+                close_coverage = False
+                for cov in tmp_coverages:
+                    if pct_cov * (1 - coverage_window) <= cov <= min(1.0, pct_cov * (1 + coverage_window)):
+                        close_coverage = True
+                if not close_coverage:
+                    # logger.info("Original guess removed for {} ({})".format(func_desc.name, " ".join([fd.name for fd
+                    #                                                                                   in ec_list
+                    #                                                                                   ])))
+                    # logger.info("\t{} vs. ({})".format(str(pct_cov), " ".join([str(c) for c in tmp_coverages])))
+                    # logger.info("\n{}: {}".format(func_desc.name, coverage))
+                    # for ec in ec_list:
+                    #     logger.info("{}: {}\n".format(ec.name, tu.get_tree_coverage(fbDtree, ec.name)))
+                    # logger.info("\n")
+                    guess = None
+
         guess_lock.acquire()
         guesses[func_desc] = guess
+        coverages[func_desc] = coverage
         guess_lock.release()
     except Exception as e:
         error_lock.acquire()
@@ -80,7 +114,8 @@ def single_test(func_desc):
         logger.exception("Error: {}".format(e))
         error_lock.release()
         guess_lock.acquire()
-        guesses[func_desc] = FBDecisionTree.UNKNOWN_FUNC
+        guesses[func_desc] = None
+        coverages[func_desc] = None
         guess_lock.release()
 
 
@@ -141,7 +176,7 @@ def main():
             logger.debug("done")
 
         msg = "Finding functions in {}...".format(binaryLoc)
-        location_map = binaryutils.find_funcs(binaryLoc, results.target, ignored_funcs)
+        location_map = bu.find_funcs(binaryLoc, results.target, ignored_funcs)
         logger.info(msg + "done!")
         logger.info("Found {} functions".format(len(location_map)))
 
@@ -184,6 +219,19 @@ def main():
                 guess_list.append(str(func))
 
         logger.info("[{}] {}: {}".format(indicator, func_desc.name, " ".join(guess_list)))
+        if guess is not None:
+            tmp_coverages = list()
+            for ec in guess.equivalence_class:
+                tmp_coverages.append(tu.compute_path_coverage(fbDtree, ec.name))
+            tmp_coverages.sort()
+
+            reachable_instructions_count = bu.compute_total_reachable_instruction_count(coverages[func_desc])
+            executed_instruction_count = bu.compute_total_executed_instruction_count(coverages[func_desc])
+            if executed_instruction_count > 0:
+                logger.info("\tCoverage: {} vs. {} ({})".format(executed_instruction_count /
+                                                                reachable_instructions_count,
+                                                                statistics.mean(tmp_coverages),
+                                                                " ".join([str(f) for f in tmp_coverages])))
 
 
 if __name__ == "__main__":

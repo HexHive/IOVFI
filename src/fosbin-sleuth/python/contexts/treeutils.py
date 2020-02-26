@@ -53,19 +53,20 @@ def get_evaluation(tree, guesses, equivalence_map=None):
     func_names = set()
     true_pos = set()
     true_neg = set()
-    incorrect = set()
+    labeled_known_when_unknown = set()
+    labeled_unknown_when_known = set()
+    labeled_incorrectly = set()
+
     for fd in tree.get_func_descs():
         func_names.add(fd.name)
 
-    for func_desc, idx in guesses.items():
+    for func_desc, guess in guesses.items():
         if "ifunc" in func_desc.name:
             continue
 
-        equiv_class = tree.get_equiv_classes(idx)
-        if equiv_class is not None:
-
+        if guess is not None:
             found = False
-            for ec in equiv_class:
+            for ec in guess.get_equivalence_class():
                 if "ifunc" in ec.name:
                     continue
 
@@ -85,14 +86,34 @@ def get_evaluation(tree, guesses, equivalence_map=None):
             if found:
                 true_pos.add(func_desc.name)
             else:
-                incorrect.add(func_desc.name)
+                path = get_tree_path(tree, func_desc.name)
+                if len(path) > 0:
+                    labeled_incorrectly.add(func_desc.name)
+                else:
+                    labeled_known_when_unknown.add(func_desc.name)
         else:
             if func_desc.name in func_names:
-                incorrect.add(func_desc.name)
+                labeled_unknown_when_known.add(func_desc.name)
             else:
                 true_neg.add(func_desc.name)
 
-    return true_pos, true_neg, incorrect
+    true_pos_list = list(true_pos)
+    true_pos_list.sort()
+
+    true_neg_list = list(true_neg)
+    true_neg_list.sort()
+
+    labeled_incorrectly_list = list(labeled_incorrectly)
+    labeled_incorrectly_list.sort()
+
+    labeled_known_when_unknown_list = list(labeled_known_when_unknown)
+    labeled_known_when_unknown_list.sort()
+
+    labeled_unknown_when_known_list = list(labeled_unknown_when_known)
+    labeled_unknown_when_known_list.sort()
+
+    return true_pos_list, true_neg_list, labeled_incorrectly_list, labeled_known_when_unknown_list, \
+           labeled_unknown_when_known_list
 
 
 def get_tree_coverage(dtree, target_func_desc_name):
@@ -158,7 +179,7 @@ def _dfs_tree(func_name, path):
         return False
 
 
-def compute_path_quality(dtree, func_name):
+def compute_path_coverage(dtree, func_name):
     path = get_tree_path(dtree, func_name)
     executed_instructions = list()
     total_instruction_count = list()

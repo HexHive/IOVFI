@@ -148,7 +148,10 @@ class FBDecisionTree:
         resp_msg = pin_run.read_response(watchdog)
         if resp_msg is None:
             raise AssertionError("Execute command did not return")
-        return resp_msg.msgtype == PinMessage.ZMSG_OK
+        if resp_msg.msgtype == PinMessage.ZMSG_OK:
+            return True, resp_msg.get_coverage()
+        else:
+            return False, None
 
     # def _child(self, index, right_child):
     #     if index < 0:
@@ -216,17 +219,19 @@ class FBDecisionTree:
                 raise AssertionError("Node is not a leaf")
 
             try_count = 0
+            coverages = list()
             for iovec in node.get_confirmation_iovecs():
                 self._log("Using iovec {}".format(iovec.hexdigest()))
                 try_count += 1
-                if not self._attempt_ctx(iovec, pin_run):
-                    return False
+                accepted, coverage = self._attempt_ctx(iovec, pin_run)
+                if not accepted:
+                    return False, None
                 if try_count >= max_iovecs:
                     break
-            return True
+                coverages.append(coverage)
+            return True, coverages
         except Exception as e:
-            logger.exception(e)
-            raise e
+            return False, None
 
     # def _get_hash(self, index):
     #     base_dtree_index = self._find_dtree_idx(index)
@@ -254,6 +259,7 @@ class FBDecisionTree:
 
         current_node = self.root
 
+        coverages = list()
         try:
             while current_node is not None:
                 if not pin_run.is_running():
@@ -275,15 +281,18 @@ class FBDecisionTree:
 
                 if current_node.is_leaf():
                     try:
-                        if self._confirm_leaf(func_desc, current_node, pin_run, max_confirm):
+                        confirmed, coverage = self._confirm_leaf(func_desc, current_node, pin_run, max_confirm)
+                        if confirmed:
+                            for cov in coverage:
+                                coverages.append(cov)
                             pin_run.stop()
-                            return current_node
+                            return current_node, coverages
                         break
                     except RuntimeError as e:
                         # No available hashes, so just mark the identified leaf
                         # as the identified leaf
                         pin_run.stop()
-                        return current_node
+                        return current_node, coverages
                     except Exception as e:
                         logger.debug("Error confirming leaf for {}: {}".format(func_desc, e))
                         break
@@ -291,17 +300,18 @@ class FBDecisionTree:
                 iovec_accepted = False
                 try:
                     logger.debug("Trying iovec {} ({})".format(current_node.identifier, current_node.iovec.hexdigest()))
-                    iovec_accepted = self._attempt_ctx(current_node.iovec, pin_run)
+                    iovec_accepted, coverage = self._attempt_ctx(current_node.iovec, pin_run)
                 except Exception as e:
                     logger.debug("Error testing iovec for {}: {}".format(str(func_desc), e))
 
                 if iovec_accepted:
                     current_node = current_node.get_right_child()
+                    coverages.append(coverage)
                 else:
                     current_node = current_node.get_left_child()
 
             pin_run.stop()
-            return None
+            return None, None
         except Exception as e:
             pin_run.stop()
             raise e

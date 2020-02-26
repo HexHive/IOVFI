@@ -1,6 +1,5 @@
 import copy
 import os
-import struct
 import subprocess
 from concurrent import futures
 
@@ -54,29 +53,6 @@ class FuzzRunResult:
 
     def __len__(self):
         return len(self.io_vecs)
-
-
-def read_coverage(resp_msg):
-    curr_pos = resp_msg.data.tell()
-    coveragesize = struct.unpack_from('N', resp_msg.data.getbuffer(), curr_pos)[0]
-    coverage = list()
-    resp_msg.data.seek(curr_pos + struct.calcsize('N'))
-    for i in range(coveragesize):
-        curr_pos = resp_msg.data.tell()
-        (numInstructions, totalInstructions) = struct.unpack_from('NN', resp_msg.data.getbuffer(), curr_pos)
-        resp_msg.data.seek(curr_pos + struct.calcsize('NN'))
-
-        instructionAddrs = list()
-        curr_pos = resp_msg.data.tell()
-        fmt = 'P' * numInstructions
-        instructions = struct.unpack_from(fmt, resp_msg.data.getbuffer(), curr_pos)
-        resp_msg.data.seek(curr_pos + struct.calcsize(fmt))
-        for addr in instructions:
-            instructionAddrs.append(addr)
-        instructionAddrs.sort()
-        coverage.append((instructionAddrs, totalInstructions))
-
-    return coverage
 
 
 def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
@@ -184,7 +160,7 @@ def fuzz_one_function(fuzz_desc):
                 result = pin_run.read_response(timeout=fuzz_desc.watchdog)
                 if result is not None and result.msgtype == PinMessage.ZMSG_OK:
                     io_vec = IOVec(result.data)
-                    io_vec_coverage = read_coverage(result)
+                    io_vec_coverage = result.get_coverage()
 
                     successful_contexts.add(io_vec)
                     hash_sum = hash(io_vec)
@@ -355,7 +331,7 @@ def consolidate_one_function(consolidationRunDesc):
 
             resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
             if resp_msg is not None and resp_msg.msgtype == PinMessage.ZMSG_OK:
-                coverage = read_coverage(resp_msg)
+                coverage = resp_msg.get_coverage()
                 desc_map[hash(iovec)] = (func_desc, coverage)
                 logger.info("{} accepts {} ({})".format(run_name, iovec.hexdigest(), ctx_count))
             else:
@@ -575,3 +551,25 @@ def compute_iovec_coverage(iovec_coverages):
         percent_coverages.append(len(executed_instructions) / total_reachable_instructions)
 
     return percent_coverages
+
+
+def compute_total_reachable_instruction_count(coverages):
+    reachable_instruction_count = dict()
+    total_reachable = 0
+    for coverage_data in coverages:
+        for (instructions, instruction_count) in coverage_data:
+            start_addr = instructions[0]
+            if start_addr not in reachable_instruction_count:
+                total_reachable += instruction_count
+                reachable_instruction_count[start_addr] = instruction_count
+
+    return total_reachable
+
+
+def compute_total_executed_instruction_count(coverages):
+    executed_instructions = set()
+    for coverage_data in coverages:
+        for (instructions, instruction_count) in coverage_data:
+            for inst in instructions:
+                executed_instructions.add(inst)
+    return len(executed_instructions)
