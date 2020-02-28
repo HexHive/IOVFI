@@ -178,24 +178,23 @@ def _dfs_tree(func_name, path):
         path.pop()
         return False
 
-
-def compute_path_coverage(dtree, func_name):
-    path = get_tree_path(dtree, func_name)
-    executed_instructions = list()
-    total_instruction_count = list()
-    for node in path:
-        if isinstance(node, FBDtree.FBDecisionTreeInteriorNode):
-            for (func_desc, coverage) in node.get_coverage().items():
-                if func_desc.name == func_name:
-                    for (instructions, total_instructions) in coverage:
-                        executed_instructions.append(len(instructions))
-                        total_instruction_count.append(total_instructions)
-                    break
-
-    if sum(total_instruction_count) > 0:
-        return sum(executed_instructions) / sum(total_instruction_count)
-    else:
-        return 0
+# def compute_path_coverage(dtree, func_name):
+#     path = get_tree_path(dtree, func_name)
+#     executed_instructions = list()
+#     total_instruction_count = list()
+#     for node in path:
+#         if isinstance(node, FBDtree.FBDecisionTreeInteriorNode):
+#             for (func_desc, coverage) in node.get_coverage().items():
+#                 if func_desc.name == func_name:
+#                     for (instructions, total_instructions) in coverage:
+#                         executed_instructions.append(len(instructions))
+#                         total_instruction_count.append(total_instructions)
+#                     break
+#
+#     if sum(total_instruction_count) > 0:
+#         return sum(executed_instructions) / sum(total_instruction_count)
+#     else:
+#         return 0
 
 # def get_func_indices(tree):
 #     tree_funcs = dict()
