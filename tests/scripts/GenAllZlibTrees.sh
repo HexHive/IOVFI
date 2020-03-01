@@ -26,19 +26,19 @@ for d in $(find $ZLIB_DIR -mindepth 1 -maxdepth 1 -type d); do
   cd $CURR_DIR
   if [ ! -f "$TIME_FILE" ] || [ -z "$(grep "Fuzz End" $TIME_FILE)" ]; then
     echo "Fuzz Start: $(date)" >$TIME_FILE
-    python3 $TOP_DIR/src/fosbin-sleuth/python/fuzz-applications.py -pindir $PINDIR -tool $PINTOOL \
+    python3 $TOP_DIR/src/software-ethology/python/fuzz-applications.py -pindir $PINDIR -tool $PINTOOL \
       -ignore $IGNORE_FILE -bin $d/lib/libz.so -ld $FB_LOADER
     echo "Fuzz End: $(date)" >>$TIME_FILE
   fi
   if [ -z "$(grep "Consolidation End" $TIME_FILE)" ]; then
     echo "Consolidation Start: $(date)" >>$TIME_FILE
-    python3 $TOP_DIR/src/fosbin-sleuth/python/ConsolidateContexts.py -pindir $PINDIR -tool $PINTOOL \
+    python3 $TOP_DIR/src/software-ethology/python/ConsolidateContexts.py -pindir $PINDIR -tool $PINTOOL \
       -ignore $IGNORE_FILE -ld $FB_LOADER
     echo "Consolidation End: $(date)" >>$TIME_FILE
   fi
   if [ -z "$(grep "Tree Generation End" $TIME_FILE)" ]; then
     echo "Tree Generation Start: $(date)" >>$TIME_FILE
-    python3 $TOP_DIR/src/fosbin-sleuth/python/GenDecisionTree.py
+    python3 $TOP_DIR/src/software-ethology/python/GenDecisionTree.py
     echo "Tree Generation End: $(date)" >>$TIME_FILE
   fi
   rm -rf logs/ _work/

@@ -14,7 +14,7 @@ DATA_DIR="$(realpath $1)"
 PIN=$(realpath $2)
 PINTOOL=$(realpath $3)
 TESTS=$(realpath $4)
-ID_SCRIPT=$(realpath $(dirname $PINTOOL)/../../../src/fosbin-sleuth/python/IdentifyFunction.py)
+ID_SCRIPT=$(realpath $(dirname $PINTOOL)/../../../src/software-ethology/python/IdentifyFunction.py)
 IGNORE_PATH="$(realpath $(dirname $PINTOOL)/../../../tests/ignored.txt)"
 echo $CURR_DIR
 

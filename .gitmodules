@@ -14,3 +14,6 @@
 [submodule "src/fosbin-sleuth/qemu-afl/proc_maps_parser"]
 	path = src/fosbin-sleuth/qemu-afl/proc_maps_parser
 	url = git@github.com:ouadev/proc_maps_parser.git
+[submodule "src/valgrind"]
+	path = src/valgrind
+	url = git://sourceware.org/git/valgrind.git
