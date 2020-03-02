@@ -7,6 +7,8 @@
 #include "ZergCommand.h"
 #include "ZergCommandServer.h"
 #include "ZergMessage.h"
+#include "FuzzerTracePC.h"
+
 
 #include <algorithm>
 #include <csetjmp>
@@ -375,7 +377,7 @@ VOID record_current_context(CONTEXT *ctx) {
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R8),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R9),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R10),
-                           PIN_GetContextReg(ctx, LEVEL_BASE::REG_R11),
+                             PIN_GetContextReg(ctx, LEVEL_BASE::REG_R11),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R12),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R13),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_R14),
@@ -409,9 +411,14 @@ VOID record_current_context(CONTEXT *ctx) {
     }
 }
 
+void record_bb_coverage(const CONTEXT *ctx) {
+    fuzzer::__sanitizer_cov_trace_pc((uintptr_t) PIN_GetContextReg(ctx, REG_INST_PTR));
+}
+
 VOID trace_execution(TRACE trace, VOID *v) {
     if (RTN_Valid(target)) {
         for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
+            INS_InsertCall(BBL_InsHead(b), IPOINT_BEFORE, (AFUNPTR) record_bb_coverage, IARG_CONST_CONTEXT, IARG_END);
             for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
                 //                std::cout << "Instrumenting " << INS_Disassemble(ins)
                 //                << "(0x" << std::hex << INS_Address(ins) << ")"

@@ -9,6 +9,7 @@ set(PINTOOL_SOURCES
         ZergCommand.cpp
         ZergMessage.cpp
         IOVec.cpp
+        FuzzerTracePC.cpp
         )
 
 set(PINTOOL_INCLUDES
@@ -21,6 +22,7 @@ set(PINTOOL_INCLUDES
         X86Context.h
         ZergCommand.h
         ZergMessage.h
+        FuzzerTracePC.h
         )
 
 set(PINTOOL_CONF
