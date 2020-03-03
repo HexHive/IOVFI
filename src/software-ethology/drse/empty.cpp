@@ -52,6 +52,4 @@ dr_client_main(client_id_t id, int argc, const char *argv[]) {
 }
 
 static void
-event_exit(void) {
-    /* empty client */
-}
+event_exit(void) { std::cout << "Tool done" << std::endl; }

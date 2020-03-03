@@ -8,7 +8,7 @@ if (NOT DynamoRIO_FOUND)
 endif (NOT DynamoRIO_FOUND)
 
 set(DRSE_SOURCES
-        empty.c
+        empty.cpp
         )
 
 add_library(${TOOL_NAME} SHARED ${DRSE_SOURCES})
