@@ -25,3 +25,5 @@ add_custom_target(InstallValgrind
 add_dependencies(InstallValgrind BuildValgrind ConfigureValgrind)
 add_dependencies(BuildValgrind ConfigureValgrind)
 add_dependencies(ConfigureValgrind MakeValgrindDir)
+
+add_subdirectory(dynamorio)

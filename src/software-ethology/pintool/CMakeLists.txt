@@ -10,6 +10,8 @@ set(PINTOOL_SOURCES
         ZergMessage.cpp
         IOVec.cpp
         FuzzerTracePC.cpp
+        MutationDispatcher.cpp
+        FuzzerUtil.cpp
         )
 
 set(PINTOOL_INCLUDES
@@ -23,6 +25,10 @@ set(PINTOOL_INCLUDES
         ZergCommand.h
         ZergMessage.h
         FuzzerTracePC.h
+        Random.h
+        MutationDispatcher.h
+        FuzzerBuiltins.h
+        FuzzerUtil.h
         )
 
 set(PINTOOL_CONF

@@ -3,6 +3,7 @@
 //
 
 #include "MutationDispatcher.h"
+#include <cstring>
 
 namespace fuzzer {
 
@@ -12,9 +13,8 @@ namespace fuzzer {
         PrintASCII(W.data(), W.size(), PrintAfter);
     }
 
-    MutationDispatcher::MutationDispatcher(Random &Rand,
-                                           const FuzzingOptions &Options)
-            : Rand(Rand), Options(Options) {
+    MutationDispatcher::MutationDispatcher(Random &Rand)
+            : Rand(Rand) {
         DefaultMutators.insert(
                 DefaultMutators.begin(),
                 {
@@ -29,53 +29,16 @@ namespace fuzzer {
                         {&MutationDispatcher::Mutate_ChangeBinaryInteger, "ChangeBinInt"},
                         {&MutationDispatcher::Mutate_CopyPart,            "CopyPart"},
                         {&MutationDispatcher::Mutate_CrossOver,           "CrossOver"},
-                        {&MutationDispatcher::Mutate_AddWordFromManualDictionary,
-                                                                          "ManualDict"},
                         {&MutationDispatcher::Mutate_AddWordFromPersistentAutoDictionary,
                                                                           "PersAutoDict"},
+                        {&MutationDispatcher::Mutate_AddWordFromTORC,     "CMP"},
                 });
-        if (Options.UseCmp)
-            DefaultMutators.push_back(
-                    {&MutationDispatcher::Mutate_AddWordFromTORC, "CMP"});
-
-        if (EF->LLVMFuzzerCustomMutator)
-            Mutators.push_back({&MutationDispatcher::Mutate_Custom, "Custom"});
-        else
-            Mutators = DefaultMutators;
-
-        if (EF->LLVMFuzzerCustomCrossOver)
-            Mutators.push_back(
-                    {&MutationDispatcher::Mutate_CustomCrossOver, "CustomCrossOver"});
     }
 
     static char RandCh(Random &Rand) {
         if (Rand.RandBool()) return Rand(256);
         const char Special[] = "!*'();:@&=+$,/?%#[]012Az-`~.\xff\x00";
         return Special[Rand(sizeof(Special) - 1)];
-    }
-
-    size_t MutationDispatcher::Mutate_Custom(uint8_t *Data, size_t Size,
-                                             size_t MaxSize) {
-        return EF->LLVMFuzzerCustomMutator(Data, Size, MaxSize, Rand.Rand());
-    }
-
-    size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
-                                                      size_t MaxSize) {
-        if (!Corpus || Corpus->size() < 2 || Size == 0)
-            return 0;
-        size_t Idx = Rand(Corpus->size());
-        const Unit &Other = (*Corpus)[Idx];
-        if (Other.empty())
-            return 0;
-        CustomCrossOverInPlaceHere.resize(MaxSize);
-        auto &U = CustomCrossOverInPlaceHere;
-        size_t NewSize = EF->LLVMFuzzerCustomCrossOver(
-                Data, Size, Other.data(), Other.size(), U.data(), U.size(), Rand.Rand());
-        if (!NewSize)
-            return 0;
-        assert(NewSize <= MaxSize && "CustomCrossOver returned overisized unit");
-        memcpy(Data, U.data(), NewSize);
-        return NewSize;
     }
 
     size_t MutationDispatcher::Mutate_ShuffleBytes(uint8_t *Data, size_t Size,
@@ -143,12 +106,6 @@ namespace fuzzer {
         size_t Idx = Rand(Size);
         Data[Idx] ^= 1 << Rand(8);
         return Size;
-    }
-
-    size_t MutationDispatcher::Mutate_AddWordFromManualDictionary(uint8_t *Data,
-                                                                  size_t Size,
-                                                                  size_t MaxSize) {
-        return AddWordFromDictionary(ManualDictionary, Data, Size, MaxSize);
     }
 
     size_t MutationDispatcher::ApplyDictionaryEntry(uint8_t *Data, size_t Size,
@@ -493,10 +450,6 @@ namespace fuzzer {
         return MutateImpl(Data, Size, MaxSize, Mutators);
     }
 
-    size_t MutationDispatcher::DefaultMutate(uint8_t *Data, size_t Size,
-                                             size_t MaxSize) {
-        return MutateImpl(Data, Size, MaxSize, DefaultMutators);
-    }
 
 // Mutates Data in place, returns new size.
     size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,

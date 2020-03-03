@@ -5,17 +5,20 @@
 #ifndef FOSBIN_RANDOM_H
 #define FOSBIN_RANDOM_H
 
-#include "pin.H"
 #include <random>
+#include <cstddef>
+#include <cassert>
 
-namespace fuzzer {
-    class Random : public std::mt19937 {
-    public:
-        Random(unsigned int seed) : std::mt19937(seed) {}
+namespace fuzzer{
+        class Random : public std::mt19937 {
+            public:
+            Random(
+            unsigned int seed) : std::mt19937(seed)
+            {}
 
-        result_type operator()() { return this->std::mt19937::operator()(); }
+            result_type operator()() { return this->std::mt19937::operator()(); }
 
-        size_t Rand() { return this->operator()(); }
+            size_t Rand() { return this->operator()(); }
 
         size_t RandBool() { return Rand() % 2; }
 

@@ -6,6 +6,7 @@
 #define FOSBIN_MUTATIONDISPATCHER_H
 
 #include "Random.h"
+#include "FuzzerDictionary.h"
 
 namespace fuzzer {
     class MutationDispatcher {
@@ -68,10 +69,6 @@ namespace fuzzer {
         /// Returns the new size of data which could be up to MaxSize.
         size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize);
 
-        /// Applies one of the default mutations. Provided as a service
-        /// to mutation authors.
-        size_t DefaultMutate(uint8_t *Data, size_t Size, size_t MaxSize);
-
         /// Creates a cross-over of two pieces of Data, returns its size.
         size_t CrossOver(const uint8_t *Data1, size_t Size1, const uint8_t *Data2,
                          size_t Size2, uint8_t *Out, size_t MaxOutSize);
@@ -115,8 +112,6 @@ namespace fuzzer {
 
         Random &Rand;
 
-        // Dictionary provided by the user via -dict=DICT_FILE.
-        Dictionary ManualDictionary;
         // Temporary dictionary modified by the fuzzer itself,
         // recreated periodically.
         Dictionary TempAutoDictionary;
@@ -130,7 +125,6 @@ namespace fuzzer {
         DictionaryEntry CmpDictionaryEntriesDeque[kCmpDictionaryEntriesDequeSize];
         size_t CmpDictionaryEntriesDequeIdx = 0;
 
-        Vector <Mutator> Mutators;
         Vector <Mutator> DefaultMutators;
         Vector <Mutator> CurrentMutatorSequence;
     };

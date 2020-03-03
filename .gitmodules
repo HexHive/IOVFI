@@ -17,3 +17,6 @@
 [submodule "src/valgrind"]
 	path = src/valgrind
 	url = git://sourceware.org/git/valgrind.git
+[submodule "src/dynamorio"]
+	path = src/dynamorio
+	url = git@github.com:DynamoRIO/dynamorio.git
