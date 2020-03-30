@@ -1,22 +1,54 @@
 import hashlib
 import struct
+from enum import IntEnum, unique, auto
 
-from .X86Context import X86Context
+from .ProgramState import ProgramState
+
+
+@unique
+class VexArch(IntEnum):
+    VexArch_INVALID = 0x400
+    VexArchX86 = auto()
+    VexArchAMD64 = auto()
+    VexArchARM = auto()
+    VexArchARM64 = auto()
+    VexArchPPC32 = auto()
+    VexArchPPC64 = auto()
+    VexArchS390X = auto()
+    VexArchMIPS32 = auto()
+    VexArchMIPS64 = auto()
+    VexArchNANOMIPS = auto()
+
+
+@unique
+class VexEndness(IntEnum):
+    VexEndness_INVALID = 0x600
+    VexEndnessLE = auto()
+    VexEndnessBE = auto()
 
 
 class IOVec:
     def __init__(self, in_file):
-        self.input = X86Context(in_file)
-        self.output = X86Context(in_file)
+        self.host_arch = VexArch(struct.unpack_from('i', in_file.read(struct.calcsize('i')))[0])
+        self.vex_endness = VexEndness(struct.unpack_from('i', in_file.read(struct.calcsize('i')))[0])
 
         syscall_count = struct.unpack_from('N', in_file.read(struct.calcsize('N')))[0]
         self.syscalls = list()
         for idx in range(0, syscall_count):
             self.syscalls.append(struct.unpack_from('Q', in_file.read(struct.calcsize('Q')))[0])
         self.syscalls.sort()
+        
+        self.random_seed = struct.unpack_from('I', in_file.read(struct.calcsize('I')))[0]
+        self.guest_state_size = struct.unpack_from('N', in_file.read(struct.calcsize('N')))[0]
+
+        self.initial_state = ProgramState(in_file, self.guest_state_size)
+        self.expected_state = ProgramState(in_file, self.guest_state_size)
+
+        fmt = 's' * self.guest_state_size
+        self.register_state_map = struct.unpack_from(fmt, in_file.read(struct.calcsize(fmt)))[0]
 
     def __hash__(self):
-        return int(self._get_hash_obj().hexdigest(), 16)
+        return int(self.hexdigest(), 16)
 
     def __str__(self):
         return self.hexdigest()
@@ -26,22 +58,19 @@ class IOVec:
 
     def _get_hash_obj(self):
         hash_sum = hashlib.sha256()
-        in_hash = hash(self.input)
-        out_hash = hash(self.input)
-        hash_sum.update(struct.pack('N', in_hash))
-        hash_sum.update(struct.pack('N', out_hash))
+        hash_sum.update(struct.pack('N', hash(self.host_arch)))
+        hash_sum.update(struct.pack('N', hash(self.vex_endness)))
+        hash_sum.update(struct.pack('N', hash(self.random_seed)))
+        hash_sum.update(struct.pack('N', hash(self.guest_state_size)))
+        hash_sum.update(struct.pack('N', hash(self.register_state_map)))
+        
+        hash_sum.update(struct.pack('N', hash(self.initial_state)))
+        hash_sum.update(struct.pack('N', hash(self.expected_state)))
 
         for syscall in self.syscalls:
             hash_sum.update(struct.pack('Q', syscall))
         return hash_sum
 
-    def write_bin(self, out_file):
-        self.input.write_bin(out_file)
-        self.output.write_bin(out_file)
-
     def hexdigest(self):
         hash_sum = self._get_hash_obj()
         return hash_sum.hexdigest()
-
-    # def size_in_bytes(self):
-    #     return self.input.size_in_bytes() + self.output.size_in_bytes()
