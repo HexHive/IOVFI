@@ -6,7 +6,7 @@ from concurrent import futures
 from .FBLogging import logger
 from .FunctionDescriptor import FunctionDescriptor
 from .IOVec import IOVec
-from .PinRun import PinMessage, PinRun
+from .SEGrindRun import PinMessage, PinRun
 
 WATCHDOG = 5.0
 MAX_RETRY_COUNT = 3

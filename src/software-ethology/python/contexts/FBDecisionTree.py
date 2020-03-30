@@ -6,7 +6,6 @@ import numpy
 from sklearn import tree, preprocessing
 
 from .FBLogging import logger
-from .PinRun import PinMessage, PinRun
 
 
 class FBDecisionTreeNode:
