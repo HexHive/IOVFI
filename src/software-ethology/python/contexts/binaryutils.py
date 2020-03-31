@@ -6,7 +6,7 @@ from concurrent import futures
 from .FBLogging import logger
 from .FunctionDescriptor import FunctionDescriptor
 from .IOVec import IOVec
-from .SEGrindRun import PinMessage, PinRun
+from .SEGrindRun import SEGrindRun, SEMsgType
 
 WATCHDOG = 5.0
 MAX_RETRY_COUNT = 3
@@ -14,31 +14,23 @@ MAX_ATTEMPTS = 100
 
 
 class RunDesc:
-    def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog):
+    def __init__(self, func_desc, valgrind_loc, work_dir, watchdog):
         self.func_desc = func_desc
-        self.pin_loc = os.path.abspath(pin_loc)
-        self.pintool_loc = os.path.abspath(pintool_loc)
-        if loader_loc is not None:
-            self.loader_loc = os.path.abspath(loader_loc)
-        else:
-            self.loader_loc = None
+        self.valgrind_loc = os.path.abspath(valgrind_loc)
         self.work_dir = os.path.abspath(work_dir)
         self.watchdog = watchdog
 
 
 class FuzzRunDesc(RunDesc):
-    def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog, fuzz_count,
-                 attempt_count=MAX_ATTEMPTS):
-        RunDesc.__init__(self, func_desc=func_desc, pin_loc=pin_loc, pintool_loc=pintool_loc, loader_loc=loader_loc,
-                         work_dir=work_dir, watchdog=watchdog)
+    def __init__(self, func_desc, valgrind_loc, work_dir, watchdog, fuzz_count, attempt_count=MAX_ATTEMPTS):
+        RunDesc.__init__(self, func_desc=func_desc, valgrind_loc=valgrind_loc, work_dir=work_dir, watchdog=watchdog)
         self.fuzz_count = fuzz_count
         self.attempt_count = attempt_count
 
 
 class ConsolidationRunDesc(RunDesc):
-    def __init__(self, func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog, contexts):
-        RunDesc.__init__(self, func_desc=func_desc, pin_loc=pin_loc, pintool_loc=pintool_loc, loader_loc=loader_loc,
-                         work_dir=work_dir, watchdog=watchdog)
+    def __init__(self, func_desc, valgrind_loc, work_dir, watchdog, contexts):
+        RunDesc.__init__(self, func_desc=func_desc, valgrind_loc=valgrind_loc, work_dir=work_dir, watchdog=watchdog)
         self.contexts = contexts
 
 
@@ -88,7 +80,7 @@ def get_log_names(func_desc):
 
 
 def fuzz_one_function(fuzz_desc):
-    pin_run = None
+    segrind_run = None
     func_name = fuzz_desc.func_desc.name
     target = fuzz_desc.func_desc.location
     binary = fuzz_desc.func_desc.binary
@@ -96,14 +88,8 @@ def fuzz_one_function(fuzz_desc):
     coverages = dict()
 
     try:
-        if os.path.splitext(binary)[1] == ".so":
-            target = func_name
-
         run_name = "{}.{}.{}".format(os.path.basename(binary), func_name, target)
-        if fuzz_desc.loader_loc is None:
-            logger.debug("{} target is {}".format(run_name, hex(target)))
-        else:
-            logger.debug("{} target is {}".format(run_name, target))
+        logger.debug("{} target is {} ({})".format(run_name, hex(target), func_name))
         pipe_in = os.path.join(fuzz_desc.work_dir, run_name + ".in")
         pipe_out = os.path.join(fuzz_desc.work_dir, run_name + ".out")
         log_names = get_log_names(fuzz_desc.func_desc)
@@ -113,9 +99,10 @@ def fuzz_one_function(fuzz_desc):
         if not os.path.exists(os.path.dirname(log_out)):
             os.makedirs(os.path.dirname(log_out), exist_ok=True)
 
-        logger.debug("Creating PinRun for {}".format(run_name))
-        pin_run = PinRun(fuzz_desc.pin_loc, fuzz_desc.pintool_loc, binary, fuzz_desc.loader_loc, pipe_in=pipe_in,
-                         pipe_out=pipe_out, log_loc=log_out, cwd=fuzz_desc.work_dir, cmd_log_loc=cmd_log)
+        logger.debug("Creating SEGrindRun for {}".format(run_name))
+        segrind_run = SEGrindRun(valgrind_loc=fuzz_desc.valgrind_loc, binary_loc=binary, pipe_in=pipe_in,
+                                 pipe_out=pipe_out,
+                                 valgrind_log_loc=log_out, run_log_loc=cmd_log, cwd=fuzz_desc.word_dir)
         logger.debug("Done")
         fuzz_count = 0
         attempts = 0
@@ -126,39 +113,38 @@ def fuzz_one_function(fuzz_desc):
                 raise RuntimeError("Too many attempts for {}".format(run_name))
 
             try:
-                if not pin_run.is_running():
-                    logger.debug("Starting PinRun for {}".format(run_name))
-                    pin_run.start()
-                    ack_msg = pin_run.send_set_target_cmd(target, fuzz_desc.watchdog)
-                    if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                if not segrind_run.is_running():
+                    logger.debug("Starting SEGrindRun for {}".format(run_name))
+                    segrind_run.start()
+                    ack_msg = segrind_run.send_set_target_cmd(target, fuzz_desc.watchdog)
+                    if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
                         raise RuntimeError("Could not set target {}".format(target))
 
-                    resp_msg = pin_run.read_response(timeout=fuzz_desc.watchdog)
-                    if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                    resp_msg = segrind_run.read_response(timeout=fuzz_desc.watchdog)
+                    if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                         raise RuntimeError("Could not set target {}".format(target))
 
-                ack_msg = pin_run.send_reset_cmd(timeout=fuzz_desc.watchdog)
-                if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                ack_msg = segrind_run.send_reset_cmd(timeout=fuzz_desc.watchdog)
+                if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
                     continue
 
-                resp_msg = pin_run.read_response(timeout=fuzz_desc.watchdog)
-                if resp_msg is None or resp_msg.msgtype \
-                        != PinMessage.ZMSG_OK:
+                resp_msg = segrind_run.read_response(timeout=fuzz_desc.watchdog)
+                if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                     continue
 
-                ack_msg = pin_run.send_fuzz_cmd(timeout=fuzz_desc.watchdog)
-                if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                ack_msg = segrind_run.send_fuzz_cmd(timeout=fuzz_desc.watchdog)
+                if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
                     continue
-                resp_msg = pin_run.read_response(timeout=fuzz_desc.watchdog)
-                if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
-                    continue
-
-                ack_msg = pin_run.send_execute_cmd(timeout=fuzz_desc.watchdog)
-                if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                resp_msg = segrind_run.read_response(timeout=fuzz_desc.watchdog)
+                if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                     continue
 
-                result = pin_run.read_response(timeout=fuzz_desc.watchdog)
-                if result is not None and result.msgtype == PinMessage.ZMSG_OK:
+                ack_msg = segrind_run.send_execute_cmd(timeout=fuzz_desc.watchdog)
+                if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
+                    continue
+
+                result = segrind_run.read_response(timeout=fuzz_desc.watchdog)
+                if result is not None and result.msgtype == SEMsgType.SEMSG_OK:
                     io_vec = IOVec(result.data)
                     io_vec_coverage = result.get_coverage()
 
@@ -174,34 +160,34 @@ def fuzz_one_function(fuzz_desc):
                     logger.debug("Fuzzing result is None")
                 elif result is not None and len(result.data.getbuffer()) == 0:
                     logger.debug("Fuzzing data is zero")
-                elif result.msgtype != PinMessage.ZMSG_OK:
+                elif result.msgtype != SEMsgType.SEMSG_OK:
                     logger.debug("Pin message is not OK: %s".format(result))
             except TimeoutError as e:
                 logger.debug(str(e))
-                pin_run.stop()
+                segrind_run.stop()
                 continue
             except AssertionError as e:
                 logger.debug(str(e))
-                pin_run.stop()
+                segrind_run.stop()
                 continue
             except KeyboardInterrupt:
                 logger.debug("{} received KeyboardInterrupt".format(run_name))
-                pin_run.stop()
+                segrind_run.stop()
                 continue
     except Exception as e:
         logger.debug("Error for {}: {}".format(run_name, e))
     finally:
         logger.info("Finished {}".format(run_name))
-        pin_run.stop()
+        segrind_run.stop()
         if os.path.exists(pipe_in):
             os.unlink(pipe_in)
         if os.path.exists(pipe_out):
             os.unlink(pipe_out)
-        del pin_run
+        del segrind_run
         return FuzzRunResult(fuzz_desc.func_desc, successful_contexts, coverages)
 
 
-def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, watchdog=WATCHDOG, fuzz_count=5,
+def fuzz_functions(func_descs, valgrind_loc, num_threads, watchdog=WATCHDOG, fuzz_count=5,
                    work_dir=os.path.abspath(os.path.join(os.curdir, "_work"))):
     fuzz_runs = list()
     io_vecs_dict = dict()
@@ -211,7 +197,7 @@ def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, wa
         os.makedirs(work_dir, exist_ok=True)
 
     for func_desc in func_descs:
-        fuzz_runs.append(FuzzRunDesc(func_desc, pin_loc, pintool_loc, loader_loc, work_dir, watchdog, fuzz_count))
+        fuzz_runs.append(FuzzRunDesc(func_desc, valgrind_loc, work_dir, watchdog, fuzz_count))
 
     with futures.ThreadPoolExecutor(max_workers=num_threads) as pool:
         results = {pool.submit(fuzz_one_function, fuzz_run): fuzz_run for fuzz_run in fuzz_runs}
@@ -230,10 +216,10 @@ def fuzz_functions(func_descs, pin_loc, pintool_loc, loader_loc, num_threads, wa
     return io_vecs_dict, unclassified
 
 
-def consolidate_one_function(consolidationRunDesc):
-    func_desc = consolidationRunDesc.func_desc
+def consolidate_one_function(consolidation_run_desc):
+    func_desc = consolidation_run_desc.func_desc
 
-    work_dir = os.path.join(consolidationRunDesc.work_dir, "consolidate")
+    work_dir = os.path.join(consolidation_run_desc.work_dir, "consolidate")
     log_dir = os.path.join("logs", "consolidate")
 
     run_name = os.path.basename(func_desc.binary) + "." + func_desc.name + "." + str(func_desc.location)
@@ -251,15 +237,15 @@ def consolidate_one_function(consolidationRunDesc):
         os.makedirs(log_dir, exist_ok=True)
 
     logger.info("{} starting".format(run_name))
-    pin_run = PinRun(consolidationRunDesc.pin_loc, consolidationRunDesc.pintool_loc, func_desc.binary,
-                     consolidationRunDesc.loader_loc, pipe_in, pipe_out, log_loc,
-                     os.path.abspath(work_dir), cmd_log_loc)
+    segrind_run = SEGrindRun(valgrind_loc=consolidation_run_desc.valgrind_loc, binary_loc=func_desc.binary,
+                             pipe_in=pipe_in, pipe_out=pipe_out, valgrind_log_loc=log_loc,
+                             cwd=os.path.abspath(work_dir), run_log_loc=cmd_log_loc)
     ctx_count = 0
     retry_count = 0
     idx = 0
     logger.debug("Created pin run for {}".format(run_name))
-    while idx < len(consolidationRunDesc.contexts):
-        iovec = consolidationRunDesc.contexts[idx]
+    while idx < len(consolidation_run_desc.contexts):
+        iovec = consolidation_run_desc.contexts[idx]
         if retry_count > MAX_RETRY_COUNT:
             idx += 1
             retry_count = 0
@@ -268,21 +254,18 @@ def consolidate_one_function(consolidationRunDesc):
 
         logger.info("{} testing {}".format(run_name, iovec.hexdigest()))
         try:
-            if not pin_run.is_running():
-                logger.debug("Starting pin_run for {}".format(run_name))
-                pin_run.stop()
-                pin_run.start(timeout=consolidationRunDesc.watchdog)
+            if not segrind_run.is_running():
+                logger.debug("Starting segrind_run for {}".format(run_name))
+                segrind_run.stop()
+                segrind_run.start(timeout=consolidation_run_desc.watchdog)
 
-                if consolidationRunDesc.loader_loc is None:
-                    ack_msg = pin_run.send_set_target_cmd(func_desc.location, timeout=consolidationRunDesc.watchdog)
-                else:
-                    ack_msg = pin_run.send_set_target_cmd(func_desc.name, timeout=consolidationRunDesc.watchdog)
+                ack_msg = segrind_run.send_set_target_cmd(func_desc.location, timeout=consolidation_run_desc.watchdog)
 
-                if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
                     logger.error("Set target ACK not received for {}".format(run_name))
                     break
-                resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
-                if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                resp_msg = segrind_run.read_response(timeout=consolidation_run_desc.watchdog)
+                if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                     logger.error("Could not set target for {}".format(run_name))
                     break
                 logger.debug("pin run started for {}".format(run_name))
@@ -290,47 +273,47 @@ def consolidate_one_function(consolidationRunDesc):
             ctx_count += 1
 
             logger.debug("Sending reset command for {}".format(run_name))
-            ack_msg = pin_run.send_reset_cmd(timeout=consolidationRunDesc.watchdog)
-            if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
-                pin_run.stop()
+            ack_msg = segrind_run.send_reset_cmd(timeout=consolidation_run_desc.watchdog)
+            if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
+                segrind_run.stop()
                 retry_count += 1
-                logger.error("Reset ACK not received for {}".format(run_name))
+                logger.error("Reset ACK not received foPinMessager {}".format(run_name))
                 continue
-            resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
-            if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
-                pin_run.stop()
+            resp_msg = segrind_run.read_response(timeout=consolidation_run_desc.watchdog)
+            if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
+                segrind_run.stop()
                 retry_count += 1
                 logger.error("Could not reset for {}".format(run_name))
                 if resp_msg is None:
                     logger.error("{} Received no response back".format(run_name))
                 else:
-                    logger.error("{} Received {} message".format(run_name, PinMessage.names[resp_msg.msgtype]))
+                    logger.error("{} Received {} message".format(run_name, resp_msg.msgtype.name))
                 continue
 
             logger.debug("Sending set ctx command for {}".format(run_name))
-            ack_msg = pin_run.send_set_ctx_cmd(iovec, timeout=consolidationRunDesc.watchdog)
-            if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
-                pin_run.stop()
+            ack_msg = segrind_run.send_set_ctx_cmd(iovec, timeout=consolidation_run_desc.watchdog)
+            if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
+                segrind_run.stop()
                 retry_count += 1
                 logger.error("Set Context ACK not received for {}".format(run_name))
                 continue
-            resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
-            if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
-                pin_run.stop()
+            resp_msg = segrind_run.read_response(timeout=consolidation_run_desc.watchdog)
+            if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
+                segrind_run.stop()
                 retry_count += 1
                 logger.error("Could not set context for {}".format(run_name))
                 continue
 
             logger.debug("Sending execute command for {}".format(run_name))
-            ack_msg = pin_run.send_execute_cmd(timeout=consolidationRunDesc.watchdog)
-            if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
-                pin_run.stop()
+            ack_msg = segrind_run.send_execute_cmd(timeout=consolidation_run_desc.watchdog)
+            if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
+                segrind_run.stop()
                 retry_count += 1
                 logger.error("Set Context ACK not received for {}".format(run_name))
                 continue
 
-            resp_msg = pin_run.read_response(timeout=consolidationRunDesc.watchdog)
-            if resp_msg is not None and resp_msg.msgtype == PinMessage.ZMSG_OK:
+            resp_msg = segrind_run.read_response(timeout=consolidation_run_desc.watchdog)
+            if resp_msg is not None and resp_msg.msgtype == SEMsgType.SEMSG_OK:
                 coverage = resp_msg.get_coverage()
                 desc_map[hash(iovec)] = (func_desc, coverage)
                 logger.info("{} accepts {} ({})".format(run_name, iovec.hexdigest(), ctx_count))
@@ -348,8 +331,8 @@ def consolidate_one_function(consolidationRunDesc):
             logger.exception("Error for {}: {}".format(run_name, str(e)))
             break
 
-    pin_run.stop()
-    del pin_run
+    segrind_run.stop()
+    del segrind_run
     if os.path.exists(pipe_in):
         os.unlink(pipe_in)
     if os.path.exists(pipe_out):
@@ -358,7 +341,7 @@ def consolidate_one_function(consolidationRunDesc):
     return desc_map
 
 
-def consolidate_contexts(pin_loc, pintool_loc, loader_loc, num_threads, contexts_mapping, watchdog=WATCHDOG,
+def consolidate_contexts(valgrind_loc, num_threads, contexts_mapping, watchdog=WATCHDOG,
                          work_dir=os.path.abspath(os.path.join(os.curdir, "_work"))):
     desc_map = dict()
 
@@ -367,8 +350,7 @@ def consolidate_contexts(pin_loc, pintool_loc, loader_loc, num_threads, contexts
 
     consolidation_runs = list()
     for func_desc, contexts in contexts_mapping.items():
-        consolidation_runs.append(ConsolidationRunDesc(func_desc, pin_loc, pintool_loc, loader_loc, work_dir,
-                                                       watchdog, contexts))
+        consolidation_runs.append(ConsolidationRunDesc(func_desc, valgrind_loc, work_dir, watchdog, contexts))
 
     with futures.ThreadPoolExecutor(max_workers=num_threads) as pool:
         results = {pool.submit(consolidate_one_function, consolidation_run): consolidation_run for consolidation_run in

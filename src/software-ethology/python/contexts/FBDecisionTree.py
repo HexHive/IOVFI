@@ -6,6 +6,7 @@ import numpy
 from sklearn import tree, preprocessing
 
 from .FBLogging import logger
+from .SEGrindRun import SEMsgType, SEGrindRun
 
 
 class FBDecisionTreeNode:
@@ -95,88 +96,38 @@ class FBDecisionTree:
     def _log(self, msg, level=logging.DEBUG):
         logger.log(level, msg)
 
-    # def _find_dtree_idx(self, index):
-    #     if index < 0:
-    #         raise ValueError("Invalid dtree index: {}".format(index))
-    # 
-    #     for base_idx, dtree in self.dtrees.items():
-    #         if index < base_idx:
-    #             continue
-    # 
-    #         if index - base_idx < dtree.tree_.node_count:
-    #             return base_idx
-    #     raise ValueError("Could not find dtree corresponding to index {}".format(index))
-
-    # def _left_child(self, index):
-    #     return self._child(index, False)
-    # 
-    # def _right_child(self, index):
-    #     return self._child(index, True)
-    # 
-    # def _is_leaf(self, index):
-    #     if index < 0:
-    #         return True
-    # 
-    #     return self._left_child(index) == self._right_child(index)
-
-    def _attempt_ctx(self, iovec, pin_run, watchdog=WATCHDOG):
+    def _attempt_ctx(self, iovec, segrind_run, watchdog=WATCHDOG):
         if iovec is None:
             raise AssertionError("No iovec provided")
-        elif pin_run is None:
+        elif segrind_run is None:
             raise AssertionError("pin_run cannot be None")
-        elif not pin_run.is_running():
+        elif not segrind_run.is_running():
             raise AssertionError("pin_run is not running")
 
-        ack_msg = pin_run.send_reset_cmd(watchdog)
-        if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+        ack_msg = segrind_run.send_reset_cmd(watchdog)
+        if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
             raise AssertionError("Received no ack for set context cmd")
-        resp_msg = pin_run.read_response(watchdog)
-        if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+        resp_msg = segrind_run.read_response(watchdog)
+        if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
             raise AssertionError("Set context command failed")
 
-        ack_msg = pin_run.send_set_ctx_cmd(iovec, watchdog)
-        if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+        ack_msg = segrind_run.send_set_ctx_cmd(iovec, watchdog)
+        if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
             raise AssertionError("Received no ack for set context cmd")
-        resp_msg = pin_run.read_response(watchdog)
-        if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+        resp_msg = segrind_run.read_response(watchdog)
+        if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
             raise AssertionError("Set context command failed")
 
-        ack_msg = pin_run.send_execute_cmd(watchdog)
-        if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+        ack_msg = segrind_run.send_execute_cmd(watchdog)
+        if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
             raise AssertionError("Received no ack for execute cmd")
-        resp_msg = pin_run.read_response(watchdog)
+        resp_msg = segrind_run.read_response(watchdog)
         if resp_msg is None:
             raise AssertionError("Execute command did not return")
-        if resp_msg.msgtype == PinMessage.ZMSG_OK:
+        if resp_msg.msgtype == SEMsgType.SEMSG_OK:
             return True, resp_msg.get_coverage()
         else:
             return False, None
-
-    # def _child(self, index, right_child):
-    #     if index < 0:
-    #         raise ValueError("Invalid index: {}".format(index))
-    #
-    #     if index in self.child_dtrees:
-    #         return self.child_dtrees[index]
-    #
-    #     dtree_idx = self._find_dtree_idx(index)
-    #     dtree = self.dtrees[dtree_idx]
-    #     tree_idx = index - dtree_idx
-    #
-    #     if right_child:
-    #         child_idx = dtree.tree_.children_right[tree_idx]
-    #     else:
-    #         child_idx = dtree.tree_.children_left[tree_idx]
-    #
-    #     if child_idx < 0:
-    #         return child_idx
-    #
-    #     return dtree_idx + child_idx
-
-    # def export_graphviz(self, outfile, treeidx=0):
-    #     dtree = self.dtrees[treeidx]
-    #     tree.export_graphviz(dtree, out_file=outfile, filled=True, rounded=True, special_characters=True,
-    #                          node_ids=True, label='none')
 
     def get_func_descs(self):
         return self.func_descs
@@ -189,25 +140,7 @@ class FBDecisionTree:
             if isinstance(node, FBDecisionTreeInteriorNode):
                 yield node
 
-    # def get_equiv_classes(self, index):
-    #     if index == self.UNKNOWN_FUNC:
-    #         return None
-    # 
-    #     if not self._is_leaf(index):
-    #         raise ValueError("Node {} is not a leaf".format(index))
-    # 
-    #     dtree_idx = self._find_dtree_idx(index)
-    #     dtree = self.dtrees[dtree_idx]
-    #     tree_idx = index - dtree_idx
-    #     equiv_classes = set()
-    #     for i in range(len(dtree.tree_.value[tree_idx][0])):
-    #         if dtree.tree_.value[tree_idx][0][i]:
-    #             hash_sum = dtree.classes_[i]
-    #             equiv_classes.add(self.funcDescs[hash_sum])
-    # 
-    #     return equiv_classes
-
-    def _confirm_leaf(self, func_desc, node, pin_run, max_iovecs=MAX_CONFIRM):
+    def _confirm_leaf(self, func_desc, node, segrind_run, max_iovecs=MAX_CONFIRM):
         if max_iovecs <= 0:
             raise RuntimeError("max_iovecs must be greater than zero")
 
@@ -222,7 +155,7 @@ class FBDecisionTree:
             for iovec in node.get_confirmation_iovecs():
                 self._log("Using iovec {}".format(iovec.hexdigest()))
                 try_count += 1
-                accepted, coverage = self._attempt_ctx(iovec, pin_run)
+                accepted, coverage = self._attempt_ctx(iovec, segrind_run)
                 if not accepted:
                     return False, None
                 if try_count >= max_iovecs:
@@ -232,65 +165,40 @@ class FBDecisionTree:
         except Exception as e:
             return False, None
 
-    # def _get_hash(self, index):
-    #     base_dtree_index = self._find_dtree_idx(index)
-    #     tree_idx = index - base_dtree_index
-    #     dtree = self.dtrees[base_dtree_index]
-    #     hash = self.labels[base_dtree_index].inverse_transform([dtree.tree_.feature[tree_idx]])[0]
-    #     return hash
-
-    # def get_iovec(self, index):
-    #     try:
-    #         if index < 0:
-    #             return None
-    #         hash = self._get_hash(index)
-    #         base_dtree_index = self._find_dtree_idx(index)
-    #         if hash in self.hashMaps[base_dtree_index]:
-    #             return self.hashMaps[base_dtree_index][hash]
-    #         return None
-    #     except:
-    #         return None
-
-    def identify(self, func_desc, pin_loc, pintool_loc, loader_loc=None, cwd=os.getcwd(), max_confirm=MAX_CONFIRM,
-                 rust_main=None, cmd_log_loc=None, log_loc=None):
-        pin_run = PinRun(pin_loc, pintool_loc, func_desc.binary, loader_loc, cwd=cwd, rust_main=rust_main,
-                         cmd_log_loc=cmd_log_loc, log_loc=log_loc)
+    def identify(self, func_desc, valgrind_loc, cwd=os.getcwd(), max_confirm=MAX_CONFIRM,
+                 cmd_log_loc=None, log_loc=None):
+        segrind_run = SEGrindRun(valgrind_loc, func_desc.binary, cwd=cwd, valgrind_log_loc=log_loc,
+                                 run_log_loc=cmd_log_loc)
 
         current_node = self.root
 
         coverages = list()
         try:
             while current_node is not None:
-                if not pin_run.is_running():
-                    pin_run.stop()
-                    pin_run.start(timeout=FBDecisionTree.WATCHDOG)
-                    if pin_run.rust_main is None:
-                        if loader_loc is None:
-                            ack_msg = pin_run.send_set_target_cmd(func_desc.location, FBDecisionTree.WATCHDOG)
-                        else:
-                            ack_msg = pin_run.send_set_target_cmd(func_desc.name, FBDecisionTree.WATCHDOG)
-                    else:
-                        ack_msg = pin_run.send_set_target_cmd(func_desc.name, FBDecisionTree.WATCHDOG)
+                if not segrind_run.is_running():
+                    segrind_run.stop()
+                    segrind_run.start(timeout=FBDecisionTree.WATCHDOG)
+                    ack_msg = segrind_run.send_set_target_cmd(func_desc.name, FBDecisionTree.WATCHDOG)
 
-                    if ack_msg is None or ack_msg.msgtype != PinMessage.ZMSG_ACK:
+                    if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
                         raise AssertionError("Could not set target for {}".format(str(func_desc)))
-                    resp_msg = pin_run.read_response(FBDecisionTree.WATCHDOG)
-                    if resp_msg is None or resp_msg.msgtype != PinMessage.ZMSG_OK:
+                    resp_msg = segrind_run.read_response(FBDecisionTree.WATCHDOG)
+                    if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                         raise AssertionError("Could not set target for {}".format(str(func_desc)))
 
                 if current_node.is_leaf():
                     try:
-                        confirmed, coverage = self._confirm_leaf(func_desc, current_node, pin_run, max_confirm)
+                        confirmed, coverage = self._confirm_leaf(func_desc, current_node, segrind_run, max_confirm)
                         if confirmed:
                             for cov in coverage:
                                 coverages.append(cov)
-                            pin_run.stop()
+                            segrind_run.stop()
                             return current_node, coverages
                         break
                     except RuntimeError as e:
                         # No available hashes, so just mark the identified leaf
                         # as the identified leaf
-                        pin_run.stop()
+                        segrind_run.stop()
                         return current_node, coverages
                     except Exception as e:
                         logger.debug("Error confirming leaf for {}: {}".format(func_desc, e))
@@ -299,7 +207,7 @@ class FBDecisionTree:
                 iovec_accepted = False
                 try:
                     logger.debug("Trying iovec {} ({})".format(current_node.identifier, current_node.iovec.hexdigest()))
-                    iovec_accepted, coverage = self._attempt_ctx(current_node.iovec, pin_run)
+                    iovec_accepted, coverage = self._attempt_ctx(current_node.iovec, segrind_run)
                 except Exception as e:
                     logger.debug("Error testing iovec for {}: {}".format(str(func_desc), e))
 
@@ -309,21 +217,11 @@ class FBDecisionTree:
                 else:
                     current_node = current_node.get_left_child()
 
-            pin_run.stop()
+            segrind_run.stop()
             return None, None
         except Exception as e:
-            pin_run.stop()
+            segrind_run.stop()
             raise e
-
-    # def size(self):
-    #     size = 0
-    #     for dtree in self.dtrees.values():
-    #         size += dtree.tree_.node_count
-    #
-    #     return size
-
-    # def __sizeof__(self):
-    #     return self.size()
 
     def gen_dtree(self, iovec_coverage_location, iovec_hash_map):
         if not os.path.exists(iovec_coverage_location):

@@ -317,9 +317,6 @@ class SEGrindRun:
     def send_reset_cmd(self, timeout=None):
         return self._send_cmd(SEMsgType.ZMSG_RESET, None, timeout)
 
-    # def send_get_exe_info_cmd(self, timeout=None):
-    #     return self._send_cmd(PinMessage.ZMSG_GET_EXE_INFO, None, timeout)
-
     def clear_response_pipe(self):
         resp = self.read_response(0.1)
         while resp is not None:
