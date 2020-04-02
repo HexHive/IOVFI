@@ -1,4 +1,3 @@
-import copy
 import os
 import subprocess
 from concurrent import futures
@@ -102,7 +101,7 @@ def fuzz_one_function(fuzz_desc):
         logger.debug("Creating SEGrindRun for {}".format(run_name))
         segrind_run = SEGrindRun(valgrind_loc=fuzz_desc.valgrind_loc, binary_loc=binary, pipe_in=pipe_in,
                                  pipe_out=pipe_out,
-                                 valgrind_log_loc=log_out, run_log_loc=cmd_log, cwd=fuzz_desc.word_dir)
+                                 valgrind_log_loc=log_out, run_log_loc=cmd_log, cwd=fuzz_desc.work_dir)
         logger.debug("Done")
         fuzz_count = 0
         attempts = 0
@@ -461,78 +460,78 @@ def get_functions_needing_fuzzing(func_desc_coverage, whole_coverage, threshold=
 #     return percent_coverages
 
 
-def rank_iovecs(iovec_coverages, reverse=False):
-    reachable_instruction_count = dict()
-    iovec_rankings = list()
-    instructions_executed = set()
+# def rank_iovecs(iovec_coverages, reverse=False):
+#     reachable_instruction_count = dict()
+#     iovec_rankings = list()
+#     instructions_executed = set()
+#
+#     working_list = copy.deepcopy(iovec_coverages)
+#
+#     total_reachable_instructions = 0
+#     for hash_sum, coverage_dict in working_list.items():
+#         for func_desc, coverage_data in coverage_dict.items():
+#             for (instructions, instruction_count) in coverage_data:
+#                 start_addr = instructions[0]
+#                 if start_addr not in reachable_instruction_count:
+#                     total_reachable_instructions += instruction_count
+#                     reachable_instruction_count[start_addr] = instruction_count
+#
+#     latest_coverage = 0
+#     while len(working_list) > 0:
+#         max_coverage_increase = (-1, None, None)
+#
+#         for hash_sum, coverage_dict in working_list.items():
+#             new_iovec_instructions = set()
+#
+#             for func_desc, coverage_data in coverage_dict.items():
+#                 for (instructions, instruction_count) in coverage_data:
+#                     for addr in instructions:
+#                         if addr not in instructions_executed:
+#                             new_iovec_instructions.add(addr)
+#
+#             current_coverage = (len(new_iovec_instructions) + len(instructions_executed)) / total_reachable_instructions
+#             if current_coverage >= max_coverage_increase[0]:
+#                 max_coverage_increase = (current_coverage, new_iovec_instructions, hash_sum)
+#
+#         for addr in max_coverage_increase[1]:
+#             instructions_executed.add(addr)
+#
+#         iovec_rankings.append((max_coverage_increase[2], max_coverage_increase[0] - latest_coverage))
+#         print(iovec_rankings[-1][1])
+#         latest_coverage = max_coverage_increase[0]
+#         del working_list[max_coverage_increase[2]]
+#
+#     if reverse:
+#         iovec_rankings.reverse()
+#     return iovec_rankings
 
-    working_list = copy.deepcopy(iovec_coverages)
 
-    total_reachable_instructions = 0
-    for hash_sum, coverage_dict in working_list.items():
-        for func_desc, coverage_data in coverage_dict.items():
-            for (instructions, instruction_count) in coverage_data:
-                start_addr = instructions[0]
-                if start_addr not in reachable_instruction_count:
-                    total_reachable_instructions += instruction_count
-                    reachable_instruction_count[start_addr] = instruction_count
-
-    latest_coverage = 0
-    while len(working_list) > 0:
-        max_coverage_increase = (-1, None, None)
-
-        for hash_sum, coverage_dict in working_list.items():
-            new_iovec_instructions = set()
-
-            for func_desc, coverage_data in coverage_dict.items():
-                for (instructions, instruction_count) in coverage_data:
-                    for addr in instructions:
-                        if addr not in instructions_executed:
-                            new_iovec_instructions.add(addr)
-
-            current_coverage = (len(new_iovec_instructions) + len(instructions_executed)) / total_reachable_instructions
-            if current_coverage >= max_coverage_increase[0]:
-                max_coverage_increase = (current_coverage, new_iovec_instructions, hash_sum)
-
-        for addr in max_coverage_increase[1]:
-            instructions_executed.add(addr)
-
-        iovec_rankings.append((max_coverage_increase[2], max_coverage_increase[0] - latest_coverage))
-        print(iovec_rankings[-1][1])
-        latest_coverage = max_coverage_increase[0]
-        del working_list[max_coverage_increase[2]]
-
-    if reverse:
-        iovec_rankings.reverse()
-    return iovec_rankings
-
-
-def compute_iovec_coverage(iovec_coverages):
-    iovec_ranks = rank_iovecs(iovec_coverages)
-
-    executed_instructions = set()
-    reachable_instruction_count = dict()
-    percent_coverages = list()
-
-    total_reachable_instructions = 0
-    for (hash_sum, rank) in iovec_ranks:
-        coverage_dict = iovec_coverages[hash_sum]
-        for func_desc, coverage_data in coverage_dict.items():
-            for (instructions, instruction_count) in coverage_data:
-                start_addr = instructions[0]
-                if start_addr not in reachable_instruction_count:
-                    total_reachable_instructions += instruction_count
-                    reachable_instruction_count[start_addr] = instruction_count
-
-    for (hash_sum, rank) in iovec_ranks:
-        coverage_dict = iovec_coverages[hash_sum]
-        for func_desc, coverage_data in coverage_dict.items():
-            for (instructions, instruction_count) in coverage_data:
-                for instruction in instructions:
-                    executed_instructions.add(instruction)
-        percent_coverages.append(len(executed_instructions) / total_reachable_instructions)
-
-    return percent_coverages
+# def compute_iovec_coverage(iovec_coverages):
+#     iovec_ranks = rank_iovecs(iovec_coverages)
+#
+#     executed_instructions = set()
+#     reachable_instruction_count = dict()
+#     percent_coverages = list()
+#
+#     total_reachable_instructions = 0
+#     for (hash_sum, rank) in iovec_ranks:
+#         coverage_dict = iovec_coverages[hash_sum]
+#         for func_desc, coverage_data in coverage_dict.items():
+#             for (instructions, instruction_count) in coverage_data:
+#                 start_addr = instructions[0]
+#                 if start_addr not in reachable_instruction_count:
+#                     total_reachable_instructions += instruction_count
+#                     reachable_instruction_count[start_addr] = instruction_count
+#
+#     for (hash_sum, rank) in iovec_ranks:
+#         coverage_dict = iovec_coverages[hash_sum]
+#         for func_desc, coverage_data in coverage_dict.items():
+#             for (instructions, instruction_count) in coverage_data:
+#                 for instruction in instructions:
+#                     executed_instructions.add(instruction)
+#         percent_coverages.append(len(executed_instructions) / total_reachable_instructions)
+#
+#     return percent_coverages
 
 
 def compute_total_reachable_instruction_count(coverages):

@@ -23,16 +23,18 @@ class SEMsgType(IntEnum):
     SEMSG_FUZZ = auto()
     SEMSG_EXECUTE = auto()
     SEMSG_SET_CTX = auto()
-    SEMSG_RESET = auto()
     SEMSG_READY = auto()
+    SEMSG_RESET = auto()
     SEMSG_SET_SO_TGT = auto()
+    SEMSG_NEW_ALLOC = auto()
+    SEMSG_FAILED_CTX = auto()
     SEMSG_TOO_MANY_INS = auto()
     SEMSG_TOO_MANY_ATTEMPTS = auto()
     SEMSG_COVERAGE = auto()
 
 
 class SEMessage:
-    HEADER_FORMAT = "iQ"
+    HEADER_FORMAT = "=iQ"
 
     def __init__(self, msgtype, data):
         self.msgtype = msgtype
@@ -153,12 +155,15 @@ class SEGrindRun:
             raise AssertionError("{} is not a pipe".format(self.pipe_out_loc))
 
     def generate_cmd(self):
-        cmd = ["LD_BIND_NOW=1", self.valgrind_loc, "--tool={}".format(self.toolname)]
+        # cmd = ["LD_BIND_NOW=1", self.valgrind_loc, "--tool={}".format(self.toolname)]
+        cmd = [self.valgrind_loc, "--tool={}".format(self.toolname)]
+
         if self.valgrind_log_loc is not None:
             cmd.append("--log-file={}".format(self.valgrind_log_loc))
 
         cmd.append("--in-pipe={}".format(self.pipe_in_loc))
         cmd.append("--out-pipe={}".format(self.pipe_out_loc))
+        cmd.append(self.binary_loc)
 
         return cmd
 
@@ -180,7 +185,7 @@ class SEGrindRun:
         self.log = None
         self.valgrind_pid = None
         if self.thr_w is not None:
-            os.write(self.thr_w, struct.pack("i", SEMsgType.ZMSG_EXIT.value))
+            os.write(self.thr_w, struct.pack("i", SEMsgType.SEMSG_EXIT.value))
 
     def is_running(self):
         # logger.debug("pipe_in: {}".format(self.pipe_in is not None))
@@ -235,12 +240,12 @@ class SEGrindRun:
         self.wait_for_ready(timeout)
 
     def stop(self):
-        logger.debug("Stopping SEGrindRun ".format(os.path.basename(self.valgrind_pid)))
+        logger.debug("Stopping SEGrindRun {}".format(self.valgrind_pid))
         try:
             if self.is_running():
-                self._send_cmd(SEMsgType.ZMSG_EXIT, None, 0.1)
+                self._send_cmd(SEMsgType.SEMSG_EXIT, None, 0.1)
         except BrokenPipeError:
-            logger.debug("Error sending {} to {}".format(SEMsgType.ZMSG_EXIT.name, self.valgrind_pid))
+            logger.debug("Error sending {} to {}".format(SEMsgType.SEMSG_EXIT.name, self.valgrind_pid))
             pass
         finally:
             if self.valgrind_thread is not None:
@@ -304,18 +309,19 @@ class SEGrindRun:
         msgtype = SEMsgType(header_data[0])
         msglen = header_data[1]
 
-        if msgtype != SEMsgType.ZMSG_READY:
+        if msgtype != SEMsgType.SEMSG_READY:
             raise AssertionError("Server did not issue a {} msg: {} (len = {})".format(
-                SEMsgType.ZMSG_READY.name, msgtype.name, msglen))
+                SEMsgType.SEMSG_READY.name, msgtype.name, msglen))
+        logger.info("Process {} is ready".format(self.valgrind_pid))
 
     def send_fuzz_cmd(self, timeout=None):
-        return self._send_cmd(SEMsgType.ZMSG_FUZZ, None, timeout)
+        return self._send_cmd(SEMsgType.SEMSG_FUZZ, None, timeout)
 
     def send_execute_cmd(self, timeout=None):
-        return self._send_cmd(SEMsgType.ZMSG_EXECUTE, None, timeout)
+        return self._send_cmd(SEMsgType.SEMSG_EXECUTE, None, timeout)
 
     def send_reset_cmd(self, timeout=None):
-        return self._send_cmd(SEMsgType.ZMSG_RESET, None, timeout)
+        return self._send_cmd(SEMsgType.SEMSG_RESET, None, timeout)
 
     def clear_response_pipe(self):
         resp = self.read_response(0.1)
@@ -358,7 +364,7 @@ class SEGrindRun:
 
     def send_set_target_cmd(self, target, timeout=None):
         logger.debug("Setting target to {} for {}".format(hex(target), self.valgrind_pid))
-        return self._send_cmd(SEMsgType.ZMSG_SET_TGT, struct.pack("Q", target), timeout)
+        return self._send_cmd(SEMsgType.SEMSG_SET_TGT, struct.pack("Q", target), timeout)
 
     def send_set_ctx_cmd(self, io_vec, timeout=None):
         if io_vec is None:
@@ -371,4 +377,4 @@ class SEGrindRun:
         if len(data.getbuffer()) == 0:
             raise AssertionError("IOVec is empty")
 
-        return self._send_cmd(SEMsgType.ZMSG_SET_CTX, data.getbuffer(), timeout)
+        return self._send_cmd(SEMsgType.SEMSG_SET_CTX, data.getbuffer(), timeout)
