@@ -44,6 +44,7 @@ class SEMessage:
         else:
             self.msglen = len(data)
             self.data = io.BytesIO(data)
+            self.data.seek(0)
 
     def __str__(self):
         return self.msgtype.name

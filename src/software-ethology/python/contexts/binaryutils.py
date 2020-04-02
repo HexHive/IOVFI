@@ -123,17 +123,17 @@ def fuzz_one_function(fuzz_desc):
                     if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                         raise RuntimeError("Could not set target {}".format(target))
 
-                ack_msg = segrind_run.send_reset_cmd(timeout=fuzz_desc.watchdog)
-                if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
-                    continue
-
-                resp_msg = segrind_run.read_response(timeout=fuzz_desc.watchdog)
-                if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
-                    continue
+                # ack_msg = segrind_run.send_reset_cmd(timeout=fuzz_desc.watchdog)
+                # if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
+                #     continue
+                #
+                # resp_msg = segrind_run.read_response(timeout=fuzz_desc.watchdog)
+                # if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
+                #     continue
 
                 ack_msg = segrind_run.send_fuzz_cmd(timeout=fuzz_desc.watchdog)
                 if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
-                    continue
+                    break
                 resp_msg = segrind_run.read_response(timeout=fuzz_desc.watchdog)
                 if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                     continue
@@ -144,12 +144,13 @@ def fuzz_one_function(fuzz_desc):
 
                 result = segrind_run.read_response(timeout=fuzz_desc.watchdog)
                 if result is not None and result.msgtype == SEMsgType.SEMSG_OK:
+                    logger.debug("Reading in IOVec")
                     io_vec = IOVec(result.data)
-                    io_vec_coverage = result.get_coverage()
+                    # io_vec_coverage = result.get_coverage()
 
                     successful_contexts.add(io_vec)
                     hash_sum = hash(io_vec)
-                    coverages[hash_sum] = io_vec_coverage
+                    # coverages[hash_sum] = io_vec_coverage
                     fuzz_count += 1
                     logger.info("{} created {} ({} of {})".format(run_name, io_vec.hexdigest(), fuzz_count,
                                                                   fuzz_desc.fuzz_count))
@@ -174,7 +175,7 @@ def fuzz_one_function(fuzz_desc):
                 segrind_run.stop()
                 continue
     except Exception as e:
-        logger.debug("Error for {}: {}".format(run_name, e))
+        logger.exception("Error for {}: {}".format(run_name, e))
     finally:
         logger.info("Finished {}".format(run_name))
         segrind_run.stop()
