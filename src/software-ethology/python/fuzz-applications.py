@@ -90,7 +90,7 @@ def main():
     if len(args) > 0:
         (fuzz_run_results, unclassified) = binaryutils.fuzz_functions(args, valgrind_loc=valgrind_loc,
                                                                       num_threads=results.threads,
-                                                                      fuzz_count=results.count)
+                                                                      fuzz_count=fuzz_count)
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(len(fuzz_run_results)))
@@ -101,13 +101,13 @@ def main():
 
         context_hashes = dict()
         desc_map = dict()
-        coverage_map = dict()
+        # coverage_map = dict()
 
-        total_instructions = dict()
-        executed_instructions = set()
+        # total_instructions = dict()
+        # executed_instructions = set()
 
         for func_desc, fuzz_run_result in fuzz_run_results.items():
-            coverage_map[func_desc] = list()
+            # coverage_map[func_desc] = list()
             for hash_sum, io_vec in fuzz_run_result.io_vecs.items():
                 context_hashes[hash_sum] = io_vec
                 # for coverage_tuple in fuzz_run_result.coverages[hash(io_vec)]:

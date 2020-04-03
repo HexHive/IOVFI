@@ -7,9 +7,9 @@ from .FunctionDescriptor import FunctionDescriptor
 from .IOVec import IOVec
 from .SEGrindRun import SEGrindRun, SEMsgType
 
-WATCHDOG = 5.0
+WATCHDOG = 50.0
 MAX_RETRY_COUNT = 3
-MAX_ATTEMPTS = 100
+MAX_ATTEMPTS = 1
 
 
 class RunDesc:
@@ -369,35 +369,35 @@ def consolidate_contexts(valgrind_loc, num_threads, contexts_mapping, watchdog=W
     return desc_map
 
 
-def get_functions_needing_fuzzing(func_desc_coverage, whole_coverage, threshold=0.7):
-    result = list()
-
-    for func_desc, coverage_data in func_desc_coverage.items():
-        func_coverage = 0
-        reachable_instructions = 0
-        total_call_graph_coverage = 0
-        for (instructions_executed, total_instructions) in coverage_data:
-            start_addr = instructions_executed[0]
-            func_coverage += len(instructions_executed)
-            reachable_instructions += total_instructions
-            total_call_graph_coverage += len(whole_coverage[start_addr])
-
-        if reachable_instructions == 0:
-            print("{} has 0 reachable instructions".format(func_desc.name))
-            continue
-
-        if func_coverage / reachable_instructions < threshold:
-            if total_call_graph_coverage / reachable_instructions > threshold:
-                print("{} has low {} coverage but {} call graph coverage".format(func_desc.name, func_coverage /
-                                                                                 reachable_instructions,
-                                                                                 total_call_graph_coverage / reachable_instructions))
-            else:
-                print("{} has low {} coverage and low {} call graph coverage".format(func_desc.name, func_coverage /
-                                                                                     reachable_instructions,
-                                                                                     total_call_graph_coverage / reachable_instructions))
-                result.append(func_desc)
-
-    return result
+# def get_functions_needing_fuzzing(func_desc_coverage, whole_coverage, threshold=0.7):
+#     result = list()
+#
+#     for func_desc, coverage_data in func_desc_coverage.items():
+#         func_coverage = 0
+#         reachable_instructions = 0
+#         total_call_graph_coverage = 0
+#         for (instructions_executed, total_instructions) in coverage_data:
+#             start_addr = instructions_executed[0]
+#             func_coverage += len(instructions_executed)
+#             reachable_instructions += total_instructions
+#             total_call_graph_coverage += len(whole_coverage[start_addr])
+#
+#         if reachable_instructions == 0:
+#             print("{} has 0 reachable instructions".format(func_desc.name))
+#             continue
+#
+#         if func_coverage / reachable_instructions < threshold:
+#             if total_call_graph_coverage / reachable_instructions > threshold:
+#                 print("{} has low {} coverage but {} call graph coverage".format(func_desc.name, func_coverage /
+#                                                                                  reachable_instructions,
+#                                                                                  total_call_graph_coverage / reachable_instructions))
+#             else:
+#                 print("{} has low {} coverage and low {} call graph coverage".format(func_desc.name, func_coverage /
+#                                                                                      reachable_instructions,
+#                                                                                      total_call_graph_coverage / reachable_instructions))
+#                 result.append(func_desc)
+#
+#     return result
 
 
 # def rank_iovecs(iovec_coverages, reverse=False):
