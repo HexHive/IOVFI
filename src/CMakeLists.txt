@@ -1,1 +1,3 @@
-add_subdirectory(fosbin-sleuth)
+add_subdirectory(software-ethology)
+add_subdirectory(valgrind)
+

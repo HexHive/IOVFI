@@ -1,4 +1,6 @@
+import hashlib
 import os
+import struct
 
 
 class FunctionDescriptor:
@@ -21,11 +23,19 @@ class FunctionDescriptor:
             result += ".{}".format(self.name)
         else:
             result += ".0x{}".format(hex(self.location))
-
         return result
 
-    def __hash__(self):
-        if self.name is not None:
-            return hash((self.binary, self.name))
+    def _get_hash_obj(self):
+        m = hashlib.sha256()
+        m.update(self.binary.encode('utf-8'))
+        if self.name is None:
+            m.update(struct.pack('P', self.location))
         else:
-            return hash((self.binary, self.location))
+            m.update(self.name.encode('utf-8'))
+        return m
+
+    def hash(self):
+        return self._get_hash_obj().digest()
+
+    def __hash__(self):
+        return int(self._get_hash_obj().hexdigest(), 16)

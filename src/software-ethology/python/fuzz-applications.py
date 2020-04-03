@@ -15,11 +15,9 @@ def main():
     global fuzz_count
 
     parser = argparse.ArgumentParser(description="Generate input/output vectors")
-    parser.add_argument("-pindir", help="/path/to/pin-3.11/dir", required=True)
-    parser.add_argument("-tool", help="/path/to/pintool", required=True)
+    parser.add_argument("-valgrind", help="/path/to/pin-3.11/dir", required=True)
     parser.add_argument("-bin", help="/path/to/target/application", required=True)
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
-    parser.add_argument("-ld", help="/path/to/fb-load")
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
     parser.add_argument("-log", help="/path/to/log/file", default="fuzz.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
@@ -42,28 +40,13 @@ def main():
         logger.fatal("Could not find {}".format(results.bin))
         exit(1)
 
-    if os.path.splitext(results.bin)[1] == ".so" and (results.ld is None or results.ld == ""):
-        logger.fatal("Loader location is necessary")
-        parser.print_help()
-        exit(1)
-
-    if results.ld is not None and not os.path.exists(results.ld):
-        logger.fatal("Could not find loader {}".format(results.ld))
-        exit(1)
-    elif not os.path.exists(results.tool):
-        logger.fatal("Could not find pintool {}".format(results.tool))
-        exit(1)
-    elif not os.path.exists(results.pindir):
-        logger.fatal("Could not find pindir {}".format(results.pindir))
+    if not os.path.exists(results.valgrind):
+        logger.fatal("Could not find valgrind {}".format(results.valgrind))
         exit(1)
 
     fuzz_count = results.count
-    loader_loc = None
-    if results.ld is not None:
-        loader_loc = os.path.abspath(results.ld)
 
-    pintool_loc = os.path.abspath(results.tool)
-    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
+    valgrind_loc = os.path.abspath(results.valgrind)
 
     ignored_funcs = set()
 
@@ -106,8 +89,9 @@ def main():
     logger.info("Fuzzing {} targets".format(len(args)))
 
     if len(args) > 0:
-        (fuzz_run_results, unclassified) = binaryutils.fuzz_functions(args, pin_loc, pintool_loc, loader_loc,
-                                                                      results.threads, fuzz_count=results.count)
+        (fuzz_run_results, unclassified) = binaryutils.fuzz_functions(args, valgrind_loc=valgrind_loc,
+                                                                      num_threads=results.threads,
+                                                                      fuzz_count=results.count)
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(len(fuzz_run_results)))

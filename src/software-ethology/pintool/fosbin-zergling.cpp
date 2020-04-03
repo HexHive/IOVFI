@@ -7,6 +7,8 @@
 #include "ZergCommand.h"
 #include "ZergCommandServer.h"
 #include "ZergMessage.h"
+#include "FuzzerTracePC.h"
+
 
 #include <algorithm>
 #include <csetjmp>
@@ -355,17 +357,16 @@ VOID record_current_context(CONTEXT *ctx) {
     if (cmd_server->get_state() != ZERG_SERVER_EXECUTING) {
         wait_to_start();
     }
-//        logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
-//        std::endl;
+    //        logMsg << "Recording context " << std::dec << fuzzing_run.size() <<
+    //        std::endl;
 //    logMsg << "Func "
-//               << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
-//               LEVEL_BASE::REG_RIP))
-//               << "(" << std::hex << PIN_GetContextReg(ctx, REG_INST_PTR)
-//               << "): "
-//               << INS_Disassemble(
-//                      INS_FindByAddress(PIN_GetContextReg(ctx,
-//                      LEVEL_BASE::REG_RIP)));
-//      log_message(logMsg);
+//           << RTN_FindNameByAddress(PIN_GetContextReg(ctx,
+//           LEVEL_BASE::REG_RIP))
+//           << "(" << std::hex << PIN_GetContextReg(ctx, REG_INST_PTR) << "): "
+//           << INS_Disassemble(
+//                  INS_FindByAddress(PIN_GetContextReg(ctx,
+//                  LEVEL_BASE::REG_RIP)));
+//    log_message(logMsg);
 
     struct X86Context tmp = {PIN_GetContextReg(ctx, LEVEL_BASE::REG_RAX),
                              PIN_GetContextReg(ctx, LEVEL_BASE::REG_RBX),
@@ -410,9 +411,14 @@ VOID record_current_context(CONTEXT *ctx) {
     }
 }
 
+void record_bb_coverage(const CONTEXT *ctx) {
+    fuzzer::__sanitizer_cov_trace_pc((uintptr_t) PIN_GetContextReg(ctx, REG_INST_PTR));
+}
+
 VOID trace_execution(TRACE trace, VOID *v) {
     if (RTN_Valid(target)) {
         for (BBL b = TRACE_BblHead(trace); BBL_Valid(b); b = BBL_Next(b)) {
+            INS_InsertCall(BBL_InsHead(b), IPOINT_BEFORE, (AFUNPTR) record_bb_coverage, IARG_CONST_CONTEXT, IARG_END);
             for (INS ins = BBL_InsHead(b); INS_Valid(ins); ins = INS_Next(ins)) {
                 //                std::cout << "Instrumenting " << INS_Disassemble(ins)
                 //                << "(0x" << std::hex << INS_Address(ins) << ")"
@@ -428,10 +434,10 @@ EXCEPT_HANDLING_RESULT globalSegfaultHandler(THREADID tid,
                                              EXCEPTION_INFO *exceptionInfo,
                                              PHYSICAL_CONTEXT *physContext,
                                              VOID *v) {
-    logMsg << "Global segfault handler called: "
-           << PIN_ExceptionToString(exceptionInfo);
-    log_error(logMsg);
-    return EHR_UNHANDLED;
+  logMsg << "Global segfault handler called: "
+         << PIN_ExceptionToString(exceptionInfo);
+  log_message(logMsg);
+  return EHR_UNHANDLED;
 }
 
 const std::string getCurrentContext(const CONTEXT *ctx, UINT32 sig) {
@@ -1111,12 +1117,12 @@ zerg_cmd_result_t handle_execute_cmd() {
     PIN_SetContextReg(&snapshot, REG_INST_PTR, RTN_Address(target));
     PIN_SetContextReg(&snapshot, REG_GBP,
                       PIN_GetContextReg(&snapshot, REG_STACK_PTR));
-    //  logMsg << "About to start executing at " << std::hex <<
-    //  RTN_Address(target)
-    //         << "(" << RTN_Name(target) << ")"
-    //         << " with context " << std::endl;
-    //  preContext.prettyPrint(logMsg);
-    //  log_message(logMsg);
+//      logMsg << "About to start executing at " << std::hex <<
+//      RTN_Address(target)
+//             << "(" << RTN_Name(target) << ")"
+//             << " with context " << std::endl;
+//      preContext.prettyPrint(logMsg);
+//      log_message(logMsg);
 
     PIN_ExecuteAt(&snapshot);
     //    log_message("PIN_ExecuteAt returned magically");
@@ -1374,8 +1380,8 @@ int main(int argc, char **argv) {
 
     PIN_InterceptSignal(SIGSEGV, catchSegfault, nullptr);
     PIN_AddInternalExceptionHandler(globalSegfaultHandler, nullptr);
-    PIN_AddFiniFunction(fini, nullptr);
-    PIN_AddContextChangeFunction(ctxChange, nullptr);
+    //    PIN_AddFiniFunction(fini, nullptr);
+    //    PIN_AddContextChangeFunction(ctxChange, nullptr);
 
     log_message("Starting");
     PIN_StartProgram();

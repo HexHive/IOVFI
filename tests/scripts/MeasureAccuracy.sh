@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ACCURACY_SCRIPT=$(realpath $(dirname $0)/../../src/fosbin-sleuth/python/ComputeAccuracy.py)
+ACCURACY_SCRIPT=$(realpath $(dirname $0)/../../src/software-ethology/python/ComputeAccuracy.py)
 ROOT_DIR=$PWD
 
 for dir in $(find $ROOT_DIR -mindepth 1 -maxdepth 1 -type d); do

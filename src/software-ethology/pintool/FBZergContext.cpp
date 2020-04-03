@@ -113,6 +113,7 @@ int64_t FBZergContext::sign_extend(int64_t orig) const {
 bool FBZergContext::return_values_equal(const FBZergContext &ctx) const {
     if ((return_is_ptr() && !ctx.return_is_ptr()) ||
         (!return_is_ptr() && ctx.return_is_ptr())) {
+//        log_message("ret 1");
         return false;
     }
 
@@ -135,6 +136,10 @@ bool FBZergContext::return_values_equal(const FBZergContext &ctx) const {
         return true;
     }
 
+//    std::stringstream msg;
+//    msg << std::hex << (void*)this_ret_val << " " << std::hex << (void*)that_ret_val;
+//    log_message("ret 2");
+//    log_message(msg);
     return false;
 }
 
