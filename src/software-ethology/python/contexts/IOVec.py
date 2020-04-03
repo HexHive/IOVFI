@@ -72,10 +72,10 @@ class IOVec:
         hash_sum.update(struct.pack('N', self.vex_endness))
         hash_sum.update(struct.pack('N', self.random_seed))
         hash_sum.update(struct.pack('N', self.guest_state_size))
-        hash_sum.update(struct.pack('s' * self.guest_state_size, self.register_state_map))
+        hash_sum.update(self.register_state_map)
 
-        hash_sum.update(struct.pack('NN', hash(self.initial_state)))
-        hash_sum.update(struct.pack('NN', hash(self.expected_state)))
+        hash_sum.update(struct.pack('N', hash(self.initial_state)))
+        hash_sum.update(struct.pack('N', hash(self.expected_state)))
 
         for syscall in self.syscalls:
             hash_sum.update(struct.pack('Q', syscall))

@@ -15,8 +15,9 @@ class ProgramState:
 
     def __hash__(self):
         hash_sum = hashlib.sha256()
-        hash_sum.update(struct.pack('N', self.register_state))
-        hash_sum.update(struct.pack('N', self.address_state))
+        hash_sum.update(self.register_state)
+        for (addr_min, addr_max, val) in self.address_state:
+            hash_sum.update(struct.pack("QQQ", addr_min, addr_max, val))
 
         return int(hash_sum.hexdigest(), 16)
 

@@ -40,7 +40,7 @@ class FuzzRunResult:
         self.coverages = dict()
         for io_vec in io_vecs:
             self.io_vecs[hash(io_vec)] = io_vec
-            self.coverages[hash(io_vec)] = coverage[hash(io_vec)]
+            # self.coverages[hash(io_vec)] = coverage[hash(io_vec)]
 
     def __len__(self):
         return len(self.io_vecs)
