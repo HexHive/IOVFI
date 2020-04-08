@@ -9,7 +9,7 @@ from .SEGrindRun import SEGrindRun, SEMsgType
 
 WATCHDOG = 50.0
 MAX_RETRY_COUNT = 3
-MAX_ATTEMPTS = 1
+MAX_ATTEMPTS = 25
 
 
 class RunDesc:
