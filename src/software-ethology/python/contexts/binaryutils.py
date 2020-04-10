@@ -154,14 +154,14 @@ def fuzz_one_function(fuzz_desc):
                     fuzz_count += 1
                     logger.info("{} created {} ({} of {})".format(run_name, io_vec.hexdigest(), fuzz_count,
                                                                   fuzz_desc.fuzz_count))
-                elif result is not None and len(result.data.getbuffer()) > 0:
+                elif result is not None and result.data is not None and len(result.data.getbuffer()) > 0:
                     logger.debug("Fuzzing run failed: {}".format(result.data.getvalue()))
                 elif result is None:
                     logger.debug("Fuzzing result is None")
-                elif result is not None and len(result.data.getbuffer()) == 0:
+                elif result is not None and result.data is not None and len(result.data.getbuffer()) == 0:
                     logger.debug("Fuzzing data is zero")
                 elif result.msgtype != SEMsgType.SEMSG_OK:
-                    logger.debug("Pin message is not OK: %s".format(result))
+                    logger.debug("Pin message is not OK: {}".format(result))
             except TimeoutError as e:
                 logger.debug(str(e))
                 segrind_run.stop()
