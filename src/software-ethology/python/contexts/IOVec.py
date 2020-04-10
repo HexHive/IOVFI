@@ -34,6 +34,19 @@ class IOVec:
         self.host_arch = VexArch(struct.unpack_from('i', in_file.read(struct.calcsize('i')))[0])
         logger.debug("Reading endness")
         self.vex_endness = VexEndness(struct.unpack_from('i', in_file.read(struct.calcsize('i')))[0])
+        logger.debug("Reading random seed")
+        self.random_seed = struct.unpack_from('I', in_file.read(struct.calcsize('I')))[0]
+
+        logger.debug("Reading initial state")
+        self.initial_state = ProgramState(in_file)
+
+        logger.debug("Reading expected state")
+        self.expected_state = ProgramState(in_file)
+
+        logger.debug("Reading registeer state map")
+        register_state_map_size = struct.unpack_from("N", in_file.read(struct.calcsize("N")))[0]
+        fmt = 's' * register_state_map_size
+        self.register_state_map = struct.unpack_from(fmt, in_file.read(struct.calcsize(fmt)))[0]
 
         logger.debug("Reading syscall count")
         syscall_count = struct.unpack_from('N', in_file.read(struct.calcsize('N')))[0]
@@ -42,20 +55,6 @@ class IOVec:
             logger.debug("Reading syscall")
             self.syscalls.append(struct.unpack_from('Q', in_file.read(struct.calcsize('Q')))[0])
         self.syscalls.sort()
-
-        logger.debug("Reading random seed")
-        self.random_seed = struct.unpack_from('I', in_file.read(struct.calcsize('I')))[0]
-        logger.debug("Reading guest state size")
-        self.guest_state_size = struct.unpack_from('N', in_file.read(struct.calcsize('N')))[0]
-
-        logger.debug("Reading initial state")
-        self.initial_state = ProgramState(in_file, self.guest_state_size)
-        logger.debug("Reading final state")
-        self.expected_state = ProgramState(in_file, self.guest_state_size)
-
-        fmt = 's' * self.guest_state_size
-        logger.debug("Reading registeer state map")
-        self.register_state_map = struct.unpack_from(fmt, in_file.read(struct.calcsize(fmt)))[0]
 
     def __hash__(self):
         return int(self.hexdigest(), 16)
@@ -71,7 +70,6 @@ class IOVec:
         hash_sum.update(struct.pack('N', self.host_arch))
         hash_sum.update(struct.pack('N', self.vex_endness))
         hash_sum.update(struct.pack('N', self.random_seed))
-        hash_sum.update(struct.pack('N', self.guest_state_size))
         hash_sum.update(self.register_state_map)
 
         hash_sum.update(struct.pack('N', hash(self.initial_state)))

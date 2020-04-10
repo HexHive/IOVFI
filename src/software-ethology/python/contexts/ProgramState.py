@@ -3,10 +3,11 @@ import struct
 
 
 class ProgramState:
-    def __init__(self, infile, register_state_size):
+    def __init__(self, infile):
+        register_state_size = struct.unpack_from("N", infile.read(struct.calcsize("N")))[0]
         fmt = 's' * register_state_size
         self.register_state = struct.unpack_from(fmt, infile.read(struct.calcsize(fmt)))[0]
-        
+
         address_space_size = struct.unpack_from('I', infile.read(struct.calcsize('I')))[0]
         self.address_state = list()
         for i in range(address_space_size):
