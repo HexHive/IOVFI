@@ -113,7 +113,7 @@ def fuzz_one_function(fuzz_desc):
 
             try:
                 if not segrind_run.is_running():
-                    logger.debug("Starting SEGrindRun for {}".format(run_name))
+                    logger.info("Starting SEGrindRun for {}".format(run_name))
                     segrind_run.start()
                     ack_msg = segrind_run.send_set_target_cmd(target, fuzz_desc.watchdog)
                     if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
@@ -149,7 +149,7 @@ def fuzz_one_function(fuzz_desc):
                     # io_vec_coverage = result.get_coverage()
 
                     successful_contexts.add(io_vec)
-                    hash_sum = hash(io_vec)
+                    # hash_sum = hash(io_vec)
                     # coverages[hash_sum] = io_vec_coverage
                     fuzz_count += 1
                     logger.info("{} created {} ({} of {})".format(run_name, io_vec.hexdigest(), fuzz_count,
@@ -199,9 +199,12 @@ def fuzz_functions(func_descs, valgrind_loc, num_threads, watchdog=WATCHDOG, fuz
     for func_desc in func_descs:
         fuzz_runs.append(FuzzRunDesc(func_desc, valgrind_loc, work_dir, watchdog, fuzz_count))
 
+    complete_count = 0
     with futures.ThreadPoolExecutor(max_workers=num_threads) as pool:
         results = {pool.submit(fuzz_one_function, fuzz_run): fuzz_run for fuzz_run in fuzz_runs}
         for result in futures.as_completed(results):
+            complete_count += 1
+            logger.info("Completed {}/{} fuzz runs".format(complete_count, len(func_descs)))
             fuzz_run = results[result]
             try:
                 fuzz_run_result = result.result()

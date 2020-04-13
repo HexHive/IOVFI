@@ -30,6 +30,7 @@ class SEMsgType(IntEnum):
     SEMSG_TOO_MANY_INS = auto()
     SEMSG_TOO_MANY_ATTEMPTS = auto()
     SEMSG_COVERAGE = auto()
+    SEMSG_TIMEOUT = auto()
 
 
 class SEMessage:
