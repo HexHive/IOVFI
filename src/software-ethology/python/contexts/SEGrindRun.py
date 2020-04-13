@@ -291,24 +291,13 @@ class SEGrindRun:
             logger.debug("SEGrindRun stopped for {}".format(self.valgrind_pid))
 
     def wait_for_ready(self, timeout=None):
-        byte_data = []
-        while len(byte_data) == 0:
-            # ready_pipes = select.select([self.thr_r, self.pipe_out], [], [], timeout)
-            ready_pipes = select.select([self.pipe_out], [], [], timeout)
-            if len(ready_pipes[0]) == 0:
-                raise AssertionError("Valgrind process timed out waiting for ready")
-            # if self.thr_r in ready_pipes[0]:
-            #     raise AssertionError("Valgrind process exited while waiting for ready")
-            if self.pipe_out in ready_pipes[0]:
-                byte_data = self.pipe_out.read(struct.calcsize(SEMessage.HEADER_FORMAT))
+        msg = self.read_response(timeout=timeout)
 
-        header_data = struct.unpack_from(SEMessage.HEADER_FORMAT, byte_data)
-        msgtype = SEMsgType(header_data[0])
-        msglen = header_data[1]
-
-        if msgtype != SEMsgType.SEMSG_READY:
-            raise AssertionError("Server did not issue a {} msg: {} (len = {})".format(
-                SEMsgType.SEMSG_READY.name, msgtype.name, msglen))
+        if msg is None or msg.msgtype != SEMsgType.SEMSG_READY:
+            error_msg = "Server did not issue a {} msg".format(SEMsgType.SEMSG_READY.name)
+            if msg is not None:
+                error_msg += ": {} (len = {})".format(msg.msgtype.name, msg.msglen)
+            raise AssertionError(error_msg)
         logger.info("Process {} is ready".format(self.valgrind_pid))
 
     def send_fuzz_cmd(self, timeout=None):
