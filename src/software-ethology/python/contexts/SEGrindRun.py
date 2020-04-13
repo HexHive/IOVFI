@@ -6,7 +6,6 @@ import stat
 import struct
 import subprocess
 import sys
-import threading
 from enum import IntEnum, unique, auto
 
 from .FBLogging import logger
@@ -136,13 +135,11 @@ class SEGrindRun:
             raise AssertionError("{} is not a pipe".format(self.pipe_out_loc))
 
         self.accepted_contexts = list()
-        self.valgrind_thread = None
+        # self.valgrind_thread = None
         self.valgrind_proc = None
         self.valgrind_pid = None
         self.pipe_in = None
         self.pipe_out = None
-        self.thr_r = None
-        self.thr_w = None
         self.log = None
 
     def _check_state(self):
@@ -156,7 +153,6 @@ class SEGrindRun:
             raise AssertionError("{} is not a pipe".format(self.pipe_out_loc))
 
     def generate_cmd(self):
-        # cmd = ["LD_BIND_NOW=1", self.valgrind_loc, "--tool={}".format(self.toolname)]
         cmd = [self.valgrind_loc, "--tool={}".format(self.toolname)]
 
         if self.valgrind_log_loc is not None:
@@ -179,14 +175,14 @@ class SEGrindRun:
         self.valgrind_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True, stdout=self.log, stderr=self.log)
         self.valgrind_pid = self.valgrind_proc.pid
         logger.debug("{} spawned process {}".format(os.path.basename(self.pipe_in_loc), self.valgrind_pid))
-        ret_value = self.valgrind_proc.wait()
-        logger.debug("Valgrind process {} ended with return code {}".format(self.valgrind_pid, ret_value))
-        if self.log is not None:
-            self.log.close()
-        self.log = None
-        self.valgrind_pid = None
-        if self.thr_w is not None:
-            os.write(self.thr_w, struct.pack("i", SEMsgType.SEMSG_EXIT.value))
+        # ret_value = self.valgrind_proc.wait()
+        # logger.debug("Valgrind process {} ended with return code {}".format(self.valgrind_pid, ret_value))
+        # if self.log is not None:
+        #     self.log.close()
+        # self.log = None
+        # self.valgrind_pid = None
+        # if self.thr_w is not None:
+        #     os.write(self.thr_w, struct.pack("i", SEMsgType.SEMSG_EXIT.value))
 
     def is_running(self):
         # logger.debug("pipe_in: {}".format(self.pipe_in is not None))
@@ -196,7 +192,7 @@ class SEGrindRun:
         #     logger.debug("pin_thread.is_alive: {}".format(self.pin_thread.is_alive()))
 
         return self.pipe_in is not None and self.pipe_out is not None and self.valgrind_proc is \
-               not None and self.valgrind_thread.is_alive()
+               not None and self.valgrind_proc.returncode is None
 
     def _send_cmd(self, cmd, data, timeout=None):
         if not self.is_running():
@@ -229,14 +225,12 @@ class SEGrindRun:
                 os.unlink(self.pipe_out_loc)
             os.mkfifo(self.pipe_out_loc)
 
-        self.thr_r, self.thr_w = os.pipe()
-        self.valgrind_thread = threading.Thread(target=self._run)
-        self.valgrind_thread.start()
+        self._run()
 
         logger.debug("Opening pipe_in {}".format(self.pipe_in_loc))
         self.pipe_in = open(self.pipe_in_loc, "wb", buffering=0)
         logger.debug("Opening pipe_out {}".format(self.pipe_out_loc))
-        self.pipe_out = os.open(self.pipe_out_loc, os.O_RDONLY)
+        self.pipe_out = open(self.pipe_out_loc, "rb", buffering=0)
 
         self.wait_for_ready(timeout)
 
@@ -249,28 +243,28 @@ class SEGrindRun:
             logger.debug("Error sending {} to {}".format(SEMsgType.SEMSG_EXIT.name, self.valgrind_pid))
             pass
         finally:
-            if self.valgrind_thread is not None:
-                self.valgrind_thread.join(timeout=0.1)
-                if self.valgrind_thread.is_alive():
-                    if self.valgrind_proc is not None:
-                        self.valgrind_proc.kill()
-                        if self.valgrind_proc.stdout is not None:
-                            logger.debug("Closing valgrind_proc.stdout for {}".format(self.valgrind_pid))
-                            self.valgrind_proc.stdout.close()
-                        if self.valgrind_proc.stderr is not None:
-                            logger.debug("Closing valgrind_proc.stderr for {}".format(self.valgrind_pid))
-                            self.valgrind_proc.stderr.close()
-                        if self.valgrind_proc.stdin is not None:
-                            logger.debug("Closing valgrind_proc.stdin for {}".format(self.valgrind_pid))
-                            self.valgrind_proc.stdin.close()
-                        self.valgrind_proc = None
+            # if self.valgrind_thread is not None:
+            #     self.valgrind_thread.join(timeout=0.1)
+            #     if self.valgrind_thread.is_alive():
+            if self.valgrind_proc is not None:
+                self.valgrind_proc.kill()
+                if self.valgrind_proc.stdout is not None:
+                    logger.debug("Closing valgrind_proc.stdout for {}".format(self.valgrind_pid))
+                    self.valgrind_proc.stdout.close()
+                if self.valgrind_proc.stderr is not None:
+                    logger.debug("Closing valgrind_proc.stderr for {}".format(self.valgrind_pid))
+                    self.valgrind_proc.stderr.close()
+                if self.valgrind_proc.stdin is not None:
+                    logger.debug("Closing valgrind_proc.stdin for {}".format(self.valgrind_pid))
+                    self.valgrind_proc.stdin.close()
+                self.valgrind_proc = None
 
-            if self.thr_r is not None:
-                os.close(self.thr_r)
-                self.thr_r = None
-            if self.thr_w is not None:
-                os.close(self.thr_w)
-                self.thr_w = None
+            # if self.thr_r is not None:
+            #     os.close(self.thr_r)
+            #     self.thr_r = None
+            # if self.thr_w is not None:
+            #     os.close(self.thr_w)
+            #     self.thr_w = None
 
             if self.log is not None:
                 if not self.log.closed:
@@ -287,7 +281,7 @@ class SEGrindRun:
 
             if self.pipe_out is not None:
                 logger.debug("Closing pipe_out for {}".format(self.valgrind_pid))
-                os.close(self.pipe_out)
+                self.pipe_out.close()
                 self.pipe_out = None
 
             if self.create_pipe_out and os.path.exists(self.pipe_out_loc):
@@ -298,13 +292,14 @@ class SEGrindRun:
     def wait_for_ready(self, timeout=None):
         byte_data = []
         while len(byte_data) == 0:
-            ready_pipes = select.select([self.thr_r, self.pipe_out], [], [], timeout)
+            # ready_pipes = select.select([self.thr_r, self.pipe_out], [], [], timeout)
+            ready_pipes = select.select([self.pipe_out], [], [], timeout)
             if len(ready_pipes[0]) == 0:
                 raise AssertionError("Valgrind process timed out waiting for ready")
-            if self.thr_r in ready_pipes[0]:
-                raise AssertionError("Valgrind process exited while waiting for ready")
+            # if self.thr_r in ready_pipes[0]:
+            #     raise AssertionError("Valgrind process exited while waiting for ready")
             if self.pipe_out in ready_pipes[0]:
-                byte_data = os.read(self.pipe_out, struct.calcsize(SEMessage.HEADER_FORMAT))
+                byte_data = self.pipe_out.read(struct.calcsize(SEMessage.HEADER_FORMAT))
 
         header_data = struct.unpack_from(SEMessage.HEADER_FORMAT, byte_data)
         msgtype = SEMsgType(header_data[0])
@@ -329,31 +324,34 @@ class SEGrindRun:
         while resp is not None:
             resp = self.read_response(0.1)
 
-    def read_response(self, timeout=None):
-        result = None
-        while result is None:
+    def read_bytes_from_pipe(self, n, timeout):
+        results = bytearray()
+        while len(results) < n:
             if not self.is_running():
                 raise AssertionError("Process {} not running".format(self.valgrind_pid))
-            ready_pipes = select.select([self.thr_r, self.pipe_out], [], [], timeout)
+            ready_pipes = select.select([self.pipe_out], [], [], timeout)
             if len(ready_pipes[0]) == 0:
+                results = None
                 break
-
-            if self.thr_r in ready_pipes[0]:
-                raise AssertionError(
-                    "Valgrind process exited prematurely".format(self.valgrind_proc.pid))
             if self.pipe_out in ready_pipes[0]:
-                pipe_data = os.read(self.pipe_out, struct.calcsize(SEMessage.HEADER_FORMAT))
-                if len(pipe_data) == 0:
-                    continue
-                header_data = struct.unpack_from(SEMessage.HEADER_FORMAT, pipe_data)
-                msgtype = SEMsgType(header_data[0])
-                msglen = header_data[1]
+                tmp_pipe_data = self.pipe_out.read(n - len(results))
+                for b in tmp_pipe_data:
+                    results.append(b)
+        return results
 
-                if msglen > 0:
-                    data = os.read(self.pipe_out, msglen)
-                else:
-                    data = None
-                result = SEMessage(msgtype, data)
+    def read_response(self, timeout=None):
+        result = None
+        pipe_data = self.read_bytes_from_pipe(n=struct.calcsize(SEMessage.HEADER_FORMAT), timeout=timeout)
+        if pipe_data is not None:
+            header_data = struct.unpack_from(SEMessage.HEADER_FORMAT, pipe_data)
+            msgtype = SEMsgType(header_data[0])
+            msglen = header_data[1]
+
+            if msglen > 0:
+                data = self.read_bytes_from_pipe(n=msglen, timeout=timeout)
+            else:
+                data = None
+            result = SEMessage(msgtype, data)
 
         if result is not None:
             logger.debug(
