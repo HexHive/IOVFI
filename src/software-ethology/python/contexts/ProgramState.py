@@ -11,14 +11,12 @@ class ProgramState:
         address_space_size = struct.unpack_from('I', infile.read(struct.calcsize('I')))[0]
         self.address_state = list()
         for i in range(address_space_size):
-            (addr_min, addr_max, val) = struct.unpack_from('QQQ', infile.read(struct.calcsize('QQQ')))
+            (addr_min, addr_max, val) = struct.unpack_from('=QQQ', infile.read(struct.calcsize('=QQQ')))
             self.address_state.append((addr_min, addr_max, val))
 
     def __hash__(self):
         hash_sum = hashlib.sha256()
-        hash_sum.update(self.register_state)
-        for (addr_min, addr_max, val) in self.address_state:
-            hash_sum.update(struct.pack("QQQ", addr_min, addr_max, val))
+        hash_sum.update(self.to_bytes())
 
         return int(hash_sum.hexdigest(), 16)
 
@@ -27,14 +25,12 @@ class ProgramState:
 
     def to_bytes(self):
         result = bytearray()
+
         result.extend(struct.pack('N', len(self.register_state)))
+        result.extend(self.register_state)
 
-        result.extend(struct.pack("N", len(self.register_state)))
-        for i in range(len(self.register_state)):
-            result.append(self.register_state[i])
-
-        result.extend(struct.pack("N", len(self.address_state)))
+        result.extend(struct.pack("I", len(self.address_state)))
         for (addr_min, addr_max, val) in self.address_state:
-            result.extend(struct.pack('QQQ', addr_min, addr_max, val))
+            result.extend(struct.pack('=QQQ', addr_min, addr_max, val))
 
         return result

@@ -246,7 +246,7 @@ def consolidate_one_function(consolidation_run_desc):
     ctx_count = 0
     retry_count = 0
     idx = 0
-    logger.debug("Created pin run for {}".format(run_name))
+    logger.debug("Created SEGrindRun for {}".format(run_name))
     while idx < len(consolidation_run_desc.contexts):
         iovec = consolidation_run_desc.contexts[idx]
         if retry_count > MAX_RETRY_COUNT:
@@ -271,27 +271,27 @@ def consolidate_one_function(consolidation_run_desc):
                 if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                     logger.error("Could not set target for {}".format(run_name))
                     break
-                logger.debug("pin run started for {}".format(run_name))
+                logger.debug("SEGrindRun started for {}".format(run_name))
                 ctx_count = 0
             ctx_count += 1
 
-            logger.debug("Sending reset command for {}".format(run_name))
-            ack_msg = segrind_run.send_reset_cmd(timeout=consolidation_run_desc.watchdog)
-            if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
-                segrind_run.stop()
-                retry_count += 1
-                logger.error("Reset ACK not received foPinMessager {}".format(run_name))
-                continue
-            resp_msg = segrind_run.read_response(timeout=consolidation_run_desc.watchdog)
-            if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
-                segrind_run.stop()
-                retry_count += 1
-                logger.error("Could not reset for {}".format(run_name))
-                if resp_msg is None:
-                    logger.error("{} Received no response back".format(run_name))
-                else:
-                    logger.error("{} Received {} message".format(run_name, resp_msg.msgtype.name))
-                continue
+            # logger.debug("Sending reset command for {}".format(run_name))
+            # ack_msg = segrind_run.send_reset_cmd(timeout=consolidation_run_desc.watchdog)
+            # if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
+            #     segrind_run.stop()
+            #     retry_count += 1
+            #     logger.error("Reset ACK not received foPinMessager {}".format(run_name))
+            #     continue
+            # resp_msg = segrind_run.read_response(timeout=consolidation_run_desc.watchdog)
+            # if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
+            #     segrind_run.stop()
+            #     retry_count += 1
+            #     logger.error("Could not reset for {}".format(run_name))
+            #     if resp_msg is None:
+            #         logger.error("{} Received no response back".format(run_name))
+            #     else:
+            #         logger.error("{} Received {} message".format(run_name, resp_msg.msgtype.name))
+            #     continue
 
             logger.debug("Sending set ctx command for {}".format(run_name))
             ack_msg = segrind_run.send_set_ctx_cmd(iovec, timeout=consolidation_run_desc.watchdog)

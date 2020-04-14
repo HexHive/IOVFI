@@ -1,4 +1,5 @@
 import hashlib
+import io
 import struct
 from enum import IntEnum, unique, auto
 
@@ -30,12 +31,13 @@ class VexEndness(IntEnum):
 
 class IOVec:
     def __init__(self, in_file):
+        in_file = io.BytesIO(in_file)
         logger.debug("Reading arch")
-        self.host_arch = VexArch(struct.unpack_from('i', in_file.read(struct.calcsize('i')))[0])
+        self.host_arch = VexArch(struct.unpack_from('=i', in_file.read(struct.calcsize('i')))[0])
         logger.debug("Reading endness")
-        self.host_endness = VexEndness(struct.unpack_from('i', in_file.read(struct.calcsize('i')))[0])
+        self.host_endness = VexEndness(struct.unpack_from('=i', in_file.read(struct.calcsize('i')))[0])
         logger.debug("Reading random seed")
-        self.random_seed = struct.unpack_from('I', in_file.read(struct.calcsize('I')))[0]
+        self.random_seed = struct.unpack_from('=I', in_file.read(struct.calcsize('I')))[0]
 
         logger.debug("Reading initial state")
         self.initial_state = ProgramState(in_file)
@@ -53,7 +55,7 @@ class IOVec:
         self.syscalls = list()
         for idx in range(0, syscall_count):
             logger.debug("Reading syscall")
-            self.syscalls.append(struct.unpack_from('Q', in_file.read(struct.calcsize('Q')))[0])
+            self.syscalls.append(struct.unpack_from('=Q', in_file.read(struct.calcsize('Q')))[0])
         self.syscalls.sort()
 
     def __hash__(self):
@@ -76,20 +78,15 @@ class IOVec:
 
     def to_bytes(self):
         result = bytearray()
-        result.extend(struct.pack('iiI', self.host_arch.value, self.host_endness.value, self.random_seed))
-        for b in self.initial_state.to_bytes():
-            result.append(b)
-
-        for b in self.expected_state.to_bytes():
-            result.append(b)
+        result.extend(struct.pack('=iiI', self.host_arch.value, self.host_endness.value, self.random_seed))
+        result.extend(self.initial_state.to_bytes())
+        result.extend(self.expected_state.to_bytes())
 
         result.extend(struct.pack("N", len(self.register_state_map)))
-
-        for b in self.register_state_map:
-            result.append(b)
+        result.extend(self.register_state_map)
 
         result.extend(struct.pack('N', len(self.syscalls)))
         for syscall in self.syscalls:
-            result.extend(struct.pack('Q', syscall))
+            result.extend(struct.pack('=Q', syscall))
 
         return result

@@ -1,4 +1,3 @@
-import io
 import os
 import random
 import select
@@ -43,16 +42,19 @@ class SEMessage:
             self.data = None
         else:
             self.msglen = len(data)
-            self.data = io.BytesIO(data)
-            self.data.seek(0)
+            self.data = data
 
     def __str__(self):
         return self.msgtype.name
 
     def write_to_pipe(self, pipe):
+        logger.debug("Writing header [ {} {} ]".format(self.msgtype.name, self.msglen))
         pipe.write(struct.pack(SEMessage.HEADER_FORMAT, self.msgtype.value, self.msglen))
         if self.msglen > 0:
-            pipe.write(self.data.read())
+            logger.debug("Writing data")
+            pipe.write(self.data)
+        pipe.flush()
+        logger.debug("Writing complete")
 
     def get_coverage(self):
         curr_pos = self.data.tell()
@@ -199,11 +201,11 @@ class SEGrindRun:
         if not self.is_running():
             raise AssertionError("Process not running")
 
-        fuzz_cmd = SEMessage(cmd, data)
-        logger.debug("Writing {} msg with {} bytes of data to {}".format(fuzz_cmd.msgtype.name,
-                                                                         fuzz_cmd.msglen,
+        cmd_msg = SEMessage(cmd, data)
+        logger.debug("Writing {} msg with {} bytes of data to {}".format(cmd_msg.msgtype.name,
+                                                                         cmd_msg.msglen,
                                                                          os.path.basename(self.pipe_in_loc)))
-        fuzz_cmd.write_to_pipe(self.pipe_in)
+        cmd_msg.write_to_pipe(self.pipe_in)
 
         response = self.read_response(timeout)
         return response
