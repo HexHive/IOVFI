@@ -17,15 +17,12 @@ def main():
     parser = argparse.ArgumentParser(description="Consolidate")
     parser.add_argument('-o', '--out', help="/path/to/output/function/descriptions", default="out.desc")
     parser.add_argument("-map", help="/path/to/context/map", default="hash.map")
-    parser.add_argument("-pindir", help="/path/to/pin-3.11/dir", required=True)
-    parser.add_argument("-tool", help="/path/to/pintool", required=True)
-    parser.add_argument("-ld", help="/path/to/fb-load")
+    parser.add_argument("-valgrind", help="/path/to/pin-3.11/dir", required=True)
     parser.add_argument("-target", help="Name of single function to target")
     parser.add_argument("-log", help="/path/to/log/file", default="consolidation.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     parser.add_argument("-threads", help="Number of threads to use", type=int, default=multiprocessing.cpu_count() * 8)
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
-    parser.add_argument("-singlectx")
 
     results = parser.parse_args()
     logger.setLevel(results.loglevel)
@@ -36,22 +33,10 @@ def main():
         logger.fatal("Could not find {}".format(results.map))
         sys.exit(1)
 
-    pin_loc = os.path.abspath(os.path.join(results.pindir, "pin"))
-    if not os.path.exists(pin_loc):
-        logger.fatal("Could not find {}".format(pin_loc))
+    valgrind_loc = os.path.abspath(results.valgrind)
+    if not os.path.exists(valgrind_loc):
+        logger.fatal("Could not find {}".format(valgrind_loc))
         sys.exit(1)
-
-    pintool_loc = os.path.abspath(results.tool)
-    if not os.path.exists(pintool_loc):
-        logger.fatal("Could not find {}".format(pintool_loc))
-        sys.exit(1)
-
-    loader_loc = None
-    if results.ld is not None:
-        loader_loc = os.path.abspath(results.ld)
-        if not os.path.exists(loader_loc):
-            logger.fatal("Could not find {}".format(loader_loc))
-            sys.exit(1)
 
     desc_file_path = os.path.abspath(results.out)
 
@@ -96,18 +81,15 @@ def main():
     logger.info("Creating consolidation list")
     for hash_sum, io_vec in hash_map.items():
         if hash_sum in desc_map:
-            if results.singlectx is None:
-                for func_desc in all_func_descs:
-                    consolidation_map[func_desc].append(io_vec)
-                    # if func_desc not in desc_map[hash_sum]:
-                    #     consolidation_map[func_desc].append(io_vec)
-            elif results.singlectx is not None and results.singlectx == io_vec.hexdigest():
+            for func_desc in all_func_descs:
                 consolidation_map[func_desc].append(io_vec)
+                # if func_desc not in desc_map[hash_sum]:
+                #     consolidation_map[func_desc].append(io_vec)
     logger.info("Done")
 
     if len(consolidation_map) > 0:
         logger.info("Starting at {}".format(datetime.datetime.today()))
-        new_desc_map = binaryutils.consolidate_contexts(pin_loc, pintool_loc, loader_loc, results.threads,
+        new_desc_map = binaryutils.consolidate_contexts(valgrind_loc, results.threads,
                                                         consolidation_map)
         desc_map.clear()
         for hash_sum, coverage_dict in new_desc_map.items():

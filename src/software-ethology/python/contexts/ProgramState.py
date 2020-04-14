@@ -5,8 +5,8 @@ import struct
 class ProgramState:
     def __init__(self, infile):
         register_state_size = struct.unpack_from("N", infile.read(struct.calcsize("N")))[0]
-        fmt = 's' * register_state_size
-        self.register_state = struct.unpack_from(fmt, infile.read(struct.calcsize(fmt)))[0]
+        fmt = 'B' * register_state_size
+        self.register_state = struct.unpack_from(fmt, infile.read(struct.calcsize(fmt)))
 
         address_space_size = struct.unpack_from('I', infile.read(struct.calcsize('I')))[0]
         self.address_state = list()
@@ -24,3 +24,17 @@ class ProgramState:
 
     def __eq__(self, other):
         return hash(self) == hash(other)
+
+    def to_bytes(self):
+        result = bytearray()
+        result.extend(struct.pack('N', len(self.register_state)))
+
+        result.extend(struct.pack("N", len(self.register_state)))
+        for i in range(len(self.register_state)):
+            result.append(self.register_state[i])
+
+        result.extend(struct.pack("N", len(self.address_state)))
+        for (addr_min, addr_max, val) in self.address_state:
+            result.extend(struct.pack('QQQ', addr_min, addr_max, val))
+
+        return result

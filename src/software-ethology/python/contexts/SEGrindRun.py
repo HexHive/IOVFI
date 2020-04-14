@@ -361,9 +361,8 @@ class SEGrindRun:
         elif not isinstance(io_vec, IOVec):
             raise AssertionError("io_vec must be an instance of IOVec")
 
-        data = io.BytesIO()
-        io_vec.write_bin(data)
-        if len(data.getbuffer()) == 0:
+        data = io_vec.to_bytes()
+        if len(data) == 0:
             raise AssertionError("IOVec is empty")
 
-        return self._send_cmd(SEMsgType.SEMSG_SET_CTX, data.getbuffer(), timeout)
+        return self._send_cmd(SEMsgType.SEMSG_SET_CTX, data, timeout)
