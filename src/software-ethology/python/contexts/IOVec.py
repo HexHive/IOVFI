@@ -29,21 +29,40 @@ class VexEndness(IntEnum):
     VexEndnessBE = auto()
 
 
+class ReturnValue:
+    def __init__(self, in_file):
+        return_value_size = struct.unpack_from("N", in_file.read(struct.calcsize("N")))[0]
+        logger.debug("Reading {} bytes".format(return_value_size))
+        fmt = '={}'.format('B' * return_value_size)
+        self.value = struct.unpack_from(fmt, in_file.read(struct.calcsize(fmt)))
+        self.is_ptr = struct.unpack_from('=?', in_file.read(struct.calcsize('=?')))[0]
+
+    def to_bytes(self):
+        result = bytearray()
+        result.extend(struct.pack("N", len(self.value)))
+        result.extend(self.value)
+        result.extend(struct.pack("=?", self.is_ptr))
+        return result
+
+
 class IOVec:
     def __init__(self, in_file):
         in_file = io.BytesIO(in_file)
         logger.debug("Reading arch")
-        self.host_arch = VexArch(struct.unpack_from('=i', in_file.read(struct.calcsize('i')))[0])
+        self.host_arch = VexArch(struct.unpack_from('=i', in_file.read(struct.calcsize('=i')))[0])
         logger.debug("Reading endness")
-        self.host_endness = VexEndness(struct.unpack_from('=i', in_file.read(struct.calcsize('i')))[0])
+        self.host_endness = VexEndness(struct.unpack_from('=i', in_file.read(struct.calcsize('=i')))[0])
         logger.debug("Reading random seed")
-        self.random_seed = struct.unpack_from('=I', in_file.read(struct.calcsize('I')))[0]
+        self.random_seed = struct.unpack_from('=I', in_file.read(struct.calcsize('=I')))[0]
 
         logger.debug("Reading initial state")
         self.initial_state = ProgramState(in_file)
 
         logger.debug("Reading expected state")
         self.expected_state = ProgramState(in_file)
+
+        logger.debug("Reading return value")
+        self.return_value = ReturnValue(in_file)
 
         logger.debug("Reading register state map")
         register_state_map_size = struct.unpack_from("N", in_file.read(struct.calcsize("N")))[0]
@@ -55,7 +74,7 @@ class IOVec:
         self.syscalls = list()
         for idx in range(0, syscall_count):
             logger.debug("Reading syscall")
-            self.syscalls.append(struct.unpack_from('=Q', in_file.read(struct.calcsize('Q')))[0])
+            self.syscalls.append(struct.unpack_from('=Q', in_file.read(struct.calcsize('=Q')))[0])
         self.syscalls.sort()
 
     def __hash__(self):
@@ -81,6 +100,7 @@ class IOVec:
         result.extend(struct.pack('=iiI', self.host_arch.value, self.host_endness.value, self.random_seed))
         result.extend(self.initial_state.to_bytes())
         result.extend(self.expected_state.to_bytes())
+        result.extend(self.return_value.to_bytes())
 
         result.extend(struct.pack("N", len(self.register_state_map)))
         result.extend(self.register_state_map)
