@@ -41,7 +41,7 @@ class ReturnValue:
         result = bytearray()
         result.extend(struct.pack("N", len(self.value)))
         result.extend(self.value)
-        result.extend(struct.pack("=?", self.is_ptr))
+        result.extend(struct.pack("?", self.is_ptr))
         return result
 
 
@@ -69,7 +69,7 @@ class IOVec:
         self.syscalls = list()
         for idx in range(0, syscall_count):
             logger.debug("Reading syscall")
-            self.syscalls.append(struct.unpack_from('=Q', in_file.read(struct.calcsize('=Q')))[0])
+            self.syscalls.append(struct.unpack_from('Q', in_file.read(struct.calcsize('Q')))[0])
         self.syscalls.sort()
 
     def __hash__(self):
