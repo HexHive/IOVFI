@@ -4,7 +4,7 @@ import struct
 from enum import IntEnum, unique, auto
 
 from .FBLogging import logger
-from .ProgramState import ProgramState
+from .ProgramState import ProgramState, RangeMap
 
 
 @unique
@@ -59,15 +59,10 @@ class IOVec:
         self.initial_state = ProgramState(in_file)
 
         logger.debug("Reading expected state")
-        self.expected_state = ProgramState(in_file)
+        self.expected_state = RangeMap(in_file)
 
         logger.debug("Reading return value")
         self.return_value = ReturnValue(in_file)
-
-        logger.debug("Reading register state map")
-        register_state_map_size = struct.unpack_from("N", in_file.read(struct.calcsize("N")))[0]
-        fmt = 'B' * register_state_map_size
-        self.register_state_map = struct.unpack_from(fmt, in_file.read(struct.calcsize(fmt)))
 
         logger.debug("Reading syscall count")
         syscall_count = struct.unpack_from('N', in_file.read(struct.calcsize('N')))[0]
@@ -101,9 +96,6 @@ class IOVec:
         result.extend(self.initial_state.to_bytes())
         result.extend(self.expected_state.to_bytes())
         result.extend(self.return_value.to_bytes())
-
-        result.extend(struct.pack("N", len(self.register_state_map)))
-        result.extend(self.register_state_map)
 
         result.extend(struct.pack('N', len(self.syscalls)))
         for syscall in self.syscalls:

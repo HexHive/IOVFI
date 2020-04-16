@@ -2,17 +2,53 @@ import hashlib
 import struct
 
 
+class RangeMapValue:
+    def __init__(self, infile):
+        self.addr_min = struct.unpack_from("=Q", infile.read(struct.calcsize('=Q')))[0]
+        self.addr_max = struct.unpack_from("=Q", infile.read(struct.calcsize('=Q')))[0]
+        self.val = struct.unpack_from("=Q", infile.read(struct.calcsize('=Q')))[0]
+
+    def to_bytes(self):
+        result = bytearray()
+        result.extend(struct.pack("=QQQ", self.addr_min, self.addr_max, self.val))
+        return result
+
+
+class RangeMap:
+    def __init__(self, infile):
+        range_map_size = struct.unpack_from('=I', infile.read(struct.calcsize('I')))[0]
+        self.entries = list()
+        for i in range(range_map_size):
+            self.entries.append(RangeMapValue(infile))
+
+    def to_bytes(self):
+        result = bytearray()
+        result.extend(struct.pack('I', len(self.entries)))
+        for entry in self.entries:
+            result.extend(entry.to_bytes())
+        return result
+
+
+class RegisterValue:
+    def __init__(self, infile):
+        self.guest_state_offset = struct.unpack_from("=i", infile.read(struct.calcsize("=i")))[0]
+        self.value = struct.unpack_from("=L", infile.read(struct.calcsize("=L")))[0]
+        self.is_ptr = struct.unpack_from("=?", infile.read(struct.calcsize("=?")))[0]
+
+    def to_bytes(self):
+        result = bytearray()
+        result.extend(struct.pack("=iL?", self.guest_state_offset, self.value, self.is_ptr))
+        return result
+
+
 class ProgramState:
     def __init__(self, infile):
-        register_state_size = struct.unpack_from("N", infile.read(struct.calcsize("N")))[0]
-        fmt = 'B' * register_state_size
-        self.register_state = struct.unpack_from(fmt, infile.read(struct.calcsize(fmt)))
-
-        address_space_size = struct.unpack_from('I', infile.read(struct.calcsize('I')))[0]
-        self.address_state = list()
-        for i in range(address_space_size):
-            (addr_min, addr_max, val) = struct.unpack_from('=QQQ', infile.read(struct.calcsize('=QQQ')))
-            self.address_state.append((addr_min, addr_max, val))
+        register_state_count = struct.unpack_from("=N", infile.read(struct.calcsize("N")))[0]
+        self.register_values = list()
+        for i in range(register_state_count):
+            self.register_values.append(RegisterValue(infile))
+        self.address_space = RangeMap(infile)
+        self.pointer_locations = RangeMap(infile)
 
     def __hash__(self):
         hash_sum = hashlib.sha256()
@@ -26,11 +62,10 @@ class ProgramState:
     def to_bytes(self):
         result = bytearray()
 
-        result.extend(struct.pack('N', len(self.register_state)))
-        result.extend(self.register_state)
-
-        result.extend(struct.pack("I", len(self.address_state)))
-        for (addr_min, addr_max, val) in self.address_state:
-            result.extend(struct.pack('=QQQ', addr_min, addr_max, val))
+        result.extend(struct.pack('N', len(self.register_values)))
+        for val in self.register_values:
+            result.extend(val.to_bytes())
+        result.extend(self.address_space.to_bytes())
+        result.extend(self.pointer_locations.to_bytes())
 
         return result
