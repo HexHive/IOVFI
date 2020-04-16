@@ -1,8 +1,6 @@
 import hashlib
 import struct
 
-from .FBLogging import logger
-
 
 class RangeMapValue:
     def __init__(self, infile):
@@ -36,7 +34,6 @@ class RegisterValue:
         self.guest_state_offset = struct.unpack_from("i", infile.read(struct.calcsize("i")))[0]
         self.value = struct.unpack_from("Q", infile.read(struct.calcsize("Q")))[0]
         self.is_ptr = struct.unpack_from("?", infile.read(struct.calcsize("?")))[0]
-        logger.debug("Read {} for register {}".format(self.value, self.guest_state_offset))
 
     def to_bytes(self):
         result = bytearray()

@@ -48,34 +48,14 @@ class SEMessage:
         return self.msgtype.name
 
     def write_to_pipe(self, pipe):
-        logger.debug("Writing header [ {} {} ]".format(self.msgtype.name, self.msglen))
         pipe.write(struct.pack(SEMessage.HEADER_FORMAT, self.msgtype.value, self.msglen))
         if self.msglen > 0:
-            logger.debug("Writing data")
             pipe.write(self.data)
         pipe.flush()
-        logger.debug("Writing complete")
 
     def get_coverage(self):
-        curr_pos = self.data.tell()
-        coveragesize = struct.unpack_from('N', self.data.getbuffer(), curr_pos)[0]
+        # TODO: Implement me
         coverage = list()
-        self.data.seek(curr_pos + struct.calcsize('N'))
-        for i in range(coveragesize):
-            curr_pos = self.data.tell()
-            (numInstructions, totalInstructions) = struct.unpack_from('NN', self.data.getbuffer(), curr_pos)
-            self.data.seek(curr_pos + struct.calcsize('NN'))
-
-            instruction_addrs = list()
-            curr_pos = self.data.tell()
-            fmt = 'P' * numInstructions
-            instructions = struct.unpack_from(fmt, self.data.getbuffer(), curr_pos)
-            self.data.seek(curr_pos + struct.calcsize(fmt))
-            for addr in instructions:
-                instruction_addrs.append(addr)
-            instruction_addrs.sort()
-            coverage.append((instruction_addrs, totalInstructions))
-
         return coverage
 
 
