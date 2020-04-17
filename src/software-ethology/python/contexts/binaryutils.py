@@ -192,11 +192,13 @@ def fuzz_functions(func_descs, valgrind_loc, num_threads, watchdog=WATCHDOG, fuz
     fuzz_runs = list()
     io_vecs_dict = dict()
     unclassified = set()
+    names = set()
 
     if not os.path.exists(work_dir):
         os.makedirs(work_dir, exist_ok=True)
 
     for func_desc in func_descs:
+        names.add(func_desc.name)
         fuzz_runs.append(FuzzRunDesc(func_desc, valgrind_loc, work_dir, watchdog, fuzz_count))
 
     complete_count = 0
@@ -204,8 +206,12 @@ def fuzz_functions(func_descs, valgrind_loc, num_threads, watchdog=WATCHDOG, fuz
         results = {pool.submit(fuzz_one_function, fuzz_run): fuzz_run for fuzz_run in fuzz_runs}
         for result in futures.as_completed(results):
             complete_count += 1
-            logger.info("Completed {}/{} fuzz runs".format(complete_count, len(func_descs)))
             fuzz_run = results[result]
+            logger.info("Completed {}/{} fuzz runs".format(complete_count, len(func_descs)))
+            names.remove(fuzz_run.func_desc.name)
+            if len(names) < 5:
+                logger.info("Functions yet to complete: ")
+                " ".join(names)
             try:
                 fuzz_run_result = result.result()
                 if len(fuzz_run_result) > 0:
