@@ -155,7 +155,7 @@ def fuzz_one_function(fuzz_desc):
                     logger.info("{} created {} ({} of {})".format(run_name, io_vec.hexdigest(), fuzz_count,
                                                                   fuzz_desc.fuzz_count))
                 elif result is not None and result.data is not None and len(result.data) > 0:
-                    logger.debug("Fuzzing run failed: {}".format(result.data.getvalue()))
+                    logger.debug("Fuzzing run failed: {}".format(result.data.decode(encoding='utf-8', errors='ignore')))
                 elif result is None:
                     logger.debug("Fuzzing result is None")
                 elif result is not None and result.data is not None and len(result.data) == 0:
