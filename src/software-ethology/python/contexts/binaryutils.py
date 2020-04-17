@@ -209,9 +209,8 @@ def fuzz_functions(func_descs, valgrind_loc, num_threads, watchdog=WATCHDOG, fuz
             fuzz_run = results[result]
             logger.info("Completed {}/{} fuzz runs".format(complete_count, len(func_descs)))
             names.remove(fuzz_run.func_desc.name)
-            if len(names) < 5:
-                logger.info("Functions yet to complete: ")
-                " ".join(names)
+            if len(names) <= 10:
+                logger.info("Functions yet to complete: {}".format(" ".join(names)))
             try:
                 fuzz_run_result = result.result()
                 if len(fuzz_run_result) > 0:
