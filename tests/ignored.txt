@@ -4,6 +4,8 @@ __do_global_dtors_aux
 _fini
 __cxa_finalize
 frame_dummy
+x2realloc
+xrealloc
 _init
 _start
 copy_acl
