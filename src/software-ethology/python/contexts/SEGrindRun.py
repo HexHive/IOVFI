@@ -155,7 +155,11 @@ class SEGrindRun:
         if self.run_log_loc is not None:
             self.log = open(self.run_log_loc, "a+")
 
-        self.valgrind_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True, stdout=self.log, stderr=self.log)
+        env_copy = os.environ.copy()
+        env_copy['LD_BIND_NOW'] = "1"
+
+        self.valgrind_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True, stdout=self.log, stderr=self.log,
+                                              env=env_copy)
         self.valgrind_pid = self.valgrind_proc.pid
         logger.debug("{} spawned process {}".format(os.path.basename(self.pipe_in_loc), self.valgrind_pid))
         # ret_value = self.valgrind_proc.wait()
