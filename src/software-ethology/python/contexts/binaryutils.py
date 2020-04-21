@@ -310,6 +310,8 @@ def consolidate_one_function(consolidation_run_desc):
                 segrind_run.stop()
                 retry_count += 1
                 logger.error("Could not set context for {}".format(run_name))
+                if resp_msg:
+                    logger.error("Received message {}".format(resp_msg.msgtype.name))
                 continue
 
             logger.debug("Sending execute command for {}".format(run_name))
@@ -333,7 +335,7 @@ def consolidate_one_function(consolidation_run_desc):
             logger.debug("Error for {}: {}".format(run_name, str(e)))
             logger.info("{} rejects {} ({})".format(run_name, iovec.hexdigest(), ctx_count))
             idx += 1
-            pin_run.stop()
+            segrind_run.stop()
             continue
         except Exception as e:
             logger.exception("Error for {}: {}".format(run_name, str(e)))

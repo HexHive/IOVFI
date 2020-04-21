@@ -284,7 +284,7 @@ class SEGrindRun:
             if msg is not None:
                 error_msg += ": {} (len = {})".format(msg.msgtype.name, msg.msglen)
             raise AssertionError(error_msg)
-        logger.info("Process {} is ready".format(self.valgrind_pid))
+        logger.debug("Process {} is ready".format(self.valgrind_pid))
 
     def send_fuzz_cmd(self, timeout=None):
         return self._send_cmd(SEMsgType.SEMSG_FUZZ, None, timeout)

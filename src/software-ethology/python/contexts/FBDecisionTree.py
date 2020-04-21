@@ -104,12 +104,12 @@ class FBDecisionTree:
         elif not segrind_run.is_running():
             raise AssertionError("pin_run is not running")
 
-        ack_msg = segrind_run.send_reset_cmd(watchdog)
-        if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
-            raise AssertionError("Received no ack for set context cmd")
-        resp_msg = segrind_run.read_response(watchdog)
-        if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
-            raise AssertionError("Set context command failed")
+        # ack_msg = segrind_run.send_reset_cmd(watchdog)
+        # if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
+        #     raise AssertionError("Received no ack for set context cmd")
+        # resp_msg = segrind_run.read_response(watchdog)
+        # if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
+        #     raise AssertionError("Set context command failed")
 
         ack_msg = segrind_run.send_set_ctx_cmd(iovec, watchdog)
         if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
@@ -125,7 +125,8 @@ class FBDecisionTree:
         if resp_msg is None:
             raise AssertionError("Execute command did not return")
         if resp_msg.msgtype == SEMsgType.SEMSG_OK:
-            return True, resp_msg.get_coverage()
+            # return True, resp_msg.get_coverage()
+            return True, None
         else:
             return False, None
 
@@ -151,17 +152,21 @@ class FBDecisionTree:
                 raise AssertionError("Node is not a leaf")
 
             try_count = 0
-            coverages = list()
+            # coverages = list()
+            confirmation_iovecs = node.get_confirmation_iovecs()
+            if len(confirmation_iovecs) == 0:
+                raise AssertionError("No confirmation IOVecs")
+
             for iovec in node.get_confirmation_iovecs():
                 self._log("Using iovec {}".format(iovec.hexdigest()))
                 try_count += 1
-                accepted, coverage = self._attempt_ctx(iovec, segrind_run)
+                accepted, _ = self._attempt_ctx(iovec, segrind_run)
                 if not accepted:
                     return False, None
                 if try_count >= max_iovecs:
                     break
-                coverages.append(coverage)
-            return True, coverages
+                # coverages.append(coverage)
+            return True, None
         except Exception as e:
             return False, None
 
@@ -190,8 +195,8 @@ class FBDecisionTree:
                     try:
                         confirmed, coverage = self._confirm_leaf(func_desc, current_node, segrind_run, max_confirm)
                         if confirmed:
-                            for cov in coverage:
-                                coverages.append(cov)
+                            # for cov in coverage:
+                            #     coverages.append(cov)
                             segrind_run.stop()
                             return current_node, coverages
                         break
@@ -213,7 +218,7 @@ class FBDecisionTree:
 
                 if iovec_accepted:
                     current_node = current_node.get_right_child()
-                    coverages.append(coverage)
+                    # coverages.append(coverage)
                 else:
                     current_node = current_node.get_left_child()
 

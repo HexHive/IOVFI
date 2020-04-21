@@ -1,3 +1,9 @@
+deregister_tm_clones
+register_tm_clones
+__do_global_dtors_aux
+_fini
+__cxa_finalize
+frame_dummy
 _init
 _start
 copy_acl
