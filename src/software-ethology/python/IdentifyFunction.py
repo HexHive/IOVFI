@@ -6,12 +6,10 @@ import multiprocessing
 import os
 import pickle
 import random
-import statistics
 import threading
 from concurrent import futures
 
 from contexts import binaryutils as bu
-from contexts import treeutils as tu
 from contexts.FBLogging import logger
 
 dangerous_functions = {'kill', '_exit', 'exit', '__kill', '_Exit', }
@@ -26,19 +24,16 @@ guessLoc = None
 
 guessLocBase = ".guesses.bin"
 
-pinLoc = None
-pintoolLoc = None
 binaryLoc = None
 fbDtree = None
-rust_main = None
-fbLoader = None
 n_confirms = 1
+valgrind_loc = None
 
 WORK_DIR = os.path.abspath(os.path.join("_work", "identifying"))
 
 
 def check_inputs(argparser):
-    global pinLoc, pintoolLoc, binaryLoc, guessLoc, rust_main
+    global valgrind_loc, binaryLoc, guessLoc
     if not os.path.exists(argparser.tree):
         logger.fatal("Could not find {}".format(argparser.tree))
         exit(1)
@@ -48,24 +43,15 @@ def check_inputs(argparser):
         exit(1)
     binaryLoc = os.path.abspath(argparser.binary)
 
-    pinLoc = os.path.abspath(os.path.join(argparser.pindir, "pin"))
-    pintoolLoc = os.path.abspath(argparser.tool)
-
-    if not os.path.exists(pinLoc):
-        logger.fatal("Could not find {}".format(pinLoc))
-        exit(1)
-
-    if not os.path.exists(pintoolLoc):
-        logger.fatal("Could not find {}".format(pintoolLoc))
-        exit(1)
-
     guessLoc = os.path.abspath(argparser.guesses)
-
-    rust_main = argparser.rust
+    valgrind_loc = os.path.abspath(argparser.valgrind)
+    if not os.path.exists(valgrind_loc):
+        logger.fatal("Could not find {}".format(valgrind_loc))
+        exit(1)
 
 
 def single_test(func_desc):
-    global error_msgs, pinLoc, pintoolLoc, fbDtree, n_confirms, rust_main, fbLoader
+    global error_msgs, fbDtree, n_confirms, valgrind_loc
 
     coverage_window = 0.7
 
@@ -73,40 +59,41 @@ def single_test(func_desc):
         log_names = bu.get_log_names(func_desc)
         log = os.path.join('logs', 'identify', log_names[0])
         cmd_log = os.path.join('logs', 'identify', log_names[1])
-        guess, coverage = fbDtree.identify(func_desc, pinLoc, pintoolLoc, cwd=WORK_DIR, max_confirm=n_confirms,
-                                           rust_main=rust_main, loader_loc=fbLoader, cmd_log_loc=cmd_log, log_loc=log)
+        guess, coverage = fbDtree.identify(func_desc=func_desc, valgrind_loc=valgrind_loc, cwd=WORK_DIR,
+                                           max_confirm=n_confirms,
+                                           cmd_log_loc=cmd_log, log_loc=log)
 
-        if guess is not None:
-            tmp_coverages = list()
-            ec_list = list(guess.equivalence_class)
-            for ec in ec_list:
-                tmp_coverages.append(tu.compute_path_coverage(fbDtree, ec.name))
-            tmp_coverages.sort()
-
-            reachable_instructions_count = bu.compute_total_reachable_instruction_count(coverage)
-            if reachable_instructions_count == 0:
-                guess = None
-            else:
-                executed_instruction_count = bu.compute_total_executed_instruction_count(coverage)
-                pct_cov = executed_instruction_count / reachable_instructions_count
-                close_coverage = False
-                for cov in tmp_coverages:
-                    if pct_cov * (1 - coverage_window) <= cov <= min(1.0, pct_cov * (1 + coverage_window)):
-                        close_coverage = True
-                if not close_coverage:
-                    # logger.info("Original guess removed for {} ({})".format(func_desc.name, " ".join([fd.name for fd
-                    #                                                                                   in ec_list
-                    #                                                                                   ])))
-                    # logger.info("\t{} vs. ({})".format(str(pct_cov), " ".join([str(c) for c in tmp_coverages])))
-                    # logger.info("\n{}: {}".format(func_desc.name, coverage))
-                    # for ec in ec_list:
-                    #     logger.info("{}: {}\n".format(ec.name, tu.get_tree_coverage(fbDtree, ec.name)))
-                    # logger.info("\n")
-                    guess = None
+        # if guess is not None:
+        #     tmp_coverages = list()
+        #     ec_list = list(guess.equivalence_class)
+        #     for ec in ec_list:
+        #         tmp_coverages.append(tu.compute_path_coverage(fbDtree, ec.name))
+        #     tmp_coverages.sort()
+        #
+        #     reachable_instructions_count = bu.compute_total_reachable_instruction_count(coverage)
+        #     if reachable_instructions_count == 0:
+        #         guess = None
+        #     else:
+        #         executed_instruction_count = bu.compute_total_executed_instruction_count(coverage)
+        #         pct_cov = executed_instruction_count / reachable_instructions_count
+        #         close_coverage = False
+        #         for cov in tmp_coverages:
+        #             if pct_cov * (1 - coverage_window) <= cov <= min(1.0, pct_cov * (1 + coverage_window)):
+        #                 close_coverage = True
+        #         if not close_coverage:
+        # logger.info("Original guess removed for {} ({})".format(func_desc.name, " ".join([fd.name for fd
+        #                                                                                   in ec_list
+        #                                                                                   ])))
+        # logger.info("\t{} vs. ({})".format(str(pct_cov), " ".join([str(c) for c in tmp_coverages])))
+        # logger.info("\n{}: {}".format(func_desc.name, coverage))
+        # for ec in ec_list:
+        #     logger.info("{}: {}\n".format(ec.name, tu.get_tree_coverage(fbDtree, ec.name)))
+        # logger.info("\n")
+        # guess = None
 
         guess_lock.acquire()
         guesses[func_desc] = guess
-        coverages[func_desc] = coverage
+        # coverages[func_desc] = coverage
         guess_lock.release()
     except Exception as e:
         error_lock.acquire()
@@ -115,17 +102,16 @@ def single_test(func_desc):
         error_lock.release()
         guess_lock.acquire()
         guesses[func_desc] = None
-        coverages[func_desc] = None
+        # coverages[func_desc] = None
         guess_lock.release()
 
 
 def main():
-    global fbDtree, guessLoc, binaryLoc, guesses, n_confirms, fbLoader
+    global fbDtree, guessLoc, binaryLoc, guesses, n_confirms, valgrind_loc
 
     parser = argparse.ArgumentParser(description="IdentifyFunction")
     parser.add_argument('-t', '--tree', help="/path/to/decision/tree", default="tree.bin")
-    parser.add_argument("-pindir", help="/path/to/pin-3.11/dir", required=True)
-    parser.add_argument("-tool", help="/path/to/pintool", required=True)
+    parser.add_argument('-valgrind', help='path/to/valgrind', required=True)
     parser.add_argument("-b", "--binary", help="/path/to/binary", required=True)
     parser.add_argument("-loglevel", help="Set log level", type=int, default=logging.INFO)
     parser.add_argument("-logprefix", help="Prefix to use before log files", default="")
@@ -134,16 +120,13 @@ def main():
     parser.add_argument("-guesses", help="/path/to/guesses", default="guesses.bin")
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
     parser.add_argument("-n", help="Number of confirmation checks", type=int, default=1)
-    parser.add_argument('-rust', help='Rust application main', type=str)
     parser.add_argument('-outputonly', help='Only output the existing guesses', type=bool, default=False)
-    parser.add_argument("-ld", help="/path/to/fb-load")
     results = parser.parse_args()
 
     logger.info("Checking inputs...")
     check_inputs(results)
     logger.info("done!")
     n_confirms = results.n
-    fbLoader = results.ld
 
     logpath = os.path.abspath(os.path.join("logs", "identify", results.logprefix))
     if not os.path.exists(logpath):
@@ -219,19 +202,19 @@ def main():
                 guess_list.append(str(func))
 
         logger.info("[{}] {}: {}".format(indicator, func_desc.name, " ".join(guess_list)))
-        if guess is not None:
-            tmp_coverages = list()
-            for ec in guess.equivalence_class:
-                tmp_coverages.append(tu.compute_path_coverage(fbDtree, ec.name))
-            tmp_coverages.sort()
-
-            reachable_instructions_count = bu.compute_total_reachable_instruction_count(coverages[func_desc])
-            executed_instruction_count = bu.compute_total_executed_instruction_count(coverages[func_desc])
-            if executed_instruction_count > 0:
-                logger.info("\tCoverage: {} vs. {} ({})".format(executed_instruction_count /
-                                                                reachable_instructions_count,
-                                                                statistics.mean(tmp_coverages),
-                                                                " ".join([str(f) for f in tmp_coverages])))
+        # if guess is not None:
+        #     tmp_coverages = list()
+        #     for ec in guess.equivalence_class:
+        #         tmp_coverages.append(tu.compute_path_coverage(fbDtree, ec.name))
+        #     tmp_coverages.sort()
+        #
+        #     reachable_instructions_count = bu.compute_total_reachable_instruction_count(coverages[func_desc])
+        #     executed_instruction_count = bu.compute_total_executed_instruction_count(coverages[func_desc])
+        #     if executed_instruction_count > 0:
+        #         logger.info("\tCoverage: {} vs. {} ({})".format(executed_instruction_count /
+        #                                                         reachable_instructions_count,
+        #                                                         statistics.mean(tmp_coverages),
+        #                                                         " ".join([str(f) for f in tmp_coverages])))
 
 
 if __name__ == "__main__":
