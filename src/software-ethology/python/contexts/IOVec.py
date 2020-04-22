@@ -86,7 +86,7 @@ class IOVec:
 
     def pretty_print(self, out=sys.stdout):
         print("============================================================", file=out)
-        print("ID: {}".format(str(self)), file=out)
+        print("ID:        {}".format(str(self)), file=out)
         print("Arch:      {}".format(self.host_arch.name), file=out)
         print("Endness:   {}".format(self.host_endness.name), file=out)
         print("Rand Seed: {}".format(self.random_seed), file=out)

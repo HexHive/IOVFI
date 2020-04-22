@@ -1,3 +1,4 @@
+import io
 import os
 import subprocess
 from concurrent import futures
@@ -152,8 +153,11 @@ def fuzz_one_function(fuzz_desc):
                     # hash_sum = hash(io_vec)
                     # coverages[hash_sum] = io_vec_coverage
                     fuzz_count += 1
-                    logger.info("{} created {} ({} of {})".format(run_name, io_vec.hexdigest(), fuzz_count,
+                    logger.info("{} created {} ({} of {})".format(run_name, str(io_vec), fuzz_count,
                                                                   fuzz_desc.fuzz_count))
+                    io_vec_contents = io.StringIO()
+                    io_vec.pretty_print(out=io_vec_contents)
+                    logger.debug(io_vec_contents.getvalue())
                 elif result is not None and result.data is not None and len(result.data) > 0:
                     logger.debug("Fuzzing run failed: {}".format(result.data.decode(encoding='utf-8', errors='ignore')))
                 elif result is None:
