@@ -1,6 +1,7 @@
 import hashlib
 import io
 import struct
+import sys
 from enum import IntEnum, unique, auto
 
 from .FBLogging import logger
@@ -37,6 +38,17 @@ class ReturnValue:
         self.value = struct.unpack_from(fmt, in_file.read(struct.calcsize(fmt)))
         self.is_ptr = struct.unpack_from('=?', in_file.read(struct.calcsize('=?')))[0]
 
+    def pretty_print(self, out=sys.stdout):
+        if self.is_ptr:
+            indicator = "O"
+        else:
+            indicator = "X"
+
+        print("0x", file=out, end='')
+        for b in self.value:
+            print("{0:02x}".format(b), file=out, end='')
+        print(" {}".format(indicator), file=out)
+
     def to_bytes(self):
         result = bytearray()
         result.extend(struct.pack("N", len(self.value)))
@@ -71,6 +83,21 @@ class IOVec:
             logger.debug("Reading syscall")
             self.syscalls.append(struct.unpack_from('Q', in_file.read(struct.calcsize('Q')))[0])
         self.syscalls.sort()
+
+    def pretty_print(self, out=sys.stdout):
+        print("============================================================", file=out)
+        print("ID: {}".format(str(self)), file=out)
+        print("Arch:      {}".format(self.host_arch.name), file=out)
+        print("Endness:   {}".format(self.host_endness.name), file=out)
+        print("Rand Seed: {}".format(self.random_seed), file=out)
+        print("Return:    ", end='', file=out)
+        self.return_value.pretty_print(out)
+        print("Syscalls:  {}".format(" ".join(self.syscalls)), file=out)
+        print('----------------------- Initial State ----------------------', file=out)
+        self.initial_state.pretty_print(out)
+        print('---------------------- Expected State ----------------------', file=out)
+        self.expected_state.pretty_print(out)
+        print("============================================================", file=out)
 
     def __hash__(self):
         return int(self.hexdigest(), 16)
