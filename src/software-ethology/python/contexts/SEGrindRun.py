@@ -311,6 +311,10 @@ class SEGrindRun:
                 break
             if self.pipe_out in ready_pipes[0]:
                 tmp_pipe_data = self.pipe_out.read(n - len(results))
+                if len(tmp_pipe_data) == 0:
+                    results = None
+                    break
+
                 for b in tmp_pipe_data:
                     results.append(b)
         return results
