@@ -64,8 +64,8 @@ def fuzz_one_function(fuzz_desc):
 
         logger.debug("Creating SEGrindRun for {}".format(run_name))
         segrind_run = SEGrindRun(valgrind_loc=fuzz_desc.valgrind_loc, binary_loc=binary, pipe_in=pipe_in,
-                                 pipe_out=pipe_out,
-                                 valgrind_log_loc=log_out, run_log_loc=cmd_log, cwd=fuzz_desc.work_dir)
+                                 pipe_out=pipe_out, valgrind_log_loc=log_out, run_log_loc=cmd_log,
+                                 cwd=fuzz_desc.work_dir)
         logger.debug("Done")
         fuzz_count = 0
         attempts = 0
@@ -143,7 +143,7 @@ def fuzz_one_function(fuzz_desc):
                 segrind_run.stop()
                 continue
     except Exception as e:
-        logger.exception("Error for {}: {}".format(run_name, e))
+        logger.error("Error for {}: {}".format(run_name, e))
     finally:
         logger.info("Finished {}".format(run_name))
         segrind_run.stop()
