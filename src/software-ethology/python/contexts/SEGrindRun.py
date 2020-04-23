@@ -186,9 +186,9 @@ class SEGrindRun:
             raise AssertionError("Process not running")
 
         cmd_msg = SEMessage(cmd, data)
-        logger.debug("Writing {} msg with {} bytes of data to {}".format(cmd_msg.msgtype.name,
-                                                                         cmd_msg.msglen,
-                                                                         os.path.basename(self.pipe_in_loc)))
+        logger.debug("Writing {} msg with {} bytes of data to {} {}".format(cmd_msg.msgtype.name,
+                                                                            cmd_msg.msglen, self.valgrind_pid,
+                                                                            os.path.basename(self.pipe_in_loc)))
         cmd_msg.write_to_pipe(self.pipe_in)
 
         response = self.read_response(timeout)
