@@ -1,4 +1,5 @@
 import os
+import struct
 import subprocess
 
 from .FunctionDescriptor import FunctionDescriptor
@@ -42,6 +43,14 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
 def get_log_names(func_desc):
     run_name = "{}.{}.{}".format(os.path.basename(func_desc.binary), func_desc.name, func_desc.location)
     return run_name + ".log", run_name + ".cmd.log"
+
+
+def read_in_list(in_bytes, data_format='Q'):
+    result = list()
+    count = struct.unpack_from('N', in_bytes.read(struct.calcsize('N')))[0]
+    for idx in range(0, count):
+        result.append(struct.unpack_from(data_format, in_bytes.read(struct.calcsize(data_format)))[0])
+    return result
 
 
 # def get_functions_needing_fuzzing(func_desc_coverage, whole_coverage, threshold=0.7):

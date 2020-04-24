@@ -1,3 +1,4 @@
+import io
 import os
 import random
 import select
@@ -6,6 +7,8 @@ import struct
 import subprocess
 import sys
 from enum import IntEnum, unique, auto
+
+import contexts.binaryutils as bu
 
 from .FBLogging import logger
 from .IOVec import IOVec
@@ -182,9 +185,11 @@ class SEGrindRun:
         return self.pipe_in is not None and self.pipe_out is not None and self.valgrind_proc is \
                not None and self.valgrind_proc.returncode is None
 
-    def _send_cmd(self, cmd, data):
+    def _send_cmd(self, cmd, data, timeout=None):
         if not self.is_running():
             raise AssertionError("Process not running")
+        if timeout is None:
+            timeout = self.timeout
 
         cmd_msg = SEMessage(cmd, data)
         logger.debug("Writing {} msg with {} bytes of data to {} {}".format(cmd_msg.msgtype.name,
@@ -192,7 +197,7 @@ class SEGrindRun:
                                                                             os.path.basename(self.pipe_in_loc)))
         cmd_msg.write_to_pipe(self.pipe_in)
 
-        response = self.read_response(self.timeout)
+        response = self.read_response(timeout)
         return response
 
     def start(self):
@@ -220,7 +225,7 @@ class SEGrindRun:
         logger.debug("Opening pipe_out {}".format(self.pipe_out_loc))
         self.pipe_out = open(self.pipe_out_loc, "rb", buffering=0)
 
-        self.wait_for_ready(self.timeout)
+        self.wait_for_ready()
 
     def stop(self):
         logger.debug("Stopping SEGrindRun {}".format(self.valgrind_pid))
@@ -277,8 +282,8 @@ class SEGrindRun:
 
             logger.debug("SEGrindRun stopped for {}".format(self.valgrind_pid))
 
-    def wait_for_ready(self):
-        msg = self.read_response()
+    def wait_for_ready(self, timeout=None):
+        msg = self.read_response(timeout=timeout)
 
         if msg is None or msg.msgtype != SEMsgType.SEMSG_READY:
             error_msg = "Server did not issue a {} msg".format(SEMsgType.SEMSG_READY.name)
@@ -296,17 +301,23 @@ class SEGrindRun:
     def send_reset_cmd(self, timeout=None):
         return self._send_cmd(SEMsgType.SEMSG_RESET, None, timeout)
 
+    def send_coverage_cmd(self, timeout=None):
+        return self._send_cmd(SEMsgType.SEMSG_COVERAGE, None, timeout)
+
     def clear_response_pipe(self):
         resp = self.read_response(0.1)
         while resp is not None:
             resp = self.read_response(0.1)
 
-    def read_bytes_from_pipe(self, n):
+    def read_bytes_from_pipe(self, n, timeout=None):
         results = bytearray()
+        if timeout is None:
+            timeout = self.timeout
+
         while len(results) < n:
             if not self.is_running():
                 raise AssertionError("Process {} not running".format(self.valgrind_pid))
-            ready_pipes = select.select([self.pipe_out], [], [], self.timeout)
+            ready_pipes = select.select([self.pipe_out], [], [], timeout)
             if len(ready_pipes[0]) == 0:
                 results = None
                 break
@@ -320,16 +331,16 @@ class SEGrindRun:
                     results.append(b)
         return results
 
-    def read_response(self):
+    def read_response(self, timeout=None):
         result = None
-        pipe_data = self.read_bytes_from_pipe(n=struct.calcsize(SEMessage.HEADER_FORMAT))
+        pipe_data = self.read_bytes_from_pipe(n=struct.calcsize(SEMessage.HEADER_FORMAT), timeout=timeout)
         if pipe_data is not None:
             header_data = struct.unpack_from(SEMessage.HEADER_FORMAT, pipe_data)
             msgtype = SEMsgType(header_data[0])
             msglen = header_data[1]
 
             if msglen > 0:
-                data = self.read_bytes_from_pipe(n=msglen)
+                data = self.read_bytes_from_pipe(n=msglen, timeout=timeout)
             else:
                 data = None
             result = SEMessage(msgtype, data)
@@ -342,9 +353,9 @@ class SEGrindRun:
             logger.debug("Received No message back from {}".format(self.valgrind_pid))
         return result
 
-    def send_set_target_cmd(self, target):
+    def send_set_target_cmd(self, target, timeout=None):
         logger.debug("Setting target to {} for {}".format(hex(target), self.valgrind_pid))
-        return self._send_cmd(SEMsgType.SEMSG_SET_TGT, struct.pack("Q", target))
+        return self._send_cmd(SEMsgType.SEMSG_SET_TGT, struct.pack("Q", target), timeout=timeout)
 
     def send_set_ctx_cmd(self, io_vec):
         if io_vec is None:
@@ -357,3 +368,13 @@ class SEGrindRun:
             raise AssertionError("IOVec is empty")
 
         return self._send_cmd(SEMsgType.SEMSG_SET_CTX, data)
+
+    def get_latest_coverage(self):
+        result = list()
+        ack_msg = self.send_coverage_cmd()
+        if ack_msg and ack_msg.msgtype == SEMsgType.SEMSG_ACK:
+            resp_msg = self.read_response()
+            if resp_msg and resp_msg.msgtype == SEMsgType.SEMSG_OK:
+                data = io.BytesIO(resp_msg.data)
+                result = bu.read_in_list(data)
+        return result

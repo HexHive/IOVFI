@@ -4,6 +4,8 @@ import struct
 import sys
 from enum import IntEnum, unique, auto
 
+import contexts.binaryutils as bu
+
 from .FBLogging import logger
 from .ProgramState import ProgramState, RangeMap
 
@@ -77,11 +79,7 @@ class IOVec:
         self.return_value = ReturnValue(in_file)
 
         # logger.debug("Reading syscall count")
-        syscall_count = struct.unpack_from('N', in_file.read(struct.calcsize('N')))[0]
-        self.syscalls = list()
-        for idx in range(0, syscall_count):
-            # logger.debug("Reading syscall")
-            self.syscalls.append(struct.unpack_from('Q', in_file.read(struct.calcsize('Q')))[0])
+        self.syscalls = bu.read_in_list(in_file)
         self.syscalls.sort()
 
     def pretty_print(self, out=sys.stdout):
