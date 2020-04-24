@@ -235,9 +235,7 @@ def main():
     parser.add_argument("-log", help="/path/to/log/file", default="fuzz.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
     # parser.add_argument("-threads", help="Number of threads to use", type=int, default=mp.cpu_count())
-    parser.add_argument("-map", help="/path/to/context/map", default="hash.map")
-    parser.add_argument('-o', '--out', help="/path/to/output/function/descriptions", default="out.desc")
-    parser.add_argument('-c', '--cov', help="/path/to/coverage/output", default='cov.map')
+    parser.add_argument('-o', '--out', help="/path/to/output/fuzzing/results", default="out.desc")
     parser.add_argument("-timeout", help='Number of seconds to wait per run', type=int, default=WATCHDOG)
     parser.add_argument('-duration', help='Total number of seconds to fuzz targets', type=int, default=DEFAULT_DURATION)
 
@@ -296,13 +294,9 @@ def main():
         location_map = bu.find_funcs(results.bin, ignored_funcs=ignored_funcs)
     logger.debug("done")
 
-    hash_file = os.path.abspath(results.map)
-    if not os.path.exists(os.path.dirname(hash_file)):
-        os.makedirs(os.path.dirname(hash_file), exist_ok=True)
-
-    map_file = os.path.abspath(results.out)
-    if not os.path.exists(os.path.dirname(map_file)):
-        os.makedirs(os.path.dirname(map_file), exist_ok=True)
+    out_file = os.path.abspath(results.out)
+    if not os.path.exists(os.path.dirname(out_file)):
+        os.makedirs(os.path.dirname(out_file), exist_ok=True)
 
     args = list()
     logger.debug("Building fuzz target list")
@@ -323,72 +317,8 @@ def main():
             for func_desc in unclassified:
                 logger.info(func_desc.name)
 
-        context_hashes = dict()
-        desc_map = dict()
-        # coverage_map = dict()
-
-        # total_instructions = dict()
-        # executed_instructions = set()
-
-        for func_desc, coverages in fuzz_run_results.items():
-            # coverage_map[func_desc] = list()
-            for io_vec, coverage in coverages.items():
-                hash_sum = io_vec.hexdigest()
-                context_hashes[hash_sum] = io_vec
-                # for coverage_tuple in fuzz_run_result.coverages[hash(io_vec)]:
-                #     individual_executed = list()
-                #     for addr in coverage_tuple[0]:
-                #         executed_instructions.add(addr)
-                #         individual_executed.append(addr)
-                #     individual_executed.sort()
-                #     total_instructions[coverage_tuple[0][0]] = coverage_tuple[1]
-                #     coverage_map[func_desc].append((individual_executed, coverage_tuple[1]))
-
-                if hash_sum not in desc_map:
-                    desc_map[hash_sum] = set()
-                desc_map[hash_sum].add(func_desc)
-
-        # whole_coverage = dict()
-        # full_count = dict()
-        # percent_covered = dict()
-        # for func_desc, coverages in coverage_map.items():
-        #     for (instructions, n_instructions) in coverages:
-        #         start = instructions[0]
-        #         if start not in whole_coverage:
-        #             whole_coverage[start] = set()
-        #         if start not in full_count:
-        #             full_count[start] = n_instructions
-        #         for i in instructions:
-        #             whole_coverage[start].add(i)
-
-        # total_executed = 0
-        # total_reachable = 0
-        # percentages = list()
-        # for start, covered_instructions in whole_coverage.items():
-        #     print("{}: {}/{} = {}".format(hex(start), len(covered_instructions), full_count[start],
-        #                                   len(covered_instructions) / full_count[start]))
-        #     percent_covered[start] = len(covered_instructions) / full_count[start]
-        #     percentages.append(len(covered_instructions) / full_count[start])
-        #     total_executed += len(covered_instructions)
-        #     total_reachable += full_count[start]
-        #
-        # print("Mean function coverage: {}".format(statistics.mean(percentages)))
-        # print("Total coverage: {} / {} = {}".format(total_executed, total_reachable, total_executed / total_reachable))
-
-        # with open(results.cov, "wb") as cov_out:
-        #     pickle.dump(coverage_map, cov_out)
-        #
-        # with open(results.cov + ".pct", 'wb') as pct_out:
-        #     pickle.dump(percent_covered, pct_out)
-        #
-        # with open(results.cov + ".whole", 'wb') as whole_out:
-        #     pickle.dump(whole_coverage, whole_out)
-
-        with open(hash_file, "wb") as hashes_out:
-            pickle.dump(context_hashes, hashes_out)
-
-        with open(map_file, "wb") as map_out:
-            pickle.dump(desc_map, map_out)
+        with open(out_file, "wb") as f:
+            pickle.dump(fuzz_run_results, f)
     else:
         logger.fatal("Could not find any functions to fuzz")
 
