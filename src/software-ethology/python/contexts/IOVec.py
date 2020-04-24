@@ -60,27 +60,27 @@ class ReturnValue:
 class IOVec:
     def __init__(self, in_file):
         in_file = io.BytesIO(in_file)
-        logger.debug("Reading arch")
+        # logger.debug("Reading arch")
         self.host_arch = VexArch(struct.unpack_from('=i', in_file.read(struct.calcsize('=i')))[0])
-        logger.debug("Reading endness")
+        # logger.debug("Reading endness")
         self.host_endness = VexEndness(struct.unpack_from('=i', in_file.read(struct.calcsize('=i')))[0])
-        logger.debug("Reading random seed")
+        # logger.debug("Reading random seed")
         self.random_seed = struct.unpack_from('=I', in_file.read(struct.calcsize('=I')))[0]
 
-        logger.debug("Reading initial state")
+        # logger.debug("Reading initial state")
         self.initial_state = ProgramState(in_file)
 
-        logger.debug("Reading expected state")
+        # logger.debug("Reading expected state")
         self.expected_state = RangeMap(in_file)
 
-        logger.debug("Reading return value")
+        # logger.debug("Reading return value")
         self.return_value = ReturnValue(in_file)
 
-        logger.debug("Reading syscall count")
+        # logger.debug("Reading syscall count")
         syscall_count = struct.unpack_from('N', in_file.read(struct.calcsize('N')))[0]
         self.syscalls = list()
         for idx in range(0, syscall_count):
-            logger.debug("Reading syscall")
+            # logger.debug("Reading syscall")
             self.syscalls.append(struct.unpack_from('Q', in_file.read(struct.calcsize('Q')))[0])
         self.syscalls.sort()
 

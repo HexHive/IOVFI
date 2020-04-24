@@ -16,10 +16,12 @@ names = set()
 complete_count = 0
 total_count = 0
 GLOBAL_LOCK = mp.Lock()
-io_vecs_dict = dict()
+# io_vecs_dict = dict()
 
 MAX_ATTEMPTS = 25
 WATCHDOG = 50.0
+
+timeout = WATCHDOG
 
 
 class FuzzRunResult:
@@ -65,7 +67,7 @@ def fuzz_one_function(fuzz_desc):
         logger.debug("Creating SEGrindRun for {}".format(run_name))
         segrind_run = SEGrindRun(valgrind_loc=fuzz_desc.valgrind_loc, binary_loc=binary, pipe_in=pipe_in,
                                  pipe_out=pipe_out, valgrind_log_loc=log_out, run_log_loc=cmd_log,
-                                 cwd=fuzz_desc.work_dir)
+                                 cwd=fuzz_desc.work_dir, timeout=fuzz_desc.watchdog)
         logger.debug("Done")
         fuzz_count = 0
         attempts = 0
@@ -83,7 +85,7 @@ def fuzz_one_function(fuzz_desc):
                     if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
                         raise RuntimeError("Could not set target {}".format(target))
 
-                    resp_msg = segrind_run.read_response(timeout=fuzz_desc.watchdog)
+                    resp_msg = segrind_run.read_response()
                     if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                         raise RuntimeError("Could not set target {}".format(target))
 
@@ -95,18 +97,18 @@ def fuzz_one_function(fuzz_desc):
                 # if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                 #     continue
 
-                ack_msg = segrind_run.send_fuzz_cmd(timeout=fuzz_desc.watchdog)
+                ack_msg = segrind_run.send_fuzz_cmd()
                 if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
                     break
-                resp_msg = segrind_run.read_response(timeout=fuzz_desc.watchdog)
+                resp_msg = segrind_run.read_response()
                 if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                     continue
 
-                ack_msg = segrind_run.send_execute_cmd(timeout=fuzz_desc.watchdog)
+                ack_msg = segrind_run.send_execute_cmd()
                 if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
                     continue
 
-                result = segrind_run.read_response(timeout=fuzz_desc.watchdog)
+                result = segrind_run.read_response()
                 if result is not None and result.msgtype == SEMsgType.SEMSG_OK:
                     logger.debug("Reading in IOVec from {}".format(segrind_run.valgrind_pid))
                     io_vec = IOVec(result.data)
@@ -177,7 +179,7 @@ def error_fuzz(err):
     logger.error(str(err))
 
 
-def fuzz_functions(func_descs, valgrind_loc, num_threads, watchdog=WATCHDOG, fuzz_count=max_fuzz_count,
+def fuzz_functions(func_descs, valgrind_loc, num_threads, watchdog, fuzz_count=max_fuzz_count,
                    work_dir=os.path.abspath(os.path.join(os.curdir, "_work"))):
     global io_vecs_dict, total_count, names
     fuzz_runs = list()
@@ -206,7 +208,7 @@ def fuzz_functions(func_descs, valgrind_loc, num_threads, watchdog=WATCHDOG, fuz
 
 
 def main():
-    global max_fuzz_count
+    global max_fuzz_count, timeout, WATCHDOG
 
     parser = argparse.ArgumentParser(description="Generate input/output vectors")
     parser.add_argument("-valgrind", help="/path/to/pin-3.11/dir", required=True)
@@ -220,6 +222,7 @@ def main():
     parser.add_argument("-count", help="Number of times to fuzz function", type=int, default=max_fuzz_count)
     parser.add_argument('-o', '--out', help="/path/to/output/function/descriptions", default="out.desc")
     parser.add_argument('-c', '--cov', help="/path/to/coverage/output", default='cov.map')
+    parser.add_argument("-timeout", help='Number of seconds to wait per run', default=WATCHDOG)
 
     results = parser.parse_args()
 
@@ -239,6 +242,7 @@ def main():
         exit(1)
 
     fuzz_count = results.count
+    timeout = results.timeout
 
     valgrind_loc = os.path.abspath(results.valgrind)
 
@@ -285,7 +289,7 @@ def main():
     if len(args) > 0:
         (fuzz_run_results, unclassified) = fuzz_functions(args, valgrind_loc=valgrind_loc,
                                                           num_threads=results.threads,
-                                                          fuzz_count=fuzz_count)
+                                                          fuzz_count=fuzz_count, watchdog=timeout)
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(len(fuzz_run_results)))
