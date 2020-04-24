@@ -228,27 +228,21 @@ class FBDecisionTree:
             segrind_run.stop()
             raise e
 
-    def gen_dtree(self, iovec_coverage_location, iovec_hash_map):
+    def gen_dtree(self, iovec_coverage_location):
         if not os.path.exists(iovec_coverage_location):
             raise FileNotFoundError(iovec_coverage_location)
-        if not os.path.exists(iovec_hash_map):
-            raise FileNotFoundError(iovec_hash_map)
 
         self._log("Loading {}...".format(iovec_coverage_location))
         with open(iovec_coverage_location, "rb") as f:
             iovec_coverages = pickle.load(f)
         self._log("done!")
 
-        self._log("Loading {}...".format(iovec_hash_map))
-        with open(iovec_hash_map, "rb") as f:
-            iovec_hash_map = pickle.load(f)
-        self._log("done!")
-
         labels = preprocessing.LabelEncoder()
         hash_labels = set()
         self._log("Transforming function labels...")
-        for hash_sum in iovec_coverages.keys():
-            hash_labels.add(hash_sum)
+        for fd, coverages in iovec_coverages.items():
+            for io_vec, coverage in coverages.items():
+                hash_labels.add(io_vec.hexdigest())
         labels.fit_transform(list(hash_labels))
         self._log("done!")
 
@@ -256,23 +250,31 @@ class FBDecisionTree:
         funcs_features = list()
         added_func_descs = dict()
         accepted_iovecs = dict()
+        iovec_hash_map = dict()
+        coverage_map = dict()
 
         self._log("Reading in function labels...")
-        for hash_sum, coverage_map in iovec_coverages.items():
-            idx = labels.transform([hash_sum])[0]
-            for func_desc, _ in coverage_map.items():
-                func_desc_hash = hash(func_desc)
-                self._log("Function {} ({}) accepts IOVec {}".format(func_desc_hash, func_desc.name,
-                                                                     hex(hash_sum)))
+        for fd, coverages in iovec_coverages.items():
+            func_desc_hash = hash(fd)
+            if func_desc_hash not in added_func_descs:
+                self.func_descs.add(fd)
+            added_func_descs[func_desc_hash] = fd
+            funcs_labels.append(func_desc_hash)
+            funcs_features.append(numpy.zeros(len(labels.classes_), dtype=bool))
+
+            for io_vec, coverage in coverages.items():
+                hash_sum = io_vec.hexdigest()
+                if hash_sum not in coverage_map:
+                    coverage_map[hash_sum] = dict()
+                coverage_map[hash_sum][fd] = coverage
+
+                idx = labels.transform([hash_sum])[0]
+                self._log("Function {} ({}) accepts IOVec {}".format(func_desc_hash, fd.name, str(io_vec)))
                 if func_desc_hash not in accepted_iovecs:
                     accepted_iovecs[func_desc_hash] = set()
+                    iovec_hash_map[io_vec.hexdigest()] = io_vec
                 accepted_iovecs[func_desc_hash].add(hash_sum)
 
-                if func_desc_hash not in added_func_descs:
-                    self.func_descs.add(func_desc)
-                    added_func_descs[func_desc_hash] = func_desc
-                    funcs_labels.append(func_desc_hash)
-                    funcs_features.append(numpy.zeros(len(labels.classes_), dtype=bool))
                 func_feature = funcs_features[funcs_labels.index(func_desc_hash)]
                 func_feature[idx] = True
         self._log("done!")
@@ -292,7 +294,7 @@ class FBDecisionTree:
                 path_iovec_hashes.add(iovec_hash)
                 iovec = iovec_hash_map[iovec_hash]
                 self._log("Adding IOVec {} to path".format(iovec))
-                self.nodes[index] = FBDecisionTreeInteriorNode(iovec=iovec, coverage=iovec_coverages[iovec_hash],
+                self.nodes[index] = FBDecisionTreeInteriorNode(iovec=iovec, coverage=coverage_map[iovec_hash],
                                                                identifier=index)
 
         for index in range(0, dtree.tree_.node_count):
@@ -319,8 +321,8 @@ class FBDecisionTree:
                             self._log(
                                 "Adding func desc {} to node {}".format(func_desc_to_add, current_node.identifier))
                             equivalence_class.append(func_desc_to_add)
-                            for iovec_hash in accepted_iovecs[hash_sum]:
-                                confirmation_iovec_hashes.add(iovec_hash)
+                            for io_vec, coverage in iovec_coverages[hash_sum].items():
+                                confirmation_iovec_hashes.add(io_vec)
                         else:
                             self._log("Func desc {} is not in added_func_descs".format(hash_sum))
                             continue
@@ -329,17 +331,17 @@ class FBDecisionTree:
                 self.equivalence_classes.append(equivalence_class)
 
                 confirmation_iovecs = list()
-                for iovec_hash in confirmation_iovec_hashes:
-                    if iovec_hash not in path_iovec_hashes:
+                for iovec in confirmation_iovec_hashes:
+                    if iovec.hexdigest() not in path_iovec_hashes:
                         self._log(
-                            "Adding iovec {} to node {}".format(iovec_hash_map[iovec_hash], current_node.identifier))
-                        confirmation_iovecs.append(iovec_hash_map[iovec_hash])
+                            "Adding iovec {} to node {}".format(iovec, current_node.identifier))
+                        confirmation_iovecs.append(iovec)
                 current_node.set_confirmation_iovecs(confirmation_iovecs)
         self._log("done!")
 
-    def __init__(self, iovec_coverage_location, iovec_hash_map):
+    def __init__(self, iovec_coverage_location):
         self.root = None
         self.func_descs = set()
         self.nodes = dict()
         self.equivalence_classes = list()
-        self.gen_dtree(iovec_coverage_location, iovec_hash_map)
+        self.gen_dtree(iovec_coverage_location)
