@@ -136,6 +136,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema):
                 elif ready_to_run and result.msgtype == SEMsgType.SEMSG_OK:
                     try:
                         coverage = segrind_run.get_latest_coverage()
+                        logger.debug("{} recorded {} instructions".format(run_name, len(coverage)))
                         if not using_external_iovec and not using_internal_iovec:
                             logger.debug("Reading in IOVec from {}".format(segrind_run.valgrind_pid))
                             io_vec = IOVec(result.data)
