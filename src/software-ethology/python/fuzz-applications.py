@@ -13,7 +13,7 @@ from contexts.SEGrindRun import SEGrindRun, SEMsgType
 
 MAX_ATTEMPTS = 25
 WATCHDOG = 50.0
-DEFAULT_DURATION = 1 * 60
+DEFAULT_DURATION = 5 * 60 * 60
 
 
 # class FuzzRunResult:
@@ -45,7 +45,7 @@ def coverage_is_different(base_coverage, new_coverage):
     return False
 
 
-def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration):
+def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema):
     segrind_run = None
     func_name = fuzz_desc.func_desc.name
     target = fuzz_desc.func_desc.location
@@ -71,9 +71,12 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration):
 
         start_time = time.time()
         current_iovec_idx = 0
+        has_sema = False
 
         while time.time() < start_time + duration or len(io_vec_list) > current_iovec_idx:
             try:
+                sema.acquire()
+                has_sema = True
                 if not segrind_run.is_running():
                     logger.info("Starting SEGrindRun for {}".format(run_name))
                     segrind_run.start()
@@ -156,23 +159,41 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration):
                 elif ready_to_run and result.msgtype != SEMsgType.SEMSG_OK:
                     if using_external_iovec:
                         logger.debug("{} rejects {}".format(run_name, str(io_vec)))
+
+                sema.release()
+                has_sema = False
                 if len(io_vec_list) <= current_iovec_idx:
                     time.sleep(1)
             except TimeoutError as e:
                 logger.debug(str(e))
                 segrind_run.stop()
+                if has_sema:
+                    sema.release()
+                    has_sema = False
                 continue
             except AssertionError as e:
                 logger.debug(str(e))
                 segrind_run.stop()
+                if has_sema:
+                    sema.release()
+                    has_sema = False
                 continue
             except KeyboardInterrupt:
                 logger.debug("{} received KeyboardInterrupt".format(run_name))
+                if has_sema:
+                    sema.release()
+                    has_sema = False
                 segrind_run.stop()
                 continue
     except Exception as e:
+        if has_sema:
+            sema.release()
+            has_sema = False
         logger.error("Error for {}: {}".format(run_name, e))
     finally:
+        if has_sema:
+            sema.release()
+            has_sema = False
         logger.info("Finished {}".format(run_name))
         segrind_run.stop()
         if os.path.exists(pipe_in):
@@ -197,6 +218,7 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration,
     with mp.Manager() as manager:
         generated_iovecs = manager.list()
         iovec_coverage = manager.dict()
+        sema = mp.Semaphore(mp.cpu_count())
 
         for func_desc in func_descs:
             iovec_coverage[func_desc] = manager.dict()
@@ -204,7 +226,8 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration,
         processes = list()
         for fuzz_run in fuzz_runs:
             processes.append(
-                mp.Process(target=fuzz_one_function, args=(fuzz_run, generated_iovecs, iovec_coverage, duration,)))
+                mp.Process(target=fuzz_one_function,
+                           args=(fuzz_run, generated_iovecs, iovec_coverage, duration, sema,)))
 
         for p in processes:
             p.start()
