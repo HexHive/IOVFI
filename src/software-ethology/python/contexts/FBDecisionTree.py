@@ -96,7 +96,7 @@ class FBDecisionTree:
     def _log(self, msg, level=logging.DEBUG):
         logger.log(level, msg)
 
-    def _attempt_ctx(self, iovec, segrind_run, watchdog=WATCHDOG):
+    def _attempt_ctx(self, iovec, segrind_run):
         if iovec is None:
             raise AssertionError("No iovec provided")
         elif segrind_run is None:
@@ -111,17 +111,17 @@ class FBDecisionTree:
         # if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
         #     raise AssertionError("Set context command failed")
 
-        ack_msg = segrind_run.send_set_ctx_cmd(iovec, watchdog)
+        ack_msg = segrind_run.send_set_ctx_cmd(iovec)
         if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
             raise AssertionError("Received no ack for set context cmd")
-        resp_msg = segrind_run.read_response(watchdog)
+        resp_msg = segrind_run.read_response()
         if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
             raise AssertionError("Set context command failed")
 
-        ack_msg = segrind_run.send_execute_cmd(watchdog)
+        ack_msg = segrind_run.send_execute_cmd()
         if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
             raise AssertionError("Received no ack for execute cmd")
-        resp_msg = segrind_run.read_response(watchdog)
+        resp_msg = segrind_run.read_response()
         if resp_msg is None:
             raise AssertionError("Execute command did not return")
         if resp_msg.msgtype == SEMsgType.SEMSG_OK:
@@ -170,9 +170,9 @@ class FBDecisionTree:
         except Exception as e:
             return False, None
 
-    def identify(self, func_desc, valgrind_loc, cwd=os.getcwd(), max_confirm=MAX_CONFIRM,
+    def identify(self, func_desc, valgrind_loc, timeout, cwd=os.getcwd(), max_confirm=MAX_CONFIRM,
                  cmd_log_loc=None, log_loc=None):
-        segrind_run = SEGrindRun(valgrind_loc, func_desc.binary, cwd=cwd, valgrind_log_loc=log_loc,
+        segrind_run = SEGrindRun(valgrind_loc, func_desc.binary, timeout=timeout, cwd=cwd, valgrind_log_loc=log_loc,
                                  run_log_loc=cmd_log_loc)
 
         current_node = self.root
@@ -182,12 +182,12 @@ class FBDecisionTree:
             while current_node is not None:
                 if not segrind_run.is_running():
                     segrind_run.stop()
-                    segrind_run.start(timeout=FBDecisionTree.WATCHDOG)
-                    ack_msg = segrind_run.send_set_target_cmd(func_desc.location, FBDecisionTree.WATCHDOG)
+                    segrind_run.start()
+                    ack_msg = segrind_run.send_set_target_cmd(func_desc.location)
 
                     if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
                         raise AssertionError("Could not set target for {}".format(str(func_desc)))
-                    resp_msg = segrind_run.read_response(FBDecisionTree.WATCHDOG)
+                    resp_msg = segrind_run.read_response()
                     if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
                         raise AssertionError("Could not set target for {}".format(str(func_desc)))
 
