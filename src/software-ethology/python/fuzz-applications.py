@@ -203,7 +203,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema):
         del segrind_run
 
 
-def fuzz_functions(func_descs, valgrind_loc, watchdog, duration,
+def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
                    work_dir=os.path.abspath(os.path.join(os.curdir, "_work"))):
     fuzz_runs = list()
     unclassified = set()
@@ -218,7 +218,7 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration,
     with mp.Manager() as manager:
         generated_iovecs = manager.list()
         iovec_coverage = manager.dict()
-        sema = mp.Semaphore(mp.cpu_count())
+        sema = mp.Semaphore(thread_count)
 
         for func_desc in func_descs:
             iovec_coverage[func_desc] = manager.dict()
@@ -257,7 +257,7 @@ def main():
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
     parser.add_argument("-log", help="/path/to/log/file", default="fuzz.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
-    # parser.add_argument("-threads", help="Number of threads to use", type=int, default=mp.cpu_count())
+    parser.add_argument("-threads", help="Number of threads to use", type=int, default=mp.cpu_count())
     parser.add_argument('-o', '--out', help="/path/to/output/fuzzing/results", default="out.desc")
     parser.add_argument("-timeout", help='Number of seconds to wait per run', type=int, default=WATCHDOG)
     parser.add_argument('-duration', help='Total number of seconds to fuzz targets', type=int, default=DEFAULT_DURATION)
@@ -274,6 +274,10 @@ def main():
 
     if results.duration <= 0:
         logger.fatal("Invalid duration: {}".format(results.duration))
+        exit(1)
+
+    if results.threads <= 0:
+        logger.fatal("Invalid thread count: {}".format(results.threads))
         exit(1)
 
     logger.setLevel(results.loglevel)
@@ -331,7 +335,7 @@ def main():
 
     if len(args) > 0:
         (fuzz_run_results, unclassified) = fuzz_functions(args, valgrind_loc=valgrind_loc, watchdog=results.timeout,
-                                                          duration=results.duration)
+                                                          duration=results.duration, thread_count=results.threads)
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(len(fuzz_run_results)))
