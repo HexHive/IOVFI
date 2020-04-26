@@ -112,7 +112,9 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema):
                         for iov, coverage in coverage_map[fuzz_desc.func_desc].items():
                             if len(coverage) > max_coverage:
                                 io_vec = iov
-                                max_coverage = len(max_coverage)
+                                max_coverage = len(coverage)
+
+                        logger.debug("IOVec chosen: {}".format(str(io_vec)))
                         ack_msg = segrind_run.send_set_ctx_cmd(io_vec)
                         if ack_msg and ack_msg.msgtype == SEMsgType.SEMSG_ACK:
                             resp_msg = segrind_run.read_response()
@@ -141,6 +143,10 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema):
                             io_vec_contents = io.StringIO()
                             io_vec.pretty_print(out=io_vec_contents)
                             logger.debug(io_vec_contents.getvalue())
+                            addr_str = ""
+                            for addr in coverage:
+                                addr_str += hex(addr) + " "
+                            logger.debug("New coverage added: {}".format(addr_str))
                             coverage_map[fuzz_desc.func_desc][io_vec] = coverage
                             io_vec_list.append(io_vec)
                         elif using_internal_iovec:
