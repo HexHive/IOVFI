@@ -185,6 +185,13 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema):
                     sema.release()
                     has_sema = False
                 continue
+            except IOError as e:
+                logger.debug(str(e))
+                segrind_run.stop()
+                if has_sema:
+                    sema.release()
+                    has_sema = False
+                continue
             except KeyboardInterrupt:
                 logger.debug("{} received KeyboardInterrupt".format(run_name))
                 if has_sema:
