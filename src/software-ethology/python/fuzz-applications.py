@@ -108,7 +108,8 @@ def coverage_past_threshold(func_desc, coverage_map, instruction_mapping, thresh
 
     logger.debug("{}: total_coverage = {} total_instructions = {}".format(func_desc.name, len(total_coverage),
                                                                           len(total_instructions)))
-    return len(total_coverage) > 0 and len(total_instructions) > 0 and len(total_coverage) >= len(total_instructions) * threshold
+    return len(total_coverage) > 0 and len(total_instructions) > 0 and len(total_coverage) >= len(
+        total_instructions) * threshold
 
 
 def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, instruction_mapping, fuzz_stats_list):
@@ -118,6 +119,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
     binary = fuzz_desc.func_desc.binary
 
     fuzz_stats = FuzzRunStatistics(fuzz_desc.func_desc)
+    hit_threshold = False
 
     try:
         run_name = "{}.{}.{}".format(os.path.basename(binary), func_name, target)
@@ -174,10 +176,11 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                             resp_msg = segrind_run.read_response()
                         ready_to_run = (resp_msg is not None and resp_msg.msgtype == SEMsgType.SEMSG_OK)
                         using_external_iovec = ready_to_run
-                elif coverage_past_threshold(func_desc=fuzz_desc.func_desc, coverage_map=coverage_map,
-                                             instruction_mapping=instruction_mapping):
+                elif hit_threshold or coverage_past_threshold(func_desc=fuzz_desc.func_desc, coverage_map=coverage_map,
+                                                              instruction_mapping=instruction_mapping):
                     ready_to_run = False
                     fuzz_stats.record_coverage_threshold_hit()
+                    hit_threshold = True
                 else:
                     if len(coverage_map[fuzz_desc.func_desc]) > 0:
                         max_coverage = 0
@@ -241,7 +244,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                         logger.debug("{} rejects {}".format(run_name, str(io_vec)))
                 sema.release()
                 has_sema = False
-                if len(io_vec_list) <= current_iovec_idx:
+                if hit_threshold and len(io_vec_list) <= current_iovec_idx:
                     fuzz_stats.record_sleep_start()
                     time.sleep(1)
                     fuzz_stats.record_sleep_end()
