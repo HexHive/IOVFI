@@ -267,12 +267,12 @@ class FBDecisionTree:
                 if hash_sum not in coverage_map:
                     coverage_map[hash_sum] = dict()
                 coverage_map[hash_sum][fd] = coverage
+                iovec_hash_map[hash_sum] = io_vec
 
                 idx = labels.transform([hash_sum])[0]
                 self._log("Function {} ({}) accepts IOVec {}".format(func_desc_hash, fd.name, str(io_vec)))
                 if func_desc_hash not in accepted_iovecs:
                     accepted_iovecs[func_desc_hash] = set()
-                    iovec_hash_map[io_vec.hexdigest()] = io_vec
                 accepted_iovecs[func_desc_hash].add(hash_sum)
 
                 func_feature = funcs_features[funcs_labels.index(func_desc_hash)]
