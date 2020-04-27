@@ -218,7 +218,9 @@ def main():
             with open(guessLine, "rb") as guessFile:
                 guesses = pickle.load(guessFile)
 
-            true_pos, true_neg, incorrect = tu.get_evaluation(dtree, guesses, equivalences)
+            true_pos, true_neg, incorrect_labels, known_when_unknown, unknown_when_known = tu.get_evaluation(dtree,
+                                                                                                             guesses,
+                                                                                                             equivalences)
             sorted_true_pos = list()
             for name in true_pos:
                 sorted_true_pos.append(name)
@@ -227,12 +229,16 @@ def main():
             print(sorted_true_pos)
             print()
 
-            sorted_incorrect = list()
-            for name in incorrect:
-                sorted_incorrect.append(name)
+            incorrect = list()
+            for name in incorrect_labels:
+                incorrect.append(name)
+            for name in known_when_unknown:
+                incorrect.append(name)
+            for name in unknown_when_known:
+                incorrect.append(name)
 
-            sorted_incorrect.sort()
-            print(sorted_incorrect)
+            incorrect.sort()
+            print(incorrect)
 
             evaluation.add_evaluation(guessLine, true_pos, true_neg, incorrect, True)
 
