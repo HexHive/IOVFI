@@ -16,17 +16,50 @@ WATCHDOG = 50.0
 DEFAULT_DURATION = 5 * 60 * 60
 
 
-# class FuzzRunResult:
-#     def __init__(self, func_desc, io_vecs, coverage):
-#         self.func_desc = func_desc
-#         self.io_vecs = dict()
-#         self.coverages = dict()
-#         for io_vec in io_vecs:
-#             self.io_vecs[hash(io_vec)] = io_vec
-#             # self.coverages[hash(io_vec)] = coverage[hash(io_vec)]
-#
-#     def __len__(self):
-#         return len(self.io_vecs)
+class FuzzRunStatistics:
+    def __init__(self, func_desc):
+        self.total_io_vecs_created = 0
+        self.total_io_vecs_accepted = 0
+        self.total_io_vecs_rejected = 0
+        self.total_rounds = 0
+        self.coverage_threshold_hit = -1
+        self.total_sleep_time = 0
+        self.total_errors = 0
+        self.func_desc = func_desc
+        self.start_time = time.time()
+        self.end_time = 0
+
+        self.sleep_start = 0
+
+    def record_creation(self):
+        self.total_io_vecs_created += 1
+        self.total_rounds += 1
+
+    def record_accept(self):
+        self.total_io_vecs_accepted += 1
+        self.total_rounds += 1
+
+    def record_rejection(self):
+        self.total_io_vecs_rejected += 1
+        self.total_rounds += 1
+
+    def record_coverage_threshold_hit(self):
+        if self.coverage_threshold_hit < 0:
+            self.coverage_threshold_hit = self.total_rounds
+
+    def record_sleep_start(self):
+        self.sleep_start = time.time()
+
+    def record_sleep_end(self):
+        time_diff = time.time() - self.sleep_start
+        self.total_sleep_time += time_diff
+
+    def record_error(self):
+        self.total_errors += 1
+        self.total_rounds += 1
+
+    def record_end(self):
+        self.end_time = time.time()
 
 
 class FuzzRunDesc(bu.RunDesc):
@@ -65,11 +98,13 @@ def coverage_past_threshold(func_desc, coverage_map, instruction_mapping, thresh
     return len(total_coverage) > 0 and len(total_coverage) >= len(total_instructions) * threshold
 
 
-def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, instruction_mapping):
+def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, instruction_mapping, fuzz_stats_list):
     segrind_run = None
     func_name = fuzz_desc.func_desc.name
     target = fuzz_desc.func_desc.location
     binary = fuzz_desc.func_desc.binary
+
+    fuzz_stats = FuzzRunStatistics(fuzz_desc.func_desc)
 
     try:
         run_name = "{}.{}.{}".format(os.path.basename(binary), func_name, target)
@@ -129,6 +164,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 elif coverage_past_threshold(func_desc=fuzz_desc.func_desc, coverage_map=coverage_map,
                                              instruction_mapping=instruction_mapping):
                     ready_to_run = False
+                    fuzz_stats.record_coverage_threshold_hit()
                 else:
                     if len(coverage_map[fuzz_desc.func_desc]) > 0:
                         max_coverage = 0
@@ -163,6 +199,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                         if not using_external_iovec and not using_internal_iovec:
                             logger.debug("Reading in IOVec from {}".format(segrind_run.valgrind_pid))
                             io_vec = IOVec(result.data)
+                            fuzz_stats.record_creation()
                             logger.info("{} created {}".format(run_name, str(io_vec)))
                             io_vec_contents = io.StringIO()
                             io_vec.pretty_print(out=io_vec_contents)
@@ -174,22 +211,29 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                             io_vec = IOVec(result.data)
                             base_coverage = coverage_map[fuzz_desc.func_desc][base_iovec]
                             if coverage_is_different(base_coverage, coverage):
+                                fuzz_stats.record_creation()
                                 logger.info("{} created {}".format(run_name, str(io_vec)))
                                 coverage_map[fuzz_desc.func_desc][io_vec] = coverage
                                 io_vec_list.append(io_vec)
                         elif using_external_iovec:
+                            fuzz_stats.record_accept()
                             logger.debug('{} accepted {}'.format(run_name, str(io_vec)))
                             coverage_map[fuzz_desc.func_desc][io_vec] = coverage
                     except Exception as e:
+                        fuzz_stats.record_error()
                         logger.error("{} failed to add IOVec: {}".format(run_name, str(e)))
                 elif ready_to_run and result.msgtype != SEMsgType.SEMSG_OK:
                     if using_external_iovec:
+                        fuzz_stats.record_rejection()
                         logger.debug("{} rejects {}".format(run_name, str(io_vec)))
                 sema.release()
                 has_sema = False
                 if len(io_vec_list) <= current_iovec_idx:
+                    fuzz_stats.record_sleep_start()
                     time.sleep(1)
+                    fuzz_stats.record_sleep_end()
             except TimeoutError as e:
+                fuzz_stats.record_error()
                 logger.debug(str(e))
                 segrind_run.stop()
                 if has_sema:
@@ -197,6 +241,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                     has_sema = False
                 continue
             except AssertionError as e:
+                fuzz_stats.record_error()
                 logger.debug(str(e))
                 segrind_run.stop()
                 if has_sema:
@@ -204,6 +249,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                     has_sema = False
                 continue
             except IOError as e:
+                fuzz_stats.record_error()
                 logger.debug(str(e))
                 segrind_run.stop()
                 if has_sema:
@@ -211,6 +257,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                     has_sema = False
                 continue
             except KeyboardInterrupt:
+                fuzz_stats.record_error()
                 logger.debug("{} received KeyboardInterrupt".format(run_name))
                 if has_sema:
                     sema.release()
@@ -218,6 +265,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 segrind_run.stop()
                 continue
     except Exception as e:
+        fuzz_stats.record_error()
         if has_sema:
             sema.release()
             has_sema = False
@@ -233,6 +281,8 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
         if os.path.exists(pipe_out):
             os.unlink(pipe_out)
         del segrind_run
+        fuzz_stats.record_end()
+        fuzz_stats_list.append(fuzz_stats)
 
 
 def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
@@ -253,6 +303,7 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
     with mp.Manager() as manager:
         generated_iovecs = manager.list()
         iovec_coverage = manager.dict()
+        fuzz_stats = manager.list()
         sema = mp.Semaphore(thread_count)
 
         for func_desc in func_descs:
@@ -262,13 +313,14 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
         for fuzz_run in fuzz_runs:
             processes.append(
                 mp.Process(target=fuzz_one_function,
-                           args=(fuzz_run, generated_iovecs, iovec_coverage, duration, sema, instruction_mapping,)))
+                           args=(fuzz_run, generated_iovecs, iovec_coverage, duration, sema, instruction_mapping,
+                                 fuzz_stats,)))
 
         for p in processes:
             p.start()
 
         for p in processes:
-            p.join()
+            p.join(duration)
 
         logger.debug("iovec_coverage contains {} entries".format(len(iovec_coverage)))
         for func_desc, coverages in iovec_coverage.items():
