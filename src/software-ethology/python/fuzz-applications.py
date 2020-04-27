@@ -24,7 +24,7 @@ DEFAULT_DURATION = 5 * 60 * 60
 #         for io_vec in io_vecs:
 #             self.io_vecs[hash(io_vec)] = io_vec
 #             # self.coverages[hash(io_vec)] = coverage[hash(io_vec)]
-# 
+#
 #     def __len__(self):
 #         return len(self.io_vecs)
 
@@ -270,13 +270,16 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
         for p in processes:
             p.join()
 
+        logger.debug("iovec_coverage contains {} entries".format(len(iovec_coverage)))
         for func_desc, coverages in iovec_coverage.items():
-            io_vecs_dict[func_desc] = dict()
-            for io_vec, coverage in coverages.items():
-                io_vecs_dict[func_desc][io_vec] = coverage
+            if len(coverages) > 0:
+                io_vecs_dict[func_desc] = dict()
+                for io_vec, coverage in coverages.items():
+                    logger.debug("{} produced {} coverage for {}".format(str(io_vec), len(coverage), func_desc.name))
+                    io_vecs_dict[func_desc][io_vec] = coverage
 
     for func_desc in func_descs:
-        if len(io_vecs_dict[func_desc]) == 0:
+        if func_desc not in io_vecs_dict:
             unclassified.add(func_desc)
 
     return io_vecs_dict, unclassified
