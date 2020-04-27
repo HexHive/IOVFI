@@ -71,8 +71,8 @@ class FuzzRunStatistics:
         print("Total Rounds:           {}".format(self.total_rounds), file=file)
         print("Total Sleep Time:       {}".format(self.total_sleep_time), file=file)
         print("Total Errors:           {}".format(self.total_errors), file=file)
-        print("Total Time:             [{} - {}]".format(self.start_time, self.end_time), file=file)
-        print("-------------------------------------------{}".format("-" * (2 + len(self.func_desc.name))))
+        print("Total Time:             {} seconds".format(int(self.end_time - self.start_time)), file=file)
+        print("-------------------------------------------{}".format("-" * (2 + len(self.func_desc.name))), file=file)
 
 
 class FuzzRunDesc(bu.RunDesc):
