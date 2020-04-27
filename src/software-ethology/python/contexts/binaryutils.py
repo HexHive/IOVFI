@@ -25,8 +25,8 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
     location_map = dict()
     objdump_cmd = subprocess.run(['objdump', '-d', binary], stdout=subprocess.PIPE)
     lines = objdump_cmd.stdout.split(b'\n')
-    func_start_re = re.compile("^(0-9a-f+) \<(\w+)\>:")
-    instr_re = re.compile("^(0-9a-f+):")
+    func_start_re = re.compile("^([0-9a-f]+) \<(\w+)\>:")
+    instr_re = re.compile("^([0-9a-f]+):")
     name = None
     for line in lines:
         line = line.decode('utf-8').strip()
