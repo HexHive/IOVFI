@@ -4,15 +4,18 @@ import struct
 
 
 class FunctionDescriptor:
-    def __init__(self, binary, name, location):
+    def __init__(self, binary, name, location, instructions):
         if binary is None:
             raise ValueError("Binary must be provided")
         if name is None and location is None:
             raise ValueError("A name or a location must be provided")
+        if instructions is None or len(instructions) == 0:
+            raise ValueError("Instructions must be provided")
 
         self.binary = os.path.abspath(binary)
         self.name = name
         self.location = location
+        self.instructions = instructions
 
     def __eq__(self, other):
         return hash(self) == hash(other)

@@ -1,6 +1,7 @@
 import os
 import struct
 import subprocess
+import re
 
 from .FunctionDescriptor import FunctionDescriptor
 
@@ -22,21 +23,32 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
         except Exception:
             pass
     location_map = dict()
-    readelf_cmd = subprocess.run(['readelf', '-Ws', binary], stdout=subprocess.PIPE)
-    lines = readelf_cmd.stdout.split(b'\n')
+    objdump_cmd = subprocess.run(['objdump', '-d', binary], stdout=subprocess.PIPE)
+    lines = objdump_cmd.stdout.split(b'\n')
+    func_start_re = re.compile("^(0-9a-f+) \<(\w+)\>:")
+    instr_re = re.compile("^(0-9a-f+):")
+    name = None
     for line in lines:
-        line = line.decode('utf-8')
-        toks = line.split()
-        if len(toks) > 4 and toks[3] == "FUNC":
-            loc = int(toks[1], 16)
-            name = toks[-1]
-            if '@' in name:
-                name = name[:name.find("@")]
+        line = line.decode('utf-8').strip()
+        func_start_match = func_start_re.match(line)
+        if func_start_match:
+            if name is not None:
+                if ignored_funcs is not None and (name in ignored_funcs or loc in ignored_funcs):
+                    if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
+                        location_map[loc] = FunctionDescriptor(binary, name, loc, instrs)
+            name = func_start_match.group(2)
+            loc = int(func_start_match.group(1), 16)
+            instrs = list()
+        else:
+            instr_match = instr_re.match(line)
+            if instr_match:
+                instrs.append(int(instr_match.group(1), 16))
 
-            if ignored_funcs is not None and (name in ignored_funcs or loc in ignored_funcs):
-                continue
+    if name is not None:
+        if ignored_funcs is not None and (name in ignored_funcs or loc in ignored_funcs):
             if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
-                location_map[loc] = FunctionDescriptor(binary, name, loc)
+                location_map[loc] = FunctionDescriptor(binary, name, loc, instrs)
+
     return location_map
 
 

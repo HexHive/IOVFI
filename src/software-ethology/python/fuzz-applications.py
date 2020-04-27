@@ -45,7 +45,25 @@ def coverage_is_different(base_coverage, new_coverage):
     return False
 
 
-def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema):
+def coverage_past_threshold(func_desc, coverage_map, instruction_mapping, threshold=0.8):
+    funcs_called = set()
+    total_instructions = set()
+    total_coverage = set()
+    for io_vec, coverage in coverage_map[func_desc].items():
+        for addr in coverage:
+            if addr in instruction_mapping:
+                funcs_called.add(instruction_mapping[addr])
+    for func_called in funcs_called:
+        for addr in func_called.instructions:
+            total_instructions.add(addr)
+        for io_vec, coverage in coverage_map[func_called].items():
+            for addr in coverage:
+                total_coverage.add(addr)
+
+    return len(total_coverage) >= len(total_instructions) * threshold
+
+
+def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, instruction_mapping):
     segrind_run = None
     func_name = fuzz_desc.func_desc.name
     target = fuzz_desc.func_desc.location
@@ -106,6 +124,9 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema):
                             resp_msg = segrind_run.read_response()
                         ready_to_run = (resp_msg is not None and resp_msg.msgtype == SEMsgType.SEMSG_OK)
                         using_external_iovec = ready_to_run
+                elif coverage_past_threshold(func_desc=fuzz_desc.func_desc, coverage_map=coverage_map,
+                                             instruction_mapping=instruction_mapping):
+                    ready_to_run = False
                 else:
                     if len(coverage_map[fuzz_desc.func_desc]) > 0:
                         max_coverage = 0
@@ -144,10 +165,6 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema):
                             io_vec_contents = io.StringIO()
                             io_vec.pretty_print(out=io_vec_contents)
                             logger.debug(io_vec_contents.getvalue())
-                            addr_str = ""
-                            for addr in coverage:
-                                addr_str += hex(addr) + " "
-                            logger.debug("New coverage added: {}".format(addr_str))
                             coverage_map[fuzz_desc.func_desc][io_vec] = coverage
                             io_vec_list.append(io_vec)
                         elif using_internal_iovec:
@@ -166,7 +183,6 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema):
                 elif ready_to_run and result.msgtype != SEMsgType.SEMSG_OK:
                     if using_external_iovec:
                         logger.debug("{} rejects {}".format(run_name, str(io_vec)))
-
                 sema.release()
                 has_sema = False
                 if len(io_vec_list) <= current_iovec_idx:
@@ -222,11 +238,14 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
     fuzz_runs = list()
     unclassified = set()
     io_vecs_dict = dict()
+    instruction_mapping = dict()
 
     if not os.path.exists(work_dir):
         os.makedirs(work_dir, exist_ok=True)
 
     for func_desc in func_descs:
+        for addr in func_desc.instructions:
+            instruction_mapping[addr] = func_desc
         fuzz_runs.append(FuzzRunDesc(func_desc, valgrind_loc, work_dir, watchdog))
 
     with mp.Manager() as manager:
@@ -241,7 +260,7 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
         for fuzz_run in fuzz_runs:
             processes.append(
                 mp.Process(target=fuzz_one_function,
-                           args=(fuzz_run, generated_iovecs, iovec_coverage, duration, sema,)))
+                           args=(fuzz_run, generated_iovecs, iovec_coverage, duration, sema, instruction_mapping,)))
 
         for p in processes:
             p.start()
