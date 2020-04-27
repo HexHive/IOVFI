@@ -30,10 +30,12 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
     name = None
     for line in lines:
         line = line.decode('utf-8').strip()
+        if len(line) == 0:
+            continue
         func_start_match = func_start_re.match(line)
         if func_start_match:
             if name is not None:
-                if ignored_funcs is not None and (name in ignored_funcs or loc in ignored_funcs):
+                if ignored_funcs is None or (name not in ignored_funcs and loc not in ignored_funcs):
                     if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
                         location_map[loc] = FunctionDescriptor(binary, name, loc, instrs)
             name = func_start_match.group(2)
@@ -45,7 +47,7 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
                 instrs.append(int(instr_match.group(1), 16))
 
     if name is not None:
-        if ignored_funcs is not None and (name in ignored_funcs or loc in ignored_funcs):
+        if ignored_funcs is None or (name not in ignored_funcs and loc not in ignored_funcs):
             if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
                 location_map[loc] = FunctionDescriptor(binary, name, loc, instrs)
 
