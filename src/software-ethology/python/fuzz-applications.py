@@ -4,6 +4,7 @@ import logging
 import multiprocessing as mp
 import os
 import pickle
+import random
 import sys
 import time
 
@@ -194,6 +195,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                                 max_coverage = len(coverage)
 
                         logger.debug("IOVec chosen: {}".format(str(io_vec)))
+                        io_vec.random_seed = random.randint()
                         ack_msg = segrind_run.send_set_ctx_cmd(io_vec)
                         if ack_msg and ack_msg.msgtype == SEMsgType.SEMSG_ACK:
                             resp_msg = segrind_run.read_response()
