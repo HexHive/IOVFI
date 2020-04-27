@@ -61,6 +61,9 @@ class FuzzRunStatistics:
 
     def record_end(self):
         self.end_time = time.time()
+        
+    def record_unsuccessful_round(self):
+        self.total_rounds += 1
 
     def pretty_print(self, file=sys.stdout):
         print("------------------ {} ----------------------".format(self.func_desc.name), file=file)
@@ -92,6 +95,7 @@ def coverage_is_different(base_coverage, new_coverage):
 
 
 def coverage_past_threshold(func_desc, coverage_map, instruction_mapping, threshold=0.8):
+    logger.debug("{}: Finding coverage for {}".format(time.time(), func_desc.name))
     funcs_called = set()
     total_instructions = set()
     total_coverage = set()
@@ -106,7 +110,7 @@ def coverage_past_threshold(func_desc, coverage_map, instruction_mapping, thresh
             for addr in coverage:
                 total_coverage.add(addr)
 
-    logger.debug("{}: total_coverage = {} total_instructions = {}".format(func_desc.name, len(total_coverage),
+    logger.debug("{} {}: total_coverage = {} total_instructions = {}".format(time.time(), func_desc.name, len(total_coverage),
                                                                           len(total_instructions)))
     return len(total_coverage) > 0 and len(total_instructions) > 0 and len(total_coverage) >= len(
         total_instructions) * threshold
@@ -231,6 +235,8 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                                 logger.info("{} created {}".format(run_name, str(io_vec)))
                                 coverage_map[fuzz_desc.func_desc][io_vec] = coverage
                                 io_vec_list.append(io_vec)
+                            else:
+                                fuzz_stats.record_unsuccessful_round()
                         elif using_external_iovec:
                             fuzz_stats.record_accept()
                             logger.debug('{} accepted {}'.format(run_name, str(io_vec)))
