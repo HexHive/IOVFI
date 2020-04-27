@@ -444,8 +444,10 @@ def main():
     logger.info("Fuzzing {} targets".format(len(args)))
 
     if len(args) > 0:
+        logger.info("Fuzzing starting at {}".format(time.time()))
         (fuzz_run_results, unclassified) = fuzz_functions(args, valgrind_loc=valgrind_loc, watchdog=results.timeout,
                                                           duration=results.duration, thread_count=results.threads)
+        logger.info("Fuzzing ended at {}".format(time.time()))
 
         logger.info("{} has {} functions".format(results.bin, func_count))
         logger.info("Fuzzable functions: {}".format(len(fuzz_run_results)))
