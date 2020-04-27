@@ -258,7 +258,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 has_sema = False
                 if hit_threshold and len(io_vec_list) <= current_iovec_idx:
                     fuzz_stats.record_sleep_start()
-                    time.sleep(1)
+                    time.sleep(10)
                     fuzz_stats.record_sleep_end()
             except TimeoutError as e:
                 fuzz_stats.record_error()
