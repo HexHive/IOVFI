@@ -88,20 +88,21 @@ def get_individual_tree_coverage(dtree):
 
 def get_full_tree_coverage(dtree):
     executed_instructions = set()
-    reachable_instruction_count = dict()
+    reachable_instructions = set()
+    instruction_mapping = dict()
+    for func_desc in dtree.get_func_descs():
+        for addr in func_desc.instructions:
+            instruction_mapping[addr] = func_desc
 
-    total_reachable_instructions = 0
     for node in dtree.get_all_interior_nodes():
         for func_desc, coverage_data in node.get_coverage().items():
-            for (instructions, instruction_count) in coverage_data:
-                start_addr = instructions[0]
-                if start_addr not in reachable_instruction_count:
-                    total_reachable_instructions += instruction_count
-                    reachable_instruction_count[start_addr] = instruction_count
-                for inst in instructions:
-                    executed_instructions.add(inst)
+            for addr in coverage_data:
+                curr_func = instruction_mapping[addr]
+                executed_instructions.add(addr)
+                for inst in curr_func.instructions:
+                    reachable_instructions.add(inst)
 
-    return len(executed_instructions) / total_reachable_instructions
+    return len(executed_instructions) / len(reachable_instructions)
 
 
 def get_tree_path(tree, func_name):
