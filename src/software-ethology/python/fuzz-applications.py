@@ -4,6 +4,7 @@ import logging
 import multiprocessing as mp
 import os
 import pickle
+import sys
 import time
 
 import contexts.binaryutils as bu
@@ -60,6 +61,18 @@ class FuzzRunStatistics:
 
     def record_end(self):
         self.end_time = time.time()
+
+    def pretty_print(self, file=sys.stdout):
+        print("------------------ {} ----------------------".format(self.func_desc.name), file=file)
+        print("Total IOVecs Created:   {}".format(self.total_io_vecs_created), file=file)
+        print("Total IOVecs Accepted:  {}".format(self.total_io_vecs_accepted), file=file)
+        print("Total IOVecs Rejected:  {}".format(self.total_io_vecs_rejected), file=file)
+        print("Coverage Threshold Hit: {}".format(self.coverage_threshold_hit), file=file)
+        print("Total Rounds:           {}".format(self.total_rounds), file=file)
+        print("Total Sleep Time:       {}".format(self.total_sleep_time), file=file)
+        print("Total Errors:           {}".format(self.total_errors), file=file)
+        print("Total Time:             [{} - {}]".format(self.start_time, self.end_time), file=file)
+        print("-------------------------------------------{}".format("-" * (2 + len(self.func_desc.name))))
 
 
 class FuzzRunDesc(bu.RunDesc):
@@ -329,6 +342,10 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
                 for io_vec, coverage in coverages.items():
                     logger.debug("{} produced {} coverage for {}".format(str(io_vec), len(coverage), func_desc.name))
                     io_vecs_dict[func_desc][io_vec] = coverage
+
+        with open("fuzz_stats.txt", "w") as f:
+            for fuzz_stat in fuzz_stats:
+                fuzz_stat.pretty_print(file=f)
 
     for func_desc in func_descs:
         if func_desc not in io_vecs_dict:
