@@ -60,8 +60,9 @@ def coverage_past_threshold(func_desc, coverage_map, instruction_mapping, thresh
             for addr in coverage:
                 total_coverage.add(addr)
 
-    logger.debug("total_coverage = {} total_instructions = {}".format(len(total_coverage), len(total_instructions)))
-    return len(total_coverage) >= len(total_instructions) * threshold
+    logger.debug("{}: total_coverage = {} total_instructions = {}".format(func_desc.name, len(total_coverage),
+                                                                          len(total_instructions)))
+    return len(total_coverage) > 0 and len(total_coverage) >= len(total_instructions) * threshold
 
 
 def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, instruction_mapping):
