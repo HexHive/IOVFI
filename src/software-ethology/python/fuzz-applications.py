@@ -237,6 +237,8 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                                 io_vec_list.append(io_vec)
                             else:
                                 fuzz_stats.record_unsuccessful_round()
+                                logger.debug("IOVec {} created no new coverage".format(str(io_vec)))
+                                logger.debug(io_vec.pretty_print())
                         elif using_external_iovec:
                             fuzz_stats.record_accept()
                             logger.debug('{} accepted {}'.format(run_name, str(io_vec)))
