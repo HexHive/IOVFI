@@ -60,6 +60,7 @@ def coverage_past_threshold(func_desc, coverage_map, instruction_mapping, thresh
             for addr in coverage:
                 total_coverage.add(addr)
 
+    logger.debug("total_coverage = {} total_instructions = {}".format(len(total_coverage), len(total_instructions)))
     return len(total_coverage) >= len(total_instructions) * threshold
 
 
