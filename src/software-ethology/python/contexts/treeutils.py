@@ -1,54 +1,6 @@
 import contexts.FBDecisionTree as FBDtree
 
 
-# def diff_two_guess_sets(guesses0, guesses1):
-#     funcs0 = dict()
-#     funcs1 = dict()
-#     for fd, idx in guesses0.items():
-#         funcs0[fd.name] = idx
-#     for fd, idx in guesses1.items():
-#         funcs1[fd.name] = idx
-#
-#     missing_in_0 = set()
-#     missing_in_1 = set()
-#     differing = set()
-#     for name, idx in funcs0.items():
-#         if name not in funcs1:
-#             missing_in_1.add(name)
-#         elif idx != funcs1[name]:
-#             differing.add(name)
-#
-#     for name, idx in funcs1.items():
-#         if name not in funcs0:
-#             missing_in_0.add(name)
-#         elif idx != funcs0[name]:
-#             differing.add(name)
-#
-#     return missing_in_0, missing_in_1, differing
-
-
-# def histogram_data(tree):
-#     sizes = list()
-#     for ec in tree.get_all_equiv_classes():
-#         sizes.append(len(ec))
-#
-#     return sizes
-
-
-# def bin_data(tree, n_bins=10):
-#     hist_data = histogram_data(tree)
-#     bins = list()
-#
-#     for size in hist_data:
-#         s = size
-#         if s > n_bins:
-#             s = n_bins
-#
-#         bins.append(s)
-#
-#     return bins
-
-
 def get_evaluation(tree, guesses, equivalence_map=None):
     func_names = set()
     true_pos = set()

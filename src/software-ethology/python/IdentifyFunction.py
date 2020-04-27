@@ -43,10 +43,11 @@ def check_inputs(argparser):
         exit(1)
 
 
-def single_test(func_desc, timeout, guesses, error_msgs):
+def single_test(func_desc, timeout, guesses, error_msgs, sema):
     global fbDtree, n_confirms, valgrind_loc
 
     try:
+        sema.acquire()
         log_names = bu.get_log_names(func_desc)
         log = os.path.join('logs', 'identify', log_names[0])
         cmd_log = os.path.join('logs', 'identify', log_names[1])
@@ -57,6 +58,8 @@ def single_test(func_desc, timeout, guesses, error_msgs):
         error_msgs.append(str(e))
         logger.error("Error: {}".format(e))
         guesses[func_desc] = None
+    finally:
+        sema.release()
 
 
 def main():
@@ -68,7 +71,7 @@ def main():
     parser.add_argument("-b", "--binary", help="/path/to/binary", required=True)
     parser.add_argument("-loglevel", help="Set log level", type=int, default=logging.INFO)
     parser.add_argument("-logprefix", help="Prefix to use before log files", default="")
-    # parser.add_argument("-threads", help="Number of threads to use", default=.cpu_count() * 8, type=int)
+    parser.add_argument("-threads", help="Number of threads to use", default=mp.cpu_count(), type=int)
     parser.add_argument("-target", help="Location or function name to target")
     parser.add_argument("-guesses", help="/path/to/guesses", default="guesses.bin")
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
@@ -115,11 +118,13 @@ def main():
         guesses = manager.dict()
         error_msgs = manager.list()
         processes = list()
+        sema = mp.Semaphore(results.threads)
         for loc, func_desc in location_map.items():
             if func_desc.name in dangerous_functions or func_desc.name in guesses.keys():
                 logger.info("Skipping {}".format(func_desc.name))
                 continue
-            processes.append(mp.Process(target=single_test, args=(func_desc, results.timeout, guesses, error_msgs,)))
+            processes.append(
+                mp.Process(target=single_test, args=(func_desc, results.timeout, guesses, error_msgs, sema,)))
 
         for p in processes:
             p.start()
