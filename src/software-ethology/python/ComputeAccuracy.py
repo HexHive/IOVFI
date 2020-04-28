@@ -221,13 +221,39 @@ def main():
             true_pos, true_neg, incorrect_labels, known_when_unknown, unknown_when_known = tu.get_evaluation(dtree,
                                                                                                              guesses,
                                                                                                              equivalences)
-            sorted_true_pos = list()
+            sorted = list()
             for name in true_pos:
-                sorted_true_pos.append(name)
+                sorted.append(name)
 
-            sorted_true_pos.sort()
-            print(sorted_true_pos)
+            sorted.sort()
+            print("--------------------- True Pos -------------------")
+            print(sorted)
             print()
+            sorted.clear()
+
+            for name in incorrect:
+                sorted.append(name)
+            sorted.sort()
+            print("--------------------- Incorrect -------------------")
+            print(sorted)
+            print()
+            sorted.clear()
+
+            for name in known_when_unknown:
+                sorted.append(name)
+            sorted.sort()
+            print("----------------- known_when_unknown ---------------")
+            print(sorted)
+            print()
+            sorted.clear()
+
+            for name in unknown_when_known:
+                sorted.append(name)
+            sorted.sort()
+            print("----------------- unknown_when_known ---------------")
+            print(sorted)
+            print()
+            sorted.clear()
 
             incorrect = list()
             for name in incorrect_labels:

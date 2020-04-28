@@ -14,7 +14,7 @@ from contexts.IOVec import IOVec
 from contexts.SEGrindRun import SEGrindRun, SEMsgType
 
 MAX_ATTEMPTS = 25
-WATCHDOG = 50.0
+WATCHDOG = 3
 DEFAULT_DURATION = 5 * 60 * 60
 
 
@@ -195,10 +195,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                                 max_coverage = len(coverage)
 
                         logger.debug("IOVec chosen: {}".format(str(io_vec)))
-                        orig_seed = io_vec.random_seed
-                        io_vec.random_seed = random.randint(0, 2147483647)
                         ack_msg = segrind_run.send_set_ctx_cmd(io_vec)
-                        io_vec.random_seed = orig_seed
                         if ack_msg and ack_msg.msgtype == SEMsgType.SEMSG_ACK:
                             resp_msg = segrind_run.read_response()
                             if resp_msg and resp_msg.msgtype == SEMsgType.SEMSG_OK:
@@ -258,7 +255,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 has_sema = False
                 if hit_threshold and len(io_vec_list) <= current_iovec_idx:
                     fuzz_stats.record_sleep_start()
-                    time.sleep(1)
+                    time.sleep(10)
                     fuzz_stats.record_sleep_end()
             except TimeoutError as e:
                 fuzz_stats.record_error()
