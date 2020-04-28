@@ -231,10 +231,10 @@ def main():
             print()
             sorted.clear()
 
-            for name in incorrect:
+            for name in incorrect_labels:
                 sorted.append(name)
             sorted.sort()
-            print("--------------------- Incorrect -------------------")
+            print("------------------ incorrect_labels ----------------")
             print(sorted)
             print()
             sorted.clear()
