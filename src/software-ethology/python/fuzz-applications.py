@@ -343,7 +343,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                             logger.debug(io_vec_contents.getvalue())
                             coverage_map[fuzz_desc.func_desc][io_vec] = coverage
                             io_vec_list.append(io_vec)
-                        elif using_internal_iovec:
+                        else:
                             base_iovec = io_vec
                             io_vec = IOVec(result.data)
                             base_coverage = coverage_map[fuzz_desc.func_desc][base_iovec]
@@ -355,7 +355,6 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                             else:
                                 fuzz_stats.record_unsuccessful_round()
                                 logger.debug("IOVec {} created no new coverage".format(str(io_vec)))
-                                logger.debug(io_vec.pretty_print())
                     except Exception as e:
                         fuzz_stats.record_error()
                         logger.error("{} failed to add IOVec: {}".format(run_name, str(e)))
