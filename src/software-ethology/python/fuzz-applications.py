@@ -362,6 +362,9 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
             for fuzz_stat in fuzz_stats:
                 fuzz_stat.pretty_print(file=f)
 
+        with open("fuzz_stats.bin", "wb") as f:
+            pickle.dump(fuzz_stats, f)
+
     for func_desc in func_descs:
         if func_desc not in io_vecs_dict:
             unclassified.add(func_desc)
