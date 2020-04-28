@@ -168,7 +168,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 using_external_iovec = False
                 using_internal_iovec = False
                 io_vec = None
-                if len(io_vec_list) > current_iovec_idx:
+                if len(io_vec_list) > current_iovec_idx and (hit_threshold or time.time() > start_time + duration):
                     while current_iovec_idx < len(io_vec_list):
                         if io_vec_list[current_iovec_idx] not in coverage_map[fuzz_desc.func_desc]:
                             io_vec = io_vec_list[current_iovec_idx]
@@ -258,7 +258,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 has_sema = False
                 if hit_threshold and len(io_vec_list) <= current_iovec_idx:
                     fuzz_stats.record_sleep_start()
-                    time.sleep(10)
+                    time.sleep(1)
                     fuzz_stats.record_sleep_end()
             except TimeoutError as e:
                 fuzz_stats.record_error()
