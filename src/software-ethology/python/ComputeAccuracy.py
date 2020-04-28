@@ -263,9 +263,6 @@ def main():
             for name in unknown_when_known:
                 incorrect.append(name)
 
-            incorrect.sort()
-            print(incorrect)
-
             evaluation.add_evaluation(guessLine, true_pos, true_neg, incorrect, True)
 
     print(evaluation)
