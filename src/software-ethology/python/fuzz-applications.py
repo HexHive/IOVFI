@@ -4,7 +4,6 @@ import logging
 import multiprocessing as mp
 import os
 import pickle
-import random
 import sys
 import time
 
@@ -179,7 +178,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 using_external_iovec = False
                 using_internal_iovec = False
                 io_vec = None
-                if len(io_vec_list) > current_iovec_idx and (hit_threshold or time.time() > start_time + duration):
+                if len(io_vec_list) > current_iovec_idx:
                     while current_iovec_idx < len(io_vec_list):
                         if io_vec_list[current_iovec_idx] not in coverage_map[fuzz_desc.func_desc]:
                             io_vec = io_vec_list[current_iovec_idx]
