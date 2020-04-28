@@ -30,8 +30,10 @@ class FuzzRunStatistics:
         self.func_desc = func_desc
         self.start_time = time.time()
         self.end_time = 0
+        self.execution_time = 0
 
         self.sleep_start = 0
+        self.execution_start = 0
 
     def record_creation(self):
         self.total_io_vecs_created += 1
@@ -66,6 +68,14 @@ class FuzzRunStatistics:
     def record_unsuccessful_round(self):
         self.total_rounds += 1
 
+    def start_execution(self, semaphore):
+        semaphore.acquire()
+        self.execution_start = time.time()
+
+    def stop_execution(self, semaphore):
+        semaphore.release()
+        self.execution_time += time.time() - self.execution_start
+
     def pretty_print(self, file=sys.stdout):
         print("------------------ {} ----------------------".format(self.func_desc.name), file=file)
         print("Total IOVecs Created:   {}".format(self.total_io_vecs_created), file=file)
@@ -75,6 +85,7 @@ class FuzzRunStatistics:
         print("Total Rounds:           {}".format(self.total_rounds), file=file)
         print("Total Sleep Time:       {}".format(self.total_sleep_time), file=file)
         print("Total Errors:           {}".format(self.total_errors), file=file)
+        print("Total Execution Time:   {}".format(self.execution_time), file=file)
         print("Total Time:             {} seconds".format(int(self.end_time - self.start_time)), file=file)
         print("-------------------------------------------{}".format("-" * (2 + len(self.func_desc.name))), file=file)
 
@@ -150,7 +161,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
 
         while time.time() < start_time + duration or len(io_vec_list) > current_iovec_idx:
             try:
-                sema.acquire()
+                fuzz_stats.start_execution(semaphore=sema)
                 has_sema = True
                 if not segrind_run.is_running():
                     logger.info("Starting SEGrindRun for {}".format(run_name))
@@ -251,7 +262,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                     if using_external_iovec:
                         fuzz_stats.record_rejection()
                         logger.debug("{} rejects {}".format(run_name, str(io_vec)))
-                sema.release()
+                fuzz_stats.stop_execution(semaphore=sema)
                 has_sema = False
                 if hit_threshold and len(io_vec_list) <= current_iovec_idx:
                     fuzz_stats.record_sleep_start()
@@ -262,7 +273,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 logger.debug(str(e))
                 segrind_run.stop()
                 if has_sema:
-                    sema.release()
+                    fuzz_stats.stop_execution(semaphore=sema)
                     has_sema = False
                 continue
             except AssertionError as e:
@@ -270,7 +281,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 logger.debug(str(e))
                 segrind_run.stop()
                 if has_sema:
-                    sema.release()
+                    fuzz_stats.stop_execution(semaphore=sema)
                     has_sema = False
                 continue
             except IOError as e:
@@ -278,26 +289,26 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 logger.debug(str(e))
                 segrind_run.stop()
                 if has_sema:
-                    sema.release()
+                    fuzz_stats.stop_execution(semaphore=sema)
                     has_sema = False
                 continue
             except KeyboardInterrupt:
                 fuzz_stats.record_error()
                 logger.debug("{} received KeyboardInterrupt".format(run_name))
                 if has_sema:
-                    sema.release()
+                    fuzz_stats.stop_execution(semaphore=sema)
                     has_sema = False
                 segrind_run.stop()
                 continue
     except Exception as e:
         fuzz_stats.record_error()
         if has_sema:
-            sema.release()
+            fuzz_stats.stop_execution(semaphore=sema)
             has_sema = False
         logger.error("Error for {}: {}".format(run_name, e))
     finally:
         if has_sema:
-            sema.release()
+            fuzz_stats.stop_execution(semaphore=sema)
             has_sema = False
         logger.info("Finished {}".format(run_name))
         segrind_run.stop()
