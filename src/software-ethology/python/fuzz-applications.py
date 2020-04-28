@@ -63,7 +63,7 @@ class FuzzRunStatistics:
 
     def record_end(self):
         self.end_time = time.time()
-        
+
     def record_unsuccessful_round(self):
         self.total_rounds += 1
 
@@ -109,21 +109,27 @@ def coverage_past_threshold(func_desc, coverage_map, instruction_mapping, thresh
     logger.debug("{}: Finding coverage for {}".format(time.time(), func_desc.name))
     funcs_called = set()
     total_instructions = set()
-    total_coverage = set()
+    total_countable_coverage = set()
+
     for io_vec, coverage in coverage_map[func_desc].items():
         for addr in coverage:
             if addr in instruction_mapping:
                 funcs_called.add(instruction_mapping[addr])
     for func_called in funcs_called:
+        logger.debug(
+            "{} called {} ({} instructions)".format(func_desc.name, func_called.name, len(func_called.instructions)))
         for addr in func_called.instructions:
             total_instructions.add(addr)
         for io_vec, coverage in coverage_map[func_called].items():
             for addr in coverage:
-                total_coverage.add(addr)
+                if addr in instruction_mapping:
+                    # Addresses not in instruction_mapping for dynamically loaded libraries
+                    total_countable_coverage.add(addr)
 
-    logger.debug("{} {}: total_coverage = {} total_instructions = {}".format(time.time(), func_desc.name, len(total_coverage),
-                                                                          len(total_instructions)))
-    return len(total_coverage) > 0 and len(total_instructions) > 0 and len(total_coverage) >= len(
+    logger.debug("{} {}: total_countable_coverage = {} total_instructions = {}".format(time.time(), func_desc.name,
+                                                                                       len(total_countable_coverage),
+                                                                                       len(total_instructions)))
+    return len(total_countable_coverage) > 0 and len(total_instructions) > 0 and len(total_countable_coverage) >= len(
         total_instructions) * threshold
 
 
@@ -178,7 +184,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 using_external_iovec = False
                 using_internal_iovec = False
                 io_vec = None
-                if len(io_vec_list) > current_iovec_idx:
+                if len(io_vec_list) > current_iovec_idx and (hit_threshold or time.time() > start_time + duration):
                     while current_iovec_idx < len(io_vec_list):
                         if io_vec_list[current_iovec_idx] not in coverage_map[fuzz_desc.func_desc]:
                             io_vec = io_vec_list[current_iovec_idx]
