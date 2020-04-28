@@ -357,9 +357,10 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
             p.start()
 
         for p in processes:
-            curr_time = time.time()
-            timeout = max(1, duration - (curr_time - time_start))
-            p.join(timeout)
+            # curr_time = time.time()
+            # timeout = max(1, duration - (curr_time - time_start))
+            # p.join(timeout)
+            p.join()
 
         logger.debug("iovec_coverage contains {} entries".format(len(iovec_coverage)))
         for func_desc, coverages in iovec_coverage.items():
