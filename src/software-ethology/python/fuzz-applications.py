@@ -297,14 +297,14 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                     fuzz_stats.stop_execution(semaphore=sema)
                     has_sema = False
                 continue
-            except KeyboardInterrupt:
-                fuzz_stats.record_error()
-                logger.debug("{} received KeyboardInterrupt".format(run_name))
-                if has_sema:
-                    fuzz_stats.stop_execution(semaphore=sema)
-                    has_sema = False
-                segrind_run.stop()
-                continue
+            # except KeyboardInterrupt:
+            #     fuzz_stats.record_error()
+            #     logger.debug("{} received KeyboardInterrupt".format(run_name))
+            #     if has_sema:
+            #         fuzz_stats.stop_execution(semaphore=sema)
+            #         has_sema = False
+            #     segrind_run.stop()
+            #     continue
     except Exception as e:
         fuzz_stats.record_error()
         if has_sema:
