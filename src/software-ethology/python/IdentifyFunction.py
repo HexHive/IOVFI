@@ -131,7 +131,8 @@ def main():
 
         with mp.Pool(processes=results.threads) as pool:
             completed = [pool.apply_async(single_test, arg) for arg in args]
-            for (func_desc, guess) in completed:
+            for c in completed:
+                (func_desc, guess) = c.get()
                 guesses_out[func_desc] = guess
 
         logger.info("Completed identification")
