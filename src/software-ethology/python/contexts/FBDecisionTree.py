@@ -181,7 +181,7 @@ class FBDecisionTree:
         try:
             while current_node is not None:
                 if not segrind_run.is_running():
-                    segrind_run.stop()
+                    # segrind_run.stop()
                     segrind_run.start()
                     ack_msg = segrind_run.send_set_target_cmd(func_desc.location)
 

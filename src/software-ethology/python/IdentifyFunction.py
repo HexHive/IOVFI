@@ -43,11 +43,10 @@ def check_inputs(argparser):
         exit(1)
 
 
-def single_test(func_desc, timeout, guesses, error_msgs, sema):
+def single_test(func_desc, timeout, guesses, error_msgs):
     global fbDtree, n_confirms, valgrind_loc
 
     try:
-        sema.acquire()
         log_names = bu.get_log_names(func_desc)
         log = os.path.join('logs', 'identify', log_names[0])
         cmd_log = os.path.join('logs', 'identify', log_names[1])
@@ -59,7 +58,6 @@ def single_test(func_desc, timeout, guesses, error_msgs, sema):
         logger.error("Error: {}".format(e))
         guesses[func_desc] = None
     finally:
-        sema.release()
         logger.debug("Completed {}".format(func_desc.name))
 
 
@@ -119,20 +117,13 @@ def main():
     with mp.Manager() as manager:
         guesses = manager.dict()
         error_msgs = manager.list()
-        processes = list()
-        sema = mp.Semaphore(results.threads)
+        pool = mp.Pool(processes=results.threads)
+
         for loc, func_desc in location_map.items():
             if func_desc.name in dangerous_functions or func_desc.name in guesses.keys():
                 logger.info("Skipping {}".format(func_desc.name))
                 continue
-            processes.append(
-                mp.Process(target=single_test, args=(func_desc, results.timeout, guesses, error_msgs, sema,)))
-
-        for p in processes:
-            p.start()
-
-        for p in processes:
-            p.join()
+            pool.apply_async(single_test, (func_desc, results.timeout, guesses, error_msgs))
 
         logger.info("Completed identification")
         for func_desc, guess in guesses.items():
