@@ -57,9 +57,9 @@ def single_test(func_desc, timeout, error_msgs):
         guess, coverage = fbDtree.identify(func_desc=func_desc, valgrind_loc=valgrind_loc, timeout=timeout,
                                            cwd=WORK_DIR, max_confirm=n_confirms, cmd_log_loc=cmd_log, log_loc=log)
         if guess is not None:
-            for ec in guess:
-                guess_equiv_class.append(ec.name)
-            guess_equiv_class.sort()
+            for ec in guess.get_equivalence_class():
+                guess_equiv_class.append(ec)
+            guess_equiv_class.sort(key=lambda fd: fd.name)
     except Exception as e:
         guess_equiv_class = None
         error_msgs.append(str(e))
@@ -161,11 +161,11 @@ def main():
         if guess is None:
             indicator = "?"
         else:
-            for func in guess.get_equivalence_class():
+            for func in guess:
                 if func.name.find(func_desc.name) >= 0:
                     indicator = "!"
                     break
-            for func in guess.get_equivalence_class():
+            for func in guess:
                 guess_list.append(str(func))
 
         logger.info("[{}] {}: {}".format(indicator, func_desc.name, " ".join(guess_list)))
