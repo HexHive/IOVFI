@@ -43,10 +43,11 @@ def check_inputs(argparser):
         exit(1)
 
 
-def single_test(func_desc, timeout, guesses, error_msgs):
+def single_test(func_desc, timeout, error_msgs):
     global fbDtree, n_confirms, valgrind_loc
     running_path = os.path.join("_work", "running", func_desc.name)
     os.makedirs(os.path.dirname(running_path), exist_ok=True)
+    guess = None
     try:
         log_names = bu.get_log_names(func_desc)
         with open("{}".format(running_path), 'w'):
@@ -55,16 +56,14 @@ def single_test(func_desc, timeout, guesses, error_msgs):
         cmd_log = os.path.join('logs', 'identify', log_names[1])
         guess, coverage = fbDtree.identify(func_desc=func_desc, valgrind_loc=valgrind_loc, timeout=timeout,
                                            cwd=WORK_DIR, max_confirm=n_confirms, cmd_log_loc=cmd_log, log_loc=log)
-        guesses[func_desc] = guess
     except Exception as e:
         error_msgs.append(str(e))
         logger.error("Error: {}".format(e))
-        guesses[func_desc] = None
     finally:
         logger.debug("Completed {}".format(func_desc.name))
         if os.path.exists(running_path):
             os.remove(running_path)
-        return func_desc
+        return func_desc, guess
 
 
 def main():
@@ -133,12 +132,13 @@ def main():
 
         with mp.Pool(processes=results.threads) as pool:
             completed = [pool.apply_async(single_test, arg) for arg in args]
-            logger.debug([res.get().name for res in completed])
+            for (func_desc, guess) in completed:
+                guesses_out[func_desc] = guess
 
         logger.info("Completed identification")
-        for func_desc, guess in guesses.items():
-            logger.debug("Recording {}".format(func_desc.name))
-            guesses_out[func_desc] = guess
+        # for func_desc, guess in guesses.items():
+        #     logger.debug("Recording {}".format(func_desc.name))
+        #     guesses_out[func_desc] = guess
 
         if len(error_msgs) > 0:
             logger.info("++++++++++++++++++++++++++++++++++++++++++++")
