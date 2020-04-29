@@ -400,7 +400,7 @@ def main():
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
     parser.add_argument("-log", help="/path/to/log/file", default="fuzz.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
-    parser.add_argument("-threads", help="Number of threads to use", type=int, default=mp.cpu_count())
+    parser.add_argument("-threads", help="Number of threads to use", type=int, default=max(mp.cpu_count() / 2, 1))
     parser.add_argument('-o', '--out', help="/path/to/output/fuzzing/results", default="out.desc")
     parser.add_argument("-timeout", help='Number of seconds to wait per run', type=int, default=WATCHDOG)
     parser.add_argument('-duration', help='Total number of seconds to fuzz targets', type=int, default=DEFAULT_DURATION)
