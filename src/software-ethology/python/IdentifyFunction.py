@@ -120,15 +120,14 @@ def main():
 
     guesses_out = dict()
     with mp.Manager() as manager:
-        guesses = manager.dict()
         error_msgs = manager.list()
 
         args = list()
         for loc, func_desc in location_map.items():
-            if func_desc.name in dangerous_functions or func_desc.name in guesses.keys():
+            if func_desc.name in dangerous_functions:
                 logger.info("Skipping {}".format(func_desc.name))
                 continue
-            args.append((func_desc, results.timeout, guesses, error_msgs))
+            args.append((func_desc, results.timeout, error_msgs))
 
         with mp.Pool(processes=results.threads) as pool:
             completed = [pool.apply_async(single_test, arg) for arg in args]
