@@ -237,7 +237,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                             logger.debug("Reading in IOVec from {}".format(segrind_run.valgrind_pid))
                             io_vec = IOVec(result.data)
                             fuzz_stats.record_creation()
-                            logger.info("{} created {}".format(run_name, str(io_vec)))
+                            logger.info("{} created {} at {}".format(run_name, str(io_vec), time.time()))
                             io_vec_contents = io.StringIO()
                             io_vec.pretty_print(out=io_vec_contents)
                             logger.debug(io_vec_contents.getvalue())
@@ -249,7 +249,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                             base_coverage = coverage_map[fuzz_desc.func_desc][base_iovec]
                             if coverage_is_different(base_coverage, coverage):
                                 fuzz_stats.record_creation()
-                                logger.info("{} created {}".format(run_name, str(io_vec)))
+                                logger.info("{} created {} at {}".format(run_name, str(io_vec), time.time()))
                                 coverage_map[fuzz_desc.func_desc][io_vec] = coverage
                                 io_vec_list.append(io_vec)
                             else:
@@ -258,7 +258,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                                 logger.debug(io_vec.pretty_print())
                         elif using_external_iovec:
                             fuzz_stats.record_accept()
-                            logger.debug('{} accepted {}'.format(run_name, str(io_vec)))
+                            logger.info('{} accepted {}'.format(run_name, str(io_vec)))
                             coverage_map[fuzz_desc.func_desc][io_vec] = coverage
                     except Exception as e:
                         fuzz_stats.record_error()
@@ -266,7 +266,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 elif ready_to_run and result.msgtype != SEMsgType.SEMSG_OK:
                     if using_external_iovec:
                         fuzz_stats.record_rejection()
-                        logger.debug("{} rejects {}".format(run_name, str(io_vec)))
+                        logger.info("{} rejects {}".format(run_name, str(io_vec)))
                 fuzz_stats.stop_execution(semaphore=sema)
                 has_sema = False
                 if hit_threshold and len(io_vec_list) <= current_iovec_idx:
