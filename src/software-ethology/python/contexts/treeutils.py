@@ -18,7 +18,7 @@ def get_evaluation(tree, guesses, equivalence_map=None):
 
         if guess is not None:
             found = False
-            for ec in guess.get_equivalence_class():
+            for ec in guess:
                 if "ifunc" in ec.name:
                     continue
 
@@ -64,8 +64,7 @@ def get_evaluation(tree, guesses, equivalence_map=None):
     labeled_unknown_when_known_list = list(labeled_unknown_when_known)
     labeled_unknown_when_known_list.sort()
 
-    return true_pos_list, true_neg_list, labeled_incorrectly_list, labeled_known_when_unknown_list, \
-           labeled_unknown_when_known_list
+    return true_pos_list, true_neg_list, labeled_incorrectly_list, labeled_known_when_unknown_list, labeled_unknown_when_known_list
 
 
 def get_tree_coverage(dtree, target_func_desc_name):
