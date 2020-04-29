@@ -46,6 +46,7 @@ def check_inputs(argparser):
 def single_test(func_desc, timeout, guesses, error_msgs):
     global fbDtree, n_confirms, valgrind_loc
     running_path = os.path.join("_work", "running", func_desc.name)
+    os.makedirs(os.path.dirname(running_path), exist_ok=True)
     try:
         log_names = bu.get_log_names(func_desc)
         with open("{}".format(running_path), 'w'):
