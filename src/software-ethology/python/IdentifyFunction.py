@@ -130,11 +130,11 @@ def main():
             logger.debug("Recording {}".format(func_desc.name))
             guesses_out[func_desc] = guess
 
-    if len(error_msgs) > 0:
-        logger.info("++++++++++++++++++++++++++++++++++++++++++++")
-        logger.info("                  Errors                    ")
-        logger.info("++++++++++++++++++++++++++++++++++++++++++++")
-        logger.info(error_msgs)
+        if len(error_msgs) > 0:
+            logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+            logger.info("                  Errors                    ")
+            logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+            logger.info(error_msgs)
 
     logger.info("++++++++++++++++++++++++++++++++++++++++++++")
     logger.info("                  Guesses                   ")
