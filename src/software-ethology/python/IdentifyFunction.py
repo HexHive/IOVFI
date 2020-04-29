@@ -19,7 +19,7 @@ n_confirms = 1
 valgrind_loc = None
 
 WORK_DIR = os.path.abspath(os.path.join("_work", "identifying"))
-WATCHDOG = 50.0
+WATCHDOG = 3
 
 
 def check_inputs(argparser):
@@ -60,6 +60,7 @@ def single_test(func_desc, timeout, guesses, error_msgs, sema):
         guesses[func_desc] = None
     finally:
         sema.release()
+        logger.debug("Completed {}".format(func_desc.name))
 
 
 def main():
@@ -132,6 +133,7 @@ def main():
         for p in processes:
             p.join()
 
+        logger.info("Completed identification")
         guesses_out = dict()
 
         if len(error_msgs) > 0:

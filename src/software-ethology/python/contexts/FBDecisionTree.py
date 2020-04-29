@@ -198,12 +198,14 @@ class FBDecisionTree:
                             # for cov in coverage:
                             #     coverages.append(cov)
                             segrind_run.stop()
+                            del segrind_run
                             return current_node, coverages
                         break
                     except RuntimeError as e:
                         # No available hashes, so just mark the identified leaf
                         # as the identified leaf
                         segrind_run.stop()
+                        del segrind_run
                         return current_node, coverages
                     except Exception as e:
                         logger.debug("Error confirming leaf for {}: {}".format(func_desc, e))
@@ -223,9 +225,11 @@ class FBDecisionTree:
                     current_node = current_node.get_left_child()
 
             segrind_run.stop()
+            del segrind_run
             return None, None
         except Exception as e:
             segrind_run.stop()
+            del segrind_run
             raise e
 
     def gen_dtree(self, iovec_coverage_location):
