@@ -115,6 +115,7 @@ def main():
         logger.info(msg + "done!")
         logger.info("Found {} functions".format(len(location_map)))
 
+    guesses_out = dict()
     with mp.Manager() as manager:
         guesses = manager.dict()
         error_msgs = manager.list()
@@ -134,36 +135,37 @@ def main():
             p.join()
 
         logger.info("Completed identification")
-        guesses_out = dict()
-
-        if len(error_msgs) > 0:
-            logger.info("++++++++++++++++++++++++++++++++++++++++++++")
-            logger.info("                  Errors                    ")
-            logger.info("++++++++++++++++++++++++++++++++++++++++++++")
-            logger.info(error_msgs)
-
-        logger.info("++++++++++++++++++++++++++++++++++++++++++++")
-        logger.info("                  Guesses                   ")
-        logger.info("++++++++++++++++++++++++++++++++++++++++++++")
         for func_desc, guess in guesses.items():
+            logger.debug("Recording {}".format(func_desc.name))
             guesses_out[func_desc] = guess
-            indicator = "X"
 
-            guess_list = list()
-            if guess is None:
-                indicator = "?"
-            else:
-                for func in guess.get_equivalence_class():
-                    if func.name.find(func_desc.name) >= 0:
-                        indicator = "!"
-                        break
-                for func in guess.get_equivalence_class():
-                    guess_list.append(str(func))
+    if len(error_msgs) > 0:
+        logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+        logger.info("                  Errors                    ")
+        logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+        logger.info(error_msgs)
 
-            logger.info("[{}] {}: {}".format(indicator, func_desc.name, " ".join(guess_list)))
+    logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+    logger.info("                  Guesses                   ")
+    logger.info("++++++++++++++++++++++++++++++++++++++++++++")
+    for func_desc, guess in guesses_out.items():
+        indicator = "X"
 
-        with open(guessLoc, 'wb') as f:
-            pickle.dump(guesses_out, f)
+        guess_list = list()
+        if guess is None:
+            indicator = "?"
+        else:
+            for func in guess.get_equivalence_class():
+                if func.name.find(func_desc.name) >= 0:
+                    indicator = "!"
+                    break
+            for func in guess.get_equivalence_class():
+                guess_list.append(str(func))
+
+        logger.info("[{}] {}: {}".format(indicator, func_desc.name, " ".join(guess_list)))
+
+    with open(guessLoc, 'wb') as f:
+        pickle.dump(guesses_out, f)
 
 
 if __name__ == "__main__":
