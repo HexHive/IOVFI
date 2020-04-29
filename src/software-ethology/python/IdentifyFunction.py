@@ -47,7 +47,7 @@ def single_test(func_desc, timeout, error_msgs):
     global fbDtree, n_confirms, valgrind_loc
     running_path = os.path.join("_work", "running", func_desc.name)
     os.makedirs(os.path.dirname(running_path), exist_ok=True)
-    guess = None
+    guess_equiv_class = list()
     try:
         log_names = bu.get_log_names(func_desc)
         with open("{}".format(running_path), 'w'):
@@ -56,14 +56,19 @@ def single_test(func_desc, timeout, error_msgs):
         cmd_log = os.path.join('logs', 'identify', log_names[1])
         guess, coverage = fbDtree.identify(func_desc=func_desc, valgrind_loc=valgrind_loc, timeout=timeout,
                                            cwd=WORK_DIR, max_confirm=n_confirms, cmd_log_loc=cmd_log, log_loc=log)
+        if guess is not None:
+            for ec in guess:
+                guess_equiv_class.append(ec.name)
+            guess_equiv_class.sort()
     except Exception as e:
+        guess_equiv_class = None
         error_msgs.append(str(e))
         logger.error("Error: {}".format(e))
     finally:
         logger.debug("Completed {}".format(func_desc.name))
         if os.path.exists(running_path):
             os.remove(running_path)
-        return func_desc, guess
+        return func_desc, guess_equiv_class
 
 
 def main():
