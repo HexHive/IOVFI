@@ -45,9 +45,11 @@ def check_inputs(argparser):
 
 def single_test(func_desc, timeout, guesses, error_msgs):
     global fbDtree, n_confirms, valgrind_loc
-
+    running_path = os.path.join("_work", "running", func_desc.name)
     try:
         log_names = bu.get_log_names(func_desc)
+        with open("{}".format(running_path), 'w'):
+            pass
         log = os.path.join('logs', 'identify', log_names[0])
         cmd_log = os.path.join('logs', 'identify', log_names[1])
         guess, coverage = fbDtree.identify(func_desc=func_desc, valgrind_loc=valgrind_loc, timeout=timeout,
@@ -59,6 +61,8 @@ def single_test(func_desc, timeout, guesses, error_msgs):
         guesses[func_desc] = None
     finally:
         logger.debug("Completed {}".format(func_desc.name))
+        if os.path.exists(running_path):
+            os.remove(running_path)
         return func_desc
 
 
