@@ -170,14 +170,15 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 has_sema = True
                 if not segrind_run.is_running():
                     logger.info("Starting SEGrindRun for {}".format(run_name))
+                    segrind_run.stop()
                     segrind_run.start()
                     ack_msg = segrind_run.send_set_target_cmd(target)
                     if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
-                        raise RuntimeError("Could not set target {}".format(target))
+                        raise AssertionError("Could not set target {}".format(target))
 
                     resp_msg = segrind_run.read_response()
                     if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
-                        raise RuntimeError("Could not set target {}".format(target))
+                        raise AssertionError("Could not set target {}".format(target))
 
                 resp_msg = None
                 result = None
