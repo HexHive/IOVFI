@@ -94,6 +94,7 @@ class FuzzRunDesc(bu.RunDesc):
     def __init__(self, func_desc, valgrind_loc, work_dir, watchdog, attempt_count=MAX_ATTEMPTS):
         bu.RunDesc.__init__(self, func_desc=func_desc, valgrind_loc=valgrind_loc, work_dir=work_dir, watchdog=watchdog)
         self.attempt_count = attempt_count
+        self.statistics = FuzzRunStatistics(func_desc=func_desc)
 
 
 def coverage_is_different(base_coverage, new_coverage):
@@ -134,38 +135,44 @@ def coverage_past_threshold(func_desc, coverage_map, instruction_mapping, thresh
         total_instructions) * threshold
 
 
-def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, instruction_mapping, fuzz_stats_list):
-    segrind_run = None
+def create_segrind_run(fuzz_desc):
     func_name = fuzz_desc.func_desc.name
     target = fuzz_desc.func_desc.location
     binary = fuzz_desc.func_desc.binary
+    run_name = "{}.{}.{}".format(os.path.basename(binary), func_name, target)
+    logger.debug("{} target is {} ({})".format(run_name, hex(target), func_name))
+    pipe_in = os.path.join(fuzz_desc.work_dir, run_name + ".in")
+    pipe_out = os.path.join(fuzz_desc.work_dir, run_name + ".out")
+    log_names = bu.get_log_names(fuzz_desc.func_desc)
+    log_out = os.path.join("logs", "fuzz", log_names[0])
+    cmd_log = os.path.join("logs", "fuzz", log_names[1])
+    # cmd_log = os.path.abspath("/dev/null")
+    if not os.path.exists(os.path.dirname(log_out)):
+        os.makedirs(os.path.dirname(log_out), exist_ok=True)
 
-    fuzz_stats = FuzzRunStatistics(fuzz_desc.func_desc)
-    hit_threshold = False
+    logger.debug("Creating SEGrindRun for {}".format(run_name))
+    segrind_run = SEGrindRun(valgrind_loc=fuzz_desc.valgrind_loc, binary_loc=binary, pipe_in=pipe_in,
+                             pipe_out=pipe_out, valgrind_log_loc=log_out, run_log_loc=cmd_log,
+                             cwd=fuzz_desc.work_dir, timeout=fuzz_desc.watchdog)
+    logger.debug("Done")
+
+    return run_name, segrind_run
+
+
+def consolidate_one_func(fuzz_desc, io_vec_list, coverage_map, sema, completed_list):
+    segrind_run = None
+    target = fuzz_desc.func_desc.location
+
+    fuzz_stats = fuzz_desc.statistics
 
     try:
-        run_name = "{}.{}.{}".format(os.path.basename(binary), func_name, target)
-        logger.debug("{} target is {} ({})".format(run_name, hex(target), func_name))
-        pipe_in = os.path.join(fuzz_desc.work_dir, run_name + ".in")
-        pipe_out = os.path.join(fuzz_desc.work_dir, run_name + ".out")
-        log_names = bu.get_log_names(fuzz_desc.func_desc)
-        log_out = os.path.join("logs", "fuzz", log_names[0])
-        cmd_log = os.path.join("logs", "fuzz", log_names[1])
-        # cmd_log = os.path.abspath("/dev/null")
-        if not os.path.exists(os.path.dirname(log_out)):
-            os.makedirs(os.path.dirname(log_out), exist_ok=True)
-
-        logger.debug("Creating SEGrindRun for {}".format(run_name))
-        segrind_run = SEGrindRun(valgrind_loc=fuzz_desc.valgrind_loc, binary_loc=binary, pipe_in=pipe_in,
-                                 pipe_out=pipe_out, valgrind_log_loc=log_out, run_log_loc=cmd_log,
-                                 cwd=fuzz_desc.work_dir, timeout=fuzz_desc.watchdog)
-        logger.debug("Done")
-
+        run_name, segrind_run = create_segrind_run(fuzz_desc=fuzz_desc)
         start_time = time.time()
         current_iovec_idx = 0
         has_sema = False
+        iovec_count = len(io_vec_list)
 
-        while time.time() < start_time + duration or len(io_vec_list) > current_iovec_idx:
+        while current_iovec_idx < iovec_count:
             try:
                 fuzz_stats.start_execution(semaphore=sema)
                 has_sema = True
@@ -183,30 +190,119 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
 
                 resp_msg = None
                 result = None
-                using_external_iovec = False
-                using_internal_iovec = False
                 io_vec = None
-                if len(io_vec_list) > current_iovec_idx and (
-                        hit_threshold or
-                        (fuzz_stats.total_io_vecs_created == 0 and fuzz_stats.total_io_vecs_accepted == 0) or
-                        time.time() > start_time + duration):
-                    while current_iovec_idx < len(io_vec_list):
-                        if io_vec_list[current_iovec_idx] not in coverage_map[fuzz_desc.func_desc]:
-                            io_vec = io_vec_list[current_iovec_idx]
-                            current_iovec_idx += 1
-                            break
+                ready_to_run = False
+                while current_iovec_idx < iovec_count:
+                    if io_vec_list[current_iovec_idx] not in coverage_map[fuzz_desc.func_desc]:
+                        io_vec = io_vec_list[current_iovec_idx]
                         current_iovec_idx += 1
+                        break
+                    current_iovec_idx += 1
                     if io_vec is not None:
                         ack_msg = segrind_run.send_set_ctx_cmd(io_vec)
                         if ack_msg and ack_msg.msgtype == SEMsgType.SEMSG_ACK:
                             resp_msg = segrind_run.read_response()
                         ready_to_run = (resp_msg is not None and resp_msg.msgtype == SEMsgType.SEMSG_OK)
-                        using_external_iovec = ready_to_run
-                elif hit_threshold or coverage_past_threshold(func_desc=fuzz_desc.func_desc, coverage_map=coverage_map,
-                                                              instruction_mapping=instruction_mapping):
-                    ready_to_run = False
+
+                if ready_to_run:
+                    ack_msg = segrind_run.send_execute_cmd()
+                    if ack_msg and ack_msg.msgtype == SEMsgType.SEMSG_ACK:
+                        result = segrind_run.read_response()
+
+                if ready_to_run and result is None:
+                    logger.debug("Fuzzing result is None for {}".format(run_name))
+                elif ready_to_run and result.msgtype == SEMsgType.SEMSG_OK:
+                    try:
+                        coverage = segrind_run.get_latest_coverage()
+                        fuzz_stats.record_accept()
+                        logger.info('{} accepted {}'.format(run_name, str(io_vec)))
+                        coverage_map[fuzz_desc.func_desc][io_vec] = coverage
+                    except Exception as e:
+                        fuzz_stats.record_error()
+                        logger.error("{} failed to add IOVec: {}".format(run_name, str(e)))
+                elif ready_to_run and result.msgtype != SEMsgType.SEMSG_OK:
+                    fuzz_stats.record_rejection()
+                    logger.info("{} rejects {}".format(run_name, str(io_vec)))
+
+                fuzz_stats.stop_execution(semaphore=sema)
+                has_sema = False
+            except TimeoutError as e:
+                fuzz_stats.record_error()
+                logger.debug(str(e))
+                segrind_run.stop()
+                if has_sema:
+                    fuzz_stats.stop_execution(semaphore=sema)
+                    has_sema = False
+                continue
+            except AssertionError as e:
+                fuzz_stats.record_error()
+                logger.debug(str(e))
+                segrind_run.stop()
+                if has_sema:
+                    fuzz_stats.stop_execution(semaphore=sema)
+                    has_sema = False
+                continue
+            except IOError as e:
+                fuzz_stats.record_error()
+                logger.debug(str(e))
+                segrind_run.stop()
+                if has_sema:
+                    fuzz_stats.stop_execution(semaphore=sema)
+                    has_sema = False
+                continue
+    except Exception as e:
+        fuzz_stats.record_error()
+        if has_sema:
+            fuzz_stats.stop_execution(semaphore=sema)
+            has_sema = False
+        logger.error("Error for {}: {}".format(run_name, e))
+    finally:
+        if has_sema:
+            fuzz_stats.stop_execution(semaphore=sema)
+            has_sema = False
+        logger.info("Finished {}".format(run_name))
+        segrind_run.stop()
+        del segrind_run
+        fuzz_stats.record_end()
+        fuzz_desc.statistics = fuzz_stats
+        completed_list.append(fuzz_desc)
+
+
+def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, instruction_mapping, completed_list):
+    segrind_run = None
+    target = fuzz_desc.func_desc.location
+
+    fuzz_stats = fuzz_desc.statistics
+
+    try:
+        run_name, segrind_run = create_segrind_run(fuzz_desc=fuzz_desc)
+        start_time = time.time()
+        has_sema = False
+
+        while time.time() < start_time + duration:
+            try:
+                fuzz_stats.start_execution(semaphore=sema)
+                has_sema = True
+                if not segrind_run.is_running():
+                    logger.info("Starting SEGrindRun for {}".format(run_name))
+                    segrind_run.stop()
+                    segrind_run.start()
+                    ack_msg = segrind_run.send_set_target_cmd(target)
+                    if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
+                        raise AssertionError("Could not set target {}".format(target))
+
+                    resp_msg = segrind_run.read_response()
+                    if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
+                        raise AssertionError("Could not set target {}".format(target))
+
+                resp_msg = None
+                result = None
+                using_internal_iovec = False
+                io_vec = None
+                if coverage_past_threshold(func_desc=fuzz_desc.func_desc, coverage_map=coverage_map,
+                                           instruction_mapping=instruction_mapping):
                     fuzz_stats.record_coverage_threshold_hit()
-                    hit_threshold = True
+                    break
                 else:
                     if len(coverage_map[fuzz_desc.func_desc]) > 0:
                         max_coverage = 0
@@ -238,7 +334,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                     try:
                         coverage = segrind_run.get_latest_coverage()
                         logger.debug("{} recorded {} instructions".format(run_name, len(coverage)))
-                        if not using_external_iovec and not using_internal_iovec:
+                        if not using_internal_iovec:
                             logger.debug("Reading in IOVec from {}".format(segrind_run.valgrind_pid))
                             io_vec = IOVec(result.data)
                             fuzz_stats.record_creation()
@@ -261,23 +357,11 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                                 fuzz_stats.record_unsuccessful_round()
                                 logger.debug("IOVec {} created no new coverage".format(str(io_vec)))
                                 logger.debug(io_vec.pretty_print())
-                        elif using_external_iovec:
-                            fuzz_stats.record_accept()
-                            logger.info('{} accepted {}'.format(run_name, str(io_vec)))
-                            coverage_map[fuzz_desc.func_desc][io_vec] = coverage
                     except Exception as e:
                         fuzz_stats.record_error()
                         logger.error("{} failed to add IOVec: {}".format(run_name, str(e)))
-                elif ready_to_run and result.msgtype != SEMsgType.SEMSG_OK:
-                    if using_external_iovec:
-                        fuzz_stats.record_rejection()
-                        logger.info("{} rejects {}".format(run_name, str(io_vec)))
                 fuzz_stats.stop_execution(semaphore=sema)
                 has_sema = False
-                if hit_threshold and len(io_vec_list) <= current_iovec_idx:
-                    fuzz_stats.record_sleep_start()
-                    time.sleep(10)
-                    fuzz_stats.record_sleep_end()
             except TimeoutError as e:
                 fuzz_stats.record_error()
                 logger.debug(str(e))
@@ -322,17 +406,14 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
             has_sema = False
         logger.info("Finished {}".format(run_name))
         segrind_run.stop()
-        if os.path.exists(pipe_in):
-            os.unlink(pipe_in)
-        if os.path.exists(pipe_out):
-            os.unlink(pipe_out)
         del segrind_run
         fuzz_stats.record_end()
-        fuzz_stats_list.append(fuzz_stats)
+        fuzz_desc.statistics = fuzz_stats
+        completed_list.append(fuzz_desc)
 
 
-def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
-                   work_dir=os.path.abspath(os.path.join(os.curdir, "_work"))):
+def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
+                                   work_dir=os.path.abspath(os.path.join(os.curdir, "_work"))):
     fuzz_runs = list()
     unclassified = set()
     io_vecs_dict = dict()
@@ -349,7 +430,8 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
     with mp.Manager() as manager:
         generated_iovecs = manager.list()
         iovec_coverage = manager.dict()
-        fuzz_stats = manager.list()
+        fuzz_completed_list = manager.list()
+        consolidate_completed_list = manager.list()
         sema = mp.Semaphore(thread_count)
 
         for func_desc in func_descs:
@@ -360,17 +442,32 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
             processes.append(
                 mp.Process(target=fuzz_one_function,
                            args=(fuzz_run, generated_iovecs, iovec_coverage, duration, sema, instruction_mapping,
-                                 fuzz_stats,)))
+                                 fuzz_completed_list,)))
 
         time_start = time.time()
         for p in processes:
             p.start()
 
         for p in processes:
-            # curr_time = time.time()
-            # timeout = max(1, duration - (curr_time - time_start))
-            # p.join(timeout)
+            curr_time = time.time()
+            timeout = max(1, duration - (curr_time - time_start))
+            p.join(timeout)
+            # p.join()
+
+        logger.info("Completed fuzzing at {}".format(time.time()))
+        processes.clear()
+        for fuzz_run in fuzz_completed_list:
+            processes.append(mp.Process(target=consolidate_one_func, args=(
+                fuzz_run, generated_iovecs, iovec_coverage, sema, consolidate_completed_list)))
+
+        logger.info("Starting consolidation at {}".format(time.time()))
+        for p in processes:
+            p.start()
+
+        for p in processes:
             p.join()
+
+        logger.info("Finished consolidation at {}".format(time.time()))
 
         logger.debug("iovec_coverage contains {} entries".format(len(iovec_coverage)))
         for func_desc, coverages in iovec_coverage.items():
@@ -380,12 +477,12 @@ def fuzz_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
                     logger.debug("{} produced {} coverage for {}".format(str(io_vec), len(coverage), func_desc.name))
                     io_vecs_dict[func_desc][io_vec] = coverage
 
-        with open("fuzz_stats.txt", "w") as f:
-            for fuzz_stat in fuzz_stats:
+        with open("completed_list.txt", "w") as f:
+            for fuzz_stat in consolidate_completed_list:
                 fuzz_stat.pretty_print(file=f)
 
-        with open("fuzz_stats.bin", "wb") as f:
-            pickle.dump(fuzz_stats, f)
+        with open("completed_list.bin", "wb") as f:
+            pickle.dump(consolidate_completed_list, f)
 
     for func_desc in func_descs:
         if func_desc not in io_vecs_dict:
@@ -489,8 +586,10 @@ def main():
 
     if len(args) > 0:
         logger.info("Fuzzing starting at {}".format(time.time()))
-        (fuzz_run_results, unclassified) = fuzz_functions(args, valgrind_loc=valgrind_loc, watchdog=results.timeout,
-                                                          duration=results.duration, thread_count=results.threads)
+        (fuzz_run_results, unclassified) = fuzz_and_consolidate_functions(args, valgrind_loc=valgrind_loc,
+                                                                          watchdog=results.timeout,
+                                                                          duration=results.duration,
+                                                                          thread_count=results.threads)
         logger.info("Fuzzing ended at {}".format(time.time()))
 
         logger.info("{} has {} functions".format(results.bin, func_count))
