@@ -187,7 +187,9 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                 using_internal_iovec = False
                 io_vec = None
                 if len(io_vec_list) > current_iovec_idx and (
-                        hit_threshold or fuzz_stats.total_io_vecs_created == 0 or time.time() > start_time + duration):
+                        hit_threshold or
+                        (fuzz_stats.total_io_vecs_created == 0 and fuzz_stats.total_io_vecs_accepted == 0) or
+                        time.time() > start_time + duration):
                     while current_iovec_idx < len(io_vec_list):
                         if io_vec_list[current_iovec_idx] not in coverage_map[fuzz_desc.func_desc]:
                             io_vec = io_vec_list[current_iovec_idx]
