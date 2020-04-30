@@ -11,6 +11,7 @@ import contexts.binaryutils as bu
 from contexts.FBLogging import logger
 from contexts.IOVec import IOVec
 from contexts.SEGrindRun import SEGrindRun, SEMsgType
+from contexts.FBDecisionTree import FBDecisionTree
 
 MAX_ATTEMPTS = 25
 WATCHDOG = 3
@@ -404,6 +405,7 @@ def main():
     parser.add_argument('-o', '--out', help="/path/to/output/fuzzing/results", default="out.desc")
     parser.add_argument("-timeout", help='Number of seconds to wait per run', type=int, default=WATCHDOG)
     parser.add_argument('-duration', help='Total number of seconds to fuzz targets', type=int, default=DEFAULT_DURATION)
+    parser.add_argument('-t', '--tree', help="File to output decision tree", default="tree.bin")
 
     results = parser.parse_args()
 
@@ -467,6 +469,9 @@ def main():
     out_file = os.path.abspath(results.out)
     if not os.path.exists(os.path.dirname(out_file)):
         os.makedirs(os.path.dirname(out_file), exist_ok=True)
+    tree_file = os.path.abspath(results.tree)
+    if not os.path.exists(os.path.dirname(tree_file)):
+        os.makedirs(os.path.dirname(tree_file), exist_ok=True)
 
     args = list()
     logger.debug("Building fuzz target list")
@@ -491,6 +496,12 @@ def main():
 
         with open(out_file, "wb") as f:
             pickle.dump(fuzz_run_results, f)
+
+        logger.info("Creating tree")
+        decision_tree = FBDecisionTree(out_file)
+        with open(tree_file, 'wb') as f:
+            pickle.dump(decision_tree)
+        logger.info("done")
     else:
         logger.fatal("Could not find any functions to fuzz")
 
