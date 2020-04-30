@@ -332,6 +332,8 @@ class SEGrindRun:
         return results
 
     def read_response(self, timeout=None):
+        if timeout is None:
+            timeout = self.timeout
         result = None
         pipe_data = self.read_bytes_from_pipe(n=struct.calcsize(SEMessage.HEADER_FORMAT), timeout=timeout)
         if pipe_data is not None:
