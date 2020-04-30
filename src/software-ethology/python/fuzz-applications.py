@@ -167,7 +167,6 @@ def consolidate_one_func(fuzz_desc, io_vec_list, coverage_map, sema, completed_l
 
     try:
         run_name, segrind_run = create_segrind_run(fuzz_desc=fuzz_desc)
-        start_time = time.time()
         current_iovec_idx = 0
         has_sema = False
         iovec_count = len(io_vec_list)
@@ -198,11 +197,11 @@ def consolidate_one_func(fuzz_desc, io_vec_list, coverage_map, sema, completed_l
                         current_iovec_idx += 1
                         break
                     current_iovec_idx += 1
-                    if io_vec is not None:
-                        ack_msg = segrind_run.send_set_ctx_cmd(io_vec)
-                        if ack_msg and ack_msg.msgtype == SEMsgType.SEMSG_ACK:
-                            resp_msg = segrind_run.read_response()
-                        ready_to_run = (resp_msg is not None and resp_msg.msgtype == SEMsgType.SEMSG_OK)
+                if io_vec is not None:
+                    ack_msg = segrind_run.send_set_ctx_cmd(io_vec)
+                    if ack_msg and ack_msg.msgtype == SEMsgType.SEMSG_ACK:
+                        resp_msg = segrind_run.read_response()
+                    ready_to_run = (resp_msg is not None and resp_msg.msgtype == SEMsgType.SEMSG_OK)
 
                 if ready_to_run:
                     ack_msg = segrind_run.send_execute_cmd()
@@ -215,7 +214,7 @@ def consolidate_one_func(fuzz_desc, io_vec_list, coverage_map, sema, completed_l
                     try:
                         coverage = segrind_run.get_latest_coverage()
                         fuzz_stats.record_accept()
-                        logger.info('{} accepted {}'.format(run_name, str(io_vec)))
+                        logger.info('{} accepts {}'.format(run_name, str(io_vec)))
                         coverage_map[fuzz_desc.func_desc][io_vec] = coverage
                     except Exception as e:
                         fuzz_stats.record_error()
@@ -478,8 +477,8 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
                     io_vecs_dict[func_desc][io_vec] = coverage
 
         with open("completed_list.txt", "w") as f:
-            for fuzz_stat in consolidate_completed_list:
-                fuzz_stat.pretty_print(file=f)
+            for fuzz_run in consolidate_completed_list:
+                fuzz_run.statistics.pretty_print(file=f)
 
         with open("completed_list.bin", "wb") as f:
             pickle.dump(consolidate_completed_list, f)
