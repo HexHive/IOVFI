@@ -454,6 +454,10 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
 
         logger.info("Completed fuzzing at {}".format(time.time()))
         processes.clear()
+        iovec_coverage.clear()
+        for func_desc in func_descs:
+            iovec_coverage[func_desc] = manager.dict()
+
         for fuzz_run in fuzz_completed_list:
             processes.append(mp.Process(target=consolidate_one_func, args=(
                 fuzz_run, generated_iovecs, iovec_coverage, sema, consolidate_completed_list)))
