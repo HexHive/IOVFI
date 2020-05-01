@@ -15,15 +15,10 @@ def get_evaluation(tree, guesses, equivalence_map=None):
     for func_desc, guess in guesses.items():
         if "ifunc" in func_desc.name:
             continue
-            
-        if func_desc.name == 'version_etc_arn':
-            print("evaluating version_etc_arn")
 
         if guess is not None:
             found = False
             for ec in guess:
-                if func_desc.name == 'version_etc_arn':
-                    print("guess: {}".format(ec.name))
                 if "ifunc" in ec.name:
                     continue
 
@@ -36,8 +31,6 @@ def get_evaluation(tree, guesses, equivalence_map=None):
                     if func_desc_name in equivalence_map:
                         func_desc_name = equivalence_map[func_desc_name]
 
-                if func_desc.name == 'version_etc_arn':
-                    print("{} vs {}".format(func_desc_name, ec.name))
                 if ec_name == func_desc_name:
                     found = True
                     break

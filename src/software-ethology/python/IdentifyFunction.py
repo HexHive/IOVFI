@@ -138,7 +138,10 @@ def main():
             completed = [pool.apply_async(single_test, arg) for arg in args]
             for c in completed:
                 (func_desc, guess) = c.get()
-                guesses_out[func_desc] = guess
+                if len(guess) > 0:
+                    guesses_out[func_desc] = guess
+                else:
+                    guesses_out[func_desc] = None
 
         logger.info("Completed identification")
         # for func_desc, guess in guesses.items():
