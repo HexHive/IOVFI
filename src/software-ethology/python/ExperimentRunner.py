@@ -121,6 +121,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument('-experiment', '-e', help='/path/to/experiment.yaml', required=True)

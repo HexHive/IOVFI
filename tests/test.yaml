@@ -1,7 +1,7 @@
 ---
-!!python/object:__main__.Experiment:
-  - id: wc
-  - trees:
+!!python/object:ExperimentRunner.Experiment
+id: wc
+trees:
       - { src_bin: /home/code/coreutils/build-clang-O0/src/wc, dest: /home/code/FOSbin-flop/eval/coreutils/wc/dtree-clang-O0/tree.bin }
       - { src_bin: /home/code/coreutils/build-clang-O1/src/wc, dest: /home/code/FOSbin-flop/eval/coreutils/wc/dtree-clang-O1/tree.bin }
       - { src_bin: /home/code/coreutils/build-clang-O2/src/wc, dest: /home/code/FOSbin-flop/eval/coreutils/wc/dtree-clang-O2/tree.bin }
@@ -10,7 +10,7 @@
       - { src_bin: /home/code/coreutils/build-gcc-O1/src/wc, dest: /home/code/FOSbin-flop/eval/coreutils/wc/dtree-gcc-O1/tree.bin }
       - { src_bin: /home/code/coreutils/build-gcc-O2/src/wc, dest: /home/code/FOSbin-flop/eval/coreutils/wc/dtree-gcc-O2/tree.bin }
       - { src_bin: /home/code/coreutils/build-gcc-O3/src/wc, dest: /home/code/FOSbin-flop/eval/coreutils/wc/dtree-gcc-O3/tree.bin }
-    eval_dirs:
+eval_dirs:
       - /home/code/derrick/coreutils/build-clang-O0/src
       - /home/code/derrick/coreutils/build-clang-O1/src
       - /home/code/derrick/coreutils/build-clang-O2/src
@@ -19,7 +19,7 @@
       - /home/code/derrick/coreutils/build-gcc-O1/src
       - /home/code/derrick/coreutils/build-gcc-O2/src
       - /home/code/derrick/coreutils/build-gcc-O3/src
-    eval_bins:
+eval_bins:
       - du
       - dir
       - ls
@@ -30,6 +30,6 @@
       - whoami
       - uname
       - dirname
-    base_dir: /home/derrick/code/FOSbin-flop/eval/coreutils/wc
-    se_dir: /home/derrick/code/FOSbin-flop
-    valgrind: /home/derrick/code/FOSbin-flop/cmake-build-debug/src/valgrind/install/bin/valgrind
+base_dir: /home/derrick/code/FOSbin-flop/eval/coreutils/wc
+se_dir: /home/derrick/code/FOSbin-flop
+valgrind: /home/derrick/code/FOSbin-flop/cmake-build-debug/src/valgrind/install/bin/valgrind
