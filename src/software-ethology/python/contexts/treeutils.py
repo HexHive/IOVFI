@@ -1,6 +1,7 @@
 import contexts.FBDecisionTree as FBDtree
 from sklearn.metrics import f1_score
 
+
 def get_preds_and_truths(tree, guesses, equivalence_map=None):
     tree_funcs = list()
     for fd in tree.get_func_descs():

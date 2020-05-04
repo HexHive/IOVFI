@@ -3,6 +3,7 @@
 import argparse
 import os
 import pickle
+import statistics
 
 import contexts.treeutils as tu
 
@@ -120,11 +121,9 @@ def str2bool(v):
 class TreeEvaluation:
     def __init__(self, tree_path):
         self.tree_path = os.path.abspath(tree_path)
-        self.f_scores = list()
-        self.guess_paths = list()
+        self.f_scores = dict()
 
     def add_evaluation(self, guess_path, dtree=None, verbose=False):
-        self.guess_paths.append(os.path.abspath(guess_path))
         with open(guess_path, 'rb') as f:
             guesses = pickle.load(f)
 
@@ -136,10 +135,16 @@ class TreeEvaluation:
         if verbose:
             print("Latest F Score: {}".format(f_score))
 
-        self.f_scores.append(f_score)
+        self.f_scores[guess_path] = f_score
+        if verbose:
+            print("Average F Score: {}".format(statistics.mean(self.f_scores)))
 
     def __str__(self):
-        result = "Not implemented"
+        result = "F Scores for {}\n".format(self.tree_path)
+        for guess_path, f_score in self.f_scores.items():
+            result += "\t{}: {}\n".format(guess_path, f_score)
+        if len(self.f_scores):
+            result += "Average = {}\n".format(statistics.mean(self.f_scores.values()))
 
         return result
 
@@ -157,7 +162,11 @@ def main():
     with open(args.tree, "rb") as treefile:
         dtree = pickle.load(treefile)
 
-    evaluation = TreeEvaluation(args.tree)
+    if args.output is not None and os.path.exists(args.output):
+        with open(args.output, 'rb') as f:
+            evaluation = pickle.load(f)
+    else:
+        evaluation = TreeEvaluation(args.tree)
 
     with open(args.guesses, "r") as guessList:
         for guessLine in guessList.readlines():
