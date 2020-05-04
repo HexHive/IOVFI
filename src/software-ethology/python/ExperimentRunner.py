@@ -84,12 +84,12 @@ class Experiment:
             
     def identify_functions(self, tree_path, binary_path, dry_run=True):
         self.change_directory(self.get_eval_dir(binary_path))
-        cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "IdentifyFunction.py", self.valgrind, os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path)))
+        cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "IdentifyFunction.py"), self.valgrind, os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path))
         self.execute_command(cmd, dry_run=dry_run)
     
     def compute_accuracy(self, tree_path, guess_path, dry_run=True):
         self.change_directory(os.path.basename(guess_path), dry_run)
-        cmd = "python3 {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "ComputeAccuracy.py", os.path.abspath(tree_path)))
+        cmd = "python3 {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "ComputeAccuracy.py"), os.path.abspath(tree_path))
         self.execute_command(cmd, dry_run)
     
     def run(self, dry_run=True):
