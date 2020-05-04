@@ -25,11 +25,13 @@ class Experiment:
         self.base_dir = base_dir
         self.eval_dirs = eval_dirs
         self.eval_bins = eval_bins
-        self.executed_commands = 0
         self.id = id
-        self.start_time = None
         self.se_dir = os.path.abspath(se_dir)
+        
+    def init(self):
         self.ignore = os.path.join(self.se_dir, "tests", "ignored.txt")
+        self.executed_commands = 0
+        self.start_time = None
         
     def log(self, msg):
         if self.start_time is None:
@@ -92,6 +94,7 @@ class Experiment:
     
     def run(self, dry_run=True):
         orig_dir = os.curdir
+        self.init()
         self.start_time = time.time()
         for tree in self.trees:
             self.log("Starting evaluation of {}".format(tree['dest']))
