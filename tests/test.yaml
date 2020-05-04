@@ -1,5 +1,5 @@
 ---
-!!python/object:ExperimentRunner.Experiment
+!!python/object:__main__.Experiment
 id: wc
 trees:
       - { src_bin: /home/code/coreutils/build-clang-O0/src/wc, dest: /home/code/FOSbin-flop/eval/coreutils/wc/dtree-clang-O0/tree.bin }
