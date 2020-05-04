@@ -102,8 +102,8 @@ class Experiment:
             self.create_tree(tree, dry_run=dry_run)
             if dry_run or os.path.exists(tree['dest']):
                 for dir in self.eval_dirs:
-                    for bin in self.eval_bins:
-                        src_bin = os.path.join(dir, bin)
+                    for binary in self.eval_bins:
+                        src_bin = os.path.join(dir, binary)
                         self.identify_functions(tree_path=tree['dest'], binary_path=src_bin, dry_run=dry_run)
                         guess_path = os.path.join(self.get_eval_dir(src_bin), 'guesses.bin')
                         if dry_run or os.path.exists(guess_path):
