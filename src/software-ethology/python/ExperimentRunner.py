@@ -100,13 +100,13 @@ class Experiment:
             self.log("Starting evaluation of {}".format(tree['dest']))
             self.change_directory(os.path.dirname(tree['dest']), dry_run=dry_run)
             self.create_tree(tree, dry_run=dry_run)
-            if os.path.exists(tree['dest']):
+            if dry_run or os.path.exists(tree['dest']):
                 for dir in self.eval_dirs:
                     for bin in self.eval_bins:
                         src_bin = os.path.join(dir, bin)
                         self.identify_functions(tree, tree_path=tree['dest'], binary_path=src_bin, dry_run=dry_run)
                         guess_path = os.path.join(self.get_eval_dir(src_bin), 'guesses.bin')
-                        if os.path.exists(guess_path):
+                        if dry_run or os.path.exists(guess_path):
                             self.compute_accuracy(tree['dest'], guess_path, dry_run)
                         else:
                             self.log("ERROR: Identification failed for {}".format(self.get_eval_dir(src_bin)))
