@@ -1,6 +1,7 @@
 import contexts.FBDecisionTree as FBDtree
+from sklearn.metrics import f1_score
 
-def get_preds_and_truths(tree, guesses):
+def get_preds_and_truths(tree, guesses, equivalence_map=None):
     tree_funcs = list()
     for fd in tree.get_func_descs():
         tree_funcs.append(fd.name)
@@ -10,20 +11,28 @@ def get_preds_and_truths(tree, guesses):
     unknown = "@@UNKNOWN@@"
     
     for fd, equiv_class in guesses.items():
+        fd_name = fd.name
+        if equivalence_map is not None and fd_name in equivalence_map:
+            fd_name = equivalence_map[fd_name]
+        
         if equiv_class is None:
             preds.append(unknown)
         else:
             found = False
             for ec in equiv_class:
-                if fd.name == ec.name:
-                    preds.append(ec.name)
+                ec_name = ec.name
+                if equivalence_map is not None and ec_name in equivalence_map:
+                    ec_name = equivalence_map[ec_name]
+                    
+                if fd_name == ec_name:
+                    preds.append(ec_name)
                     found = True
                     break
             if not found:
-                preds.append(equiv_class[0].name)
+                preds.append(ec_name)
             
-        if fd.name in tree_funcs:
-            truths.append(fd.name)
+        if fd_name in tree_funcs:
+            truths.append(fd_name)
         else:
             truths.append(unknown)
             
@@ -31,6 +40,11 @@ def get_preds_and_truths(tree, guesses):
 
 
 def get_evaluation(tree, guesses, equivalence_map=None):
+    preds, truths = get_preds_and_truths(tree=tree, guesses=guesses, equivalence_map=equivalence_map)
+    return f1_score(truths, preds, average='micro')
+
+
+def classify_guesses(tree, guesses, equivalence_map=None):
     func_names = set()
     true_pos = set()
     true_neg = set()

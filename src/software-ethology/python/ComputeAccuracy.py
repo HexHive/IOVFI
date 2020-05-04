@@ -3,7 +3,6 @@
 import argparse
 import os
 import pickle
-import statistics
 
 import contexts.treeutils as tu
 
@@ -107,93 +106,40 @@ equivalences = {
 }
 
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 class TreeEvaluation:
     def __init__(self, tree_path):
         self.tree_path = os.path.abspath(tree_path)
-        self.specificities = list()
-        self.recalls = list()
-        self.accuracies = list()
-        self.precisions = list()
+        self.f_scores = list()
         self.guess_paths = list()
 
-    def add_evaluation(self, guess_path, true_pos, true_neg, incorrect, verbose=False):
+    def add_evaluation(self, guess_path, dtree=None, verbose=False):
         self.guess_paths.append(os.path.abspath(guess_path))
+        with open(guess_path, 'rb') as f:
+            guesses = pickle.load(f)
 
-        accuracy = (len(true_pos) + len(true_neg)) / (len(true_pos) + len(true_neg) + len(incorrect) + len(
-            incorrect))
-        self.accuracies.append(accuracy)
+        if dtree is None:
+            with open(self.tree_path, 'rb') as f:
+                dtree = pickle.load(f)
 
-        recall = len(true_pos) / (len(true_pos) + len(incorrect))
-        self.recalls.append(recall)
-
-        specificity = len(true_neg) / (len(true_neg) + len(incorrect))
-        self.specificities.append(specificity)
-
-        precision = len(true_pos) / (len(true_pos) + len(incorrect))
-        self.precisions.append(precision)
+        f_score = tu.get_evaluation(dtree, guesses, equivalences)
         if verbose:
-            print("Latest accuracy: {}".format(accuracy))
-            print("Latest recall: {}".format(recall))
-            print("Latest specificity: {}".format(specificity))
-            print("Latest precision: {}".format(precision))
-            print()
+            print("Latest F Score: {}".format(f_score))
+
+        self.f_scores.append(f_score)
 
     def __str__(self):
-        if len(self.accuracies) > 1:
-            avg = statistics.mean(self.accuracies)
-            stddev = statistics.stdev(self.accuracies)
-            median = statistics.median(self.accuracies)
-        elif len(self.accuracies) == 1:
-            avg = self.accuracies[0]
-            median = self.accuracies[0]
-            stddev = 0
-        else:
-            raise AssertionError("No guesses provided")
-
-        result = "Average Accuracy: {} +- {}\n".format(avg, stddev)
-        result += "Median Accuracy: {}\n\n".format(median)
-
-        if len(self.recalls) > 1:
-            avg = statistics.mean(self.recalls)
-            stddev = statistics.stdev(self.recalls)
-            median = statistics.median(self.recalls)
-        elif len(self.recalls) == 1:
-            avg = self.recalls[0]
-            median = self.recalls[0]
-            stddev = 0
-        else:
-            raise AssertionError("No guesses provided")
-
-        result += "Average Recall: {} +- {}\n".format(avg, stddev)
-        result += "Median Accuracy: {}\n\n".format(median)
-
-        if len(self.specificities) > 1:
-            avg = statistics.mean(self.specificities)
-            stddev = statistics.stdev(self.specificities)
-            median = statistics.median(self.specificities)
-        elif len(self.specificities) == 1:
-            avg = self.specificities[0]
-            median = self.specificities[0]
-            stddev = 0
-        else:
-            raise AssertionError("No guesses provided")
-
-        result += "Average Specificity: {} +- {}\n".format(avg, stddev)
-        result += "Median Specificity: {}\n\n".format(median)
-
-        if len(self.precisions) > 1:
-            avg = statistics.mean(self.precisions)
-            stddev = statistics.stdev(self.precisions)
-            median = statistics.median(self.precisions)
-        elif len(self.precisions) == 1:
-            avg = self.precisions[0]
-            median = self.precisions[0]
-            stddev = 0
-        else:
-            raise AssertionError("No guesses provided")
-
-        result += "Average Precision: {} +- {}\n".format(avg, stddev)
-        result += "Median Precision: {}".format(median)
+        result = "Not implemented"
 
         return result
 
@@ -203,6 +149,8 @@ def main():
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
     parser.add_argument("-g", dest="guesses", help="/path/to/guess/list", default="guesses.txt")
     parser.add_argument("-output", "-o", help="/path/to/measurement.bin")
+    parser.add_argument('-verbose', help="Print out additional information", type=str2bool, nargs='?', const=True,
+                        default=False)
 
     args = parser.parse_args()
 
@@ -214,56 +162,49 @@ def main():
     with open(args.guesses, "r") as guessList:
         for guessLine in guessList.readlines():
             guessLine = guessLine.strip()
+
             print("Computing accuracy for {}\n".format(guessLine))
             with open(guessLine, "rb") as guessFile:
                 guesses = pickle.load(guessFile)
 
-            true_pos, true_neg, incorrect_labels, known_when_unknown, unknown_when_known = tu.get_evaluation(dtree,
-                                                                                                             guesses,
-                                                                                                             equivalences)
-            sorted = list()
-            for name in true_pos:
-                sorted.append(name)
+            if args.verbose:
+                true_pos, true_neg, incorrect_labels, known_when_unknown, unknown_when_known = \
+                    tu.classify_guesses(dtree, guesses, equivalences)
+                sorted_names = list()
+                for name in true_pos:
+                    sorted_names.append(name)
 
-            sorted.sort()
-            print("--------------------- True Pos -------------------")
-            print(sorted)
-            print()
-            sorted.clear()
+                sorted_names.sort()
+                print("--------------------- True Pos -------------------")
+                print(sorted_names)
+                print()
+                sorted_names.clear()
 
-            for name in incorrect_labels:
-                sorted.append(name)
-            sorted.sort()
-            print("------------------ incorrect_labels ----------------")
-            print(sorted)
-            print()
-            sorted.clear()
+                for name in incorrect_labels:
+                    sorted_names.append(name)
+                sorted_names.sort()
+                print("------------------ incorrect_labels ----------------")
+                print(sorted_names)
+                print()
+                sorted_names.clear()
 
-            for name in known_when_unknown:
-                sorted.append(name)
-            sorted.sort()
-            print("----------------- known_when_unknown ---------------")
-            print(sorted)
-            print()
-            sorted.clear()
+                for name in known_when_unknown:
+                    sorted_names.append(name)
+                sorted_names.sort()
+                print("----------------- known_when_unknown ---------------")
+                print(sorted_names)
+                print()
+                sorted_names.clear()
 
-            for name in unknown_when_known:
-                sorted.append(name)
-            sorted.sort()
-            print("----------------- unknown_when_known ---------------")
-            print(sorted)
-            print()
-            sorted.clear()
+                for name in unknown_when_known:
+                    sorted_names.append(name)
+                sorted_names.sort()
+                print("----------------- unknown_when_known ---------------")
+                print(sorted_names)
+                print()
+                sorted_names.clear()
 
-            incorrect = list()
-            for name in incorrect_labels:
-                incorrect.append(name)
-            for name in known_when_unknown:
-                incorrect.append(name)
-            for name in unknown_when_known:
-                incorrect.append(name)
-
-            evaluation.add_evaluation(guessLine, true_pos, true_neg, incorrect, True)
+            evaluation.add_evaluation(guess_path=guessLine, dtree=dtree, verbose=args.verbose)
 
     print(evaluation)
     if args.output is not None:
