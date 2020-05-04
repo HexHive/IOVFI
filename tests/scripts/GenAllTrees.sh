@@ -5,8 +5,8 @@ if [[ $# != 3 ]]; then
   exit 1
 fi
 
-CWD=$(pwd)
-TREE_BIN=$(basename $CWD)
+START_DIR=$(pwd)
+TREE_BIN=$(basename $START_DIR)
 COREUTILS_DIR=$(realpath $1)
 TOP_DIR=$(realpath $2)
 PINTOOL=$TOP_DIR/cmake-build-debug/pintools/intel64/fosbin-zergling.so
@@ -39,5 +39,5 @@ for d in $(find $COREUTILS_DIR -maxdepth 1 -type d -name "build-*-O*"); do
     echo "Tree Generation End: $(date)" >>$TIME_FILE
   fi
   rm -rf logs/ _work/
-  cd $CWD
+  cd $START_DIR
 done

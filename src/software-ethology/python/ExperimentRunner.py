@@ -1,0 +1,137 @@
+import argparse
+import os
+import subprocess
+import time
+
+import yaml
+
+
+class Experiment:
+    def __init__(self, id, trees, eval_dirs, eval_bins, base_dir, se_dir, valgrind):
+        if not os.path.exists(valgrind):
+            raise FileNotFoundError(valgrind)
+        if trees is None or len(trees) == 0:
+            raise AssertionError("Trees cannot be empty")
+        if base_dir is None or len(base_dir) == 0:
+            base_dir = os.curdir
+        if self.id is None or len(self.id) == 0:
+            raise AssertionError("ID cannot be empty")
+        if se_dir is None or not os.path.exists(se_dir):
+            raise AssertionError("Could not find SE dir")
+        if not os.path.exists(os.path.join(se_dir, "src", "software-ethology", "fuzz-applications.py")):
+            raise AssertionError("Missing fuzz_applications.py")
+        
+        self.valgrind = os.path.abspath(valgrind)
+        self.base_dir = base_dir
+        self.eval_dirs = eval_dirs
+        self.eval_bins = eval_bins
+        self.executed_commands = 0
+        self.id = id
+        self.start_time = None
+        self.se_dir = os.path.abspath(se_dir)
+        self.ignore = os.path.join(self.se_dir, "tests", "ignored.txt")
+        
+    def log(self, msg):
+        if self.start_time is None:
+            self.start_time = time.time()
+        duration = int(time.time() - self.start_time)
+        print("[{}] {}".format(duration, msg))
+        
+    def execute_command(self, command, dry_run):
+        cmd_tokens = command.split()
+        self.log("Executing {}".format(cmd_tokens))
+        self.executed_commands += 1
+        result = True
+        if not dry_run:
+            try:
+                out_file = open("{}.{}.out".format(self.id, self.executed_commands), "w")
+                err_file = open("{}.{}.err".format(self.id, self.executed_commands), "w")
+                subprocess.run(cmd_tokens, check=True, stdout=out_file, stderr=err_file)
+            except Exception as e:
+                self.log("ERROR: {}".format(str(e)))
+                result = False
+            finally:
+                out_file.close()
+                err_file.close()
+        if result:
+            self.log("Command Complete")
+        
+    def create_directory(self, dir, dry_run=True):
+        if not os.path.exists(dir):
+            self.log("Creating {}".format(dir))
+            if not dry_run:
+                os.makedirs(dir, exist_ok=True)
+        
+    def change_directory(self, dir, dry_run=True):
+        self.create_directory(dir, dry_run)
+        if not dry_run:
+            os.chdir(dir)
+        
+    def create_tree(self, tree, dry_run=True):
+        if not os.path.exists(tree.dest):
+            self.log("Creating tree {} from source {}".format(tree.dest, tree.src_bin))
+            if not dry_run and not os.path.exists(tree.src_bin):
+                raise AssertionError("Tree source {} does not exist".format(tree.src_bin))
+            cmd = "python3 {} -valgrind {} -bin {} -ignore {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "fuzz-applications.py"), self.valgrind, tree.src_bin, self.ignore, tree.dest)
+            self.execute_command(cmd, dry_run=dry_run)
+        else:
+            self.log("{} already exists...skipping".format(tree.dest))
+            
+    def get_eval_dir(self, src_binary):
+        return os.path.abspath(os.path.join(os.path.basename(os.path.dirname(src_binary)), os.path.basename(src_binary)))
+            
+    def identify_functions(self, tree_path, binary_path, dry_run=True):
+        self.change_directory(self.get_eval_dir(binary_path))
+        cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "IdentifyFunction.py", self.valgrind, os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path)))
+        self.execute_command(cmd, dry_run=dry_run)
+    
+    def compute_accuracy(self, tree_path, guess_path, dry_run=True):
+        self.change_directory(os.path.basename(guess_path), dry_run)
+        cmd = "python3 {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "ComputeAccuracy.py", os.path.abspath(tree_path)))
+        self.execute_command(cmd, dry_run)
+    
+    def run(self, dry_run=True):
+        orig_dir = os.curdir
+        self.start_time = time.time()
+        for tree in self.trees:
+            self.log("Starting evaluation of {}".format(tree.dest))
+            self.change_directory(os.path.dirname(tree.dest), dry_run=dry_run)
+            self.create_tree(tree, dry_run=dry_run)
+            if os.path.exists(tree.dest):
+                for dir in self.eval_dirs:
+                    for bin in self.eval_bins:
+                        src_bin = os.path.join(dir, bin)
+                        self.identify_functions(tree, tree_path=tree.dest, binary_path=src_bin, dry_run=dry_run)
+                        guess_path = os.path.join(self.get_eval_dir(src_bin), 'guesses.bin')
+                        if os.path.exists(guess_path):
+                            self.compute_accuracy(tree.dest, guess_path, dry_run)
+                        else:
+                            self.log("ERROR: Identification failed for {}".format(self.get_eval_dir(src_bin)))
+            else:
+                self.log("ERROR: Tree creation failed for {}".format(tree.dest))
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+def main():
+    parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
+    parser.add_argument('-experiment', '-e', help='/path/to/experiment.yaml', required=True)
+    parser.add_argument('-dry', type=str2bool, nargs='?', const=True, default=True, help="Dry run")
+    
+    args = parser.parse_args()
+
+    with open(args.experiment, 'r') as f:
+        experiment = yaml.load(f)
+        
+    experiment.run(dry_run=args.dry)
+
+if __name__ == "__main__":
+    main()
