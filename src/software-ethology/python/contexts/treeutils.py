@@ -1,5 +1,34 @@
 import contexts.FBDecisionTree as FBDtree
 
+def get_preds_and_truths(tree, guesses):
+    tree_funcs = list()
+    for fd in tree.get_func_descs():
+        tree_funcs.append(fd.name)
+        
+    preds = list()
+    truths = list()
+    unknown = "@@UNKNOWN@@"
+    
+    for fd, equiv_class in guesses.items():
+        if equiv_class is None:
+            preds.append(unknown)
+        else:
+            found = False
+            for ec in equiv_class:
+                if fd.name == ec.name:
+                    preds.append(ec.name)
+                    found = True
+                    break
+            if not found:
+                preds.append(equiv_class[0].name)
+            
+        if fd.name in tree_funcs:
+            truths.append(fd.name)
+        else:
+            truths.append(unknown)
+            
+    return preds, truths
+
 
 def get_evaluation(tree, guesses, equivalence_map=None):
     func_names = set()
