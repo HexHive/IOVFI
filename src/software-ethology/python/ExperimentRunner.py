@@ -68,14 +68,14 @@ class Experiment:
             os.chdir(dir)
         
     def create_tree(self, tree, dry_run=True):
-        if not os.path.exists(tree.dest):
-            self.log("Creating tree {} from source {}".format(tree.dest, tree.src_bin))
-            if not dry_run and not os.path.exists(tree.src_bin):
-                raise AssertionError("Tree source {} does not exist".format(tree.src_bin))
-            cmd = "python3 {} -valgrind {} -bin {} -ignore {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "fuzz-applications.py"), self.valgrind, tree.src_bin, self.ignore, tree.dest)
+        if not os.path.exists(tree['dest']):
+            self.log("Creating tree {} from source {}".format(tree['dest'], tree['src_bin']))
+            if not dry_run and not os.path.exists(tree['src_bin']):
+                raise AssertionError("Tree source {} does not exist".format(tree['src_bin']))
+            cmd = "python3 {} -valgrind {} -bin {} -ignore {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "fuzz-applications.py"), self.valgrind, tree['src_bin'], self.ignore, tree['dest'])
             self.execute_command(cmd, dry_run=dry_run)
         else:
-            self.log("{} already exists...skipping".format(tree.dest))
+            self.log("{} already exists...skipping".format(tree['dest']))
             
     def get_eval_dir(self, src_binary):
         return os.path.abspath(os.path.join(os.path.basename(os.path.dirname(src_binary)), os.path.basename(src_binary)))
@@ -94,21 +94,21 @@ class Experiment:
         orig_dir = os.curdir
         self.start_time = time.time()
         for tree in self.trees:
-            self.log("Starting evaluation of {}".format(tree.dest))
-            self.change_directory(os.path.dirname(tree.dest), dry_run=dry_run)
+            self.log("Starting evaluation of {}".format(tree['dest']))
+            self.change_directory(os.path.dirname(tree['dest']), dry_run=dry_run)
             self.create_tree(tree, dry_run=dry_run)
-            if os.path.exists(tree.dest):
+            if os.path.exists(tree['dest']):
                 for dir in self.eval_dirs:
                     for bin in self.eval_bins:
                         src_bin = os.path.join(dir, bin)
-                        self.identify_functions(tree, tree_path=tree.dest, binary_path=src_bin, dry_run=dry_run)
+                        self.identify_functions(tree, tree_path=tree['dest'], binary_path=src_bin, dry_run=dry_run)
                         guess_path = os.path.join(self.get_eval_dir(src_bin), 'guesses.bin')
                         if os.path.exists(guess_path):
-                            self.compute_accuracy(tree.dest, guess_path, dry_run)
+                            self.compute_accuracy(tree['dest'], guess_path, dry_run)
                         else:
                             self.log("ERROR: Identification failed for {}".format(self.get_eval_dir(src_bin)))
             else:
-                self.log("ERROR: Tree creation failed for {}".format(tree.dest))
+                self.log("ERROR: Tree creation failed for {}".format(tree['dest']))
 
 
 def str2bool(v):
