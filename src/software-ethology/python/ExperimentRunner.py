@@ -133,7 +133,7 @@ def main():
     args = parser.parse_args()
 
     with open(args.experiment, 'r') as f:
-        experiment = yaml.load(f)
+        experiment = yaml.load(f, Loader=yaml.FullLoader)
         
     experiment.run(dry_run=args.dry)
 
