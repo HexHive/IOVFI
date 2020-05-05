@@ -81,7 +81,7 @@ class Experiment:
 
     def change_directory(self, dir, dry_run=True):
         self.create_directory(dir, dry_run)
-        self.log("Changing directory to {} from {}".format(dir, os.path.curdir))
+        self.log("Changing directory to {} from {}".format(dir, os.getcwd()))
         if not dry_run:
             if not os.path.isdir(dir):
                 self.log("ERROR: {} is not a directory".format(dir))
@@ -90,7 +90,7 @@ class Experiment:
                 os.chdir(dir)
             else:
                 self.log("ERROR: {} does not exist".format(dir))
-        self.log("Current directory: {}".format(os.path.curdir))
+        self.log("Current directory: {}".format(os.getcwd()))
 
     def create_tree(self, tree, dry_run=True):
         if not os.path.exists(tree['dest']):
