@@ -1,5 +1,38 @@
 import contexts.FBDecisionTree as FBDtree
 from sklearn.metrics import f1_score
+import pickle
+import statistics
+import os
+
+class TreeEvaluation:
+    def __init__(self, tree_path):
+        self.tree_path = os.path.abspath(tree_path)
+        self.f_scores = dict()
+
+    def add_evaluation(self, guess_path, dtree=None, verbose=False, equivalence_map=None):
+        with open(guess_path, 'rb') as f:
+            guesses = pickle.load(f)
+
+        if dtree is None:
+            with open(self.tree_path, 'rb') as f:
+                dtree = pickle.load(f)
+
+        f_score = get_evaluation(dtree, guesses, equivalence_map)
+        if verbose:
+            print("Latest F Score: {}".format(f_score))
+
+        self.f_scores[guess_path] = f_score
+        if verbose:
+            print("Average F Score: {}".format(statistics.mean(self.f_scores)))
+
+    def __str__(self):
+        result = "F Scores for {}\n".format(self.tree_path)
+        for guess_path, f_score in self.f_scores.items():
+            result += "\t{}: {}\n".format(guess_path, f_score)
+        if len(self.f_scores):
+            result += "Average = {}\n".format(statistics.mean(self.f_scores.values()))
+
+        return result
 
 
 def get_preds_and_truths(tree, guesses, equivalence_map=None):

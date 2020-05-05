@@ -118,37 +118,6 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
-class TreeEvaluation:
-    def __init__(self, tree_path):
-        self.tree_path = os.path.abspath(tree_path)
-        self.f_scores = dict()
-
-    def add_evaluation(self, guess_path, dtree=None, verbose=False):
-        with open(guess_path, 'rb') as f:
-            guesses = pickle.load(f)
-
-        if dtree is None:
-            with open(self.tree_path, 'rb') as f:
-                dtree = pickle.load(f)
-
-        f_score = tu.get_evaluation(dtree, guesses, equivalences)
-        if verbose:
-            print("Latest F Score: {}".format(f_score))
-
-        self.f_scores[guess_path] = f_score
-        if verbose:
-            print("Average F Score: {}".format(statistics.mean(self.f_scores)))
-
-    def __str__(self):
-        result = "F Scores for {}\n".format(self.tree_path)
-        for guess_path, f_score in self.f_scores.items():
-            result += "\t{}: {}\n".format(guess_path, f_score)
-        if len(self.f_scores):
-            result += "Average = {}\n".format(statistics.mean(self.f_scores.values()))
-
-        return result
-
-
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
@@ -166,7 +135,7 @@ def main():
         with open(args.output, 'rb') as f:
             evaluation = pickle.load(f)
     else:
-        evaluation = TreeEvaluation(args.tree)
+        evaluation = tu.TreeEvaluation(args.tree)
 
     with open(args.guesses, "r") as guessList:
         for guessLine in guessList.readlines():
