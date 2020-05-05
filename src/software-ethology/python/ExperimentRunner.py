@@ -67,17 +67,19 @@ class Experiment:
         if result:
             self.log("Command Complete")
 
-    def create_directory(self, dir, dry_run=True):
-        path = pathlib.Path(dir)
+    def create_directory(self, dir_path, dry_run=True):
+        path = pathlib.Path(dir_path)
         if not path.exists():
-            self.log("Creating {}".format(dir))
+            self.log("Creating {}".format(dir_path))
             if not dry_run:
                 try:
                     path.mkdir(parents=True, exist_ok=True)
                     if not path.exists():
-                        raise AssertionError("{} wasn't created".format(dir))
+                        raise AssertionError("{} wasn't created".format(dir_path))
                 except Exception as e:
-                    self.log("ERROR: Failed to create {}: {}".format(dir, str(e)))
+                    self.log("ERROR: Failed to create {}: {}".format(dir_path, str(e)))
+        else:
+            self.log("{} exists...skipping".format(dir_path))
 
     def change_directory(self, dir, dry_run=True):
         self.create_directory(dir, dry_run)
