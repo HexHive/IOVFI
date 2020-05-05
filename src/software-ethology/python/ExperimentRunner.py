@@ -123,11 +123,14 @@ class Experiment:
             os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path), guess_path)
         self.execute_command(cmd, dry_run=dry_run)
 
-    def compute_accuracy(self, tree_path, guess_path, dry_run=True):
+    def compute_accuracy(self, tree_path, guess_path, output_path, dry_run=True):
         self.change_directory(os.path.dirname(guess_path), dry_run)
-        cmd = "python3 {} -t {}".format(
+        with open('guesses.txt', 'w') as f:
+            f.write(guess_path)
+
+        cmd = "python3 {} -t {} -o {}".format(
             os.path.join(self.se_dir, "src", "software-ethology", "python", "ComputeAccuracy.py"),
-            os.path.abspath(tree_path))
+            os.path.abspath(tree_path), output_path)
         self.execute_command(cmd, dry_run)
 
     def run(self, dry_run=True):
@@ -156,7 +159,9 @@ class Experiment:
                             self.identify_functions(tree_path=tree['dest'], binary_path=src_bin, guess_path=guess_path,
                                                     dry_run=dry_run)
                             if dry_run or os.path.exists(guess_path):
-                                self.compute_accuracy(tree['dest'], guess_path, dry_run)
+                                self.compute_accuracy(tree['dest'], guess_path,
+                                                      os.path.join(os.path.dirname(tree['dest']), "accuracy.bin"),
+                                                      dry_run)
                             else:
                                 self.log("ERROR: Identification failed for {}".format(self.get_eval_dir(src_bin)))
                 else:
