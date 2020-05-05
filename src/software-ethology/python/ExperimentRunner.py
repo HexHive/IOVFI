@@ -81,7 +81,7 @@ class Experiment:
 
     def change_directory(self, dir, dry_run=True):
         self.create_directory(dir, dry_run)
-        self.log("Changing directory to {}".format(dir))
+        self.log("Changing directory to {} from {}".format(dir, os.path.curdir))
         if not dry_run:
             if not os.path.isdir(dir):
                 self.log("ERROR: {} is not a directory".format(dir))
@@ -90,6 +90,7 @@ class Experiment:
                 os.chdir(dir)
             else:
                 self.log("ERROR: {} does not exist".format(dir))
+        self.log("Current directory: {}".format(os.path.curdir))
 
     def create_tree(self, tree, dry_run=True):
         if not os.path.exists(tree['dest']):
@@ -107,9 +108,7 @@ class Experiment:
         return os.path.abspath(os.path.join(os.path.dirname(tree_path), os.path.basename(src_binary)))
 
     def identify_functions(self, tree_path, binary_path, dry_run=True):
-        self.log("Current directory: {}".format(os.curdir))
         self.change_directory(self.get_eval_dir(binary_path, tree_path))
-        self.log("Current directory: {}".format(os.curdir))
         cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {}".format(
             os.path.join(self.se_dir, "src", "software-ethology", "python", "IdentifyFunction.py"), self.valgrind,
             os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path))
