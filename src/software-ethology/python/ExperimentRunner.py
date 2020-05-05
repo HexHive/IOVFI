@@ -73,7 +73,7 @@ class Experiment:
             self.log("Creating {}".format(dir))
             if not dry_run:
                 try:
-                    pathlib.Path(dir).mkdir(parents=True, exist_ok=True)
+                    path.mkdir(parents=True, exist_ok=True)
                 except Exception as e:
                     self.log("ERROR: Failed to create {}: {}".format(dir, str(e)))
 
