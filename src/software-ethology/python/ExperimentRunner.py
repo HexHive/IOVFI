@@ -87,11 +87,11 @@ class Experiment:
         else:
             self.log("{} already exists...skipping".format(tree['dest']))
             
-    def get_eval_dir(self, src_binary):
-        return os.path.abspath(os.path.basename(src_binary))
+    def get_eval_dir(self, src_binary, tree_path):
+        return os.path.abspath(os.path.join(os.path.dirname(tree_path), os.path.basename(src_binary)))
             
     def identify_functions(self, tree_path, binary_path, dry_run=True):
-        self.change_directory(self.get_eval_dir(binary_path))
+        self.change_directory(self.get_eval_dir(binary_path, tree_path))
         cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "IdentifyFunction.py"), self.valgrind, os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path))
         self.execute_command(cmd, dry_run=dry_run)
     
@@ -121,7 +121,7 @@ class Experiment:
                         for binary_path in self.eval_bins:
                             src_bin = os.path.join(eval_dir, binary_path)
                             self.identify_functions(tree_path=tree['dest'], binary_path=src_bin, dry_run=dry_run)
-                            guess_path = os.path.join(self.get_eval_dir(src_bin), 'guesses.bin')
+                            guess_path = os.path.join(self.get_eval_dir(src_bin, tree['dest']), 'guesses.bin')
                             if dry_run or os.path.exists(guess_path):
                                 self.compute_accuracy(tree['dest'], guess_path, dry_run)
                             else:
