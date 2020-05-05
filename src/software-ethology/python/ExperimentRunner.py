@@ -68,7 +68,8 @@ class Experiment:
             self.log("Command Complete")
 
     def create_directory(self, dir, dry_run=True):
-        if not os.path.exists(dir):
+        path = pathlib.Path(dir)
+        if not path.exists():
             self.log("Creating {}".format(dir))
             if not dry_run:
                 try:
@@ -80,7 +81,11 @@ class Experiment:
         self.create_directory(dir, dry_run)
         self.log("Changing directory to {}".format(dir))
         if not dry_run:
-            os.chdir(dir)
+            if not os.path.isdir(dir):
+                self.log("ERROR: {} is not a directory".format(dir))
+                return
+            if os.path.exists(dir):
+                os.chdir(dir)
 
     def create_tree(self, tree, dry_run=True):
         if not os.path.exists(tree['dest']):
