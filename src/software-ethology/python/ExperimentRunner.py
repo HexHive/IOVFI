@@ -109,8 +109,8 @@ class Experiment:
         log_path = os.path.abspath(os.path.join(self.base_dir, "{}.log".format(self.id)))
         err_path = os.path.abspath(os.path.join(self.base_dir, "{}.err".format(self.id)))
         self.log('Logging to {}'.format(log_path))
-        sys.stdout = log_path
-        sys.stderr = err_path
+        sys.stdout = open(log_path, 'w')
+        sys.stderr = open(err_path, 'w')
         try:
             for tree in self.trees:
                 self.log("Starting evaluation of {}".format(tree['dest']))
@@ -129,6 +129,8 @@ class Experiment:
                 else:
                     self.log("ERROR: Tree creation failed for {}".format(tree['dest']))
         finally:
+            sys.stdout.close()
+            sys.stderr.close()
             sys.stdout = orig_sysout
             sys.stderr = orig_syserr
 
