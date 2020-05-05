@@ -21,7 +21,7 @@ class Experiment:
             raise AssertionError("Could not find SE dir")
         if not os.path.exists(os.path.join(se_dir, "src", "software-ethology", "fuzz-applications.py")):
             raise AssertionError("Missing fuzz_applications.py")
-        
+
         self.valgrind = os.path.abspath(valgrind)
         self.base_dir = base_dir
         self.eval_dirs = eval_dirs
@@ -31,19 +31,19 @@ class Experiment:
         self.start_time = None
         self.ignore = None
         self.executed_commands = 0
-        
+
     def init(self):
         self.ignore = os.path.join(self.se_dir, "tests", "ignored.txt")
         self.executed_commands = 0
         self.start_time = None
-        
+
     def log(self, msg):
         if self.start_time is None:
             self.start_time = time.time()
         duration = int(time.time() - self.start_time)
         print("[{}] {}".format(duration, msg))
         sys.stdout.flush()
-        
+
     def execute_command(self, command, dry_run):
         cmd_tokens = command.split()
         self.log("Executing {}".format(cmd_tokens))
@@ -66,42 +66,51 @@ class Experiment:
                 err_file.close()
         if result:
             self.log("Command Complete")
-        
+
     def create_directory(self, dir, dry_run=True):
         if not os.path.exists(dir):
             self.log("Creating {}".format(dir))
             if not dry_run:
-                pathlib.Path(dir).mkdir(parents=True, exist_ok=True)
-        
+                try:
+                    pathlib.Path(dir).mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    self.log("ERROR: Failed to create {}: {}".format(dir, str(e)))
+
     def change_directory(self, dir, dry_run=True):
         self.create_directory(dir, dry_run)
         self.log("Changing directory to {}".format(dir))
         if not dry_run:
             os.chdir(dir)
-        
+
     def create_tree(self, tree, dry_run=True):
         if not os.path.exists(tree['dest']):
             self.log("Creating tree {} from source {}".format(tree['dest'], tree['src_bin']))
             if not dry_run and not os.path.exists(tree['src_bin']):
                 raise AssertionError("Tree source {} does not exist".format(tree['src_bin']))
-            cmd = "python3 {} -valgrind {} -bin {} -ignore {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "fuzz-applications.py"), self.valgrind, tree['src_bin'], self.ignore, tree['dest'])
+            cmd = "python3 {} -valgrind {} -bin {} -ignore {} -t {}".format(
+                os.path.join(self.se_dir, "src", "software-ethology", "python", "fuzz-applications.py"), self.valgrind,
+                tree['src_bin'], self.ignore, tree['dest'])
             self.execute_command(cmd, dry_run=dry_run)
         else:
             self.log("{} already exists...skipping".format(tree['dest']))
-            
+
     def get_eval_dir(self, src_binary, tree_path):
         return os.path.abspath(os.path.join(os.path.dirname(tree_path), os.path.basename(src_binary)))
-            
+
     def identify_functions(self, tree_path, binary_path, dry_run=True):
         self.change_directory(self.get_eval_dir(binary_path, tree_path))
-        cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "IdentifyFunction.py"), self.valgrind, os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path))
+        cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {}".format(
+            os.path.join(self.se_dir, "src", "software-ethology", "python", "IdentifyFunction.py"), self.valgrind,
+            os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path))
         self.execute_command(cmd, dry_run=dry_run)
-    
+
     def compute_accuracy(self, tree_path, guess_path, dry_run=True):
         self.change_directory(os.path.dirname(guess_path), dry_run)
-        cmd = "python3 {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "ComputeAccuracy.py"), os.path.abspath(tree_path))
+        cmd = "python3 {} -t {}".format(
+            os.path.join(self.se_dir, "src", "software-ethology", "python", "ComputeAccuracy.py"),
+            os.path.abspath(tree_path))
         self.execute_command(cmd, dry_run)
-    
+
     def run(self, dry_run=True):
         orig_dir = os.curdir
         self.init()
@@ -133,10 +142,10 @@ class Experiment:
                 else:
                     self.log("ERROR: Tree creation failed for {}".format(tree['dest']))
         finally:
-            log.close()
-            err.close()
             sys.stdout = orig_sysout
             sys.stderr = orig_syserr
+            log.close()
+            err.close()
 
 
 def str2bool(v):
@@ -154,12 +163,12 @@ def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument('-experiment', '-e', help='/path/to/experiment.yaml', required=True)
     parser.add_argument('-dry', type=str2bool, nargs='?', const=True, default=True, help="Dry run")
-    
+
     args = parser.parse_args()
 
     with open(args.experiment, 'r') as f:
         experiment = yaml.load(f, Loader=yaml.FullLoader)
-        
+
     experiment.run(dry_run=args.dry)
 
 
