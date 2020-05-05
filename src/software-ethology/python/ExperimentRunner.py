@@ -74,6 +74,8 @@ class Experiment:
             if not dry_run:
                 try:
                     path.mkdir(parents=True, exist_ok=True)
+                    if not path.exists():
+                        raise AssertionError("{} wasn't created".format(dir))
                 except Exception as e:
                     self.log("ERROR: Failed to create {}: {}".format(dir, str(e)))
 
