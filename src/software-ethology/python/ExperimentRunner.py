@@ -88,6 +88,8 @@ class Experiment:
                 return
             if os.path.exists(dir):
                 os.chdir(dir)
+            else:
+                self.log("ERROR: {} does not exist".format(dir))
 
     def create_tree(self, tree, dry_run=True):
         if not os.path.exists(tree['dest']):
