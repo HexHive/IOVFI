@@ -41,6 +41,7 @@ class Experiment:
             self.start_time = time.time()
         duration = int(time.time() - self.start_time)
         print("[{}] {}".format(duration, msg))
+        sys.stdout.flush()
         
     def execute_command(self, command, dry_run):
         cmd_tokens = command.split()
