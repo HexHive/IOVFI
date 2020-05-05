@@ -11,14 +11,14 @@ trees:
       - { src_bin: /home/derrick/code/coreutils/build-gcc-O2/src/wc, dest: /home/derrick/code/FOSbin-flop/eval/coreutils/wc/dtree-gcc-O2/tree.bin }
       - { src_bin: /home/derrick/code/coreutils/build-gcc-O3/src/wc, dest: /home/derrick/code/FOSbin-flop/eval/coreutils/wc/dtree-gcc-O3/tree.bin }
 eval_dirs:
-      - /home/derrick/code/coreutils/build-clang-O0/src
-      - /home/derrick/code/coreutils/build-clang-O1/src
-      - /home/derrick/code/coreutils/build-clang-O2/src
-      - /home/derrick/code/coreutils/build-clang-O3/src
-      - /home/derrick/code/coreutils/build-gcc-O0/src
-      - /home/derrick/code/coreutils/build-gcc-O1/src
-      - /home/derrick/code/coreutils/build-gcc-O2/src
-      - /home/derrick/code/coreutils/build-gcc-O3/src
+      - !!python/object:__main__.Directory {path: /home/derrick/code/coreutils/build-clang-O0/src, short_name: clang-O0}
+      - !!python/object:__main__.Directory {path: /home/derrick/code/coreutils/build-clang-O1/src, short_name: clang-O1}
+      - !!python/object:__main__.Directory {path: /home/derrick/code/coreutils/build-clang-O2/src, short_name: clang-O2}
+      - !!python/object:__main__.Directory {path: /home/derrick/code/coreutils/build-clang-O3/src, short_name: clang-O3}
+      - !!python/object:__main__.Directory {path: /home/derrick/code/coreutils/build-gcc-O0/src, short_name: gcc-O0}
+      - !!python/object:__main__.Directory {path: /home/derrick/code/coreutils/build-gcc-O1/src, short_name: gcc-O1}
+      - !!python/object:__main__.Directory {path: /home/derrick/code/coreutils/build-gcc-O2/src, short_name: gcc-O2}
+      - !!python/object:__main__.Directory {path: /home/derrick/code/coreutils/build-gcc-O3/src, short_name: gcc-O3}
 eval_bins:
       - du
       - dir
