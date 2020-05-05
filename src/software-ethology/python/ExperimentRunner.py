@@ -107,7 +107,7 @@ class Experiment:
         orig_sysout = sys.stdout
         orig_syserr = sys.stderr
         log_path = os.path.abspath(os.path.join(self.base_dir, "{}.log".format(self.id)))
-        err_path = os.path.abspath(os.path.join(self.base_dir), "{}.err".format(self.id))
+        err_path = os.path.abspath(os.path.join(self.base_dir, "{}.err".format(self.id)))
         self.log('Logging to {}'.format(log_path))
         sys.stdout = log_path
         sys.stderr = err_path
