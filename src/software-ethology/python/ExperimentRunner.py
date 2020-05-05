@@ -96,7 +96,7 @@ class Experiment:
         self.execute_command(cmd, dry_run=dry_run)
     
     def compute_accuracy(self, tree_path, guess_path, dry_run=True):
-        self.change_directory(os.path.basename(guess_path), dry_run)
+        self.change_directory(os.path.dirname(guess_path), dry_run)
         cmd = "python3 {} -t {}".format(os.path.join(self.se_dir, "src", "software-ethology", "python", "ComputeAccuracy.py"), os.path.abspath(tree_path))
         self.execute_command(cmd, dry_run)
     
