@@ -4,6 +4,7 @@ import pickle
 import statistics
 import os
 
+
 class TreeEvaluation:
     def __init__(self, tree_path):
         self.tree_path = os.path.abspath(tree_path)

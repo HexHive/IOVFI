@@ -160,7 +160,8 @@ class Experiment:
                                                     dry_run=dry_run)
                             if dry_run or os.path.exists(guess_path):
                                 self.compute_accuracy(tree['dest'], guess_path,
-                                                      os.path.join(os.path.dirname(tree['dest']), "accuracy.bin"),
+                                                      os.path.join(os.path.dirname(tree['dest']), eval_dir.shortname,
+                                                                   "accuracy.bin"),
                                                       dry_run)
                             else:
                                 self.log("ERROR: Identification failed for {}".format(self.get_eval_dir(src_bin)))
