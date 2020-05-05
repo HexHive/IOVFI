@@ -4,6 +4,7 @@ import subprocess
 import time
 import sys
 import yaml
+import pathlib
 
 
 class Experiment:
@@ -70,7 +71,7 @@ class Experiment:
         if not os.path.exists(dir):
             self.log("Creating {}".format(dir))
             if not dry_run:
-                os.makedirs(dir, exist_ok=True)
+                pathlib.Path(dir).mkdir(parents=True, exist_ok=True)
         
     def change_directory(self, dir, dry_run=True):
         self.create_directory(dir, dry_run)
