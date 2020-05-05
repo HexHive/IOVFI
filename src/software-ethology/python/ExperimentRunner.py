@@ -137,6 +137,8 @@ class Experiment:
         orig_dir = os.curdir
         self.init()
         self.start_time = time.time()
+        if not os.path.exists(self.base_dir):
+            os.makedirs(self.base_dir, exist_ok=True)
         orig_sysout = sys.stdout
         orig_syserr = sys.stderr
         log_path = os.path.abspath(os.path.join(self.base_dir, "{}.log".format(self.id)))
