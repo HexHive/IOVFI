@@ -113,7 +113,8 @@ class Experiment:
             self.log("{} already exists...skipping".format(tree['dest']))
 
     def get_eval_dir(self, src_binary, tree_path, eval_dir):
-        return os.path.abspath(os.path.join(os.path.dirname(tree_path), eval_dir.short_name, os.path.basename(src_binary)))
+        return os.path.abspath(
+            os.path.join(os.path.dirname(tree_path), eval_dir.short_name, os.path.basename(src_binary)))
 
     def identify_functions(self, tree_path, binary_path, guess_path, dry_run=True):
         self.change_directory(os.path.dirname(guess_path), dry_run)
@@ -152,7 +153,8 @@ class Experiment:
                         for binary_path in self.eval_bins:
                             src_bin = os.path.join(eval_dir.path, binary_path)
                             guess_path = os.path.join(self.get_eval_dir(src_bin, tree['dest'], eval_dir), 'guesses.bin')
-                            self.identify_functions(tree_path=tree['dest'], binary_path=src_bin, dry_run=dry_run)
+                            self.identify_functions(tree_path=tree['dest'], binary_path=src_bin, guess_path=guess_path,
+                                                    dry_run=dry_run)
                             if dry_run or os.path.exists(guess_path):
                                 self.compute_accuracy(tree['dest'], guess_path, dry_run)
                             else:
