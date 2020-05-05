@@ -2,7 +2,7 @@ import argparse
 import os
 import subprocess
 import time
-
+import sys
 import yaml
 
 
@@ -27,6 +27,9 @@ class Experiment:
         self.eval_bins = eval_bins
         self.id = id
         self.se_dir = os.path.abspath(se_dir)
+        self.start_time = None
+        self.ignore = None
+        self.executed_commands = 0
         
     def init(self):
         self.ignore = os.path.join(self.se_dir, "tests", "ignored.txt")
@@ -46,8 +49,12 @@ class Experiment:
         result = True
         if not dry_run:
             try:
-                out_file = open("{}.{}.out".format(self.id, self.executed_commands), "w")
-                err_file = open("{}.{}.err".format(self.id, self.executed_commands), "w")
+                if not os.path.exists(os.path.join(self.base_dir, "cmds")):
+                    os.mkdir(os.path.join(self.base_dir, "cmds"))
+                out_path = os.path.join(self.base_dir, "cmds", "{}.{}.out".format(self.id, self.executed_commands))
+                err_path = os.path.join(self.base_dir, "cmds", "{}.{}.err".format(self.id, self.executed_commands))
+                out_file = open(out_path, "w")
+                err_file = open(err_path, "w")
                 subprocess.run(cmd_tokens, check=True, stdout=out_file, stderr=err_file)
             except Exception as e:
                 self.log("ERROR: {}".format(str(e)))
@@ -66,6 +73,7 @@ class Experiment:
         
     def change_directory(self, dir, dry_run=True):
         self.create_directory(dir, dry_run)
+        self.log("Changing directory to {}".format(dir))
         if not dry_run:
             os.chdir(dir)
         
@@ -80,7 +88,7 @@ class Experiment:
             self.log("{} already exists...skipping".format(tree['dest']))
             
     def get_eval_dir(self, src_binary):
-        return os.path.abspath(os.path.join(os.path.basename(os.path.dirname(src_binary)), os.path.basename(src_binary)))
+        return os.path.abspath(os.path.basename(src_binary))
             
     def identify_functions(self, tree_path, binary_path, dry_run=True):
         self.change_directory(self.get_eval_dir(binary_path))
@@ -96,22 +104,33 @@ class Experiment:
         orig_dir = os.curdir
         self.init()
         self.start_time = time.time()
-        for tree in self.trees:
-            self.log("Starting evaluation of {}".format(tree['dest']))
-            self.change_directory(os.path.dirname(tree['dest']), dry_run=dry_run)
-            self.create_tree(tree, dry_run=dry_run)
-            if dry_run or os.path.exists(tree['dest']):
-                for eval_dir in self.eval_dirs:
-                    for binary_path in self.eval_bins:
-                        src_bin = os.path.join(eval_dir, binary_path)
-                        self.identify_functions(tree_path=tree['dest'], binary_path=src_bin, dry_run=dry_run)
-                        guess_path = os.path.join(self.get_eval_dir(src_bin), 'guesses.bin')
-                        if dry_run or os.path.exists(guess_path):
-                            self.compute_accuracy(tree['dest'], guess_path, dry_run)
-                        else:
-                            self.log("ERROR: Identification failed for {}".format(self.get_eval_dir(src_bin)))
-            else:
-                self.log("ERROR: Tree creation failed for {}".format(tree['dest']))
+        orig_sysout = sys.stdout
+        orig_syserr = sys.stderr
+        log_path = os.path.abspath(os.path.join(self.base_dir, "{}.log".format(self.id)))
+        err_path = os.path.abspath(os.path.join(self.base_dir), "{}.err".format(self.id))
+        self.log('Logging to {}'.format(log_path))
+        sys.stdout = log_path
+        sys.stderr = err_path
+        try:
+            for tree in self.trees:
+                self.log("Starting evaluation of {}".format(tree['dest']))
+                self.change_directory(os.path.dirname(tree['dest']), dry_run=dry_run)
+                self.create_tree(tree, dry_run=dry_run)
+                if dry_run or os.path.exists(tree['dest']):
+                    for eval_dir in self.eval_dirs:
+                        for binary_path in self.eval_bins:
+                            src_bin = os.path.join(eval_dir, binary_path)
+                            self.identify_functions(tree_path=tree['dest'], binary_path=src_bin, dry_run=dry_run)
+                            guess_path = os.path.join(self.get_eval_dir(src_bin), 'guesses.bin')
+                            if dry_run or os.path.exists(guess_path):
+                                self.compute_accuracy(tree['dest'], guess_path, dry_run)
+                            else:
+                                self.log("ERROR: Identification failed for {}".format(self.get_eval_dir(src_bin)))
+                else:
+                    self.log("ERROR: Tree creation failed for {}".format(tree['dest']))
+        finally:
+            sys.stdout = orig_sysout
+            sys.stderr = orig_syserr
 
 
 def str2bool(v):
@@ -136,6 +155,7 @@ def main():
         experiment = yaml.load(f, Loader=yaml.FullLoader)
         
     experiment.run(dry_run=args.dry)
+
 
 if __name__ == "__main__":
     main()
