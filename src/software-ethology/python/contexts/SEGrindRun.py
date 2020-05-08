@@ -316,6 +316,7 @@ class SEGrindRun:
         if timeout is None:
             timeout = self.timeout
 
+        logger.debug("timeout = {}".format(timeout))
         while len(results) < n:
             if not self.is_running():
                 raise AssertionError("Process {} not running".format(self.valgrind_pid))
