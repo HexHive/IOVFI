@@ -148,7 +148,7 @@ class SEGrindRun:
         cmd.append("--in-pipe={}".format(self.pipe_in_loc))
         cmd.append("--out-pipe={}".format(self.pipe_out_loc))
         if self.timeout:
-            cmd.append("--timeout={}".format(self.timeout))
+            cmd.append("--max-duration={}".format(self.timeout))
         cmd.append(self.binary_loc)
 
         return cmd
