@@ -138,7 +138,7 @@ def main():
             completed = [pool.apply_async(single_test, arg) for arg in args]
             for c in completed:
                 (func_desc, guess) = c.get()
-                if len(guess) > 0:
+                if guess and len(guess) > 0:
                     guesses_out[func_desc] = guess
                 else:
                     guesses_out[func_desc] = None
