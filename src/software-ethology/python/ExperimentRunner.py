@@ -15,7 +15,7 @@ class Directory:
 
 
 class Experiment:
-    def __init__(self, id, timeout, trees, eval_dirs, eval_bins, base_dir, se_dir, valgrind, so_loader):
+    def __init__(self, id, timeout, trees, eval_dirs, eval_bins, base_dir, se_dir, valgrind, so_loader, duration):
         if not os.path.exists(valgrind):
             raise FileNotFoundError(valgrind)
         if trees is None or len(trees) == 0:
@@ -42,6 +42,7 @@ class Experiment:
         self.ignore = None
         self.executed_commands = 0
         self.timeout = timeout
+        self.duration = duration
 
     def init(self):
         self.ignore = os.path.join(self.se_dir, "tests", "ignored.txt")
@@ -110,9 +111,9 @@ class Experiment:
             self.log("Creating tree {} from source {}".format(tree['dest'], tree['src_bin']))
             if not dry_run and not os.path.exists(tree['src_bin']):
                 raise AssertionError("Tree source {} does not exist".format(tree['src_bin']))
-            cmd = "python3 {} -valgrind {} -bin {} -ignore {} -t {} -timeout {} -loader {}".format(
+            cmd = "python3 {} -valgrind {} -bin {} -ignore {} -t {} -timeout {} -loader {} -duration {}".format(
                 os.path.join(self.se_dir, "src", "software-ethology", "python", "fuzz-applications.py"), self.valgrind,
-                tree['src_bin'], self.ignore, tree['dest'], self.timeout, self.so_loader)
+                tree['src_bin'], self.ignore, tree['dest'], self.timeout, self.so_loader, self.duration)
             self.execute_command(cmd, dry_run=dry_run)
         else:
             self.log("{} already exists...skipping".format(tree['dest']))
