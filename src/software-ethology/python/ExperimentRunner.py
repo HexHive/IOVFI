@@ -32,7 +32,7 @@ class Experiment:
             raise FileNotFoundError(so_loader)
 
         self.valgrind = os.path.abspath(valgrind)
-        self.loader = os.path.abspath(so_loader)
+        self.so_loader = os.path.abspath(so_loader)
         self.base_dir = base_dir
         self.eval_dirs = eval_dirs
         self.eval_bins = eval_bins
@@ -112,7 +112,7 @@ class Experiment:
                 raise AssertionError("Tree source {} does not exist".format(tree['src_bin']))
             cmd = "python3 {} -valgrind {} -bin {} -ignore {} -t {} -timeout {} -loader {}".format(
                 os.path.join(self.se_dir, "src", "software-ethology", "python", "fuzz-applications.py"), self.valgrind,
-                tree['src_bin'], self.ignore, tree['dest'], self.timeout, self.loader)
+                tree['src_bin'], self.ignore, tree['dest'], self.timeout, self.so_loader)
             self.execute_command(cmd, dry_run=dry_run)
         else:
             self.log("{} already exists...skipping".format(tree['dest']))
@@ -126,7 +126,7 @@ class Experiment:
         cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {} -guesses {} -timeout {} -loader {}".format(
             os.path.join(self.se_dir, "src", "software-ethology", "python", "IdentifyFunction.py"), self.valgrind,
             os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path), guess_path, self.timeout,
-            self.loader)
+            self.so_loader)
         self.execute_command(cmd, dry_run=dry_run)
 
     def compute_accuracy(self, tree_path, guess_path, output_path, dry_run=True):
