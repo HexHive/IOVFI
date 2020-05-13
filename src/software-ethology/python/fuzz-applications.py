@@ -595,7 +595,8 @@ def main():
         (fuzz_run_results, unclassified) = fuzz_and_consolidate_functions(args, valgrind_loc=valgrind_loc,
                                                                           watchdog=results.timeout,
                                                                           duration=results.duration,
-                                                                          thread_count=results.threads)
+                                                                          thread_count=results.threads,
+                                                                          loader_loc=results.loader)
         logger.info("Fuzzing ended at {}".format(time.time()))
 
         logger.info("{} has {} functions".format(results.bin, func_count))
