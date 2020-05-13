@@ -15,7 +15,7 @@ class Directory:
 
 
 class Experiment:
-    def __init__(self, id, timeout, trees, eval_dirs, eval_bins, base_dir, se_dir, valgrind, loader):
+    def __init__(self, id, timeout, trees, eval_dirs, eval_bins, base_dir, se_dir, valgrind, so_loader):
         if not os.path.exists(valgrind):
             raise FileNotFoundError(valgrind)
         if trees is None or len(trees) == 0:
@@ -28,11 +28,11 @@ class Experiment:
             raise AssertionError("Could not find SE dir")
         if not os.path.exists(os.path.join(se_dir, "src", "software-ethology", "fuzz-applications.py")):
             raise AssertionError("Missing fuzz_applications.py")
-        if not os.path.exists(loader):
-            raise FileNotFoundError(loader)
+        if not os.path.exists(so_loader):
+            raise FileNotFoundError(so_loader)
 
         self.valgrind = os.path.abspath(valgrind)
-        self.loader = os.path.abspath(loader)
+        self.loader = os.path.abspath(so_loader)
         self.base_dir = base_dir
         self.eval_dirs = eval_dirs
         self.eval_bins = eval_bins
