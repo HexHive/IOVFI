@@ -34,3 +34,4 @@ eval_bins:
 base_dir: /home/derrick/code/FOSbin-flop/eval/coreutils/wc
 se_dir: /home/derrick/code/FOSbin-flop
 valgrind: /home/derrick/code/FOSbin-flop/cmake-build-debug/src/valgrind/install/bin/valgrind
+so_loader: /home/derrick/code/FOSbin-flop/cmake-build-debug/bin/segrind_so_loader

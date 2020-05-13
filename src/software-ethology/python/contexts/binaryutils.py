@@ -1,16 +1,19 @@
 import os
+import re
 import struct
 import subprocess
-import re
 
 from .FunctionDescriptor import FunctionDescriptor
 
 
 class RunDesc:
-    def __init__(self, func_desc, valgrind_loc, work_dir, watchdog):
+    def __init__(self, func_desc, valgrind_loc, work_dir, watchdog, loader_loc=None):
         self.func_desc = func_desc
         self.valgrind_loc = os.path.abspath(valgrind_loc)
         self.work_dir = os.path.abspath(work_dir)
+        self.loader_loc = loader_loc
+        if self.loader_loc:
+            self.loader_loc = os.path.abspath(self.loader_loc)
         self.watchdog = watchdog
 
 

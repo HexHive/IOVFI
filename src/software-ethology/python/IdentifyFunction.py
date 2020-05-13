@@ -4,6 +4,7 @@ import argparse
 import logging
 import multiprocessing as mp
 import os
+import pathlib
 import pickle
 
 from contexts import binaryutils as bu
@@ -17,13 +18,14 @@ binaryLoc = None
 fbDtree = None
 n_confirms = 1
 valgrind_loc = None
+loader_loc = None
 
 WORK_DIR = os.path.abspath(os.path.join("_work", "identifying"))
 WATCHDOG = 3
 
 
 def check_inputs(argparser):
-    global valgrind_loc, binaryLoc, guessLoc
+    global valgrind_loc, binaryLoc, guessLoc, loader_loc
     if not os.path.exists(argparser.tree):
         logger.fatal("Could not find {}".format(argparser.tree))
         exit(1)
@@ -35,6 +37,12 @@ def check_inputs(argparser):
 
     guessLoc = os.path.abspath(argparser.guesses)
     valgrind_loc = os.path.abspath(argparser.valgrind)
+    loader_loc = argparser.loader
+    if loader_loc:
+        loader_loc = os.path.abspath(loader_loc)
+    if loader_loc is None and pathlib.Path(binaryLoc).suffix == ".so":
+        logger.fatal("No Shared Object loader provided for {}".format(binaryLoc))
+    
     if not os.path.exists(valgrind_loc):
         logger.fatal("Could not find {}".format(valgrind_loc))
         exit(1)
@@ -44,7 +52,7 @@ def check_inputs(argparser):
 
 
 def single_test(func_desc, timeout, error_msgs):
-    global fbDtree, n_confirms, valgrind_loc
+    global fbDtree, n_confirms, valgrind_loc, loader_loc
     running_path = os.path.join("_work", "running", func_desc.name)
     os.makedirs(os.path.dirname(running_path), exist_ok=True)
     guess_equiv_class = list()
@@ -55,7 +63,8 @@ def single_test(func_desc, timeout, error_msgs):
         log = os.path.join('logs', 'identify', log_names[0])
         cmd_log = os.path.join('logs', 'identify', log_names[1])
         guess, coverage = fbDtree.identify(func_desc=func_desc, valgrind_loc=valgrind_loc, timeout=timeout,
-                                           cwd=WORK_DIR, max_confirm=n_confirms, cmd_log_loc=cmd_log, log_loc=log)
+                                           cwd=WORK_DIR, max_confirm=n_confirms, cmd_log_loc=cmd_log, log_loc=log,
+                                           loader_loc=loader_loc)
         if guess is not None:
             for ec in guess.get_equivalence_class():
                 guess_equiv_class.append(ec)
@@ -72,15 +81,17 @@ def single_test(func_desc, timeout, error_msgs):
 
 
 def main():
-    global fbDtree, binaryLoc, n_confirms, valgrind_loc
+    global fbDtree, binaryLoc, n_confirms, valgrind_loc, loader_loc
 
     parser = argparse.ArgumentParser(description="IdentifyFunction")
     parser.add_argument('-t', '--tree', help="/path/to/decision/tree", default="tree.bin")
     parser.add_argument('-valgrind', help='path/to/valgrind', required=True)
     parser.add_argument("-b", "--binary", help="/path/to/binary", required=True)
+    parser.add_argument('-loader', help='/path/to/segrind_so_loader', default=None)
     parser.add_argument("-loglevel", help="Set log level", type=int, default=logging.INFO)
     parser.add_argument("-logprefix", help="Prefix to use before log files", default="")
-    parser.add_argument("-threads", help="Number of threads to use", default=max(int(mp.cpu_count() / 2 - 1), 1), type=int)
+    parser.add_argument("-threads", help="Number of threads to use", default=max(int(mp.cpu_count() / 2 - 1), 1),
+                        type=int)
     parser.add_argument("-target", help="Location or function name to target")
     parser.add_argument("-guesses", help="/path/to/guesses", default="guesses.bin")
     parser.add_argument("-ignore", help="/path/to/ignored/functions")

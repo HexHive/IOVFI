@@ -1,5 +1,6 @@
 import io
 import os
+import pathlib
 import random
 import select
 import stat
@@ -63,11 +64,14 @@ class SEMessage:
 
 
 class SEGrindRun:
-    def __init__(self, valgrind_loc, binary_loc, timeout, pipe_in=None, pipe_out=None, valgrind_log_loc=None,
+    def __init__(self, valgrind_loc, binary_loc, timeout, loader_loc=None, pipe_in=None, pipe_out=None,
+                 valgrind_log_loc=None,
                  run_log_loc=None, cwd=os.getcwd(), toolname="segrind"):
         self.binary_loc = os.path.abspath(binary_loc)
         if not os.path.exists(self.binary_loc):
             raise FileNotFoundError("{} does not exist".format(self.binary_loc))
+
+        self.binary_is_shared_library = pathlib.Path(self.binary_loc).suffix == ".so"
 
         if toolname is None or len(toolname) == 0:
             raise AssertionError("toolname cannot be empty")
@@ -76,6 +80,14 @@ class SEGrindRun:
         self.valgrind_loc = os.path.abspath(valgrind_loc)
         if not os.path.exists(self.valgrind_loc):
             raise FileNotFoundError("{} does not exist".format(self.valgrind_loc))
+
+        self.loader_loc = loader_loc
+        if self.loader_loc:
+            if not os.path.exists(self.loader_loc):
+                raise FileNotFoundError("{} does not exist".format(self.loader_loc))
+
+        if self.binary_is_shared_library and self.loader_loc is None:
+            raise AssertionError("{} is a shared library and no loader is provided".format(self.binary_loc))
 
         self.cwd = os.path.abspath(cwd)
         if not os.path.exists(self.cwd):
@@ -149,6 +161,10 @@ class SEGrindRun:
         cmd.append("--out-pipe={}".format(self.pipe_out_loc))
         if self.timeout:
             cmd.append("--max-duration={}".format(self.timeout))
+
+        if self.binary_is_shared_library:
+            cmd.append(self.loader_loc)
+
         cmd.append(self.binary_loc)
 
         return cmd
@@ -161,11 +177,7 @@ class SEGrindRun:
         if self.run_log_loc is not None:
             self.log = open(self.run_log_loc, "a+")
 
-        env_copy = os.environ.copy()
-        env_copy['LD_BIND_NOW'] = "1"
-
-        self.valgrind_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True, stdout=self.log, stderr=self.log,
-                                              env=env_copy)
+        self.valgrind_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True, stdout=self.log, stderr=self.log)
         self.valgrind_pid = self.valgrind_proc.pid
         logger.debug("{} spawned process {}".format(os.path.basename(self.pipe_in_loc), self.valgrind_pid))
         # ret_value = self.valgrind_proc.wait()
@@ -358,9 +370,14 @@ class SEGrindRun:
             logger.debug("Received No message back from {}".format(self.valgrind_pid))
         return result
 
-    def send_set_target_cmd(self, target, timeout=None):
-        logger.debug("Setting target to {} for {}".format(hex(target), self.valgrind_pid))
-        return self._send_cmd(SEMsgType.SEMSG_SET_TGT, struct.pack("Q", target), timeout=timeout)
+    def send_set_target_cmd(self, target_func_desc, timeout=None):
+        logger.debug("Setting target to {} for {}".format(str(target_func_desc), self.valgrind_pid))
+        if self.binary_is_shared_library:
+            return self._send_cmd(SEMsgType.SEMSG_SET_SO_TGT, struct.pack("%ds" % (len(target_func_desc.name) + 1),
+                                                                          bytes(target_func_desc.name + '\x00',
+                                                                                'utf-8')))
+        else:
+            return self._send_cmd(SEMsgType.SEMSG_SET_TGT, struct.pack("Q", target_func_desc.location), timeout=timeout)
 
     def send_set_ctx_cmd(self, io_vec):
         if io_vec is None:

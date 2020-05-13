@@ -91,8 +91,9 @@ class FuzzRunStatistics:
 
 
 class FuzzRunDesc(bu.RunDesc):
-    def __init__(self, func_desc, valgrind_loc, work_dir, watchdog, attempt_count=MAX_ATTEMPTS):
-        bu.RunDesc.__init__(self, func_desc=func_desc, valgrind_loc=valgrind_loc, work_dir=work_dir, watchdog=watchdog)
+    def __init__(self, func_desc, valgrind_loc, work_dir, watchdog, loader_loc=None, attempt_count=MAX_ATTEMPTS):
+        bu.RunDesc.__init__(self, func_desc=func_desc, valgrind_loc=valgrind_loc, work_dir=work_dir, watchdog=watchdog,
+                            loader_loc=loader_loc)
         self.attempt_count = attempt_count
         self.statistics = FuzzRunStatistics(func_desc=func_desc)
 
@@ -153,7 +154,7 @@ def create_segrind_run(fuzz_desc):
     logger.debug("Creating SEGrindRun for {}".format(run_name))
     segrind_run = SEGrindRun(valgrind_loc=fuzz_desc.valgrind_loc, binary_loc=binary, pipe_in=pipe_in,
                              pipe_out=pipe_out, valgrind_log_loc=log_out, run_log_loc=cmd_log,
-                             cwd=fuzz_desc.work_dir, timeout=fuzz_desc.watchdog)
+                             cwd=fuzz_desc.work_dir, timeout=fuzz_desc.watchdog, loader_loc=fuzz_desc.loader_loc)
     logger.debug("Done")
 
     return run_name, segrind_run
@@ -161,7 +162,7 @@ def create_segrind_run(fuzz_desc):
 
 def consolidate_one_func(fuzz_desc, io_vec_list, coverage_map, sema, completed_list):
     segrind_run = None
-    target = fuzz_desc.func_desc.location
+    target = fuzz_desc.func_desc
 
     fuzz_stats = fuzz_desc.statistics
 
@@ -181,11 +182,10 @@ def consolidate_one_func(fuzz_desc, io_vec_list, coverage_map, sema, completed_l
                     segrind_run.start()
                     ack_msg = segrind_run.send_set_target_cmd(target)
                     if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
-                        raise AssertionError("Could not set target {}".format(target))
-
+                        raise AssertionError("Could not set target {}".format(str(target)))
                     resp_msg = segrind_run.read_response()
                     if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
-                        raise AssertionError("Could not set target {}".format(target))
+                        raise AssertionError("Could not set target {}".format(str(target)))
 
                 resp_msg = None
                 result = None
@@ -269,7 +269,7 @@ def consolidate_one_func(fuzz_desc, io_vec_list, coverage_map, sema, completed_l
 
 def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, instruction_mapping, completed_list):
     segrind_run = None
-    target = fuzz_desc.func_desc.location
+    target = fuzz_desc.func_desc
 
     fuzz_stats = fuzz_desc.statistics
 
@@ -288,11 +288,11 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
                     segrind_run.start()
                     ack_msg = segrind_run.send_set_target_cmd(target)
                     if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
-                        raise AssertionError("Could not set target {}".format(target))
+                        raise AssertionError("Could not set target {}".format(str(target)))
 
                     resp_msg = segrind_run.read_response()
                     if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
-                        raise AssertionError("Could not set target {}".format(target))
+                        raise AssertionError("Could not set target {}".format(str(target)))
 
                 resp_msg = None
                 result = None
@@ -410,7 +410,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema, inst
         completed_list.append(fuzz_desc)
 
 
-def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration, thread_count,
+def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration, thread_count, loader_loc,
                                    work_dir=os.path.abspath(os.path.join(os.curdir, "_work"))):
     fuzz_runs = list()
     unclassified = set()
@@ -423,7 +423,9 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
     for func_desc in func_descs:
         for addr in func_desc.instructions:
             instruction_mapping[addr] = func_desc
-        fuzz_runs.append(FuzzRunDesc(func_desc, valgrind_loc, work_dir, watchdog))
+        fuzz_runs.append(
+            FuzzRunDesc(func_desc=func_desc, valgrind_loc=valgrind_loc, work_dir=work_dir, watchdog=watchdog,
+                        loader_loc=loader_loc))
 
     with mp.Manager() as manager:
         generated_iovecs = manager.list()
@@ -499,11 +501,13 @@ def main():
     parser = argparse.ArgumentParser(description="Generate input/output vectors")
     parser.add_argument("-valgrind", help="/path/to/pin-3.11/dir", required=True)
     parser.add_argument("-bin", help="/path/to/target/application", required=True)
+    parser.add_argument("-loader", help='/path/to/segrind_so_loader', default=None)
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
     parser.add_argument("-funcs", help="/path/to/file/with/func/names")
     parser.add_argument("-log", help="/path/to/log/file", default="fuzz.log")
     parser.add_argument("-loglevel", help="Level of output", type=int, default=logging.INFO)
-    parser.add_argument("-threads", help="Number of threads to use", type=int, default=max(int(mp.cpu_count() / 2 - 1), 1))
+    parser.add_argument("-threads", help="Number of threads to use", type=int,
+                        default=max(int(mp.cpu_count() / 2 - 1), 1))
     parser.add_argument('-o', '--out', help="/path/to/output/fuzzing/results", default="out.desc")
     parser.add_argument("-timeout", help='Number of seconds to wait per run', type=int, default=WATCHDOG)
     parser.add_argument('-duration', help='Total number of seconds to fuzz targets', type=int, default=DEFAULT_DURATION)

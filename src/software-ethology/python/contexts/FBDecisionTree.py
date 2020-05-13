@@ -171,9 +171,9 @@ class FBDecisionTree:
             return False, None
 
     def identify(self, func_desc, valgrind_loc, timeout, cwd=os.getcwd(), max_confirm=MAX_CONFIRM,
-                 cmd_log_loc=None, log_loc=None):
+                 cmd_log_loc=None, log_loc=None, loader_loc=None):
         segrind_run = SEGrindRun(valgrind_loc, func_desc.binary, timeout=timeout, cwd=cwd, valgrind_log_loc=log_loc,
-                                 run_log_loc=cmd_log_loc)
+                                 run_log_loc=cmd_log_loc, loader_loc=loader_loc)
 
         current_node = self.root
 
