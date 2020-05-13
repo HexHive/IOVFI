@@ -28,10 +28,14 @@ def send_set_target(addr):
     write_pipe.flush()
     read_msg()
     read_msg()
-    
+
+
 def send_set_so_target(func_name):
-    fmt = empty_fmt + 's' * (len(func_name) + 1)
-    write_pipe.write(struct.pack(fmt, 9, len(func_name) + 1, func_name + '\x00'))
+    c_name = func_name + '\x00'
+    
+    fmt = empty_fmt + "%ds" % (len(c_name))
+
+    write_pipe.write(struct.pack(fmt, 9, len(c_name), bytes(c_name, 'utf-8')))
     write_pipe.flush()
     read_msg()
     read_msg()
