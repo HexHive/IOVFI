@@ -1,10 +1,11 @@
 import argparse
 import os
-import subprocess
-import time
-import sys
-import yaml
 import pathlib
+import subprocess
+import sys
+import time
+
+import yaml
 
 
 class Directory:
@@ -14,7 +15,7 @@ class Directory:
 
 
 class Experiment:
-    def __init__(self, id, trees, eval_dirs, eval_bins, base_dir, se_dir, valgrind):
+    def __init__(self, id, timeout, trees, eval_dirs, eval_bins, base_dir, se_dir, valgrind):
         if not os.path.exists(valgrind):
             raise FileNotFoundError(valgrind)
         if trees is None or len(trees) == 0:
@@ -37,6 +38,7 @@ class Experiment:
         self.start_time = None
         self.ignore = None
         self.executed_commands = 0
+        self.timeout = timeout
 
     def init(self):
         self.ignore = os.path.join(self.se_dir, "tests", "ignored.txt")
@@ -105,9 +107,9 @@ class Experiment:
             self.log("Creating tree {} from source {}".format(tree['dest'], tree['src_bin']))
             if not dry_run and not os.path.exists(tree['src_bin']):
                 raise AssertionError("Tree source {} does not exist".format(tree['src_bin']))
-            cmd = "python3 {} -valgrind {} -bin {} -ignore {} -t {}".format(
+            cmd = "python3 {} -valgrind {} -bin {} -ignore {} -t {} -timeout {}".format(
                 os.path.join(self.se_dir, "src", "software-ethology", "python", "fuzz-applications.py"), self.valgrind,
-                tree['src_bin'], self.ignore, tree['dest'])
+                tree['src_bin'], self.ignore, tree['dest'], self.timeout)
             self.execute_command(cmd, dry_run=dry_run)
         else:
             self.log("{} already exists...skipping".format(tree['dest']))
@@ -118,9 +120,9 @@ class Experiment:
 
     def identify_functions(self, tree_path, binary_path, guess_path, dry_run=True):
         self.change_directory(os.path.dirname(guess_path), dry_run)
-        cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {} -guesses {}".format(
+        cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {} -guesses {} -timeout {}".format(
             os.path.join(self.se_dir, "src", "software-ethology", "python", "IdentifyFunction.py"), self.valgrind,
-            os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path), guess_path)
+            os.path.abspath(binary_path), self.ignore, os.path.abspath(tree_path), guess_path, self.timeout)
         self.execute_command(cmd, dry_run=dry_run)
 
     def compute_accuracy(self, tree_path, guess_path, output_path, dry_run=True):
