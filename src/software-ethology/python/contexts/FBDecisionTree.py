@@ -183,7 +183,7 @@ class FBDecisionTree:
                 if not segrind_run.is_running():
                     # segrind_run.stop()
                     segrind_run.start()
-                    ack_msg = segrind_run.send_set_target_cmd(func_desc.location)
+                    ack_msg = segrind_run.send_set_target_cmd(func_desc)
 
                     if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
                         raise AssertionError("Could not set target for {}".format(str(func_desc)))
