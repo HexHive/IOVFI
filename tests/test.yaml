@@ -3,6 +3,7 @@
 id: wc
 timeout: 1000
 duration: 18000
+log_level: 20
 trees:
       - { src_bin: /home/derrick/code/coreutils/build-clang-O0/src/wc, dest: /home/derrick/code/FOSbin-flop/eval/coreutils/wc/dtree-clang-O0/tree.bin }
       - { src_bin: /home/derrick/code/coreutils/build-clang-O1/src/wc, dest: /home/derrick/code/FOSbin-flop/eval/coreutils/wc/dtree-clang-O1/tree.bin }
