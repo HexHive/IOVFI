@@ -1,8 +1,9 @@
-import contexts.FBDecisionTree as FBDtree
-from sklearn.metrics import f1_score
+import os
 import pickle
 import statistics
-import os
+
+import contexts.FBDecisionTree as FBDtree
+from sklearn.metrics import f1_score
 
 
 class TreeEvaluation:
@@ -208,61 +209,18 @@ def _dfs_tree(func_name, path):
         path.pop()
         return False
 
-# def compute_path_coverage(dtree, func_name):
-#     path = get_tree_path(dtree, func_name)
-#     executed_instructions = list()
-#     total_instruction_count = list()
-#     for node in path:
-#         if isinstance(node, FBDtree.FBDecisionTreeInteriorNode):
-#             for (func_desc, coverage) in node.get_coverage().items():
-#                 if func_desc.name == func_name:
-#                     for (instructions, total_instructions) in coverage:
-#                         executed_instructions.append(len(instructions))
-#                         total_instruction_count.append(total_instructions)
-#                     break
-#
-#     if sum(total_instruction_count) > 0:
-#         return sum(executed_instructions) / sum(total_instruction_count)
-#     else:
-#         return 0
 
-# def get_func_indices(tree):
-#     tree_funcs = dict()
-#     for idx in range(0, tree.size()):
-#         if tree._is_leaf(idx):
-#             for ec in tree.get_equiv_classes(idx):
-#                 tree_funcs[ec.name] = idx
-#
-#     return tree_funcs
-
-
-# def output_incorrect(tree, guesses):
-#     true_pos, true_neg, incorrect = get_evaluation(tree, guesses)
-#     tree_funcs = dict()
-#     for idx in range(0, tree.size()):
-#         if tree._is_leaf(idx):
-#             equiv_classes = tree.get_equiv_classes(idx)
-#             for ec in equiv_classes:
-#                 tree_funcs[ec.name] = idx
-#
-#     for fd, guess in guesses.items():
-#         if fd.name in incorrect:
-#             correct = list()
-#             if fd.name in tree_funcs:
-#                 equiv_classes = tree.get_equiv_classes(tree_funcs[fd.name])
-#                 for ec in equiv_classes:
-#                     correct.append(ec.name)
-#                 correct.sort()
-#             else:
-#                 correct.append("UNKNOWN")
-#
-#             equiv_classes = tree.get_equiv_classes(guess)
-#             if equiv_classes is not None:
-#                 names = list()
-#                 for ec in equiv_classes:
-#                     names.append(ec.name)
-#                 names.sort()
-#                 print("{}: {} <--> {}".format(fd.name, " ".join(names), " ".join(correct)))
-#             else:
-#                 print("{}: UNKNOWN <--> {}".format(fd.name, " ".join(correct)))
-#             print()
+def bin_ec_sizes(tree, max_ec_size=10):
+    equiv_classes = tree.get_all_equiv_classes()
+    bins = dict()
+    for idx in range(1, max_ec_size + 1):
+        bins[idx] = 0
+        
+    for ec in equiv_classes:
+        ec_size = len(ec)
+        if ec_size >= max_ec_size:
+            bins[max_ec_size] += 1
+        else:
+            bins[ec_size] += 1
+            
+    return bins
