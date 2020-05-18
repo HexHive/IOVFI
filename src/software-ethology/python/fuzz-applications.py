@@ -504,7 +504,7 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
                                           instruction_mapping, 
                                           fuzz_completed_list,)) for fuzz_run in fuzz_runs]
             for res in full_res:
-                res.get(timeout=int(duration / len(fuzz_runs)))
+                res.wait(timeout=int(duration / len(fuzz_runs)))
             
         # processes = list()
         # for fuzz_run in fuzz_runs:
@@ -547,7 +547,7 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
                                                consolidate_completed_list))
                         for fuzz_run in fuzz_completed_list]
             for res in full_res:
-                res.get()
+                res.wait()
 
         logger.info("Finished consolidation at {}".format(time.time()))
 
