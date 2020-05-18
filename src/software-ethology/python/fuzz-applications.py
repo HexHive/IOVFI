@@ -545,7 +545,7 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
         with mp.Pool(thread_count) as pool:
             full_res = [pool.apply_async(func=consolidate_one_func,
                                          args=(fuzz_run, generated_iovecs,
-                                               iovec_coverage, sema,
+                                               iovec_coverage, None,
                                                consolidate_completed_list))
                         for fuzz_run in fuzz_completed_list]
             for res in full_res:
