@@ -174,7 +174,10 @@ class Experiment:
                                                                    "accuracy.bin"),
                                                       dry_run)
                             else:
-                                self.log("ERROR: Identification failed for {}".format(self.get_eval_dir(src_bin)))
+                                self.log("ERROR: Identification failed for {}"
+                                         .format(self.get_eval_dir(src_bin,
+                                                                   tree['dest'],
+                                                                   eval_dir)))
                 else:
                     self.log("ERROR: Tree creation failed for {}".format(tree['dest']))
         finally:
