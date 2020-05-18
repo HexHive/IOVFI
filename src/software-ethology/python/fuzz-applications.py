@@ -69,11 +69,13 @@ class FuzzRunStatistics:
         self.total_rounds += 1
 
     def start_execution(self, semaphore):
-        semaphore.acquire()
+        if semaphore:
+            semaphore.acquire()
         self.execution_start = time.time()
 
     def stop_execution(self, semaphore):
-        semaphore.release()
+        if semaphore:
+            semaphore.release()
         self.execution_time += time.time() - self.execution_start
 
     def pretty_print(self, file=sys.stdout):
@@ -489,7 +491,7 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
         iovec_coverage = manager.dict()
         fuzz_completed_list = manager.list()
         consolidate_completed_list = manager.list()
-        sema = mp.Semaphore(thread_count)
+        # sema = mp.Semaphore(thread_count)
 
         for func_desc in func_descs:
             iovec_coverage[func_desc] = manager.dict()
@@ -500,7 +502,7 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
                                     args=(fuzz_run, generated_iovecs, 
                                           iovec_coverage, 
                                           max(1, int(duration / len(fuzz_runs))),
-                                          sema, 
+                                          None, 
                                           instruction_mapping, 
                                           fuzz_completed_list,)) for fuzz_run in fuzz_runs]
             for res in full_res:
