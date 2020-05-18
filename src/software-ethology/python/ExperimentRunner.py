@@ -16,7 +16,7 @@ class Directory:
 
 class Experiment:
     def __init__(self, id, timeout, trees, eval_dirs, eval_bins, base_dir, se_dir, valgrind, so_loader, duration,
-                 log_level):
+                 log_level, ignore):
         if not os.path.exists(valgrind):
             raise FileNotFoundError(valgrind)
         if trees is None or len(trees) == 0:
@@ -40,14 +40,13 @@ class Experiment:
         self.id = id
         self.se_dir = os.path.abspath(se_dir)
         self.start_time = None
-        self.ignore = None
+        self.ignore = ignore
         self.executed_commands = 0
         self.timeout = timeout
         self.duration = duration
         self.log_level = log_level
 
     def init(self):
-        self.ignore = os.path.join(self.se_dir, "tests", "ignored.txt")
         self.executed_commands = 0
         self.start_time = None
 
