@@ -41,7 +41,8 @@ def check_inputs(argparser):
     if loader_loc:
         loader_loc = os.path.abspath(loader_loc)
     if loader_loc is None and pathlib.Path(binaryLoc).suffix == ".so":
-        logger.fatal("No Shared Object loader provided for {}".format(binaryLoc))
+        logger.fatal("No Shared Object loader provided for {}".format(
+            binaryLoc))
     
     if not os.path.exists(valgrind_loc):
         logger.fatal("Could not find {}".format(valgrind_loc))

@@ -498,7 +498,7 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
 
         time_start = time.time()
         fuzz_time = max(1, int(duration/len(fuzz_runs)))
-        logger.info("Fuzzing each target for {} ms".format(fuzz_time))
+        logger.info("Fuzzing each target for {} s".format(fuzz_time))
         with mp.Pool(thread_count) as pool:
             full_res = [pool.apply_async(func=fuzz_one_function,
                                     args=(fuzz_run, generated_iovecs, 
@@ -508,7 +508,7 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
                                           instruction_mapping, 
                                           fuzz_completed_list,)) for fuzz_run in fuzz_runs]
             for res in full_res:
-                res.wait(timeout=fuzz_time)
+                res.wait(timeout=2*fuzz_time)
             
         # processes = list()
         # for fuzz_run in fuzz_runs:
