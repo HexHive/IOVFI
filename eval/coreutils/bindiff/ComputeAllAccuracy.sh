@@ -14,6 +14,7 @@ do
     do
       for test_env in "${comp_envs[@]}"
       do
+	mkdir -p `realpath results/$tree_prog/build-$tree_env/build-$test_env`      
         bindiff --output_format log --output_dir \
         `realpath results/$tree_prog/build-$tree_env/build-$test_env` \
         build-$tree_env/src/$tree_prog/$tree_prog.BinExport \

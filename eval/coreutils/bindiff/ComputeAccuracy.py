@@ -62,7 +62,7 @@ def compute_accuracy(bindiff):
         # for i in range(len(truths)):
         #     print("{} <--> {}".format(truths[i], predictions[i]))
 
-        print(f1_score(truths, predictions, average='micro'))
+        print(f1_score(truths, predictions, average='micro'), end="")
 
 
 def main():
