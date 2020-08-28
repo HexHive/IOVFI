@@ -69,6 +69,17 @@ def read_in_list(in_bytes, data_format='Q'):
         result.append(struct.unpack_from(data_format, in_bytes.read(struct.calcsize(data_format)))[0])
     return result
 
+def compute_per_func_cov(out_desc):
+    result = list()
+    for fd in out_desc:
+        insns = set()
+        for iovec in out_desc[fd]:
+            for cov in out_desc[fd][iovec]:
+                if cov in fd.instructions:
+                    insns.add(cov)
+        result.append(len(insns) / len(fd.instructions))
+    return result
+
 
 # def get_functions_needing_fuzzing(func_desc_coverage, whole_coverage, threshold=0.7):
 #     result = list()
