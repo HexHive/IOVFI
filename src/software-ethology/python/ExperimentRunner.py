@@ -141,6 +141,31 @@ class Experiment:
             os.path.abspath(tree_path), output_path)
         self.execute_command(cmd, dry_run)
 
+    def handle_eval_bins(self, eval_dir, tree, dry_run):
+        if self.eval_bins is None:
+            return
+        for binary_path in self.eval_bins:
+            src_bin = os.path.join(eval_dir.path, binary_path)
+            guess_path = os.path.join(self.get_eval_dir(src_bin, tree['dest'], eval_dir), 'guesses.bin')
+            self.identify_functions(tree_path=tree['dest'], binary_path=src_bin, guess_path=guess_path,
+                                    dry_run=dry_run)
+            if dry_run or os.path.exists(guess_path):
+                self.compute_accuracy(tree['dest'], guess_path,
+                                      os.path.join(os.path.dirname(tree['dest']), eval_dir.short_name,
+                                                   "accuracy.bin"),
+                                      dry_run)
+            else:
+                self.log("ERROR: Identification failed for {}"
+                         .format(self.get_eval_dir(src_bin,
+                                                   tree['dest'],
+                                                   eval_dir)))
+
+    def handle_eval_dirs(self, tree, dry_run):
+        if self.eval_dirs is None:
+            return
+        for eval_dir in self.eval_dirs:
+            self.handle_eval_bins(eval_dir=eval_dir, tree=tree, dry_run=dry_run)
+
     def run(self, dry_run=True):
         orig_dir = os.curdir
         self.init()
@@ -162,22 +187,7 @@ class Experiment:
                 self.change_directory(os.path.dirname(tree['dest']), dry_run=dry_run)
                 self.create_tree(tree, dry_run=dry_run)
                 if dry_run or os.path.exists(tree['dest']):
-                    for eval_dir in self.eval_dirs:
-                        for binary_path in self.eval_bins:
-                            src_bin = os.path.join(eval_dir.path, binary_path)
-                            guess_path = os.path.join(self.get_eval_dir(src_bin, tree['dest'], eval_dir), 'guesses.bin')
-                            self.identify_functions(tree_path=tree['dest'], binary_path=src_bin, guess_path=guess_path,
-                                                    dry_run=dry_run)
-                            if dry_run or os.path.exists(guess_path):
-                                self.compute_accuracy(tree['dest'], guess_path,
-                                                      os.path.join(os.path.dirname(tree['dest']), eval_dir.short_name,
-                                                                   "accuracy.bin"),
-                                                      dry_run)
-                            else:
-                                self.log("ERROR: Identification failed for {}"
-                                         .format(self.get_eval_dir(src_bin,
-                                                                   tree['dest'],
-                                                                   eval_dir)))
+                    self.handle_eval_dirs(tree=tree, dry_run=dry_run)
                 else:
                     self.log("ERROR: Tree creation failed for {}".format(tree['dest']))
         finally:
