@@ -21,6 +21,7 @@ def get_git_diffs(version1, version2):
     for line in diff_result.stdout.decode('utf-8'):
         stat_match = stat_regex.match(line)
         if stat_match:
+            print(line)
             file_name = stat_match.group(1)
             _, extension = os.path.splitext(file_name)
             if extension not in ('.c', '.h'):
