@@ -5,7 +5,7 @@ import io
 
 
 def get_git_diffs(version1, version2):
-    stat_regex_str = "(\d*)\s+(\d*)\s+\S+"
+    stat_regex_str = "(\d*)\s+(\d*)\s+(\S+)"
     stat_regex = re.compile(stat_regex_str)
 
     total_adds = 0
