@@ -15,7 +15,7 @@ def get_git_diffs(version1, version2):
     print("Running {} in {}".format(" ".join(cmd), os.getcwd()))
     diff_result = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True).stdout
 
-    for line in iter(diff_result.readline, ''):
+    for line in io.IOTextWrapper(diff_result, encoding="utf-8"):
         line = line.rstrip()
         stat_match = stat_regex.match(line)
         if stat_match:
