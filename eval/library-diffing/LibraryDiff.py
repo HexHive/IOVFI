@@ -18,7 +18,8 @@ def get_git_diffs(version1, version2):
     cmd = ['git', 'diff', version1, version2, '--stat']
     diff_result = subprocess.run(cmd, stdout=subprocess.PIPE)
 
-    for line in diff_result.stdout.readline().decode('utf-8'):
+    for line in diff_result.stdout.readline():
+        line = line.decode('utf-8').strip()
         stat_match = stat_regex.match(line)
         print(line)
         if stat_match:
