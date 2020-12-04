@@ -6,7 +6,7 @@ import os
 def get_git_diffs(version1, version2):
     add_regex_str = "(\d*) insertion"
     del_regex_str = "(\d*) deletion"
-    stat_regex_str = "^(\S+)\s+"
+    stat_regex_str = "^(\S+)\s+\|"
 
     add_regex = re.compile(add_regex_str)
     del_regex = re.compile(del_regex_str)
@@ -20,8 +20,8 @@ def get_git_diffs(version1, version2):
 
     for line in diff_result.stdout.decode('utf-8'):
         stat_match = stat_regex.match(line)
+        print(line)
         if stat_match:
-            print(line)
             file_name = stat_match.group(1)
             _, extension = os.path.splitext(file_name)
             if extension not in ('.c', '.h'):
