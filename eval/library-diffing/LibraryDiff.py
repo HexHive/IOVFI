@@ -1,5 +1,6 @@
 import re
 import subprocess
+import sys
 
 
 def get_git_diffs(version1, version2):
@@ -12,19 +13,10 @@ def get_git_diffs(version1, version2):
     total_adds = 0
     total_dels = 0
 
-    diff_result = subprocess.run(['find',
-                                          '.',
-                                          '-name',
-                                          '\"*.[c,h]\"',
-                                          '-exec',
-                                          'git',
-                                          'diff',
-                                          version1,
-                                          version2,
-                                          '--stat',
-                                          '--',
-                                          '{}'
-                                          ], capture_output=True)
+    diff_result = subprocess.run(['find', '.', '-name', '\"*.[c,h]\"', '-exec',
+                                          'git', 'diff', version1, version2,
+                                          '--stat', '--', '{}'],
+                                 stdout=subprocess.PIPE)
 
     for line in diff_result.stdout.decode('utf-8'):
         add_match = add_regex.match(line)
