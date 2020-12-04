@@ -1,6 +1,7 @@
 import re
 import subprocess
 import os
+import io
 
 
 def get_git_diffs(version1, version2):
@@ -12,11 +13,11 @@ def get_git_diffs(version1, version2):
 
     cmd = ['git', 'diff', version1, version2, '--numstat']
     print("Running {} in {}".format(" ".join(cmd), os.getcwd()))
-    diff_result = subprocess.run(cmd, stdout=subprocess.PIPE,
+    diff_result = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True,
                                  encoding='UTF-8').stdout
 
-    for line in diff_result.readline():
-        line = line.strip()
+    for line in iter(diff_result.readline, ''):
+        line = line.rstrip()
         stat_match = stat_regex.match(line)
         if stat_match:
             file_name = stat_match.group(3)
