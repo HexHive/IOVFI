@@ -14,7 +14,7 @@ def get_git_diffs(version1, version2):
     total_dels = 0
 
     cmd = ['find', '.', '-name', '\"*.[c,h]\"', '-exec', 'git', 'diff', version1, version2, '--stat', '--', '{}', '\\;']
-    print('Running: ', cmd)
+    print('Running: ', cmd.join(' '))
     diff_result = subprocess.run(cmd,
                                  stdout=subprocess.PIPE)
 
