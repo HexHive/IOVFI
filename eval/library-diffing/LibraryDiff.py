@@ -6,7 +6,7 @@ import os
 def get_git_diffs(version1, version2):
     add_regex_str = "(\d*) insertion"
     del_regex_str = "(\d*) deletion"
-    stat_regex_str = "(\S+)\s+|"
+    stat_regex_str = "(\S+)\s+\|"
 
     add_regex = re.compile(add_regex_str)
     del_regex = re.compile(del_regex_str)
