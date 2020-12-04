@@ -20,7 +20,7 @@ def get_git_diffs(version1, version2):
         stat_match = stat_regex.match(line)
         if stat_match:
             file_name = stat_match.group(3)
-            _, extension = os.splitext(file_name)
+            _, extension = os.path.splitext(file_name)
             if extension in (".c", ".h"):
                 total_adds += int(stat_match.group(1))
                 total_dels += int(stat_match.group(2))
