@@ -26,3 +26,18 @@ def get_git_diffs(version1, version2):
                 total_dels += int(stat_match.group(2))
 
     return total_adds, total_dels
+
+
+def main():
+    versions = ['v1.2.7', 'v1.2.7.1', 'v1.2.7.2', 'v1.2.7.3', 'v1.2.8',
+                'v1.2.9', 'v1.2.10', 'v1.2.11']
+
+    os.chdir('/home/derrick/code/zlib')
+    for version1 in versions:
+        for version2 in versions:
+            print("{} {} {}".format(version1, version2, get_git_diffs(version1,
+                                                              version2)))
+
+
+if __name__ == "__main__":
+    main()
