@@ -15,12 +15,14 @@ to identify functions quickly.
 ## Building
 1. `mkdir cmake-build-debug && cd cmake-build-debug`
 1. `cmake ..`
-1. `cmake --build . -target BuildValgrind`
+1. `cmake --build . --target BuildValgrind`
   - The `valgrind` binary will be placed in
     `cmake-build-debug/src/valgrind/install/bin`
+1. `cmake --build . --target segrind_so_loader`
 
 ## Building a decision tree
-Building the decision tree involves fuzzing the target application, consolidating the IOVecs generated, and then actually generating the decision tree.
+Building the decision tree involves fuzzing the target application,
+consolidating the IOVecs generated, and then actually generating the decision tree.
 The following scripts assume you are working from the top level directory
 of this repo, but we recommend that you perform this in a separate 
 directory.  Adjust paths accordingly. Each script has a `-h` tag to get
@@ -36,19 +38,22 @@ deleted when the decision tree is created.
 A fair warning: the two directories can take up a lot of space.
 
 ### Fuzzing a binary
-1. `src/fosbin-sleuth/python/fuzz-applications.py -valgrind
-cmake-build-debug/src/valgrind/install/bin/valgrind -ignore tests/ignore -bin /path/to/binary`
+1. `src/software-ethology/python/fuzz-applications.py -valgrind
+cmake-build-debug/src/valgrind/install/bin/valgrind -ignore tests/ignored.txt
+-t tree.bin -bin /path/to/binary`
 
 This creates `tree.bin` which is the decision tree generated after fuzzing the
 binary for a period of time, or until the code coverage threshold is exceeded.
+If you want to fuzz a library, use the `segrind_so_loader`, i.e., attach
+`-loader cmake-build-debug/bin/segrind_so_loader` to the previous command.
 
 ## Semantic Function Identification
-1. `src/fosbin-sleuth/python/IdentifyFunction.py -valgrind
+1. `src/software-ethology/python/IdentifyFunction.py -valgrind
 cmake-build-debug/src/valgrind/install/bin/valgrind -b /path/to/unknown/binary`
 
 This script creates a file called `guesses.bin`, which is a python dictionary
 mapping functions in the supplied binary (in the form of 
-`src/fosbin-sleuth/python/context/FunctionDescriptor` python objects)
+`src/software-ethology/python/context/FunctionDescriptor` python objects)
 to equivalence classes in the tree.
 If the function could not be found in the decision tree, then it is assigned
 None. 
