@@ -147,7 +147,8 @@ def main():
             logger.debug("done")
 
         msg = "Finding functions in {}...".format(binaryLoc)
-        location_map = bu.find_funcs(binaryLoc, results.target, ignored_funcs)
+        location_map = bu.find_funcs(binaryLoc, results.target,
+                                     ignored_funcs, syms=results.syms)
         logger.info(msg + "done!")
         logger.info("Found {} functions".format(len(location_map)))
 

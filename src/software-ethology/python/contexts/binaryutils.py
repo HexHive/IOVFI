@@ -3,7 +3,20 @@ import re
 import struct
 import subprocess
 
+import xml.etree.ElementTree as ET
+
 from .FunctionDescriptor import FunctionDescriptor
+
+
+def parse_xml_output(file_loc):
+    tree = ET.parse(file_loc)
+    root = tree.getroot()
+    sym_map = dict()
+    for func in root.iter('FUNCTION'):
+        name = func.get('NAME').strip()
+        start = func.get('ENTRY_POINT').strip()
+        sym_map[start] = (name, start)
+    return sym_map
 
 
 class RunDesc:
@@ -18,7 +31,7 @@ class RunDesc:
         self.watchdog = watchdog
 
 
-def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
+def find_funcs(binary, target=None, ignored_funcs=None, syms=None):
     target_is_name = True
     if target is not None:
         try:
@@ -27,6 +40,10 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
         except Exception:
             pass
     location_map = dict()
+    syms_map = None
+    if syms:
+        syms_map = parse_xml_output(syms)
+
     objdump_cmd = subprocess.run(['objdump', '-d', binary],
                                  stdout=subprocess.PIPE)
     lines = objdump_cmd.stdout.split(b'\n')
@@ -37,23 +54,44 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
         line = line.decode('utf-8').strip()
         if len(line) == 0:
             continue
-        func_start_match = func_start_re.match(line)
-        if func_start_match:
-            if name is not None:
-                if ignored_funcs is None or (
-                        name not in ignored_funcs and loc not in ignored_funcs):
-                    if target is None or (
-                            not target_is_name and target == loc) or (
-                            target_is_name and target == name):
-                        location_map[loc] = FunctionDescriptor(binary, name,
-                                                               loc, instrs)
-            name = func_start_match.group(2)
-            loc = int(func_start_match.group(1), 16)
-            instrs = list()
+
+        if syms_map is None:
+            func_start_match = func_start_re.match(line)
+            if func_start_match:
+                if name is not None:
+                    if ignored_funcs is None or (
+                            name not in ignored_funcs and loc not in ignored_funcs):
+                        if target is None or (
+                                not target_is_name and target == loc) or (
+                                target_is_name and target == name):
+                            location_map[loc] = FunctionDescriptor(binary, name,
+                                                                   loc, instrs)
+                name = func_start_match.group(2)
+                loc = int(func_start_match.group(1), 16)
+                instrs = list()
+            else:
+                instr_match = instr_re.match(line)
+                if instr_match:
+                    instrs.append(int(instr_match.group(1), 16))
         else:
             instr_match = instr_re.match(line)
             if instr_match:
-                instrs.append(int(instr_match.group(1), 16))
+                inst = instr_match.group(1).strip()
+                if inst in syms_map:
+                    if name is not None:
+                        if ignored_funcs is None or (
+                                name not in ignored_funcs and loc not in ignored_funcs):
+                            if target is None or (
+                                    not target_is_name and target == loc) or (
+                                    target_is_name and target == name):
+                                location_map[loc] = FunctionDescriptor(binary,
+                                                                       name,
+                                                                       loc,
+                                                                       instrs)
+                    name = syms_map[inst][0]
+                    loc = int(inst, 16)
+                    instrs = list()
+                instrs.append(int(inst, 16))
 
     if name is not None:
         if ignored_funcs is None or (

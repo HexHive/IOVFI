@@ -14,6 +14,12 @@ class Directory:
         self.short_name = short_name
 
 
+class EvaluationBinary:
+    def __init__(self, name, symbol_file):
+        self.name = name
+        self.symbol_file = symbol_file
+
+
 class Experiment:
     def __init__(self, id, timeout, trees, eval_dirs, eval_bins, base_dir,
                  se_dir, valgrind, so_loader, duration,
@@ -138,7 +144,7 @@ class Experiment:
                          os.path.basename(src_binary)))
 
     def identify_functions(self, tree_path, binary_path, guess_path,
-                           dry_run=True):
+                           dry_run=True, symbol_file=None):
         self.change_directory(os.path.dirname(guess_path), dry_run)
         cmd = "python3 {} -valgrind {} -b {} -ignore {} -t {} -guesses {} -timeout {} -loader {} -loglevel {}".format(
             os.path.join(self.se_dir, "src", "software-ethology", "python",
@@ -146,6 +152,8 @@ class Experiment:
             os.path.abspath(binary_path), self.ignore,
             os.path.abspath(tree_path), guess_path, self.timeout,
             self.so_loader, self.log_level)
+        if symbol_file:
+            cmd += " -syms {}".format(symbol_file)
         self.execute_command(cmd, dry_run=dry_run)
 
     def compute_accuracy(self, tree_path, guess_path, output_path,
@@ -163,14 +171,18 @@ class Experiment:
     def handle_eval_bins(self, eval_dir, tree, dry_run):
         if self.eval_bins is None:
             return
-        for binary_path in self.eval_bins:
-            src_bin = os.path.join(eval_dir.path, binary_path)
+        for binary in self.eval_bins:
+            src_bin = os.path.join(eval_dir.path, binary.name)
+            sym_file = None
+            if binary.symbol_file:
+                sym_file = os.path.join(eval_dir.path, binary.symbol_file)
+
             guess_path = os.path.join(
                 self.get_eval_dir(src_bin, tree['dest'], eval_dir),
                 'guesses.bin')
             self.identify_functions(tree_path=tree['dest'], binary_path=src_bin,
                                     guess_path=guess_path,
-                                    dry_run=dry_run)
+                                    dry_run=dry_run, symbol_file=sym_file)
             if dry_run or os.path.exists(guess_path):
                 self.compute_accuracy(tree['dest'], guess_path,
                                       os.path.join(
