@@ -14,7 +14,8 @@ def main():
     parser = argparse.ArgumentParser(description="GenDecisionTree")
     parser.add_argument('-d', '--desc', help="IOVecs and coverage information",
                         default="out.desc")
-    parser.add_argument('-t', '--tree', help="File to output decision tree", default=TREE_OUT)
+    parser.add_argument('-t', '--tree', help="File to output decision tree",
+                        default=TREE_OUT)
     parser.add_argument("-log", help='/path/to/log/file', default="tree.log")
 
     results = parser.parse_args()

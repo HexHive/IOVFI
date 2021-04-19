@@ -3,7 +3,6 @@
 import argparse
 import os
 import pickle
-import statistics
 
 import contexts.treeutils as tu
 
@@ -121,9 +120,11 @@ def str2bool(v):
 def main():
     parser = argparse.ArgumentParser(description="Computes Analysis Accuracy")
     parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin")
-    parser.add_argument("-g", dest="guesses", help="/path/to/guess/list", default="guesses.txt")
+    parser.add_argument("-g", dest="guesses", help="/path/to/guess/list",
+                        default="guesses.txt")
     parser.add_argument("-output", "-o", help="/path/to/measurement.bin")
-    parser.add_argument('-verbose', help="Print out additional information", type=str2bool, nargs='?', const=True,
+    parser.add_argument('-verbose', help="Print out additional information",
+                        type=str2bool, nargs='?', const=True,
                         default=False)
 
     args = parser.parse_args()
@@ -182,7 +183,8 @@ def main():
                 print()
                 sorted_names.clear()
 
-            evaluation.add_evaluation(guess_path=guessLine, dtree=dtree, verbose=args.verbose)
+            evaluation.add_evaluation(guess_path=guessLine, dtree=dtree,
+                                      verbose=args.verbose)
 
     print(evaluation)
     if args.output is not None:

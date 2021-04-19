@@ -1,26 +1,33 @@
 import hashlib
 import struct
+
 import sys
 
 
 class RangeMapValue:
     def __init__(self, infile):
-        self.addr_min = struct.unpack_from("Q", infile.read(struct.calcsize('Q')))[0]
-        self.addr_max = struct.unpack_from("Q", infile.read(struct.calcsize('Q')))[0]
+        self.addr_min = \
+        struct.unpack_from("Q", infile.read(struct.calcsize('Q')))[0]
+        self.addr_max = \
+        struct.unpack_from("Q", infile.read(struct.calcsize('Q')))[0]
         self.val = struct.unpack_from("Q", infile.read(struct.calcsize('Q')))[0]
 
     def pretty_print(self, out=sys.stdout):
-        print("[ {0:#0{1}x} -- {2:#0{1}x} ] = {3}".format(self.addr_min, 18, self.addr_max, self.val), file=out)
+        print("[ {0:#0{1}x} -- {2:#0{1}x} ] = {3}".format(self.addr_min, 18,
+                                                          self.addr_max,
+                                                          self.val), file=out)
 
     def to_bytes(self):
         result = bytearray()
-        result.extend(struct.pack("=QQQ", self.addr_min, self.addr_max, self.val))
+        result.extend(
+            struct.pack("=QQQ", self.addr_min, self.addr_max, self.val))
         return result
 
 
 class RangeMap:
     def __init__(self, infile):
-        range_map_size = struct.unpack_from('I', infile.read(struct.calcsize('I')))[0]
+        range_map_size = \
+        struct.unpack_from('I', infile.read(struct.calcsize('I')))[0]
         self.entries = list()
         for i in range(range_map_size):
             self.entries.append(RangeMapValue(infile))
@@ -39,26 +46,32 @@ class RangeMap:
 
 class RegisterValue:
     def __init__(self, infile):
-        self.guest_state_offset = struct.unpack_from("i", infile.read(struct.calcsize("i")))[0]
-        self.value = struct.unpack_from("Q", infile.read(struct.calcsize("Q")))[0]
-        self.is_ptr = struct.unpack_from("?", infile.read(struct.calcsize("?")))[0]
+        self.guest_state_offset = \
+        struct.unpack_from("i", infile.read(struct.calcsize("i")))[0]
+        self.value = struct.unpack_from("Q", infile.read(struct.calcsize("Q")))[
+            0]
+        self.is_ptr = \
+        struct.unpack_from("?", infile.read(struct.calcsize("?")))[0]
 
     def pretty_print(self, out=sys.stdout):
         if self.is_ptr:
             indicator = "O"
         else:
             indicator = "X"
-        print("{0}:\t{1:#0{2}x} {3}".format(self.guest_state_offset, self.value, 18, indicator), file=out)
+        print("{0}:\t{1:#0{2}x} {3}".format(self.guest_state_offset, self.value,
+                                            18, indicator), file=out)
 
     def to_bytes(self):
         result = bytearray()
-        result.extend(struct.pack("=iQ?", self.guest_state_offset, self.value, self.is_ptr))
+        result.extend(struct.pack("=iQ?", self.guest_state_offset, self.value,
+                                  self.is_ptr))
         return result
 
 
 class ProgramState:
     def __init__(self, infile):
-        register_state_count = struct.unpack_from("N", infile.read(struct.calcsize("N")))[0]
+        register_state_count = \
+        struct.unpack_from("N", infile.read(struct.calcsize("N")))[0]
         self.register_values = list()
         for i in range(register_state_count):
             self.register_values.append(RegisterValue(infile))

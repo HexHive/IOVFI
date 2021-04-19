@@ -2,14 +2,14 @@ import io
 import os
 import pathlib
 import random
-import select
 import stat
 import struct
 import subprocess
-import sys
 from enum import IntEnum, unique, auto
 
 import contexts.binaryutils as bu
+import select
+import sys
 
 from .FBLogging import logger
 from .IOVec import IOVec
@@ -52,7 +52,8 @@ class SEMessage:
         return self.msgtype.name
 
     def write_to_pipe(self, pipe):
-        pipe.write(struct.pack(SEMessage.HEADER_FORMAT, self.msgtype.value, self.msglen))
+        pipe.write(struct.pack(SEMessage.HEADER_FORMAT, self.msgtype.value,
+                               self.msglen))
         if self.msglen > 0:
             pipe.write(self.data)
         pipe.flush()
@@ -64,14 +65,16 @@ class SEMessage:
 
 
 class SEGrindRun:
-    def __init__(self, valgrind_loc, binary_loc, timeout, loader_loc=None, pipe_in=None, pipe_out=None,
+    def __init__(self, valgrind_loc, binary_loc, timeout, loader_loc=None,
+                 pipe_in=None, pipe_out=None,
                  valgrind_log_loc=None,
                  run_log_loc=None, cwd=os.getcwd(), toolname="segrind"):
         self.binary_loc = os.path.abspath(binary_loc)
         if not os.path.exists(self.binary_loc):
             raise FileNotFoundError("{} does not exist".format(self.binary_loc))
 
-        self.binary_is_shared_library = pathlib.Path(self.binary_loc).suffix == ".so"
+        self.binary_is_shared_library = pathlib.Path(
+            self.binary_loc).suffix == ".so"
 
         if toolname is None or len(toolname) == 0:
             raise AssertionError("toolname cannot be empty")
@@ -79,15 +82,19 @@ class SEGrindRun:
 
         self.valgrind_loc = os.path.abspath(valgrind_loc)
         if not os.path.exists(self.valgrind_loc):
-            raise FileNotFoundError("{} does not exist".format(self.valgrind_loc))
+            raise FileNotFoundError(
+                "{} does not exist".format(self.valgrind_loc))
 
         self.loader_loc = loader_loc
         if self.loader_loc:
             if not os.path.exists(self.loader_loc):
-                raise FileNotFoundError("{} does not exist".format(self.loader_loc))
+                raise FileNotFoundError(
+                    "{} does not exist".format(self.loader_loc))
 
         if self.binary_is_shared_library and self.loader_loc is None:
-            raise AssertionError("{} is a shared library and no loader is provided".format(self.binary_loc))
+            raise AssertionError(
+                "{} is a shared library and no loader is provided".format(
+                    self.binary_loc))
 
         self.cwd = os.path.abspath(cwd)
         if not os.path.exists(self.cwd):
@@ -96,7 +103,8 @@ class SEGrindRun:
         if valgrind_log_loc is not None:
             self.valgrind_log_loc = os.path.abspath(valgrind_log_loc)
             if not os.path.exists(os.path.dirname(self.valgrind_log_loc)):
-                os.makedirs(os.path.dirname(self.valgrind_log_loc), exist_ok=True)
+                os.makedirs(os.path.dirname(self.valgrind_log_loc),
+                            exist_ok=True)
         else:
             self.valgrind_log_loc = None
 
@@ -109,8 +117,10 @@ class SEGrindRun:
 
         if pipe_in is None:
             self.pipe_in_loc = os.path.join(cwd,
-                                            "{}.{}.in".format(os.path.basename(self.binary_loc),
-                                                              random.randint(0, sys.maxsize)))
+                                            "{}.{}.in".format(os.path.basename(
+                                                self.binary_loc),
+                                                              random.randint(0,
+                                                                             sys.maxsize)))
         else:
             self.pipe_in_loc = os.path.abspath(pipe_in)
 
@@ -121,8 +131,9 @@ class SEGrindRun:
             raise AssertionError("{} is not a pipe".format(self.pipe_in_loc))
 
         if pipe_out is None:
-            self.pipe_out_loc = os.path.join(cwd, "{}.{}.out".format(os.path.basename(self.binary_loc),
-                                                                     random.randint(0, sys.maxsize)))
+            self.pipe_out_loc = os.path.join(cwd, "{}.{}.out".format(
+                os.path.basename(self.binary_loc),
+                random.randint(0, sys.maxsize)))
         else:
             self.pipe_out_loc = os.path.abspath(pipe_out)
 
@@ -177,9 +188,12 @@ class SEGrindRun:
         if self.run_log_loc is not None:
             self.log = open(self.run_log_loc, "a+")
 
-        self.valgrind_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True, stdout=self.log, stderr=self.log)
+        self.valgrind_proc = subprocess.Popen(cmd, cwd=self.cwd, close_fds=True,
+                                              stdout=self.log, stderr=self.log)
         self.valgrind_pid = self.valgrind_proc.pid
-        logger.debug("{} spawned process {}".format(os.path.basename(self.pipe_in_loc), self.valgrind_pid))
+        logger.debug(
+            "{} spawned process {}".format(os.path.basename(self.pipe_in_loc),
+                                           self.valgrind_pid))
         # ret_value = self.valgrind_proc.wait()
         # logger.debug("Valgrind process {} ended with return code {}".format(self.valgrind_pid, ret_value))
         # if self.log is not None:
@@ -206,9 +220,10 @@ class SEGrindRun:
             timeout = self.timeout
 
         cmd_msg = SEMessage(cmd, data)
-        logger.debug("Writing {} msg with {} bytes of data to {} {}".format(cmd_msg.msgtype.name,
-                                                                            cmd_msg.msglen, self.valgrind_pid,
-                                                                            os.path.basename(self.pipe_in_loc)))
+        logger.debug("Writing {} msg with {} bytes of data to {} {}".format(
+            cmd_msg.msgtype.name,
+            cmd_msg.msglen, self.valgrind_pid,
+            os.path.basename(self.pipe_in_loc)))
         cmd_msg.write_to_pipe(self.pipe_in)
 
         response = self.read_response(timeout)
@@ -247,7 +262,9 @@ class SEGrindRun:
             if self.is_running():
                 self._send_cmd(SEMsgType.SEMSG_EXIT, None, 0.1)
         except BrokenPipeError:
-            logger.debug("Error sending {} to {}".format(SEMsgType.SEMSG_EXIT.name, self.valgrind_pid))
+            logger.debug(
+                "Error sending {} to {}".format(SEMsgType.SEMSG_EXIT.name,
+                                                self.valgrind_pid))
             pass
         finally:
             # if self.valgrind_thread is not None:
@@ -256,13 +273,16 @@ class SEGrindRun:
             if self.valgrind_proc is not None:
                 self.valgrind_proc.kill()
                 if self.valgrind_proc.stdout is not None:
-                    logger.debug("Closing valgrind_proc.stdout for {}".format(self.valgrind_pid))
+                    logger.debug("Closing valgrind_proc.stdout for {}".format(
+                        self.valgrind_pid))
                     self.valgrind_proc.stdout.close()
                 if self.valgrind_proc.stderr is not None:
-                    logger.debug("Closing valgrind_proc.stderr for {}".format(self.valgrind_pid))
+                    logger.debug("Closing valgrind_proc.stderr for {}".format(
+                        self.valgrind_pid))
                     self.valgrind_proc.stderr.close()
                 if self.valgrind_proc.stdin is not None:
-                    logger.debug("Closing valgrind_proc.stdin for {}".format(self.valgrind_pid))
+                    logger.debug("Closing valgrind_proc.stdin for {}".format(
+                        self.valgrind_pid))
                     self.valgrind_proc.stdin.close()
                 self.valgrind_proc = None
 
@@ -287,7 +307,8 @@ class SEGrindRun:
                 os.unlink(self.pipe_in_loc)
 
             if self.pipe_out is not None:
-                logger.debug("Closing pipe_out for {}".format(self.valgrind_pid))
+                logger.debug(
+                    "Closing pipe_out for {}".format(self.valgrind_pid))
                 self.pipe_out.close()
                 self.pipe_out = None
 
@@ -300,9 +321,11 @@ class SEGrindRun:
         msg = self.read_response(timeout=timeout)
 
         if msg is None or msg.msgtype != SEMsgType.SEMSG_READY:
-            error_msg = "Server did not issue a {} msg".format(SEMsgType.SEMSG_READY.name)
+            error_msg = "Server did not issue a {} msg".format(
+                SEMsgType.SEMSG_READY.name)
             if msg is not None:
-                error_msg += ": {} (len = {})".format(msg.msgtype.name, msg.msglen)
+                error_msg += ": {} (len = {})".format(msg.msgtype.name,
+                                                      msg.msglen)
             raise AssertionError(error_msg)
         logger.debug("Process {} is ready".format(self.valgrind_pid))
 
@@ -331,7 +354,8 @@ class SEGrindRun:
         logger.debug("timeout = {}".format(timeout))
         while len(results) < n:
             if not self.is_running():
-                raise AssertionError("Process {} not running".format(self.valgrind_pid))
+                raise AssertionError(
+                    "Process {} not running".format(self.valgrind_pid))
             ready_pipes = select.select([self.pipe_out], [], [], timeout)
             if len(ready_pipes[0]) == 0:
                 results = None
@@ -350,7 +374,8 @@ class SEGrindRun:
         if timeout is None:
             timeout = self.timeout
         result = None
-        pipe_data = self.read_bytes_from_pipe(n=struct.calcsize(SEMessage.HEADER_FORMAT), timeout=timeout)
+        pipe_data = self.read_bytes_from_pipe(
+            n=struct.calcsize(SEMessage.HEADER_FORMAT), timeout=timeout)
         if pipe_data is not None:
             header_data = struct.unpack_from(SEMessage.HEADER_FORMAT, pipe_data)
             msgtype = SEMsgType(header_data[0])
@@ -364,20 +389,26 @@ class SEGrindRun:
 
         if result is not None:
             logger.debug(
-                "Received {} msg with {} bytes back from {}".format(result.msgtype.name, result.msglen,
-                                                                    self.valgrind_pid))
+                "Received {} msg with {} bytes back from {}".format(
+                    result.msgtype.name, result.msglen,
+                    self.valgrind_pid))
         else:
-            logger.debug("Received No message back from {}".format(self.valgrind_pid))
+            logger.debug(
+                "Received No message back from {}".format(self.valgrind_pid))
         return result
 
     def send_set_target_cmd(self, target_func_desc, timeout=None):
-        logger.debug("Setting target to {} for {}".format(str(target_func_desc), self.valgrind_pid))
+        logger.debug("Setting target to {} for {}".format(str(target_func_desc),
+                                                          self.valgrind_pid))
         if self.binary_is_shared_library:
-            return self._send_cmd(SEMsgType.SEMSG_SET_SO_TGT, struct.pack("%ds" % (len(target_func_desc.name) + 1),
-                                                                          bytes(target_func_desc.name + '\x00',
-                                                                                'utf-8')))
+            return self._send_cmd(SEMsgType.SEMSG_SET_SO_TGT, struct.pack(
+                "%ds" % (len(target_func_desc.name) + 1),
+                bytes(target_func_desc.name + '\x00',
+                      'utf-8')))
         else:
-            return self._send_cmd(SEMsgType.SEMSG_SET_TGT, struct.pack("Q", target_func_desc.location), timeout=timeout)
+            return self._send_cmd(SEMsgType.SEMSG_SET_TGT,
+                                  struct.pack("Q", target_func_desc.location),
+                                  timeout=timeout)
 
     def send_set_ctx_cmd(self, io_vec):
         if io_vec is None:

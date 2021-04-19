@@ -1,10 +1,10 @@
 import hashlib
 import io
 import struct
-import sys
 from enum import IntEnum, unique, auto
 
 import contexts.binaryutils as bu
+import sys
 
 from .FBLogging import logger
 from .ProgramState import ProgramState, RangeMap
@@ -34,11 +34,13 @@ class VexEndness(IntEnum):
 
 class ReturnValue:
     def __init__(self, in_file):
-        return_value_size = struct.unpack_from("N", in_file.read(struct.calcsize("N")))[0]
+        return_value_size = \
+        struct.unpack_from("N", in_file.read(struct.calcsize("N")))[0]
         logger.debug("Reading {} bytes".format(return_value_size))
         fmt = '={}'.format('B' * return_value_size)
         self.value = struct.unpack_from(fmt, in_file.read(struct.calcsize(fmt)))
-        self.is_ptr = struct.unpack_from('=?', in_file.read(struct.calcsize('=?')))[0]
+        self.is_ptr = \
+        struct.unpack_from('=?', in_file.read(struct.calcsize('=?')))[0]
 
     def pretty_print(self, out=sys.stdout):
         if self.is_ptr:
@@ -63,11 +65,14 @@ class IOVec:
     def __init__(self, in_file):
         in_file = io.BytesIO(in_file)
         # logger.debug("Reading arch")
-        self.host_arch = VexArch(struct.unpack_from('=i', in_file.read(struct.calcsize('=i')))[0])
+        self.host_arch = VexArch(
+            struct.unpack_from('=i', in_file.read(struct.calcsize('=i')))[0])
         # logger.debug("Reading endness")
-        self.host_endness = VexEndness(struct.unpack_from('=i', in_file.read(struct.calcsize('=i')))[0])
+        self.host_endness = VexEndness(
+            struct.unpack_from('=i', in_file.read(struct.calcsize('=i')))[0])
         # logger.debug("Reading random seed")
-        self.random_seed = struct.unpack_from('=I', in_file.read(struct.calcsize('=I')))[0]
+        self.random_seed = \
+        struct.unpack_from('=I', in_file.read(struct.calcsize('=I')))[0]
 
         # logger.debug("Reading initial state")
         self.initial_state = ProgramState(in_file)
@@ -83,7 +88,8 @@ class IOVec:
         self.syscalls.sort()
 
     def pretty_print(self, out=sys.stdout):
-        print("============================================================", file=out)
+        print("============================================================",
+              file=out)
         print("ID:        {}".format(str(self)), file=out)
         print("Arch:      {}".format(self.host_arch.name), file=out)
         print("Endness:   {}".format(self.host_endness.name), file=out)
@@ -91,11 +97,14 @@ class IOVec:
         print("Return:    ", end='', file=out)
         self.return_value.pretty_print(out)
         print("Syscalls:  {}".format(" ".join(self.syscalls)), file=out)
-        print('----------------------- Initial State ----------------------', file=out)
+        print('----------------------- Initial State ----------------------',
+              file=out)
         self.initial_state.pretty_print(out)
-        print('---------------------- Expected State ----------------------', file=out)
+        print('---------------------- Expected State ----------------------',
+              file=out)
         self.expected_state.pretty_print(out)
-        print("============================================================", file=out)
+        print("============================================================",
+              file=out)
 
     def __hash__(self):
         return int(self.hexdigest(), 16)
@@ -117,7 +126,9 @@ class IOVec:
 
     def to_bytes(self):
         result = bytearray()
-        result.extend(struct.pack('=iiI', self.host_arch.value, self.host_endness.value, self.random_seed))
+        result.extend(
+            struct.pack('=iiI', self.host_arch.value, self.host_endness.value,
+                        self.random_seed))
         result.extend(self.initial_state.to_bytes())
         result.extend(self.expected_state.to_bytes())
         result.extend(self.return_value.to_bytes())

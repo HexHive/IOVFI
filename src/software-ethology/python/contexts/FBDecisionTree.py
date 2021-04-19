@@ -10,7 +10,8 @@ from .SEGrindRun import SEMsgType, SEGrindRun
 
 
 class FBDecisionTreeNode:
-    def __init__(self, parent=None, left_child=None, right_child=None, identifier=None):
+    def __init__(self, parent=None, left_child=None, right_child=None,
+                 identifier=None):
         self.parent = parent
         self.left_child = left_child
         self.right_child = right_child
@@ -50,8 +51,10 @@ class FBDecisionTreeNode:
 
 
 class FBDecisionTreeInteriorNode(FBDecisionTreeNode):
-    def __init__(self, parent=None, iovec=None, coverage=None, left_child=None, right_child=None, identifier=None):
-        FBDecisionTreeNode.__init__(self, parent=parent, left_child=left_child, right_child=right_child,
+    def __init__(self, parent=None, iovec=None, coverage=None, left_child=None,
+                 right_child=None, identifier=None):
+        FBDecisionTreeNode.__init__(self, parent=parent, left_child=left_child,
+                                    right_child=right_child,
                                     identifier=identifier)
         self.iovec = iovec
         self.coverage = coverage
@@ -70,7 +73,8 @@ class FBDecisionTreeInteriorNode(FBDecisionTreeNode):
 
 
 class FBDecisionTreeLeafNode(FBDecisionTreeNode):
-    def __init__(self, equivalence_class=None, confirmation_iovecs=None, parent=None, identifier=None):
+    def __init__(self, equivalence_class=None, confirmation_iovecs=None,
+                 parent=None, identifier=None):
         FBDecisionTreeNode.__init__(self, parent=parent, identifier=identifier)
         self.equivalence_class = equivalence_class
         self.confirmation_iovecs = confirmation_iovecs
@@ -141,13 +145,17 @@ class FBDecisionTree:
             if isinstance(node, FBDecisionTreeInteriorNode):
                 yield node
 
-    def _confirm_leaf(self, func_desc, node, segrind_run, max_iovecs=MAX_CONFIRM):
+    def _confirm_leaf(self, func_desc, node, segrind_run,
+                      max_iovecs=MAX_CONFIRM):
         if max_iovecs <= 0:
             raise RuntimeError("max_iovecs must be greater than zero")
 
         try:
-            self._log("Confirming {}({}) is {}".format(func_desc.name, hex(func_desc.location),
-                                                       " ".join([fd.name for fd in node.get_equivalence_class()])))
+            self._log("Confirming {}({}) is {}".format(func_desc.name,
+                                                       hex(func_desc.location),
+                                                       " ".join(
+                                                           [fd.name for fd in
+                                                            node.get_equivalence_class()])))
             if not node.is_leaf():
                 raise AssertionError("Node is not a leaf")
 
@@ -170,9 +178,12 @@ class FBDecisionTree:
         except Exception as e:
             return False, None
 
-    def identify(self, func_desc, valgrind_loc, timeout, cwd=os.getcwd(), max_confirm=MAX_CONFIRM,
+    def identify(self, func_desc, valgrind_loc, timeout, cwd=os.getcwd(),
+                 max_confirm=MAX_CONFIRM,
                  cmd_log_loc=None, log_loc=None, loader_loc=None):
-        segrind_run = SEGrindRun(valgrind_loc, func_desc.binary, timeout=timeout, cwd=cwd, valgrind_log_loc=log_loc,
+        segrind_run = SEGrindRun(valgrind_loc, func_desc.binary,
+                                 timeout=timeout, cwd=cwd,
+                                 valgrind_log_loc=log_loc,
                                  run_log_loc=cmd_log_loc, loader_loc=loader_loc)
 
         current_node = self.root
@@ -186,14 +197,21 @@ class FBDecisionTree:
                     ack_msg = segrind_run.send_set_target_cmd(func_desc)
 
                     if ack_msg is None or ack_msg.msgtype != SEMsgType.SEMSG_ACK:
-                        raise AssertionError("Could not set target for {}".format(str(func_desc)))
+                        raise AssertionError(
+                            "Could not set target for {}".format(
+                                str(func_desc)))
                     resp_msg = segrind_run.read_response()
                     if resp_msg is None or resp_msg.msgtype != SEMsgType.SEMSG_OK:
-                        raise AssertionError("Could not set target for {}".format(str(func_desc)))
+                        raise AssertionError(
+                            "Could not set target for {}".format(
+                                str(func_desc)))
 
                 if current_node.is_leaf():
                     try:
-                        confirmed, coverage = self._confirm_leaf(func_desc, current_node, segrind_run, max_confirm)
+                        confirmed, coverage = self._confirm_leaf(func_desc,
+                                                                 current_node,
+                                                                 segrind_run,
+                                                                 max_confirm)
                         if confirmed:
                             # for cov in coverage:
                             #     coverages.append(cov)
@@ -208,15 +226,22 @@ class FBDecisionTree:
                         del segrind_run
                         return current_node, coverages
                     except Exception as e:
-                        logger.debug("Error confirming leaf for {}: {}".format(func_desc, e))
+                        logger.debug(
+                            "Error confirming leaf for {}: {}".format(func_desc,
+                                                                      e))
                         break
 
                 iovec_accepted = False
                 try:
-                    logger.debug("Trying iovec {} ({})".format(current_node.identifier, current_node.iovec.hexdigest()))
-                    iovec_accepted, coverage = self._attempt_ctx(current_node.iovec, segrind_run)
+                    logger.debug(
+                        "Trying iovec {} ({})".format(current_node.identifier,
+                                                      current_node.iovec.hexdigest()))
+                    iovec_accepted, coverage = self._attempt_ctx(
+                        current_node.iovec, segrind_run)
                 except Exception as e:
-                    logger.debug("Error testing iovec for {}: {}".format(str(func_desc), e))
+                    logger.debug(
+                        "Error testing iovec for {}: {}".format(str(func_desc),
+                                                                e))
 
                 if iovec_accepted:
                     current_node = current_node.get_right_child()
@@ -274,12 +299,16 @@ class FBDecisionTree:
                 iovec_hash_map[hash_sum] = io_vec
 
                 idx = labels.transform([hash_sum])[0]
-                self._log("Function {} ({}) accepts IOVec {}".format(func_desc_hash, fd.name, str(io_vec)))
+                self._log(
+                    "Function {} ({}) accepts IOVec {}".format(func_desc_hash,
+                                                               fd.name,
+                                                               str(io_vec)))
                 if func_desc_hash not in accepted_iovecs:
                     accepted_iovecs[func_desc_hash] = set()
                 accepted_iovecs[func_desc_hash].add(hash_sum)
 
-                func_feature = funcs_features[funcs_labels.index(func_desc_hash)]
+                func_feature = funcs_features[
+                    funcs_labels.index(func_desc_hash)]
                 func_feature[idx] = True
         self._log("done!")
 
@@ -294,11 +323,15 @@ class FBDecisionTree:
             if left_child == right_child:
                 self.nodes[index] = FBDecisionTreeLeafNode(identifier=index)
             else:
-                iovec_hash = labels.inverse_transform([dtree.tree_.feature[index]])[0]
+                iovec_hash = \
+                labels.inverse_transform([dtree.tree_.feature[index]])[0]
                 path_iovec_hashes.add(iovec_hash)
                 iovec = iovec_hash_map[iovec_hash]
                 self._log("Adding IOVec {} to path".format(iovec))
-                self.nodes[index] = FBDecisionTreeInteriorNode(iovec=iovec, coverage=coverage_map[iovec_hash],
+                self.nodes[index] = FBDecisionTreeInteriorNode(iovec=iovec,
+                                                               coverage=
+                                                               coverage_map[
+                                                                   iovec_hash],
                                                                identifier=index)
 
         for index in range(0, dtree.tree_.node_count):
@@ -323,12 +356,16 @@ class FBDecisionTree:
                         if hash_sum in added_func_descs:
                             func_desc_to_add = added_func_descs[hash_sum]
                             self._log(
-                                "Adding func desc {} to node {}".format(func_desc_to_add, current_node.identifier))
+                                "Adding func desc {} to node {}".format(
+                                    func_desc_to_add, current_node.identifier))
                             equivalence_class.append(func_desc_to_add)
-                            for io_vec, coverage in iovec_coverages[hash_sum].items():
+                            for io_vec, coverage in iovec_coverages[
+                                hash_sum].items():
                                 confirmation_iovec_hashes.add(io_vec)
                         else:
-                            self._log("Func desc {} is not in added_func_descs".format(hash_sum))
+                            self._log(
+                                "Func desc {} is not in added_func_descs".format(
+                                    hash_sum))
                             continue
 
                 current_node.set_equivalence_class(equivalence_class)
@@ -338,7 +375,8 @@ class FBDecisionTree:
                 for iovec in confirmation_iovec_hashes:
                     if iovec.hexdigest() not in path_iovec_hashes:
                         self._log(
-                            "Adding iovec {} to node {}".format(iovec, current_node.identifier))
+                            "Adding iovec {} to node {}".format(iovec,
+                                                                current_node.identifier))
                         confirmation_iovecs.append(iovec)
                 current_node.set_confirmation_iovecs(confirmation_iovecs)
         self._log("done!")

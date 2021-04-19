@@ -11,7 +11,8 @@ class TreeEvaluation:
         self.tree_path = os.path.abspath(tree_path)
         self.f_scores = dict()
 
-    def add_evaluation(self, guess_path, dtree=None, verbose=False, equivalence_map=None):
+    def add_evaluation(self, guess_path, dtree=None, verbose=False,
+                       equivalence_map=None):
         with open(guess_path, 'rb') as f:
             guesses = pickle.load(f)
 
@@ -32,7 +33,8 @@ class TreeEvaluation:
         for guess_path, f_score in self.f_scores.items():
             result += "\t{}: {}\n".format(guess_path, f_score)
         if len(self.f_scores):
-            result += "Average = {}\n".format(statistics.mean(self.f_scores.values()))
+            result += "Average = {}\n".format(
+                statistics.mean(self.f_scores.values()))
 
         return result
 
@@ -41,16 +43,16 @@ def get_preds_and_truths(tree, guesses, equivalence_map=None):
     tree_funcs = list()
     for fd in tree.get_func_descs():
         tree_funcs.append(fd.name)
-        
+
     preds = list()
     truths = list()
     unknown = "@@UNKNOWN@@"
-    
+
     for fd, equiv_class in guesses.items():
         fd_name = fd.name
         if equivalence_map is not None and fd_name in equivalence_map:
             fd_name = equivalence_map[fd_name]
-        
+
         if equiv_class is None:
             preds.append(unknown)
         else:
@@ -59,24 +61,25 @@ def get_preds_and_truths(tree, guesses, equivalence_map=None):
                 ec_name = ec.name
                 if equivalence_map is not None and ec_name in equivalence_map:
                     ec_name = equivalence_map[ec_name]
-                    
+
                 if fd_name == ec_name:
                     preds.append(ec_name)
                     found = True
                     break
             if not found:
                 preds.append(ec_name)
-            
+
         if fd_name in tree_funcs:
             truths.append(fd_name)
         else:
             truths.append(unknown)
-            
+
     return preds, truths
 
 
 def get_evaluation(tree, guesses, equivalence_map=None):
-    preds, truths = get_preds_and_truths(tree=tree, guesses=guesses, equivalence_map=equivalence_map)
+    preds, truths = get_preds_and_truths(tree=tree, guesses=guesses,
+                                         equivalence_map=equivalence_map)
     return f1_score(truths, preds, average='micro')
 
 
@@ -215,12 +218,12 @@ def bin_ec_sizes(tree, max_ec_size=10):
     bins = dict()
     for idx in range(1, max_ec_size + 1):
         bins[idx] = 0
-        
+
     for ec in equiv_classes:
         ec_size = len(ec)
         if ec_size >= max_ec_size:
             bins[max_ec_size] += 1
         else:
             bins[ec_size] += 1
-            
+
     return bins

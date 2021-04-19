@@ -43,7 +43,7 @@ def check_inputs(argparser):
     if loader_loc is None and pathlib.Path(binaryLoc).suffix == ".so":
         logger.fatal("No Shared Object loader provided for {}".format(
             binaryLoc))
-    
+
     if not os.path.exists(valgrind_loc):
         logger.fatal("Could not find {}".format(valgrind_loc))
         exit(1)
@@ -63,8 +63,11 @@ def single_test(func_desc, timeout, error_msgs):
             pass
         log = os.path.join('logs', 'identify', log_names[0])
         cmd_log = os.path.join('logs', 'identify', log_names[1])
-        guess, coverage = fbDtree.identify(func_desc=func_desc, valgrind_loc=valgrind_loc, timeout=timeout,
-                                           cwd=WORK_DIR, max_confirm=n_confirms, cmd_log_loc=cmd_log, log_loc=log,
+        guess, coverage = fbDtree.identify(func_desc=func_desc,
+                                           valgrind_loc=valgrind_loc,
+                                           timeout=timeout,
+                                           cwd=WORK_DIR, max_confirm=n_confirms,
+                                           cmd_log_loc=cmd_log, log_loc=log,
                                            loader_loc=loader_loc)
         if guess is not None:
             for ec in guess.get_equivalence_class():
@@ -85,20 +88,31 @@ def main():
     global fbDtree, binaryLoc, n_confirms, valgrind_loc, loader_loc
 
     parser = argparse.ArgumentParser(description="IdentifyFunction")
-    parser.add_argument('-t', '--tree', help="/path/to/decision/tree", default="tree.bin")
+    parser.add_argument('-t', '--tree', help="/path/to/decision/tree",
+                        default="tree.bin")
     parser.add_argument('-valgrind', help='path/to/valgrind', required=True)
     parser.add_argument("-b", "--binary", help="/path/to/binary", required=True)
-    parser.add_argument('-loader', help='/path/to/segrind_so_loader', default=None)
-    parser.add_argument("-loglevel", help="Set log level", type=int, default=logging.INFO)
-    parser.add_argument("-logprefix", help="Prefix to use before log files", default="")
-    parser.add_argument("-threads", help="Number of threads to use", default=max(int(mp.cpu_count() / 2 - 1), 1),
+    parser.add_argument('-loader', help='/path/to/segrind_so_loader',
+                        default=None)
+    parser.add_argument("-loglevel", help="Set log level", type=int,
+                        default=logging.INFO)
+    parser.add_argument("-logprefix", help="Prefix to use before log files",
+                        default="")
+    parser.add_argument("-threads", help="Number of threads to use",
+                        default=max(int(mp.cpu_count() / 2 - 1), 1),
                         type=int)
     parser.add_argument("-target", help="Location or function name to target")
-    parser.add_argument("-guesses", help="/path/to/guesses", default="guesses.bin")
+    parser.add_argument("-guesses", help="/path/to/guesses",
+                        default="guesses.bin")
     parser.add_argument("-ignore", help="/path/to/ignored/functions")
-    parser.add_argument("-n", help="Number of confirmation checks", type=int, default=1)
-    parser.add_argument('-outputonly', help='Only output the existing guesses', type=bool, default=False)
-    parser.add_argument('-timeout', help='Time to wait for function to complete', type=int, default=WATCHDOG)
+    parser.add_argument("-n", help="Number of confirmation checks", type=int,
+                        default=1)
+    parser.add_argument('-outputonly', help='Only output the existing guesses',
+                        type=bool, default=False)
+    parser.add_argument('-timeout',
+                        help='Time to wait for function to complete', type=int,
+                        default=WATCHDOG)
+    parser.add_argument('-syms', help="Symbol mapping file")
     results = parser.parse_args()
 
     logger.info("Checking inputs...")
@@ -106,10 +120,12 @@ def main():
     logger.info("done!")
     n_confirms = results.n
 
-    logpath = os.path.abspath(os.path.join("logs", "identify", results.logprefix))
+    logpath = os.path.abspath(
+        os.path.join("logs", "identify", results.logprefix))
     if not os.path.exists(logpath):
         os.makedirs(logpath, exist_ok=True)
-    loghandler = logging.FileHandler(os.path.join(logpath, os.path.basename(binaryLoc) + ".log"), mode="w")
+    loghandler = logging.FileHandler(
+        os.path.join(logpath, os.path.basename(binaryLoc) + ".log"), mode="w")
     logger.addHandler(loghandler)
     logger.setLevel(results.loglevel)
 
@@ -183,7 +199,8 @@ def main():
             for func in guess:
                 guess_list.append(str(func))
 
-        logger.info("[{}] {}: {}".format(indicator, func_desc.name, " ".join(guess_list)))
+        logger.info("[{}] {}: {}".format(indicator, func_desc.name,
+                                         " ".join(guess_list)))
 
     with open(guessLoc, 'wb') as f:
         pickle.dump(guesses_out, f)

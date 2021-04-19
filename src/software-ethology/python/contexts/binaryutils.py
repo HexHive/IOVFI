@@ -7,7 +7,8 @@ from .FunctionDescriptor import FunctionDescriptor
 
 
 class RunDesc:
-    def __init__(self, func_desc, valgrind_loc, work_dir, watchdog, loader_loc=None):
+    def __init__(self, func_desc, valgrind_loc, work_dir, watchdog,
+                 loader_loc=None):
         self.func_desc = func_desc
         self.valgrind_loc = os.path.abspath(valgrind_loc)
         self.work_dir = os.path.abspath(work_dir)
@@ -26,7 +27,8 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
         except Exception:
             pass
     location_map = dict()
-    objdump_cmd = subprocess.run(['objdump', '-d', binary], stdout=subprocess.PIPE)
+    objdump_cmd = subprocess.run(['objdump', '-d', binary],
+                                 stdout=subprocess.PIPE)
     lines = objdump_cmd.stdout.split(b'\n')
     func_start_re = re.compile("^([0-9a-f]+) \<(\w+)\>:")
     instr_re = re.compile("^([0-9a-f]+):")
@@ -38,9 +40,13 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
         func_start_match = func_start_re.match(line)
         if func_start_match:
             if name is not None:
-                if ignored_funcs is None or (name not in ignored_funcs and loc not in ignored_funcs):
-                    if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
-                        location_map[loc] = FunctionDescriptor(binary, name, loc, instrs)
+                if ignored_funcs is None or (
+                        name not in ignored_funcs and loc not in ignored_funcs):
+                    if target is None or (
+                            not target_is_name and target == loc) or (
+                            target_is_name and target == name):
+                        location_map[loc] = FunctionDescriptor(binary, name,
+                                                               loc, instrs)
             name = func_start_match.group(2)
             loc = int(func_start_match.group(1), 16)
             instrs = list()
@@ -50,15 +56,19 @@ def find_funcs(binary, target=None, ignored_funcs=None, is_shared=None):
                 instrs.append(int(instr_match.group(1), 16))
 
     if name is not None:
-        if ignored_funcs is None or (name not in ignored_funcs and loc not in ignored_funcs):
-            if target is None or (not target_is_name and target == loc) or (target_is_name and target == name):
-                location_map[loc] = FunctionDescriptor(binary, name, loc, instrs)
+        if ignored_funcs is None or (
+                name not in ignored_funcs and loc not in ignored_funcs):
+            if target is None or (not target_is_name and target == loc) or (
+                    target_is_name and target == name):
+                location_map[loc] = FunctionDescriptor(binary, name, loc,
+                                                       instrs)
 
     return location_map
 
 
 def get_log_names(func_desc):
-    run_name = "{}.{}.{}".format(os.path.basename(func_desc.binary), func_desc.name, func_desc.location)
+    run_name = "{}.{}.{}".format(os.path.basename(func_desc.binary),
+                                 func_desc.name, func_desc.location)
     return run_name + ".log", run_name + ".cmd.log"
 
 
@@ -66,8 +76,10 @@ def read_in_list(in_bytes, data_format='Q'):
     result = list()
     count = struct.unpack_from('N', in_bytes.read(struct.calcsize('N')))[0]
     for idx in range(0, count):
-        result.append(struct.unpack_from(data_format, in_bytes.read(struct.calcsize(data_format)))[0])
+        result.append(struct.unpack_from(data_format, in_bytes.read(
+            struct.calcsize(data_format)))[0])
     return result
+
 
 def compute_per_func_cov(out_desc):
     result = list()

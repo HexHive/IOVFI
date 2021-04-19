@@ -1,13 +1,15 @@
 #!/usr/bin/python3
 
-import pickle
 import argparse
+import pickle
 
 
 def main():
     parser = argparse.ArgumentParser(description="Compares two code bases")
-    parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin", required=True)
-    parser.add_argument("-g", dest="guesses", default="guesses.bin", help="/path/to/guesses.bin", required=True)
+    parser.add_argument("-tree", default="tree.bin", help="/path/to/tree.bin",
+                        required=True)
+    parser.add_argument("-g", dest="guesses", default="guesses.bin",
+                        help="/path/to/guesses.bin", required=True)
 
     args = parser.parse_args()
     with open(args.tree, 'rb') as f:

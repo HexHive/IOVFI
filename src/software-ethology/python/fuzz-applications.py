@@ -4,6 +4,7 @@ import logging
 import multiprocessing as mp
 import os
 import pickle
+
 import sys
 import time
 
@@ -231,7 +232,7 @@ def consolidate_one_func(fuzz_desc, io_vec_list, coverage_map, sema,
                     if ack_msg and ack_msg.msgtype == SEMsgType.SEMSG_ACK:
                         resp_msg = segrind_run.read_response()
                     ready_to_run = (
-                                resp_msg is not None and resp_msg.msgtype == SEMsgType.SEMSG_OK)
+                            resp_msg is not None and resp_msg.msgtype == SEMsgType.SEMSG_OK)
 
                 if ready_to_run:
                     ack_msg = segrind_run.send_execute_cmd()
@@ -360,7 +361,7 @@ def fuzz_one_function(fuzz_desc, io_vec_list, coverage_map, duration, sema,
                     if ack_msg and ack_msg.msgtype == SEMsgType.SEMSG_ACK:
                         resp_msg = segrind_run.read_response()
                     ready_to_run = (
-                                resp_msg and resp_msg.msgtype == SEMsgType.SEMSG_OK)
+                            resp_msg and resp_msg.msgtype == SEMsgType.SEMSG_OK)
 
                 if ready_to_run:
                     ack_msg = segrind_run.send_execute_cmd()
@@ -497,19 +498,20 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
             iovec_coverage[func_desc] = manager.dict()
 
         time_start = time.time()
-        fuzz_time = max(1, int(duration/len(fuzz_runs)))
+        fuzz_time = max(1, int(duration / len(fuzz_runs)))
         logger.info("Fuzzing each target for {} s".format(fuzz_time))
         with mp.Pool(thread_count) as pool:
             full_res = [pool.apply_async(func=fuzz_one_function,
-                                    args=(fuzz_run, generated_iovecs, 
-                                          iovec_coverage,
-                                          fuzz_time,
-                                          None, 
-                                          instruction_mapping, 
-                                          fuzz_completed_list,)) for fuzz_run in fuzz_runs]
+                                         args=(fuzz_run, generated_iovecs,
+                                               iovec_coverage,
+                                               fuzz_time,
+                                               None,
+                                               instruction_mapping,
+                                               fuzz_completed_list,)) for
+                        fuzz_run in fuzz_runs]
             for res in full_res:
-                res.wait(timeout=2*fuzz_time)
-            
+                res.wait(timeout=2 * fuzz_time)
+
         # processes = list()
         # for fuzz_run in fuzz_runs:
         #     processes.append(
@@ -543,7 +545,7 @@ def fuzz_and_consolidate_functions(func_descs, valgrind_loc, watchdog, duration,
         #
         # for p in processes:
         #     p.join()
-        
+
         with mp.Pool(thread_count) as pool:
             full_res = [pool.apply_async(func=consolidate_one_func,
                                          args=(fuzz_run, generated_iovecs,
