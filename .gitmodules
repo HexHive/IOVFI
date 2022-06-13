@@ -1,3 +1,4 @@
 [submodule "src/valgrind"]
 	path = src/valgrind
 	url = git@github.com:HexHive/se-valgrind.git
+	branch = sensitivity-analysis
