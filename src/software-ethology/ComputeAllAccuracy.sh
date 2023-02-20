@@ -21,7 +21,7 @@ do
         -tree $tree_prog/dtree-$tree_env/tree.bin \
         -g $tree_prog/dtree-$tree_env/$test_env/$test_prog/guesses.txt \
         -o $tree_prog/dtree-$tree_env/singleton-accuracy.bin \
-        -tree_label dtree-$tree_env -compilation_label $comp_envs
+        -tree_label dtree-$tree_env -compilation_label $test_env
 
         echo -n "," >> results.csv
       done
