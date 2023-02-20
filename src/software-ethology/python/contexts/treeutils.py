@@ -83,7 +83,7 @@ def get_preds_and_truths(tree, guesses, equivalence_map=None, singletons_only=Fa
 def get_evaluation(tree, guesses, equivalence_map=None, singletons_only=False):
     preds, truths = get_preds_and_truths(tree=tree, guesses=guesses,
                                          equivalence_map=equivalence_map)
-    return f1_score(truths, preds, average='micro', singletons_only=singletons_only)
+    return f1_score(truths, preds, average='micro')
 
 
 def classify_guesses(tree, guesses, equivalence_map=None):
