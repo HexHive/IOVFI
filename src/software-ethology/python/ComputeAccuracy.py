@@ -130,7 +130,7 @@ def main():
                                    'equivalence classes of size 1 or Unknown',
                                     action='store_true')
     parser.add_argument('-tree_label', type=str, help='DTree label')
-    parser.add_argument('-compilation_level', type=str, help='Compilation environment '
+    parser.add_argument('-compilation_label', type=str, help='Compilation environment '
                                                              'of test program')
 
     args = parser.parse_args()
