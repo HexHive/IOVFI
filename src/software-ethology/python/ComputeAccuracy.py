@@ -126,6 +126,9 @@ def main():
     parser.add_argument('-verbose', help="Print out additional information",
                         type=str2bool, nargs='?', const=True,
                         default=False)
+    parser.add_argument('-s', dest='singletons_only', help='Only compute accuracy for '
+                                   'equivalence classes of size 1 or Unknown',
+                                    action='store_true')
 
     args = parser.parse_args()
 
@@ -184,7 +187,8 @@ def main():
                 sorted_names.clear()
 
             evaluation.add_evaluation(guess_path=guessLine, dtree=dtree,
-                                      verbose=args.verbose)
+                                      verbose=args.verbose,
+                                      singletons_only=args.singletons_only)
 
     print(evaluation)
     if args.output is not None:

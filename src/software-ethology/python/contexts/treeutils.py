@@ -12,7 +12,7 @@ class TreeEvaluation:
         self.f_scores = dict()
 
     def add_evaluation(self, guess_path, dtree=None, verbose=False,
-                       equivalence_map=None):
+                       equivalence_map=None, singletons_only=False):
         with open(guess_path, 'rb') as f:
             guesses = pickle.load(f)
 
@@ -20,7 +20,8 @@ class TreeEvaluation:
             with open(self.tree_path, 'rb') as f:
                 dtree = pickle.load(f)
 
-        f_score = get_evaluation(dtree, guesses, equivalence_map)
+        f_score = get_evaluation(dtree, guesses, equivalence_map=equivalence_map,
+                                 singletons_only=singletons_only)
         if verbose:
             print("Latest F Score: {}".format(f_score))
 
@@ -39,7 +40,7 @@ class TreeEvaluation:
         return result
 
 
-def get_preds_and_truths(tree, guesses, equivalence_map=None):
+def get_preds_and_truths(tree, guesses, equivalence_map=None, singletons_only=False):
     tree_funcs = list()
     for fd in tree.get_func_descs():
         tree_funcs.append(fd.name)
@@ -50,6 +51,8 @@ def get_preds_and_truths(tree, guesses, equivalence_map=None):
 
     for fd, equiv_class in guesses.items():
         fd_name = fd.name
+        if singletons_only and equiv_class is not None and len(equiv_class) > 1:
+            continue
         if equivalence_map is not None and fd_name in equivalence_map:
             fd_name = equivalence_map[fd_name]
 
@@ -77,10 +80,10 @@ def get_preds_and_truths(tree, guesses, equivalence_map=None):
     return preds, truths
 
 
-def get_evaluation(tree, guesses, equivalence_map=None):
+def get_evaluation(tree, guesses, equivalence_map=None, singletons_only=False):
     preds, truths = get_preds_and_truths(tree=tree, guesses=guesses,
                                          equivalence_map=equivalence_map)
-    return f1_score(truths, preds, average='micro')
+    return f1_score(truths, preds, average='micro', singletons_only=singletons_only)
 
 
 def classify_guesses(tree, guesses, equivalence_map=None):
