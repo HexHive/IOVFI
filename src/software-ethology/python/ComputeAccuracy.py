@@ -129,6 +129,9 @@ def main():
     parser.add_argument('-s', dest='singletons_only', help='Only compute accuracy for '
                                    'equivalence classes of size 1 or Unknown',
                                     action='store_true')
+    parser.add_argument('-tree_label', type=str, help='DTree label')
+    parser.add_argument('-compilation_level', type=str, help='Compilation environment '
+                                                             'of test program')
 
     args = parser.parse_args()
 
@@ -188,7 +191,9 @@ def main():
 
             evaluation.add_evaluation(guess_path=guessLine, dtree=dtree,
                                       verbose=args.verbose,
-                                      singletons_only=args.singletons_only)
+                                      singletons_only=args.singletons_only,
+                                      tree_label=args.tree_label,
+                                      compilation_label=args.compilation_label)
 
     print(evaluation)
     if args.output is not None:

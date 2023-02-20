@@ -1,6 +1,7 @@
 import os
 import pickle
 import statistics
+import pandas as pd
 
 import contexts.FBDecisionTree as FBDtree
 from sklearn.metrics import f1_score
@@ -10,9 +11,11 @@ class TreeEvaluation:
     def __init__(self, tree_path):
         self.tree_path = os.path.abspath(tree_path)
         self.f_scores = dict()
+        self.pandas_scores = dict()
 
     def add_evaluation(self, guess_path, dtree=None, verbose=False,
-                       equivalence_map=None, singletons_only=False):
+                       equivalence_map=None, singletons_only=False, tree_label=None,
+                       compilation_label=None):
         with open(guess_path, 'rb') as f:
             guesses = pickle.load(f)
 
@@ -24,6 +27,16 @@ class TreeEvaluation:
                                  singletons_only=singletons_only)
         if verbose:
             print("Latest F Score: {}".format(f_score))
+
+        if tree_label is not None and compilation_label is not None:
+            if tree_label not in self.pandas_scores:
+                self.pandas_scores[tree_label] = dict()
+
+            if compilation_label not in self.pandas_scores[tree_label]:
+                self.pandas_scores[tree_label][compilation_label] = list()
+
+            self.pandas_scores[tree_label][compilation_label].append(f_score)
+
 
         self.f_scores[guess_path] = f_score
         if verbose:
@@ -38,6 +51,12 @@ class TreeEvaluation:
                 statistics.mean(self.f_scores.values()))
 
         return result
+
+    def to_csv(self, destination):
+        with open(destination, 'w') as f:
+            if len(self.pandas_scores) > 0:
+                df = pd.DataFrame(self.pandas_scores)
+                df.to_csv(f)
 
 
 def get_preds_and_truths(tree, guesses, equivalence_map=None, singletons_only=False):
