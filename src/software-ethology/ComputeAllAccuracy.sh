@@ -19,7 +19,8 @@ do
       do
         python3 /home/derrick/code/FOSbin-flop/src/software-ethology/python/ComputeAccuracy.py -s -t $tree_prog/dtree-$tree_env/tree.bin \
         -g $tree_prog/dtree-$tree_env/$test_env/$test_prog/guesses.txt \
-        -o $tree_prog/dtree-$tree_env/singleton-accuracy.bin
+        -o $tree_prog/dtree-$tree_env/singleton-accuracy.bin \
+        -tree_label dtree-$tree_env -compilation_label $comp_envs
 
         echo -n "," >> results.csv
       done

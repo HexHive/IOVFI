@@ -55,7 +55,14 @@ class TreeEvaluation:
     def to_csv(self, destination):
         with open(destination, 'w') as f:
             if len(self.pandas_scores) > 0:
-                df = pd.DataFrame(self.pandas_scores)
+                averages = dict()
+                for tree_label, compilation_levels in self.pandas_scores.items():
+                    if tree_label not in averages:
+                        averages[tree_label] = dict()
+                    for compilation_level, f_scores in compilation_levels.items():
+                        averages[tree_label][compilation_level] = \
+                            statistics.mean(f_scores)
+                df = pd.DataFrame(averages)
                 df.to_csv(f)
 
 
