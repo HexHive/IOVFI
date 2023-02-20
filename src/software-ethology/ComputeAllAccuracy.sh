@@ -17,7 +17,8 @@ do
     do
       for test_env in "${comp_envs[@]}"
       do
-        python3 /home/derrick/code/FOSbin-flop/src/software-ethology/python/ComputeAccuracy.py -s -t $tree_prog/dtree-$tree_env/tree.bin \
+        python3 /home/derrick/code/FOSbin-flop/src/software-ethology/python/ComputeAccuracy.py -s \
+        -tree $tree_prog/dtree-$tree_env/tree.bin \
         -g $tree_prog/dtree-$tree_env/$test_env/$test_prog/guesses.txt \
         -o $tree_prog/dtree-$tree_env/singleton-accuracy.bin \
         -tree_label dtree-$tree_env -compilation_label $comp_envs
