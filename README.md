@@ -1,7 +1,7 @@
-# FOSBin-Flop
+# IOVec Function Identification (IOVFI)
 
 Dynamic function identifier for stripped binaries.
-FOSBin-Flop works by measuring program state changes a function performs
+IOVFI works by measuring program state changes a function performs
 with a given input program state, and then uses this information as a 
 unique fingerprint for later identification in unknown binaries.
 The combination of input program state and output program state is called
